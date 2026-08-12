@@ -1,0 +1,71 @@
+{
+    "rewrites": [
+        {
+            "source": "/api/robokassa-check/:invId",
+            "destination": "/api/robokassa-check.js?invId=:invId"
+        },
+        {
+            "source": "/api/check-payment/:paymentId",
+            "destination": "/api/yookassa-check.js?paymentId=:paymentId"
+        },
+        {
+            "source": "/api/transcribe",
+            "destination": "/api/transcribe.js"
+        },
+        {
+            "source": "/api/upload-media",
+            "destination": "/api/upload-media.js"
+        },
+        {
+            "source": "/api/yookassa-create",
+            "destination": "/api/yookassa-create.js"
+        },
+        {
+            "source": "/api/robokassa-create",
+            "destination": "/api/robokassa-create.js"
+        },
+        {
+            "source": "/api/robokassa-result",
+            "destination": "/api/robokassa-result.js"
+        },
+        {
+            "source": "/api/vk-news",
+            "destination": "/api/vk-news.js"
+        },
+        {
+            "source": "/api/vk-edit",
+            "destination": "/api/vk-edit.js"
+        },
+        {
+            "source": "/api/yclients-sync",
+            "destination": "/api/yclients-sync.js"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/api/(.*)",
+            "headers": [
+                {
+                    "key": "Access-Control-Allow-Credentials",
+                    "value": "true"
+                },
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Access-Control-Allow-Methods",
+                    "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT"
+                },
+                {
+                    "key": "Access-Control-Allow-Headers",
+                    "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+                }
+            ]
+        }
+    ]
+}

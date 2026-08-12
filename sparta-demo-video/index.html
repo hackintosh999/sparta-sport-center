@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="ru" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Sparta Sports Center - Video Showcase</title>
+    <!-- GSAP -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    
+    <!-- Tailwind v4 Runtime -->
+    <script>
+      window.__tailwindReady = new Promise(function(resolve){
+        var loaded = document.readyState === "complete";
+        var resolved = false;
+        var observer;
+        function readTailwindCss(){
+          var styles = document.querySelectorAll("style");
+          for(var i = styles.length - 1; i >= 0; i--){
+            var text = styles[i].textContent || "";
+            if(text.indexOf("tailwindcss v") !== -1) return text;
+          }
+          return "";
+        }
+        function finish(){
+          if(resolved || !loaded || !readTailwindCss()) return;
+          resolved = true;
+          if(observer) observer.disconnect();
+          resolve(true);
+        }
+        observer = new MutationObserver(finish);
+        observer.observe(document.documentElement, {childList:true, subtree:true, characterData:true});
+        if(loaded){ finish(); } else { window.addEventListener("load", function(){ loaded = true; finish(); }, {once:true}); }
+      });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js" crossorigin="anonymous"></script>
+    
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background-color: #0B0F17;
+        font-family: 'Inter', sans-serif;
+        color: #F8FAFC;
+      }
+      .font-display {
+        font-family: 'Outfit', sans-serif;
+      }
+      
+      /* Background Grid Glow */
+      .bg-grid {
+        background-size: 60px 60px;
+        background-image: 
+          linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      }
+      
+      /* Glassmorphism Styles */
+      .glass-card {
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      }
+
+      .glass-card-gold {
+        background: rgba(30, 27, 75, 0.5);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        box-shadow: 0 10px 40px rgba(245, 158, 11, 0.15);
+      }
+
+      .gold-text-gradient {
+        background: linear-gradient(135deg, #FFF 0%, #FBBF24 50%, #F59E0B 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .crimson-glow {
+        box-shadow: 0 0 30px rgba(239, 68, 68, 0.35);
+      }
+
+      .gold-glow {
+        box-shadow: 0 0 35px rgba(245, 158, 11, 0.4);
+      }
+
+      .cyan-glow {
+        box-shadow: 0 0 30px rgba(6, 182, 212, 0.35);
+      }
+      
+      /* Waveform animation */
+      .wave-bar {
+        transform-origin: bottom;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="40"
+      data-width="1920"
+      data-height="1080"
+      class="relative w-[1920px] h-[1080px] bg-[#0B0F17] bg-grid overflow-hidden flex flex-col justify-center items-center"
+    >
+      <!-- Ambient Lighting Orbs -->
+      <div id="orb-gold" data-layout-allow-overflow="true" class="absolute -top-40 -left-40 w-[600px] h-[600px] bg-amber-500/15 rounded-full blur-[140px] pointer-events-none"></div>
+      <div id="orb-crimson" data-layout-allow-overflow="true" class="absolute -bottom-40 -right-40 w-[700px] h-[700px] bg-red-600/15 rounded-full blur-[160px] pointer-events-none"></div>
+      <div id="orb-cyan" data-layout-allow-overflow="true" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-cyan-500/10 rounded-full blur-[180px] pointer-events-none"></div>
+
+      <!-- Top Header Navigation Bar -->
+      <header id="app-header" class="absolute top-8 left-16 right-16 z-50 flex items-center justify-between px-8 py-4 glass-card rounded-2xl border border-white/10 opacity-0">
+        <div class="flex items-center space-x-4">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-display font-black text-slate-950 text-xl shadow-lg shadow-amber-500/20">
+            S
+          </div>
+          <span class="font-display font-extrabold text-2xl tracking-wider text-white">SPARTA <span class="text-amber-400">SPORTS</span></span>
+        </div>
+        <nav class="flex items-center space-x-8 text-sm font-medium text-slate-300">
+          <span class="text-amber-400 font-semibold flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span>Главная</span>
+          <span>Направления</span>
+          <span>Тренеры</span>
+          <span>Расписание</span>
+          <span>Мессенджер</span>
+        </nav>
+        <div class="flex items-center space-x-4">
+          <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Центр открыт
+          </span>
+          <button class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/25">
+            Личный кабинет
+          </button>
+        </div>
+      </header>
+
+      <!-- ================= SCENE 1: HERO & BRANDING (0s - 10s) ================= -->
+      <div id="scene-1" class="absolute inset-0 flex flex-col items-center justify-center px-24 z-10">
+        <div id="s1-shield" class="w-28 h-28 mb-8 rounded-3xl bg-gradient-to-br from-amber-400 via-amber-500 to-red-600 p-0.5 shadow-2xl gold-glow opacity-0 scale-75">
+          <div class="w-full h-full bg-slate-950 rounded-[22px] flex items-center justify-center">
+            <svg class="w-14 h-14 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-3zm0 4a3 3 0 110 6 3 3 0 010-6zm0 14.3c-3.1-1.07-5.5-4.43-5.9-8.1 1.7.9 3.7 1.4 5.9 1.4s4.2-.5 5.9-1.4c-.4 3.67-2.8 7.03-5.9 8.1z"/>
+            </svg>
+          </div>
+        </div>
+
+        <h1 id="s1-title" class="font-display font-black text-7xl tracking-tight text-center mb-6 opacity-0 leading-tight">
+          SPARTA <span class="gold-text-gradient">SPORTS CENTER</span>
+        </h1>
+
+        <p id="s1-subtitle" class="text-2xl text-slate-300 max-w-3xl text-center font-light mb-12 opacity-0 leading-relaxed">
+          Многофункциональный спортивный комплекс & цифровая платформа нового поколения
+        </p>
+
+        <div id="s1-pills" class="flex items-center gap-6 opacity-0">
+          <div class="px-6 py-3.5 rounded-2xl glass-card border-amber-500/30 flex items-center gap-3 text-amber-300 font-semibold text-lg">
+            <span class="text-2xl">⚡</span> Онлайн-запись 24/7
+          </div>
+          <div class="px-6 py-3.5 rounded-2xl glass-card border-red-500/30 flex items-center gap-3 text-red-300 font-semibold text-lg">
+            <span class="text-2xl">🏆</span> Турниры & Награды
+          </div>
+          <div class="px-6 py-3.5 rounded-2xl glass-card border-cyan-500/30 flex items-center gap-3 text-cyan-300 font-semibold text-lg">
+            <span class="text-2xl">💬</span> Умное Сообщество
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= SCENE 2: DIRECTIONS & COACHES (10s - 20s) ================= -->
+      <div id="scene-2" class="absolute inset-0 flex flex-col items-center justify-center px-20 pt-20 z-10 opacity-0 pointer-events-none">
+        <div id="s2-header" class="text-center mb-12">
+          <span class="text-amber-400 font-semibold text-sm uppercase tracking-widest block mb-2">Профессиональная подготовка</span>
+          <h2 class="font-display font-bold text-5xl text-white">Спортивные Направления & Наставники</h2>
+        </div>
+
+        <div class="w-full grid grid-cols-4 gap-6 mb-10">
+          <!-- Card 1 -->
+          <div class="s2-card glass-card p-6 rounded-3xl border border-white/10 hover:border-amber-500/50 transition-all">
+            <div class="w-14 h-14 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center text-3xl mb-5 border border-red-500/30">
+              🥊
+            </div>
+            <h3 class="font-display font-bold text-2xl text-white mb-2">Единоборства</h3>
+            <p class="text-sm text-slate-400 mb-4 leading-relaxed">Самбо, Дзюдо, Бокс, ММА. Развитие силы, выносливости и самодисциплины.</p>
+            <span class="text-xs font-semibold text-amber-400 bg-amber-400/10 px-3 py-1.5 rounded-lg border border-amber-400/20">12 Групп • Дети и Взрослые</span>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="s2-card glass-card p-6 rounded-3xl border border-white/10 hover:border-cyan-500/50 transition-all">
+            <div class="w-14 h-14 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-3xl mb-5 border border-cyan-500/30">
+              🤸
+            </div>
+            <h3 class="font-display font-bold text-2xl text-white mb-2">Гимнастика</h3>
+            <p class="text-sm text-slate-400 mb-4 leading-relaxed">Художественная и спортивная гимнастика. Гибкость, грация и координированность.</p>
+            <span class="text-xs font-semibold text-cyan-400 bg-cyan-400/10 px-3 py-1.5 rounded-lg border border-cyan-400/20">8 Групп • С 4 лет</span>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="s2-card glass-card p-6 rounded-3xl border border-white/10 hover:border-emerald-500/50 transition-all">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-3xl mb-5 border border-emerald-500/30">
+              🏊
+            </div>
+            <h3 class="font-display font-bold text-2xl text-white mb-2">Плавание</h3>
+            <p class="text-sm text-slate-400 mb-4 leading-relaxed">25-метровый бассейн, аква-аэробика и индивидуальные занятия с тренером.</p>
+            <span class="text-xs font-semibold text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-lg border border-emerald-400/20">Все уровни подготовки</span>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="s2-card glass-card p-6 rounded-3xl border border-white/10 hover:border-amber-500/50 transition-all">
+            <div class="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-3xl mb-5 border border-amber-500/30">
+              🏋️
+            </div>
+            <h3 class="font-display font-bold text-2xl text-white mb-2">ОФП & Кроссфит</h3>
+            <p class="text-sm text-slate-400 mb-4 leading-relaxed">Общая физическая подготовка, функциональный тренинг и силовые зоны.</p>
+            <span class="text-xs font-semibold text-amber-400 bg-amber-400/10 px-3 py-1.5 rounded-lg border border-amber-400/20">Персональный тренинг</span>
+          </div>
+        </div>
+
+        <!-- Coach Highlight Row -->
+        <div id="s2-coaches" class="w-full flex items-center justify-center gap-8">
+          <div class="glass-card px-6 py-4 rounded-2xl flex items-center gap-4 border-l-4 border-l-amber-500">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-500 to-red-500 flex items-center justify-center font-bold text-lg text-white shadow-md">
+              АС
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-white">Александр Смирнов</h4>
+                <span class="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">⭐ 4.98</span>
+              </div>
+              <p class="text-xs text-slate-400">Мастер спорта по Самбо • Опыт 12 лет</p>
+            </div>
+          </div>
+
+          <div class="glass-card px-6 py-4 rounded-2xl flex items-center gap-4 border-l-4 border-l-cyan-500">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center font-bold text-lg text-white shadow-md">
+              ЕМ
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-white">Елена Морозова</h4>
+                <span class="text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold">⭐ 5.0</span>
+              </div>
+              <p class="text-xs text-slate-400">Старший тренер по Гимнастике</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= SCENE 3: COMMUNITY & MESSENGER (20s - 30s) ================= -->
+      <div id="scene-3" class="absolute inset-0 flex flex-col items-center justify-center px-24 pt-20 z-10 opacity-0 pointer-events-none">
+        <div id="s3-header" class="text-center mb-8">
+          <span class="text-cyan-400 font-semibold text-sm uppercase tracking-widest block mb-2">Общение и поддержка</span>
+          <h2 class="font-display font-bold text-5xl text-white">Интерактивный Мессенджер & Чат Групп</h2>
+        </div>
+
+        <!-- Chat Mockup Window -->
+        <div id="s3-chat" class="w-[900px] h-[520px] glass-card rounded-3xl border border-slate-700/60 p-6 flex flex-col justify-between shadow-2xl relative">
+          <!-- Chat Header -->
+          <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-xl font-bold">
+                🏆
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-lg">Сборная по Самбо (Младшая группа)</h4>
+                <span class="text-xs text-emerald-400 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 24 атлета онлайн</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="px-3 py-1 rounded-lg bg-slate-800 text-xs text-slate-300">📌 Закреплено сообщение</span>
+            </div>
+          </div>
+
+          <!-- Chat Messages Container -->
+          <div class="flex-1 py-4 flex flex-col gap-4 overflow-hidden justify-end">
+            <!-- Incoming Coach Message -->
+            <div id="msg-1" class="self-start max-w-[70%] glass-card p-4 rounded-2xl rounded-tl-none border-l-4 border-l-amber-500 opacity-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-bold text-sm text-amber-400">Тренер Александр Смирнов</span>
+                <span class="text-[10px] text-slate-400">14:32</span>
+              </div>
+              <p class="text-sm text-slate-200 leading-snug">
+                Команда, завтра в 18:00 открытая тренировка по отработке бросков! Жду всех без опозданий 🥊🔥
+              </p>
+              <!-- Reactions -->
+              <div id="msg-reactions" class="flex items-center gap-2 mt-3 opacity-0">
+                <span class="px-2.5 py-1 rounded-full bg-slate-800/80 border border-amber-500/30 text-xs font-medium text-amber-300 flex items-center gap-1">
+                  🔥 14
+                </span>
+                <span class="px-2.5 py-1 rounded-full bg-slate-800/80 border border-red-500/30 text-xs font-medium text-red-300 flex items-center gap-1">
+                  🥊 9
+                </span>
+                <span class="px-2.5 py-1 rounded-full bg-slate-800/80 border border-cyan-500/30 text-xs font-medium text-cyan-300 flex items-center gap-1">
+                  👍 6
+                </span>
+              </div>
+            </div>
+
+            <!-- Voice Message Note -->
+            <div id="msg-2" class="self-start max-w-[65%] glass-card p-4 rounded-2xl rounded-tl-none border-l-4 border-l-cyan-500 opacity-0">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="font-bold text-sm text-cyan-400">Голосовая заметка от Тренера</span>
+                <span class="text-[10px] text-slate-400">0:24</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-lg font-bold">
+                  ▶
+                </div>
+                <!-- Simulated Waveform -->
+                <div id="waveform" class="flex items-center gap-1 h-8 flex-1">
+                  <div class="wave-bar w-1 bg-cyan-400 rounded-full h-4"></div>
+                  <div class="wave-bar w-1 bg-cyan-400 rounded-full h-7"></div>
+                  <div class="wave-bar w-1 bg-cyan-400 rounded-full h-3"></div>
+                  <div class="wave-bar w-1 bg-cyan-400 rounded-full h-8"></div>
+                  <div class="wave-bar w-1 bg-cyan-400 rounded-full h-5"></div>
+                  <div class="wave-bar w-1 bg-cyan-400 rounded-full h-6"></div>
+                  <div class="wave-bar w-1 bg-cyan-400 rounded-full h-2"></div>
+                  <div class="wave-bar w-1 bg-cyan-400 rounded-full h-7"></div>
+                  <div class="wave-bar w-1 bg-cyan-400 rounded-full h-4"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Emoji Picker Floating Modal Simulation -->
+          <div id="emoji-picker" data-layout-allow-overlap="true" class="absolute right-8 bottom-16 w-72 glass-card p-4 rounded-2xl border border-amber-500/40 opacity-0 scale-90 shadow-2xl z-20">
+            <div class="text-xs font-bold text-slate-300 mb-3 flex items-center justify-between">
+              <span>Sparta Emojis</span>
+              <span class="text-amber-400">Поиск... 🔍</span>
+            </div>
+            <div class="grid grid-cols-5 gap-2 text-2xl text-center">
+              <span class="p-1 hover:bg-slate-800 rounded">🥇</span>
+              <span class="p-1 hover:bg-slate-800 rounded">🥊</span>
+              <span class="p-1 hover:bg-slate-800 rounded">🔥</span>
+              <span class="p-1 hover:bg-slate-800 rounded">🏆</span>
+              <span class="p-1 hover:bg-slate-800 rounded">💪</span>
+              <span class="p-1 hover:bg-slate-800 rounded">🤸</span>
+              <span class="p-1 hover:bg-slate-800 rounded">🏊</span>
+              <span class="p-1 hover:bg-slate-800 rounded">⭐</span>
+              <span class="p-1 hover:bg-slate-800 rounded">⚡</span>
+              <span class="p-1 hover:bg-slate-800 rounded">🎯</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= SCENE 4: CALL TO ACTION (30s - 40s) ================= -->
+      <div id="scene-4" class="absolute inset-0 flex flex-col items-center justify-center px-24 z-10 opacity-0 pointer-events-none">
+        <div id="s4-card" data-layout-allow-overflow="true" class="w-[1000px] glass-card-gold p-12 rounded-3xl text-center flex flex-col items-center border border-amber-500/40 relative overflow-hidden">
+          <!-- Background Ambient Glow -->
+          <div data-layout-allow-overflow="true" class="absolute -top-24 -left-24 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+          <span id="s4-badge" class="px-5 py-2 rounded-full bg-amber-500/20 text-amber-300 font-semibold text-sm border border-amber-500/30 mb-6 uppercase tracking-wider">
+            Первое пробное занятие — БЕСПЛАТНО
+          </span>
+
+          <h2 id="s4-title" class="font-display font-black text-6xl text-white mb-6 leading-tight">
+            Присоединяйтесь к Команде <span class="gold-text-gradient">SPARTA</span>
+          </h2>
+
+          <p id="s4-sub" class="text-xl text-slate-300 max-w-2xl font-light mb-10 leading-relaxed">
+            Запишитесь на тренировку прямо сейчас и получите персональный план развития от лучших тренеров.
+          </p>
+
+          <!-- Large Glowing CTA Button -->
+          <button id="s4-btn" class="px-10 py-5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-red-500 text-slate-950 font-display font-extrabold text-2xl shadow-2xl gold-glow transform transition-all hover:scale-105 flex items-center gap-3">
+            <span>ЗАПИСАТЬСЯ НА ТРЕНИРОВКУ</span>
+            <span class="text-3xl">➔</span>
+          </button>
+
+          <!-- Contact Details Footer -->
+          <div id="s4-footer" class="flex items-center gap-12 mt-12 pt-8 border-t border-white/10 text-sm font-medium text-slate-400">
+            <span class="flex items-center gap-2">📍 ул. Спартаковская, 15</span>
+            <span class="flex items-center gap-2">📞 +7 (800) 555-35-35</span>
+            <span class="flex items-center gap-2 text-amber-400">🌐 sparta-sports.ru</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= GSAP TIMELINE MASTER ANIMATION ================= -->
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Ambient Orbs Pulse (continuous looping timeline)
+      gsap.to("#orb-gold", { duration: 6, scale: 1.2, x: 50, y: 50, repeat: 6, yoyo: true, ease: "sine.inOut" });
+      gsap.to("#orb-crimson", { duration: 8, scale: 1.15, x: -60, y: -40, repeat: 4, yoyo: true, ease: "sine.inOut" });
+
+      // ----------------- HEADER & SCENE 1 (0.0s - 10.0s) -----------------
+      tl.to("#app-header", { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 0.2);
+      
+      tl.to("#s1-shield", { opacity: 1, scale: 1, duration: 1.2, ease: "back.out(1.7)" }, 0.5);
+      tl.to("#s1-title", { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 1.2);
+      tl.to("#s1-subtitle", { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 1.8);
+      tl.to("#s1-pills", { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 2.4);
+
+      // Transition out Scene 1 (9.0s - 10.0s)
+      tl.to("#scene-1", { opacity: 0, scale: 0.95, duration: 0.8, ease: "power2.in" }, 9.0);
+
+      // ----------------- SCENE 2: DIRECTIONS & COACHES (10.0s - 20.0s) -----------------
+      tl.to("#scene-2", { opacity: 1, pointerEvents: "auto", duration: 0.8 }, 10.0);
+      tl.from("#s2-header", { opacity: 0, y: -30, duration: 0.8, ease: "power3.out" }, 10.2);
+      tl.from(".s2-card", { opacity: 0, y: 50, stagger: 0.2, duration: 0.8, ease: "power3.out" }, 10.6);
+      tl.from("#s2-coaches", { opacity: 0, y: 30, duration: 0.8, ease: "power3.out" }, 12.0);
+
+      // Transition out Scene 2 (19.0s - 20.0s)
+      tl.to("#scene-2", { opacity: 0, scale: 0.95, duration: 0.8, ease: "power2.in" }, 19.0);
+
+      // ----------------- SCENE 3: MESSENGER & EMOJI (20.0s - 30.0s) -----------------
+      tl.to("#scene-3", { opacity: 1, pointerEvents: "auto", duration: 0.8 }, 20.0);
+      tl.from("#s3-header", { opacity: 0, y: -30, duration: 0.8, ease: "power3.out" }, 20.2);
+      tl.from("#s3-chat", { opacity: 0, scale: 0.9, duration: 0.8, ease: "back.out(1.4)" }, 20.6);
+      
+      tl.to("#msg-1", { opacity: 1, x: 0, duration: 0.7, ease: "power3.out" }, 21.5);
+      tl.to("#msg-reactions", { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.7)" }, 22.4);
+      tl.to("#msg-2", { opacity: 1, x: 0, duration: 0.7, ease: "power3.out" }, 23.5);
+      
+      // Waveform pulse animation
+      tl.to(".wave-bar", { scaleY: 1.8, duration: 0.4, repeat: 5, yoyo: true, ease: "sine.inOut", stagger: 0.05 }, 24.0);
+      
+      // Emoji modal popup
+      tl.to("#emoji-picker", { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.7)" }, 25.5);
+
+      // Transition out Scene 3 (29.0s - 30.0s)
+      tl.to("#scene-3", { opacity: 0, scale: 0.95, duration: 0.8, ease: "power2.in" }, 29.0);
+
+      // ----------------- SCENE 4: CALL TO ACTION (30.0s - 40.0s) -----------------
+      tl.to("#scene-4", { opacity: 1, pointerEvents: "auto", duration: 0.8 }, 30.0);
+      tl.from("#s4-card", { opacity: 0, scale: 0.85, duration: 1, ease: "back.out(1.5)" }, 30.3);
+      tl.from("#s4-badge", { opacity: 0, y: -20, duration: 0.6 }, 31.0);
+      tl.from("#s4-title", { opacity: 0, y: 20, duration: 0.8 }, 31.4);
+      tl.from("#s4-sub", { opacity: 0, y: 20, duration: 0.8 }, 31.8);
+      tl.from("#s4-btn", { opacity: 0, scale: 0.8, duration: 0.8, ease: "back.out(2)" }, 32.4);
+      tl.from("#s4-footer", { opacity: 0, y: 20, duration: 0.8 }, 33.2);
+
+      // Button continuous gentle glow pulse
+      tl.to("#s4-btn", { scale: 1.04, duration: 1.2, repeat: 4, yoyo: true, ease: "sine.inOut" }, 33.5);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

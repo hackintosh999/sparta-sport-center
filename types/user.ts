@@ -1,0 +1,59 @@
+export type UserRole = 'user' | 'admin' | 'director' | 'coach' | 'parent' | 'trainer' | 'developer' | 'dev';
+export type UserStatus = 'active' | 'banned' | 'deleted' | 'inactive' | 'linked' | 'pending';
+
+export interface UserItem {
+    id: string;
+    email: string;
+    role: UserRole;
+    status: UserStatus;
+    name?: string;
+    phone?: string;
+    childPhone?: string;
+    parentName?: string;
+    parentFullName?: string;
+    parent_name?: string;
+    guardianName?: string;
+    parentInfo?: any;
+    parentPhone?: string;
+    parentEmail?: string;
+    childName?: string;
+    childFullName?: string;
+    childAge?: number | string;
+    childGender?: 'male' | 'female';
+    balance?: number;
+    bonuses?: number;
+    groupId?: string;
+    createdAt?: any;
+    updatedAt?: any;
+    avatarUrl?: string;
+    photoUrl?: string;
+    notes?: string;
+    displayName?: string;
+    assignedUid?: string;
+    originalName?: string;
+    targetGroupId?: string;
+    importedAt?: any;
+    childFirstName?: string;
+    childLastName?: string;
+    firstName?: string;
+    lastName?: string;
+    childBirthYear?: number | string;
+    isPendingRegistration?: boolean;
+    lastActive?: any;
+    subscription?: any;
+    walletBalance?: number;
+    totalSpent?: number;
+    verification?: any;
+    adminNotes?: string;
+    achievements?: any[];
+    ban?: any;
+    claimed?: boolean;
+    isClaimed?: boolean;
+    linkedParentId?: string;
+    linkedChildId?: string;
+    isStaff?: boolean;
+    isAdmin?: boolean;
+}
+
+export type User = UserItem;
+

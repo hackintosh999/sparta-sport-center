@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-08-01T11:21:53.871Z",
+  "projectRoot": "C:\\Users\\User\\Downloads\\sparta-sports-center",
+  "structure": {
+    "hasPackageJson": true,
+    "hasTsConfig": true,
+    "hasClaudeConfig": true,
+    "hasClaudeFlow": true
+  },
+  "scannedAt": 1785583313871
+}

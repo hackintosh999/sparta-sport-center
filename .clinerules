@@ -1,0 +1,16 @@
+# UI Layout Rules
+
+1. Sidebar Integration:
+   - All global action icons (`ThemeToggle`, `Notification Bell`, `Settings`) must reside strictly inside the left Sidebar Profile Card.
+   - ThemeToggle is used ONLY in User Dashboard Profile Card. Do NOT insert ThemeToggle into Admin Sidebar or floating page headers.
+
+2. Header Cleanliness:
+   - Never insert absolute/fixed floating action icons (ThemeToggle, duplicate bells, trophies) in page header rows or top-right corners. Keep dashboard/admin headers clean and minimal.
+
+3. Table Actions Standard:
+   - Use a single primary button (e.g., "+ Абонемент") + `MoreVertical` (3 dots) dropdown menu for secondary actions.
+   - Dropdown menus must strictly use `relative` parent triggers with `absolute right-0 top-full z-50` and dark backdrop styling (`bg-[#18181b] border border-white/10 shadow-2xl`).
+
+CRITICAL GIT RULE:
+- NEVER execute git commands (`git checkout`, `git restore`, `git reset`, `git revert`, `git stash`) without explicit, direct user authorization.
+- Do NOT roll back workspace files automatically. All file corrections must be performed via direct file editing.

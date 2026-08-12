@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Production build outputs
+dist
+dist-electron
+release
+release-build
+
+# Local environment & secrets
+.env
+.env.local
+.env.*.local
+*.db
+
+# Logs & temp
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.vscode
+.idea

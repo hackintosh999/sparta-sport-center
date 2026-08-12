@@ -1,0 +1,1633 @@
+{
+  "communities": {
+    "0": [
+      "components_landingpage",
+      "components_landingpage_coaches",
+      "components_landingpage_faq",
+      "components_landingpage_faqs",
+      "components_landingpage_features",
+      "components_landingpage_footer",
+      "components_landingpage_getpriceinfo",
+      "components_landingpage_hero",
+      "components_landingpage_landingpage",
+      "components_landingpage_marquee",
+      "components_landingpage_nav_items",
+      "components_landingpage_navbar",
+      "components_landingpage_programs",
+      "components_landingpage_staff_roles",
+      "components_landingpage_team",
+      "components_landingpage_whyus",
+      "components_membershipmodal",
+      "components_membershipmodal_membershipmodal",
+      "components_membershipmodal_membershipmodalprops",
+      "components_reviewssection",
+      "components_reviewssection_getvideoembedurl",
+      "components_reviewssection_reviewcard",
+      "components_reviewssection_reviewcardprops",
+      "components_reviewssection_reviewssection",
+      "components_reviewssection_reviewssectionprops",
+      "components_schedulesection",
+      "components_schedulesection_getcoachimage",
+      "components_schedulesection_schedulesection",
+      "components_termsmodal",
+      "components_termsmodal_termsmodal",
+      "components_termsmodal_termsmodalprops",
+      "components_uicomponents_container",
+      "components_uicomponents_sectionheader",
+      "data_programs",
+      "data_programs_programs",
+      "pages_admin_adminreviews",
+      "pages_admin_adminreviews_adminreviews",
+      "pages_admin_adminreviews_getvideoembedurl",
+      "pages_admin_adminreviews_reviewadmincard",
+      "pages_admin_adminreviews_reviewadmincardprops",
+      "pages_admin_adminschedule",
+      "pages_admin_adminschedule_adminschedule",
+      "services_schedulesync",
+      "services_schedulesync_triggerreversesync",
+      "services_schedulesync_triggerschedulesync",
+      "src_data_programs",
+      "src_types_index",
+      "types",
+      "types_coach",
+      "types_faqitem",
+      "types_feature",
+      "types_index",
+      "types_navitem",
+      "types_program",
+      "types_review",
+      "types_review_review",
+      "types_review_reviewreply",
+      "types_scheduleday",
+      "types_scheduleitem"
+    ],
+    "1": [
+      "claude_helpers_learning_service",
+      "claude_helpers_learning_service_config",
+      "claude_helpers_learning_service_data_dir",
+      "claude_helpers_learning_service_db_path",
+      "claude_helpers_learning_service_dirname",
+      "claude_helpers_learning_service_embeddingservice",
+      "claude_helpers_learning_service_embeddingservice_constructor",
+      "claude_helpers_learning_service_embeddingservice_embed",
+      "claude_helpers_learning_service_embeddingservice_embedbatch",
+      "claude_helpers_learning_service_embeddingservice_fallbackembed",
+      "claude_helpers_learning_service_embeddingservice_initialize",
+      "claude_helpers_learning_service_filename",
+      "claude_helpers_learning_service_hnswindex",
+      "claude_helpers_learning_service_hnswindex_add",
+      "claude_helpers_learning_service_hnswindex_constructor",
+      "claude_helpers_learning_service_hnswindex_cosinedistance",
+      "claude_helpers_learning_service_hnswindex_cosinesimilarity",
+      "claude_helpers_learning_service_hnswindex_deserialize",
+      "claude_helpers_learning_service_hnswindex_findnearest",
+      "claude_helpers_learning_service_hnswindex_insertintograph",
+      "claude_helpers_learning_service_hnswindex_pruneconnections",
+      "claude_helpers_learning_service_hnswindex_remove",
+      "claude_helpers_learning_service_hnswindex_removefromgraph",
+      "claude_helpers_learning_service_hnswindex_search",
+      "claude_helpers_learning_service_hnswindex_searchgraph",
+      "claude_helpers_learning_service_hnswindex_serialize",
+      "claude_helpers_learning_service_initializedatabase",
+      "claude_helpers_learning_service_learningservice",
+      "claude_helpers_learning_service_learningservice_buffertofloat32array",
+      "claude_helpers_learning_service_learningservice_checkpromotion",
+      "claude_helpers_learning_service_learningservice_close",
+      "claude_helpers_learning_service_learningservice_consolidate",
+      "claude_helpers_learning_service_learningservice_constructor",
+      "claude_helpers_learning_service_learningservice_cosinesimilarity",
+      "claude_helpers_learning_service_learningservice_exportsession",
+      "claude_helpers_learning_service_learningservice_getstate",
+      "claude_helpers_learning_service_learningservice_getstats",
+      "claude_helpers_learning_service_learningservice_initialize",
+      "claude_helpers_learning_service_learningservice_loadindexes",
+      "claude_helpers_learning_service_learningservice_pruneshortterm",
+      "claude_helpers_learning_service_learningservice_recordpatternusage",
+      "claude_helpers_learning_service_learningservice_searchpatterns",
+      "claude_helpers_learning_service_learningservice_setstate",
+      "claude_helpers_learning_service_learningservice_storepattern",
+      "claude_helpers_learning_service_learningservice_updatepatternusage",
+      "claude_helpers_learning_service_main",
+      "claude_helpers_learning_service_metrics_path",
+      "claude_helpers_learning_service_project_root"
+    ],
+    "2": [
+      "app",
+      "app_adminachievements",
+      "app_adminbans",
+      "app_adminbroadcasts",
+      "app_admincomments",
+      "app_admindashboard",
+      "app_admindirections",
+      "app_adminfinance",
+      "app_admingroups",
+      "app_adminmessages",
+      "app_adminnews",
+      "app_adminpromos",
+      "app_adminrequests",
+      "app_adminreviews",
+      "app_adminscanner",
+      "app_adminschedule",
+      "app_adminsettings",
+      "app_adminshop",
+      "app_adminteam",
+      "app_adminusers",
+      "app_broadcasts",
+      "app_dashboard",
+      "app_directordashboard",
+      "app_educationinfo",
+      "app_favorites",
+      "app_legallayout",
+      "app_productdetails",
+      "app_publicoffer",
+      "app_referralredirect",
+      "app_requisites",
+      "app_resetpassword",
+      "app_shop",
+      "components_admin_adminroute",
+      "components_admin_adminroute_adminroute",
+      "components_admin_directorroute",
+      "components_admin_directorroute_directorroute",
+      "components_electron_windowtitlebar",
+      "components_electron_windowtitlebar_windowtitlebar",
+      "components_loadingscreen",
+      "components_loadingscreen_loadingscreen",
+      "components_maintenancescreen",
+      "components_maintenancescreen_maintenancescreen",
+      "components_maintenancescreen_maintenancescreenprops"
+    ],
+    "3": [
+      "claude_helpers_auto_memory_hook",
+      "claude_helpers_auto_memory_hook_data_dir",
+      "claude_helpers_auto_memory_hook_dim",
+      "claude_helpers_auto_memory_hook_dirname",
+      "claude_helpers_auto_memory_hook_doimport",
+      "claude_helpers_auto_memory_hook_dostatus",
+      "claude_helpers_auto_memory_hook_dosync",
+      "claude_helpers_auto_memory_hook_filename",
+      "claude_helpers_auto_memory_hook_gracefulexit",
+      "claude_helpers_auto_memory_hook_jsonfilebackend",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_bulkdelete",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_bulkinsert",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_clearnamespace",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_constructor",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_count",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_delete",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_get",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_getbykey",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_getstats",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_healthcheck",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_initialize",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_listnamespaces",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_persist",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_query",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_search",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_shutdown",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_store",
+      "claude_helpers_auto_memory_hook_jsonfilebackend_update",
+      "claude_helpers_auto_memory_hook_loadmemorypackage",
+      "claude_helpers_auto_memory_hook_log",
+      "claude_helpers_auto_memory_hook_project_root",
+      "claude_helpers_auto_memory_hook_readconfig",
+      "claude_helpers_auto_memory_hook_store_path",
+      "claude_helpers_auto_memory_hook_success",
+      "claude_helpers_auto_memory_hook_trackbackend",
+      "claude_helpers_auto_memory_hook_warnmemoryunavailable",
+      "components_gifpicker",
+      "components_gifpicker_fallback_gifs",
+      "components_gifpicker_gifpicker",
+      "components_gifpicker_gifpickerprops",
+      "docref_adr_0048"
+    ],
+    "4": [
+      "ref",
+      "ref_dom",
+      "ref_dom_iterable",
+      "ref_es2022",
+      "ref_node",
+      "ref_scratch",
+      "ref_scripts",
+      "ref_tmp",
+      "ref_vite_client",
+      "tsconfig",
+      "tsconfig_compileroptions",
+      "tsconfig_compileroptions_allowimportingtsextensions",
+      "tsconfig_compileroptions_allowjs",
+      "tsconfig_compileroptions_experimentaldecorators",
+      "tsconfig_compileroptions_isolatedmodules",
+      "tsconfig_compileroptions_jsx",
+      "tsconfig_compileroptions_lib",
+      "tsconfig_compileroptions_module",
+      "tsconfig_compileroptions_moduledetection",
+      "tsconfig_compileroptions_moduleresolution",
+      "tsconfig_compileroptions_noemit",
+      "tsconfig_compileroptions_paths",
+      "tsconfig_compileroptions_skiplibcheck",
+      "tsconfig_compileroptions_target",
+      "tsconfig_compileroptions_types",
+      "tsconfig_compileroptions_usedefineforclassfields",
+      "tsconfig_exclude",
+      "tsconfig_paths"
+    ],
+    "5": [
+      "app_app",
+      "components_bannedscreen",
+      "components_bannedscreen_bannedscreen",
+      "components_bannedscreen_bannedscreenprops",
+      "components_broadcastchat",
+      "components_broadcastchat_broadcastchat",
+      "components_broadcastchat_broadcastchatprops",
+      "components_broadcastchat_message",
+      "components_broadcastreactions",
+      "components_broadcastreactions_broadcastreactions",
+      "components_broadcastreactions_broadcastreactionsprops",
+      "components_broadcastreactions_emojis",
+      "components_broadcastreactions_reaction",
+      "components_groupssection",
+      "components_groupssection_coach_names",
+      "components_groupssection_groupssection",
+      "components_leavereviewmodal",
+      "components_leavereviewmodal_leavereviewmodal",
+      "components_leavereviewmodal_leavereviewmodalprops",
+      "context_authcontext_useauth",
+      "pages_admin_admindashboard",
+      "pages_admin_admindashboard_admindashboard",
+      "pages_admin_directordashboard",
+      "pages_admin_directordashboard_category_metadata",
+      "pages_admin_directordashboard_colors",
+      "pages_admin_directordashboard_directordashboard",
+      "types_shop_group"
+    ],
+    "6": [
+      "components_mediaviewermodal",
+      "components_mediaviewermodal_mediaviewermodal",
+      "components_mediaviewermodal_mediaviewermodalprops",
+      "components_newsmodal",
+      "components_newsmodal_categories",
+      "components_newsmodal_commentitem",
+      "components_newsmodal_getvideoembedurl",
+      "components_newsmodal_newsmodal",
+      "components_newsmodal_newsmodalprops",
+      "components_newsmodal_striphtml",
+      "components_newssection",
+      "components_newssection_categories",
+      "components_newssection_newssection",
+      "components_newssection_smartimage",
+      "components_newssection_striphtml",
+      "components_relatednewslist",
+      "components_relatednewslist_category_labels",
+      "components_relatednewslist_relatednewslist",
+      "components_relatednewslist_relatednewslistprops",
+      "components_sharemodal",
+      "components_sharemodal_sharemodal",
+      "components_sharemodal_sharemodalprops",
+      "types_news",
+      "types_news_newscategory",
+      "types_news_newscategoryoption",
+      "types_news_newsitem"
+    ],
+    "7": [
+      "claude_helpers_swarm_hooks",
+      "claude_helpers_swarm_hooks_accept_handoff",
+      "claude_helpers_swarm_hooks_broadcast_context",
+      "claude_helpers_swarm_hooks_broadcast_pattern",
+      "claude_helpers_swarm_hooks_complete_handoff",
+      "claude_helpers_swarm_hooks_get_agents",
+      "claude_helpers_swarm_hooks_get_consensus_status",
+      "claude_helpers_swarm_hooks_get_messages",
+      "claude_helpers_swarm_hooks_get_pattern_broadcasts",
+      "claude_helpers_swarm_hooks_get_pending_handoffs",
+      "claude_helpers_swarm_hooks_get_stats",
+      "claude_helpers_swarm_hooks_import_pattern",
+      "claude_helpers_swarm_hooks_init_stats",
+      "claude_helpers_swarm_hooks_initiate_consensus",
+      "claude_helpers_swarm_hooks_initiate_handoff",
+      "claude_helpers_swarm_hooks_post_task_swarm_update",
+      "claude_helpers_swarm_hooks_pre_task_swarm_context",
+      "claude_helpers_swarm_hooks_register_agent",
+      "claude_helpers_swarm_hooks_resolve_consensus",
+      "claude_helpers_swarm_hooks_send_message",
+      "claude_helpers_swarm_hooks_sh__entry",
+      "claude_helpers_swarm_hooks_update_stat",
+      "claude_helpers_swarm_hooks_vote_consensus"
+    ],
+    "8": [
+      "components_profile_coach_messagestab",
+      "components_profile_coach_messagestab_chatparticipant",
+      "components_profile_coach_messagestab_messagestab",
+      "components_profile_coach_messagestab_messagestabprops",
+      "components_profile_coachchat",
+      "components_profile_coachchat_audioplayer",
+      "components_profile_coachchat_coachchat",
+      "components_profile_coachchat_coachchatprops",
+      "components_profile_coachsection",
+      "components_profile_coachsection_coachsection",
+      "components_profile_coachsection_coachsectionprops",
+      "components_profile_coachsection_default_exercises",
+      "components_profile_coachsection_exercise_categories",
+      "components_profile_coachsection_muscle_groups",
+      "context_themecontext",
+      "context_themecontext_theme",
+      "context_themecontext_themecontext",
+      "context_themecontext_themecontexttype",
+      "context_themecontext_themeprovider",
+      "context_themecontext_usetheme",
+      "hooks_usecoachanalytics",
+      "hooks_usecoachanalytics_usecoachanalytics"
+    ],
+    "9": [
+      "components_profile_coachcalendar",
+      "components_profile_coachcalendar_coachcalendar",
+      "components_profile_coachcalendar_coachcalendarprops",
+      "components_profile_friendssection",
+      "components_profile_friendssection_friendssection",
+      "components_profile_friendssection_friendssectionprops",
+      "components_profile_linkingrequestbanner",
+      "components_profile_linkingrequestbanner_linkingrequest",
+      "components_profile_membershipreceipt",
+      "components_profile_membershipreceipt_membershipreceipt",
+      "components_profile_membershipreceipt_membershipreceiptprops",
+      "components_profile_progresssection",
+      "components_profile_progresssection_progresssection",
+      "components_profile_progresssection_progresssectionprops",
+      "components_uicomponents",
+      "components_uicomponents_button",
+      "components_uicomponents_buttonprops",
+      "components_uicomponents_cardprops",
+      "components_uicomponents_glasscard",
+      "components_uicomponents_sectionheaderprops",
+      "pages_resetpassword",
+      "pages_resetpassword_resetpassword"
+    ],
+    "10": [
+      "firebase_db",
+      "pages_admin_adminbans",
+      "pages_admin_adminbans_adminbans",
+      "pages_admin_admincomments",
+      "pages_admin_admincomments_admincomments",
+      "pages_admin_admindirections",
+      "pages_admin_admindirections_admindirections",
+      "pages_admin_admindirections_default_programs",
+      "pages_admin_admindirections_program",
+      "pages_admin_adminfinance",
+      "pages_admin_adminfinance_adminfinance",
+      "pages_admin_adminfinance_colors",
+      "pages_admin_adminfinance_expense",
+      "pages_admin_adminfinance_transaction",
+      "pages_admin_adminpromos",
+      "pages_admin_adminpromos_adminpromos",
+      "pages_admin_adminpromos_promocode",
+      "pages_admin_adminrequests",
+      "pages_admin_adminrequests_adminrequests",
+      "pages_admin_adminsettings",
+      "pages_admin_adminsettings_adminsettings",
+      "pages_admin_adminsettings_savebutton"
+    ],
+    "11": [
+      "autoprefixer",
+      "electron_builder",
+      "electron_serve",
+      "eslint_plugin_react_hooks",
+      "globals",
+      "package_devdependencies",
+      "package_devdependencies_autoprefixer",
+      "package_devdependencies_electron_builder",
+      "package_devdependencies_electron_serve",
+      "package_devdependencies_eslint_plugin_react_hooks",
+      "package_devdependencies_globals",
+      "package_devdependencies_prettier",
+      "package_devdependencies_tailwindcss_postcss",
+      "package_devdependencies_types_node",
+      "package_devdependencies_typescript",
+      "prettier",
+      "tailwindcss_postcss",
+      "types_node",
+      "typescript"
+    ],
+    "12": [
+      "claude_helpers_learning_service_hnswindex_size",
+      "components_cartsidebar",
+      "components_cartsidebar_cartsidebar",
+      "components_seo",
+      "components_seo_seo",
+      "components_seo_seoprops",
+      "context_cartcontext_cartprovider",
+      "context_cartcontext_usecart",
+      "context_favoritescontext",
+      "context_favoritescontext_favoritescontext",
+      "context_favoritescontext_favoritescontexttype",
+      "context_favoritescontext_favoritesprovider",
+      "context_favoritescontext_usefavorites",
+      "pages_favorites",
+      "pages_favorites_favorites",
+      "pages_productdetails_productdetails",
+      "pages_shop",
+      "pages_shop_shop"
+    ],
+    "13": [
+      "components_admin_adminlayout",
+      "components_admin_adminlayout_adminlayout",
+      "components_dashboard",
+      "components_dashboard_directordashboard",
+      "components_dashboard_staff_roles",
+      "components_notificationsmodal",
+      "components_notificationsmodal_notificationcategory",
+      "components_notificationsmodal_notificationsmodal",
+      "components_notificationsmodal_notificationsmodalprops",
+      "components_profile_activitysection",
+      "components_profile_activitysection_activitysection",
+      "components_profile_activitysection_activitysectionprops",
+      "components_profile_linkingrequestbanner_linkingrequestbanner",
+      "components_themetoggle",
+      "components_themetoggle_themetoggle",
+      "components_topupmodal",
+      "components_topupmodal_topupmodal",
+      "components_topupmodal_topupmodalprops"
+    ],
+    "14": [
+      "components_profile_createpollmodal",
+      "components_profile_createpollmodal_createpollmodal",
+      "components_profile_createpollmodal_createpollmodalprops",
+      "components_profile_groupchat",
+      "components_profile_groupchat_animatedemoji",
+      "components_profile_groupchat_circularprogress",
+      "components_profile_groupchat_copyimagetoclipboard",
+      "components_profile_groupchat_downloadfile",
+      "components_profile_groupchat_groupchat",
+      "components_profile_groupchat_groupchatprops",
+      "components_profile_groupchat_participantitem",
+      "components_profile_groupchat_participantitemprops",
+      "components_profile_groupchat_verificationbadge",
+      "components_profile_groupchat_weathermodal",
+      "components_profile_groupchat_weatherwidget",
+      "components_profile_pollmessage",
+      "components_profile_pollmessage_pollmessage",
+      "components_profile_pollmessage_pollmessageprops"
+    ],
+    "15": [
+      "claude_helpers_metrics_db",
+      "claude_helpers_metrics_db_calculatemoduleprogress",
+      "claude_helpers_metrics_db_checksecurityfile",
+      "claude_helpers_metrics_db_countfilesandlines",
+      "claude_helpers_metrics_db_countprocesses",
+      "claude_helpers_metrics_db_db_path",
+      "claude_helpers_metrics_db_dbdir",
+      "claude_helpers_metrics_db_dirname",
+      "claude_helpers_metrics_db_exporttojson",
+      "claude_helpers_metrics_db_getmetricsjson",
+      "claude_helpers_metrics_db_initdatabase",
+      "claude_helpers_metrics_db_main",
+      "claude_helpers_metrics_db_persist",
+      "claude_helpers_metrics_db_project_root",
+      "claude_helpers_metrics_db_syncmetrics",
+      "claude_helpers_metrics_db_utility_packages",
+      "claude_helpers_metrics_db_v3_dir"
+    ],
+    "16": [
+      "claude_helpers_statusline",
+      "claude_helpers_statusline_banner_version",
+      "claude_helpers_statusline_c",
+      "claude_helpers_statusline_config",
+      "claude_helpers_statusline_execsync_execfilesync",
+      "claude_helpers_statusline_fs",
+      "claude_helpers_statusline_generatejson",
+      "claude_helpers_statusline_generatestatusline",
+      "claude_helpers_statusline_getlearningstats",
+      "claude_helpers_statusline_getsecuritystatus",
+      "claude_helpers_statusline_getswarmstatus",
+      "claude_helpers_statusline_getsystemmetrics",
+      "claude_helpers_statusline_getuserinfo",
+      "claude_helpers_statusline_getv3progress",
+      "claude_helpers_statusline_path",
+      "claude_helpers_statusline_progressbar",
+      "claude_helpers_statusline_resolvebannerversion"
+    ],
+    "17": [
+      "components_sizeadvisor",
+      "components_sizeadvisor_sizeadvisor",
+      "components_sizeadvisor_sizeadvisorprops",
+      "package_dependencies_xlsx",
+      "pages_admin_admingroups",
+      "pages_admin_admingroups_admingroups",
+      "pages_admin_admingroups_calculateage",
+      "types_shop",
+      "types_shop_bandetails",
+      "types_shop_experiencelevel",
+      "types_shop_reviewreply",
+      "types_shop_scheduleitem",
+      "types_shop_sizedata",
+      "types_shop_temperament",
+      "types_shop_user",
+      "xlsx"
+    ],
+    "18": [
+      "components_admin_replytemplatesmodal",
+      "components_admin_replytemplatesmodal_replytemplatesmodal",
+      "components_admin_replytemplatesmodal_replytemplatesmodalprops",
+      "components_admin_replytemplatesmodal_template",
+      "components_spartavideoplayer",
+      "components_spartavideoplayer_spartavideoplayer",
+      "components_spartavideoplayer_spartavideoplayerprops",
+      "pages_admin_adminmessages",
+      "pages_admin_adminmessages_adminmessages",
+      "pages_admin_adminmessages_colors",
+      "pages_admin_adminmessages_isonline",
+      "pages_admin_adminmessages_message",
+      "pages_admin_adminmessages_messagehistory",
+      "pages_admin_adminmessages_messagetag",
+      "pages_admin_adminmessages_note"
+    ],
+    "19": [
+      "components_contactmodal",
+      "components_contactmodal_contactmodal",
+      "components_contactmodal_contactmodalprops",
+      "components_contactmodal_messagehistory",
+      "components_contactmodal_ticket",
+      "components_profile_userrequests",
+      "components_profile_userrequests_messagehistory",
+      "components_profile_userrequests_ticket",
+      "components_profile_userrequests_userrequests",
+      "components_profile_userrequests_userrequestsprops",
+      "constants_supportfaq",
+      "constants_supportfaq_quick_categories",
+      "constants_supportfaq_quick_subjects",
+      "constants_supportfaq_quickcategory",
+      "constants_supportfaq_support_faq"
+    ],
+    "20": [
+      "components_profile_attendancesection",
+      "components_profile_attendancesection_attendancesection",
+      "components_profile_attendancesection_attendancesectionprops",
+      "components_profile_linkchildmodal",
+      "components_profile_linkchildmodal_linkchildmodal",
+      "components_profile_linkchildmodal_linkchildmodalprops",
+      "components_profile_parentdashboard",
+      "components_profile_parentdashboard_parentdashboard",
+      "components_profile_parentdashboard_parentdashboardprops",
+      "services_userservice",
+      "services_userservice_findchildtolink",
+      "services_userservice_getchildrenprofiles",
+      "services_userservice_linkparenttochild",
+      "services_userservice_linkparenttoregistrychild",
+      "services_userservice_sendlinkingrequest"
+    ],
+    "21": [
+      "components_profileviewmodal",
+      "components_profileviewmodal_profileviewmodalprops",
+      "context_authcontext",
+      "context_authcontext_authcontext",
+      "context_authcontext_authcontexttype",
+      "context_authcontext_authprovider",
+      "firebase_app",
+      "firebase_auth",
+      "firebase_firebaseconfig",
+      "firebase_googleprovider",
+      "firebase_storage",
+      "firebase_ts_firebase",
+      "index",
+      "index_root",
+      "index_rootelement"
+    ],
+    "22": [
+      "claude_helpers_learning_hooks",
+      "claude_helpers_learning_hooks_error",
+      "claude_helpers_learning_hooks_generate_session_id",
+      "claude_helpers_learning_hooks_get_stats",
+      "claude_helpers_learning_hooks_log",
+      "claude_helpers_learning_hooks_record_usage",
+      "claude_helpers_learning_hooks_run_benchmark",
+      "claude_helpers_learning_hooks_search_patterns",
+      "claude_helpers_learning_hooks_session_end",
+      "claude_helpers_learning_hooks_session_start",
+      "claude_helpers_learning_hooks_sh__entry",
+      "claude_helpers_learning_hooks_store_pattern",
+      "claude_helpers_learning_hooks_success",
+      "claude_helpers_learning_hooks_warn"
+    ],
+    "23": [
+      "claude_helpers_swarm_comms",
+      "claude_helpers_swarm_comms_batch_add",
+      "claude_helpers_swarm_comms_batch_flush",
+      "claude_helpers_swarm_comms_batch_flush_all",
+      "claude_helpers_swarm_comms_broadcast_pattern_async",
+      "claude_helpers_swarm_comms_enqueue",
+      "claude_helpers_swarm_comms_get_comms_stats",
+      "claude_helpers_swarm_comms_pool_acquire",
+      "claude_helpers_swarm_comms_pool_init",
+      "claude_helpers_swarm_comms_pool_release",
+      "claude_helpers_swarm_comms_process_queue",
+      "claude_helpers_swarm_comms_sh__entry",
+      "claude_helpers_swarm_comms_start_consensus_async",
+      "claude_helpers_swarm_comms_vote_async"
+    ],
+    "24": [
+      "claude_helpers_daemon_manager",
+      "claude_helpers_daemon_manager_error",
+      "claude_helpers_daemon_manager_is_running",
+      "claude_helpers_daemon_manager_log",
+      "claude_helpers_daemon_manager_restart_all",
+      "claude_helpers_daemon_manager_sh__entry",
+      "claude_helpers_daemon_manager_show_status",
+      "claude_helpers_daemon_manager_start_all",
+      "claude_helpers_daemon_manager_start_metrics_daemon",
+      "claude_helpers_daemon_manager_start_swarm_monitor",
+      "claude_helpers_daemon_manager_stop_all",
+      "claude_helpers_daemon_manager_stop_daemon",
+      "claude_helpers_daemon_manager_success"
+    ],
+    "25": [
+      "components_authmodal",
+      "components_authmodal_authmodal",
+      "components_authmodal_authmodalprops",
+      "components_smartenrollmentwizard",
+      "components_smartenrollmentwizard_animatednumber",
+      "components_smartenrollmentwizard_experience_levels",
+      "components_smartenrollmentwizard_goals",
+      "components_smartenrollmentwizard_motivations",
+      "components_smartenrollmentwizard_smartenrollmentwizard",
+      "components_smartenrollmentwizard_smartenrollmentwizardprops",
+      "components_smartenrollmentwizard_temperaments",
+      "utils_studentlinking",
+      "utils_studentlinking_linkstudenttogroup"
+    ],
+    "26": [
+      "components_reviewmediamodal",
+      "components_reviewmediamodal_reviewmediamodal",
+      "components_reviewmediamodal_reviewmediamodalprops",
+      "components_videoplayer",
+      "components_videoplayer_videoplayer",
+      "components_videoplayer_videoplayerprops",
+      "lib_supabase",
+      "pages_productdetails",
+      "supabase",
+      "supabase_supabase",
+      "types_shop_review",
+      "types_shop_sizechart"
+    ],
+    "27": [
+      "package_scripts",
+      "package_scripts_android_add",
+      "package_scripts_android_open",
+      "package_scripts_android_sync",
+      "package_scripts_build",
+      "package_scripts_dev",
+      "package_scripts_electron_build",
+      "package_scripts_electron_dev",
+      "package_scripts_format",
+      "package_scripts_lint",
+      "package_scripts_lint_fix",
+      "package_scripts_seed"
+    ],
+    "28": [
+      "canvas_confetti",
+      "capacitor_cli",
+      "formidable",
+      "package_dependencies",
+      "package_dependencies_canvas_confetti",
+      "package_dependencies_capacitor_cli",
+      "package_dependencies_formidable",
+      "package_dependencies_react_three_drei",
+      "package_dependencies_types_http_proxy_middleware",
+      "react_three_drei",
+      "types_http_proxy_middleware"
+    ],
+    "29": [
+      "claude_helpers_auto_commit",
+      "claude_helpers_auto_commit_auto_commit",
+      "claude_helpers_auto_commit_batch_commit",
+      "claude_helpers_auto_commit_count_changes",
+      "claude_helpers_auto_commit_error",
+      "claude_helpers_auto_commit_file_commit",
+      "claude_helpers_auto_commit_has_changes",
+      "claude_helpers_auto_commit_log",
+      "claude_helpers_auto_commit_push_only",
+      "claude_helpers_auto_commit_sh__entry",
+      "claude_helpers_auto_commit_warn"
+    ],
+    "30": [
+      "claude_helpers_sync_v3_metrics",
+      "claude_helpers_sync_v3_metrics_calculate_ddd_progress",
+      "claude_helpers_sync_v3_metrics_calculate_module_progress",
+      "claude_helpers_sync_v3_metrics_check_security_status",
+      "claude_helpers_sync_v3_metrics_count_domains",
+      "claude_helpers_sync_v3_metrics_count_modules",
+      "claude_helpers_sync_v3_metrics_count_total_files",
+      "claude_helpers_sync_v3_metrics_count_total_lines",
+      "claude_helpers_sync_v3_metrics_log",
+      "claude_helpers_sync_v3_metrics_sh__entry",
+      "claude_helpers_sync_v3_metrics_sync_metrics"
+    ],
+    "31": [
+      "components_admin_richtexteditor",
+      "components_admin_richtexteditor_colors",
+      "components_admin_richtexteditor_richtexteditor",
+      "components_admin_richtexteditor_richtexteditorprops",
+      "pages_admin_adminnews",
+      "pages_admin_adminnews_adminnews",
+      "pages_admin_adminnews_categories",
+      "pages_admin_adminnews_getvideoembedurl",
+      "pages_admin_adminnews_newsitem",
+      "pages_admin_adminnews_statusbadge",
+      "pages_admin_adminnews_striphtml"
+    ],
+    "32": [
+      "components_broadcastarchivemodal",
+      "components_broadcastarchivemodal_broadcastarchivemodal",
+      "components_broadcastarchivemodal_broadcastarchivemodalprops",
+      "pages_admin_adminbroadcasts",
+      "pages_admin_adminbroadcasts_adminbroadcasts",
+      "pages_admin_adminbroadcasts_getvideoembedurl",
+      "pages_broadcasts",
+      "pages_broadcasts_broadcasts",
+      "pages_broadcasts_useviewers",
+      "types_broadcast",
+      "types_broadcast_broadcast"
+    ],
+    "33": [
+      "components_profile_achievementslist",
+      "components_profile_achievementslist_achievementcard",
+      "components_profile_achievementslist_achievementcardprops",
+      "components_profile_achievementslist_achievementslist",
+      "components_profile_achievementslist_achievementslistprops",
+      "components_profile_achievementslist_viewer3d",
+      "pages_admin_adminachievements",
+      "pages_admin_adminachievements_adminachievements",
+      "pages_admin_adminachievements_viewer3d",
+      "types_shop_achievementdefinition",
+      "types_shop_userachievement"
+    ],
+    "34": [
+      "components_profile_magictransfer",
+      "components_profile_magictransfer_magictransfer",
+      "components_profile_magictransfer_magictransferprops",
+      "components_profile_magictransfer_transfermode",
+      "components_trialmodal",
+      "components_trialmodal_trialmodal",
+      "components_trialmodal_trialmodalprops",
+      "utils_storage",
+      "utils_storage_performemergencycleanup",
+      "utils_storage_performhardreset",
+      "utils_storage_safelocalstorage"
+    ],
+    "35": [
+      "package",
+      "package_build",
+      "package_build_appid",
+      "package_build_directories",
+      "package_build_productname",
+      "package_directories_output",
+      "package_main",
+      "package_name",
+      "package_private",
+      "package_type",
+      "package_version"
+    ],
+    "36": [
+      "claude_helpers_adr_compliance",
+      "claude_helpers_adr_compliance_adrs",
+      "claude_helpers_adr_compliance_check_adr_001",
+      "claude_helpers_adr_compliance_check_adr_002",
+      "claude_helpers_adr_compliance_check_adr_003",
+      "claude_helpers_adr_compliance_check_adr_005",
+      "claude_helpers_adr_compliance_check_adr_008",
+      "claude_helpers_adr_compliance_check_compliance",
+      "claude_helpers_adr_compliance_sh__entry",
+      "claude_helpers_adr_compliance_should_run"
+    ],
+    "37": [
+      "claude_helpers_swarm_monitor",
+      "claude_helpers_swarm_monitor_check_once",
+      "claude_helpers_swarm_monitor_count_active_processes",
+      "claude_helpers_swarm_monitor_error",
+      "claude_helpers_swarm_monitor_log",
+      "claude_helpers_swarm_monitor_monitor_continuous",
+      "claude_helpers_swarm_monitor_sh__entry",
+      "claude_helpers_swarm_monitor_success",
+      "claude_helpers_swarm_monitor_update_activity_metrics",
+      "claude_helpers_swarm_monitor_warn"
+    ],
+    "38": [
+      "components_profile_statssection",
+      "components_profile_statssection_statssection",
+      "components_profile_statssection_statssectionprops",
+      "pages_admin_adminusers",
+      "pages_admin_adminusers_adminusers",
+      "types_user",
+      "types_user_user",
+      "types_user_useritem",
+      "types_user_userrole",
+      "types_user_userstatus"
+    ],
+    "39": [
+      "components_shop_shoptoast",
+      "components_shop_shoptoast_shoptoast",
+      "components_shop_shoptoast_shoptoastcontainer",
+      "components_shop_shoptoast_shoptoastprops",
+      "components_shop_shoptoast_toasttype",
+      "context_cartcontext",
+      "context_cartcontext_cartcontext",
+      "context_cartcontext_cartcontexttype",
+      "types_shop_cartitem",
+      "types_shop_product"
+    ],
+    "40": [
+      "utils_soundmanager",
+      "utils_soundmanager_soundmanager",
+      "utils_soundmanager_soundmanager_constructor",
+      "utils_soundmanager_soundmanager_playsound",
+      "utils_soundmanager_soundmanager_playstart",
+      "utils_soundmanager_soundmanager_playtension",
+      "utils_soundmanager_soundmanager_playtick",
+      "utils_soundmanager_soundmanager_playwin",
+      "utils_soundmanager_soundmanager_preloadsounds",
+      "utils_soundmanager_soundmanager_togglemute"
+    ],
+    "41": [
+      "claude_helpers_checkpoint_manager",
+      "claude_helpers_checkpoint_manager_clean_checkpoints",
+      "claude_helpers_checkpoint_manager_diff_checkpoint",
+      "claude_helpers_checkpoint_manager_list_checkpoints",
+      "claude_helpers_checkpoint_manager_rollback_checkpoint",
+      "claude_helpers_checkpoint_manager_sh__entry",
+      "claude_helpers_checkpoint_manager_show_checkpoint",
+      "claude_helpers_checkpoint_manager_show_help",
+      "claude_helpers_checkpoint_manager_show_summary"
+    ],
+    "42": [
+      "claude_helpers_memory",
+      "claude_helpers_memory_commands",
+      "claude_helpers_memory_fs",
+      "claude_helpers_memory_loadmemory",
+      "claude_helpers_memory_memory_dir",
+      "claude_helpers_memory_memory_file",
+      "claude_helpers_memory_path",
+      "claude_helpers_memory_savememory",
+      "claude_helpers_memory_value"
+    ],
+    "43": [
+      "env_var_claude_flow_hooks_enabled",
+      "env_var_claude_flow_max_agents",
+      "env_var_claude_flow_memory_backend",
+      "env_var_claude_flow_mode",
+      "env_var_claude_flow_topology",
+      "env_var_npm_config_update_notifier",
+      "mcp",
+      "mcp_command_cmd",
+      "mcp_mcp_server_claude_flow"
+    ],
+    "44": [
+      "claude_helpers_perf_worker",
+      "claude_helpers_perf_worker_benchmark_memory",
+      "claude_helpers_perf_worker_benchmark_search",
+      "claude_helpers_perf_worker_benchmark_startup",
+      "claude_helpers_perf_worker_run_benchmarks",
+      "claude_helpers_perf_worker_run_deep_benchmark",
+      "claude_helpers_perf_worker_sh__entry",
+      "claude_helpers_perf_worker_should_run"
+    ],
+    "45": [
+      "claude_helpers_router",
+      "claude_helpers_router_agent_capabilities",
+      "claude_helpers_router_buildpattern",
+      "claude_helpers_router_compiled_patterns",
+      "claude_helpers_router_escaperegex",
+      "claude_helpers_router_rationale_6",
+      "claude_helpers_router_routetask",
+      "claude_helpers_router_task_patterns"
+    ],
+    "46": [
+      "claude_helpers_worker_manager",
+      "claude_helpers_worker_manager_force_all",
+      "claude_helpers_worker_manager_log",
+      "claude_helpers_worker_manager_run_all_workers",
+      "claude_helpers_worker_manager_run_daemon",
+      "claude_helpers_worker_manager_run_worker",
+      "claude_helpers_worker_manager_sh__entry",
+      "claude_helpers_worker_manager_status_all"
+    ],
+    "47": [
+      "components_dashboard_dashboard",
+      "components_profileviewmodal_profileviewmodal",
+      "components_requestdetailsmodal",
+      "components_requestdetailsmodal_requestdetailsmodal",
+      "components_requestdetailsmodal_requestdetailsmodalprops",
+      "package_dependencies_react",
+      "pages_admin_adminshop_adminshop",
+      "react"
+    ],
+    "48": [
+      "claude_helpers_security_scanner",
+      "claude_helpers_security_scanner_check_npm_audit",
+      "claude_helpers_security_scanner_run_scan",
+      "claude_helpers_security_scanner_scan_secrets",
+      "claude_helpers_security_scanner_scan_vulnerabilities",
+      "claude_helpers_security_scanner_sh__entry",
+      "claude_helpers_security_scanner_should_run"
+    ],
+    "49": [
+      "claude_helpers_session",
+      "claude_helpers_session_atomicwrite",
+      "claude_helpers_session_commands",
+      "claude_helpers_session_fs",
+      "claude_helpers_session_path",
+      "claude_helpers_session_session_dir",
+      "claude_helpers_session_session_file"
+    ],
+    "50": [
+      "constants_sizecharts",
+      "constants_sizecharts_jersey_adult",
+      "constants_sizecharts_jersey_child",
+      "constants_sizecharts_pants_child",
+      "constants_sizecharts_shorts_adult",
+      "constants_sizecharts_shorts_child",
+      "pages_admin_adminshop"
+    ],
+    "51": [
+      "claude_helpers_ddd_tracker",
+      "claude_helpers_ddd_tracker_check_domain",
+      "claude_helpers_ddd_tracker_count_entities",
+      "claude_helpers_ddd_tracker_sh__entry",
+      "claude_helpers_ddd_tracker_should_run",
+      "claude_helpers_ddd_tracker_track_ddd"
+    ],
+    "52": [
+      "claude_helpers_learning_optimizer",
+      "claude_helpers_learning_optimizer_calculate_routing_accuracy",
+      "claude_helpers_learning_optimizer_optimize_patterns",
+      "claude_helpers_learning_optimizer_run_sona_training",
+      "claude_helpers_learning_optimizer_sh__entry",
+      "claude_helpers_learning_optimizer_should_run"
+    ],
+    "53": [
+      "claude_helpers_standard_checkpoint_hooks",
+      "claude_helpers_standard_checkpoint_hooks_post_edit_checkpoint",
+      "claude_helpers_standard_checkpoint_hooks_pre_edit_checkpoint",
+      "claude_helpers_standard_checkpoint_hooks_session_end_checkpoint",
+      "claude_helpers_standard_checkpoint_hooks_sh__entry",
+      "claude_helpers_standard_checkpoint_hooks_task_checkpoint"
+    ],
+    "54": [
+      "claude_helpers_validate_v3_config",
+      "claude_helpers_validate_v3_config_log_error",
+      "claude_helpers_validate_v3_config_log_info",
+      "claude_helpers_validate_v3_config_log_success",
+      "claude_helpers_validate_v3_config_log_warning",
+      "claude_helpers_validate_v3_config_sh__entry"
+    ],
+    "55": [
+      "components_admin_adminaiconsole",
+      "components_admin_adminaiconsole_adminaiconsole",
+      "components_admin_adminaiconsole_adminaiconsoleprops",
+      "services_aiactionresolver",
+      "services_aiactionresolver_aiactionresponse",
+      "services_aiactionresolver_resolveaiaction"
+    ],
+    "56": [
+      "components_profile_coach_dailyhub",
+      "components_profile_coach_dailyhub_dailyhub",
+      "components_profile_coach_dailyhub_dailyhubmemo",
+      "components_profile_coach_dailyhub_dailyhubprops",
+      "components_profile_coach_dailyhub_student",
+      "components_profile_coach_dailyhub_training"
+    ],
+    "57": [
+      "components_profile_messagessection",
+      "components_profile_messagessection_contextmenuitem",
+      "components_profile_messagessection_contextmenuitemprops",
+      "components_profile_messagessection_creationoption",
+      "components_profile_messagessection_messagessection",
+      "components_profile_messagessection_messagessectionprops"
+    ],
+    "58": [
+      "server",
+      "server_app",
+      "server_checkpaymenthandler",
+      "server_getgeminiclient",
+      "server_supabase",
+      "server_upload"
+    ],
+    "59": [
+      "components_admin_qrscanner",
+      "components_admin_qrscanner_qrscanner",
+      "components_admin_qrscanner_qrscannerprops",
+      "pages_admin_adminscanner",
+      "pages_admin_adminscanner_adminscanner"
+    ],
+    "60": [
+      "components_profile_coach_statslab",
+      "components_profile_coach_statslab_coachhistorystats",
+      "components_profile_coach_statslab_skillsdistribution",
+      "components_profile_coach_statslab_statslab",
+      "components_profile_coach_statslab_statslabprops"
+    ],
+    "61": [
+      "claude_helpers_health_monitor",
+      "claude_helpers_health_monitor_check_health",
+      "claude_helpers_health_monitor_sh__entry",
+      "claude_helpers_health_monitor_should_run"
+    ],
+    "62": [
+      "claude_helpers_pattern_consolidator",
+      "claude_helpers_pattern_consolidator_consolidate_patterns",
+      "claude_helpers_pattern_consolidator_sh__entry",
+      "claude_helpers_pattern_consolidator_should_run"
+    ],
+    "63": [
+      "components_profile_coach_trialstab",
+      "components_profile_coach_trialstab_trialrequest",
+      "components_profile_coach_trialstab_trialstab",
+      "components_profile_coach_trialstab_trialstabprops"
+    ],
+    "64": [
+      "components_profile_shopreceipt",
+      "components_profile_shopreceipt_shopreceipt",
+      "components_profile_shopreceipt_shopreceiptprops",
+      "types_shop_order"
+    ],
+    "65": [
+      "components_viewer3d",
+      "components_viewer3d_anycanvas",
+      "components_viewer3d_model",
+      "components_viewer3d_viewer3d"
+    ],
+    "66": [
+      "electron",
+      "package_build_files",
+      "package_devdependencies_electron",
+      "ref_dist"
+    ],
+    "67": [
+      "pages_admin_adminteam",
+      "pages_admin_adminteam_adminteam",
+      "pages_admin_adminteam_coach",
+      "pages_admin_adminteam_default_coaches"
+    ],
+    "68": [
+      "claude_helpers_github_safe",
+      "claude_helpers_github_safe_args",
+      "docref_adr_0127"
+    ],
+    "69": [
+      "claude_helpers_statusline_hook",
+      "claude_helpers_statusline_hook_claude_flow_statusline",
+      "claude_helpers_statusline_hook_sh__entry"
+    ],
+    "70": [
+      "components_documentviewermodal",
+      "components_documentviewermodal_documentviewermodal",
+      "components_documentviewermodal_documentviewermodalprops"
+    ],
+    "71": [
+      "scratch_clean_files",
+      "scratch_clean_files_files",
+      "scratch_clean_files_fs"
+    ],
+    "72": [
+      "vercel",
+      "vercel_headers",
+      "vercel_rewrites"
+    ],
+    "73": [
+      "capacitor_android",
+      "package_dependencies_capacitor_android"
+    ],
+    "74": [
+      "express",
+      "package_dependencies_express"
+    ],
+    "75": [
+      "capacitor_core",
+      "package_dependencies_capacitor_core"
+    ],
+    "76": [
+      "claude_helpers_github_setup",
+      "claude_helpers_github_setup_sh__entry"
+    ],
+    "77": [
+      "claude_helpers_guidance_hook",
+      "claude_helpers_guidance_hook_sh__entry"
+    ],
+    "78": [
+      "claude_helpers_guidance_hooks",
+      "claude_helpers_guidance_hooks_sh__entry"
+    ],
+    "79": [
+      "claude_helpers_post_commit",
+      "claude_helpers_post_commit__entry"
+    ],
+    "80": [
+      "claude_helpers_pre_commit",
+      "claude_helpers_pre_commit__entry"
+    ],
+    "81": [
+      "claude_helpers_quick_start",
+      "claude_helpers_quick_start_sh__entry"
+    ],
+    "82": [
+      "claude_helpers_setup_mcp",
+      "claude_helpers_setup_mcp_sh__entry"
+    ],
+    "83": [
+      "claude_helpers_update_v3_progress",
+      "claude_helpers_update_v3_progress_sh__entry"
+    ],
+    "84": [
+      "claude_helpers_v3",
+      "claude_helpers_v3_sh__entry"
+    ],
+    "85": [
+      "claude_helpers_v3_quick_status",
+      "claude_helpers_v3_quick_status_sh__entry"
+    ],
+    "86": [
+      "concurrently",
+      "package_dependencies_concurrently"
+    ],
+    "87": [
+      "cors",
+      "package_dependencies_cors"
+    ],
+    "88": [
+      "date_fns",
+      "package_dependencies_date_fns"
+    ],
+    "89": [
+      "dotenv",
+      "package_dependencies_dotenv"
+    ],
+    "90": [
+      "electron_is_dev",
+      "package_devdependencies_electron_is_dev"
+    ],
+    "91": [
+      "emoji_picker_react",
+      "package_dependencies_emoji_picker_react"
+    ],
+    "92": [
+      "eslint",
+      "package_devdependencies_eslint"
+    ],
+    "93": [
+      "eslint_js",
+      "package_devdependencies_eslint_js"
+    ],
+    "94": [
+      "eslint_plugin_react",
+      "package_devdependencies_eslint_plugin_react"
+    ],
+    "95": [
+      "framer_motion",
+      "package_dependencies_framer_motion"
+    ],
+    "96": [
+      "google_generative_ai",
+      "package_dependencies_google_generative_ai"
+    ],
+    "97": [
+      "gsap",
+      "package_dependencies_gsap"
+    ],
+    "98": [
+      "html2canvas",
+      "package_dependencies_html2canvas"
+    ],
+    "99": [
+      "html5_qrcode",
+      "package_dependencies_html5_qrcode"
+    ],
+    "100": [
+      "http_proxy_middleware",
+      "package_dependencies_http_proxy_middleware"
+    ],
+    "101": [
+      "jspdf",
+      "package_dependencies_jspdf"
+    ],
+    "102": [
+      "jspdf_autotable",
+      "package_dependencies_jspdf_autotable"
+    ],
+    "103": [
+      "lottie_react",
+      "package_dependencies_lottie_react"
+    ],
+    "104": [
+      "lucide_react",
+      "package_dependencies_lucide_react"
+    ],
+    "105": [
+      "multer",
+      "package_dependencies_multer"
+    ],
+    "106": [
+      "openrouter",
+      "openrouter_queryopenrouter"
+    ],
+    "107": [
+      "package_dependencies_firebase",
+      "package_json_firebase"
+    ],
+    "108": [
+      "package_dependencies_qrcode_react",
+      "qrcode_react"
+    ],
+    "109": [
+      "package_dependencies_react_dom",
+      "react_dom"
+    ],
+    "110": [
+      "package_dependencies_react_player",
+      "react_player"
+    ],
+    "111": [
+      "package_dependencies_react_router_dom",
+      "react_router_dom"
+    ],
+    "112": [
+      "package_dependencies_react_three_fiber",
+      "react_three_fiber"
+    ],
+    "113": [
+      "package_dependencies_recharts",
+      "recharts"
+    ],
+    "114": [
+      "package_dependencies_supabase_supabase_js",
+      "supabase_supabase_js"
+    ],
+    "115": [
+      "package_dependencies_three",
+      "three"
+    ],
+    "116": [
+      "package_dependencies_types_canvas_confetti",
+      "types_canvas_confetti"
+    ],
+    "117": [
+      "package_dependencies_types_express",
+      "types_express"
+    ],
+    "118": [
+      "package_dependencies_types_three",
+      "types_three"
+    ],
+    "119": [
+      "package_dependencies_uuid",
+      "uuid"
+    ],
+    "120": [
+      "package_devdependencies_postcss",
+      "postcss"
+    ],
+    "121": [
+      "package_devdependencies_prettier_plugin_tailwindcss",
+      "prettier_plugin_tailwindcss"
+    ],
+    "122": [
+      "package_devdependencies_tailwindcss",
+      "tailwindcss"
+    ],
+    "123": [
+      "package_devdependencies_tsx",
+      "tsx"
+    ],
+    "124": [
+      "package_devdependencies_typescript_eslint",
+      "typescript_eslint"
+    ],
+    "125": [
+      "package_devdependencies_typescript_eslint_eslint_plugin",
+      "typescript_eslint_eslint_plugin"
+    ],
+    "126": [
+      "package_devdependencies_typescript_eslint_parser",
+      "typescript_eslint_parser"
+    ],
+    "127": [
+      "package_devdependencies_vite",
+      "vite"
+    ],
+    "128": [
+      "package_devdependencies_vitejs_plugin_react",
+      "vitejs_plugin_react"
+    ],
+    "129": [
+      "package_devdependencies_wait_on",
+      "wait_on"
+    ],
+    "130": [
+      "pages_legal_educationinfo",
+      "pages_legal_educationinfo_educationinfo"
+    ],
+    "131": [
+      "pages_legal_legallayout",
+      "pages_legal_legallayout_legallayout"
+    ],
+    "132": [
+      "pages_legal_publicoffer",
+      "pages_legal_publicoffer_publicoffer"
+    ],
+    "133": [
+      "pages_legal_requisites",
+      "pages_legal_requisites_requisites"
+    ],
+    "134": [
+      "eslint_config"
+    ],
+    "135": [
+      "postcss_config"
+    ],
+    "136": [
+      "tailwind_config"
+    ],
+    "137": [
+      "vite_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.05143191116306254,
+    "1": 0.07092198581560284,
+    "2": 0.04983388704318937,
+    "3": 0.08902439024390243,
+    "4": 0.07142857142857142,
+    "5": 0.09401709401709402,
+    "6": 0.08923076923076922,
+    "7": 0.22134387351778656,
+    "8": 0.13852813852813853,
+    "9": 0.1341991341991342,
+    "10": 0.09523809523809523,
+    "11": 0.10526315789473684,
+    "12": 0.16993464052287582,
+    "13": 0.13071895424836602,
+    "14": 0.12418300653594772,
+    "15": 0.20588235294117646,
+    "16": 0.21323529411764705,
+    "17": 0.15,
+    "18": 0.14285714285714285,
+    "19": 0.2,
+    "20": 0.23809523809523808,
+    "21": 0.1619047619047619,
+    "22": 0.42857142857142855,
+    "23": 0.31868131868131866,
+    "24": 0.48717948717948717,
+    "25": 0.23076923076923078,
+    "26": 0.24242424242424243,
+    "27": 0.16666666666666666,
+    "28": 0.18181818181818182,
+    "29": 0.41818181818181815,
+    "30": 0.21818181818181817,
+    "31": 0.21818181818181817,
+    "32": 0.3090909090909091,
+    "33": 0.23636363636363636,
+    "34": 0.2545454545454545,
+    "35": 0.18181818181818182,
+    "36": 0.24444444444444444,
+    "37": 0.4888888888888889,
+    "38": 0.28888888888888886,
+    "39": 0.3111111111111111,
+    "40": 0.28888888888888886,
+    "41": 0.4166666666666667,
+    "42": 0.2222222222222222,
+    "43": 0.2222222222222222,
+    "44": 0.35714285714285715,
+    "45": 0.2857142857142857,
+    "46": 0.5714285714285714,
+    "47": 0.25,
+    "48": 0.38095238095238093,
+    "49": 0.2857142857142857,
+    "50": 0.5238095238095238,
+    "51": 0.4666666666666667,
+    "52": 0.5333333333333333,
+    "53": 0.6,
+    "54": 0.6,
+    "55": 0.6,
+    "56": 0.3333333333333333,
+    "57": 0.3333333333333333,
+    "58": 0.3333333333333333,
+    "59": 0.5,
+    "60": 0.4,
+    "61": 0.8333333333333334,
+    "62": 0.8333333333333334,
+    "63": 0.5,
+    "64": 0.6666666666666666,
+    "65": 0.5,
+    "66": 0.5,
+    "67": 0.6666666666666666,
+    "68": 0.6666666666666666,
+    "69": 0.6666666666666666,
+    "70": 0.6666666666666666,
+    "71": 0.6666666666666666,
+    "72": 0.6666666666666666,
+    "73": 1.0,
+    "74": 1.0,
+    "75": 1.0,
+    "76": 1.0,
+    "77": 1.0,
+    "78": 1.0,
+    "79": 1.0,
+    "80": 1.0,
+    "81": 1.0,
+    "82": 1.0,
+    "83": 1.0,
+    "84": 1.0,
+    "85": 1.0,
+    "86": 1.0,
+    "87": 1.0,
+    "88": 1.0,
+    "89": 1.0,
+    "90": 1.0,
+    "91": 1.0,
+    "92": 1.0,
+    "93": 1.0,
+    "94": 1.0,
+    "95": 1.0,
+    "96": 1.0,
+    "97": 1.0,
+    "98": 1.0,
+    "99": 1.0,
+    "100": 1.0,
+    "101": 1.0,
+    "102": 1.0,
+    "103": 1.0,
+    "104": 1.0,
+    "105": 1.0,
+    "106": 1.0,
+    "107": 1.0,
+    "108": 1.0,
+    "109": 1.0,
+    "110": 1.0,
+    "111": 1.0,
+    "112": 1.0,
+    "113": 1.0,
+    "114": 1.0,
+    "115": 1.0,
+    "116": 1.0,
+    "117": 1.0,
+    "118": 1.0,
+    "119": 1.0,
+    "120": 1.0,
+    "121": 1.0,
+    "122": 1.0,
+    "123": 1.0,
+    "124": 1.0,
+    "125": 1.0,
+    "126": 1.0,
+    "127": 1.0,
+    "128": 1.0,
+    "129": 1.0,
+    "130": 1.0,
+    "131": 1.0,
+    "132": 1.0,
+    "133": 1.0,
+    "134": 1.0,
+    "135": 1.0,
+    "136": 1.0,
+    "137": 1.0
+  },
+  "gods": [
+    {
+      "id": "firebase_db",
+      "label": "db",
+      "degree": 68
+    },
+    {
+      "id": "context_authcontext_useauth",
+      "label": "useAuth()",
+      "degree": 65
+    },
+    {
+      "id": "claude_helpers_auto_memory_hook_jsonfilebackend",
+      "label": "JsonFileBackend",
+      "degree": 19
+    },
+    {
+      "id": "claude_helpers_swarm_hooks_sh__entry",
+      "label": "swarm-hooks.sh script",
+      "degree": 19
+    },
+    {
+      "id": "claude_helpers_learning_service_learningservice",
+      "label": "LearningService",
+      "degree": 18
+    },
+    {
+      "id": "components_uicomponents_button",
+      "label": "Button()",
+      "degree": 17
+    },
+    {
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 16
+    },
+    {
+      "id": "claude_helpers_learning_service_hnswindex",
+      "label": "HNSWIndex",
+      "degree": 15
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "degree": 12
+    },
+    {
+      "id": "package_dependencies_react",
+      "label": "react",
+      "degree": 12
+    }
+  ],
+  "surprises": [
+    {
+      "source": "Navbar()",
+      "target": "useAuth()",
+      "source_files": [
+        "components/LandingPage.tsx",
+        "context/AuthContext.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities; peripheral node `Navbar()` unexpectedly reaches hub `useAuth()`"
+    },
+    {
+      "source": "Hero()",
+      "target": "useAuth()",
+      "source_files": [
+        "components/LandingPage.tsx",
+        "context/AuthContext.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities; peripheral node `Hero()` unexpectedly reaches hub `useAuth()`"
+    },
+    {
+      "source": "LandingPage()",
+      "target": "useAuth()",
+      "source_files": [
+        "components/LandingPage.tsx",
+        "context/AuthContext.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities; peripheral node `LandingPage()` unexpectedly reaches hub `useAuth()`"
+    },
+    {
+      "source": "MembershipModal()",
+      "target": "useAuth()",
+      "source_files": [
+        "components/MembershipModal.tsx",
+        "context/AuthContext.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities; peripheral node `MembershipModal()` unexpectedly reaches hub `useAuth()`"
+    },
+    {
+      "source": "NewsModal()",
+      "target": "useAuth()",
+      "source_files": [
+        "components/NewsModal.tsx",
+        "context/AuthContext.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities; peripheral node `NewsModal()` unexpectedly reaches hub `useAuth()`"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `dependencies` connect `dependencies` to `shop.ts`, `package.json`, `react`, `@capacitor/android`, `express`, `@capacitor/core`, `concurrently`, `cors`, `date-fns`, `dotenv`, `emoji-picker-react`, `framer-motion`, `@google/generative-ai`, `gsap`, `html2canvas`, `html5-qrcode`, `http-proxy-middleware`, `jspdf`, `jspdf-autotable`, `lottie-react`, `lucide-react`, `multer`, `firebase`, `qrcode.react`, `react-dom`, `react-player`, `react-router-dom`, `@react-three/fiber`, `recharts`, `@supabase/supabase-js`, `three`, `@types/canvas-confetti`, `@types/express`, `@types/three`, `uuid`?",
+      "why": "High betweenness centrality (0.184) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `db` connect `db` to `LandingPage.tsx`, `App.tsx`, `useAuth`, `NewsModal.tsx`, `CoachSection.tsx`, `UIComponents.tsx`, `FavoritesContext.tsx`, `Dashboard.tsx`, `GroupChat.tsx`, `shop.ts`, `AdminMessages.tsx`, `UserRequests.tsx`, `ParentDashboard.tsx`, `AuthContext.tsx`, `SmartEnrollmentWizard.tsx`, `ProductDetails.tsx`, `AdminNews.tsx`, `Broadcasts.tsx`, `AchievementsList.tsx`, `storage.ts`, `AdminUsers.tsx`, `react`, `AdminShop.tsx`, `MessagesSection.tsx`, `AdminScanner.tsx`, `AdminTeam.tsx`?",
+      "why": "High betweenness centrality (0.126) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `useAuth()` connect `useAuth` to `LandingPage.tsx`, `App.tsx`, `storage.ts`, `NewsModal.tsx`, `CartContext.tsx`, `CoachSection.tsx`, `AdminUsers.tsx`, `UIComponents.tsx`, `FavoritesContext.tsx`, `Dashboard.tsx`, `react`, `AdminMessages.tsx`, `UserRequests.tsx`, `AuthContext.tsx`, `SmartEnrollmentWizard.tsx`, `ProductDetails.tsx`?",
+      "why": "High betweenness centrality (0.122) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `ADRS`, `__filename`, `__dirname` to the rest of the system?",
+      "why": "322 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `LandingPage.tsx` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.05143191116306254 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `LearningService` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.07092198581560284 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `App.tsx` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.04983388704318937 - nodes in this community are weakly interconnected."
+    }
+  ]
+}
