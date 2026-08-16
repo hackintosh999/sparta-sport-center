@@ -25,8 +25,8 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
         days: 'Пн, Ср, Пт',
         time: '19:00 - 20:00',
         streamType: 'weekday',
-        streamTitle: 'Будний поток (Интенсив)',
-        physioBadge: '⚡ Оптимальное время для школьной нагрузки',
+        streamTitle: 'Группа в будние дни (вечер)',
+        physioBadge: '⚡ Оптимальное время после школы',
         maxCapacity: 30,
         initialOccupied: 28
     },
@@ -40,8 +40,8 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
         days: 'Пн, Ср, Пт',
         time: '20:00 - 21:00',
         streamType: 'weekday',
-        streamTitle: 'Будний поток (Интенсив)',
-        physioBadge: '🔋 Мягкая разгрузка нервной системы после школы',
+        streamTitle: 'Группа в будние дни (вечер)',
+        physioBadge: '🔋 Спортивная разгрузка после уроков',
         maxCapacity: 20,
         initialOccupied: 18
     },
@@ -55,8 +55,8 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
         days: 'Пн, Ср, Пт',
         time: '20:00 - 21:00',
         streamType: 'weekday',
-        streamTitle: 'Будний поток (Интенсив)',
-        physioBadge: '🔋 Разгрузка после уроков',
+        streamTitle: 'Группа в будние дни (вечер)',
+        physioBadge: '🔋 Спортивная разгрузка после уроков',
         maxCapacity: 20,
         initialOccupied: 16
     },
@@ -70,7 +70,7 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
         days: 'Пн, Ср, Пт',
         time: '19:00 - 20:00',
         streamType: 'weekday',
-        streamTitle: 'Будний поток (Интенсив)',
+        streamTitle: 'Группа в будние дни (вечер)',
         maxCapacity: 20,
         initialOccupied: 16
     },
@@ -84,7 +84,7 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
         days: 'Сб, Вс',
         time: '13:00 - 14:00',
         streamType: 'weekend',
-        streamTitle: 'Выходной поток (Лайт)',
+        streamTitle: 'Группа выходного дня',
         maxCapacity: 25,
         initialOccupied: 22
     },
@@ -98,8 +98,8 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
         days: 'Сб, Вс',
         time: '12:00 - 13:00',
         streamType: 'weekend',
-        streamTitle: 'Выходной поток (Лайт)',
-        physioBadge: '☀️ Рекомендовано физиологами: пик активности перед обедом',
+        streamTitle: 'Группа выходного дня',
+        physioBadge: '☀️ Дневное время перед обедом',
         maxCapacity: 20,
         initialOccupied: 17
     },
@@ -113,7 +113,7 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
         days: 'Сб, Вс',
         time: '14:00 - 15:00',
         streamType: 'weekend',
-        streamTitle: 'Выходной поток (Лайт)',
+        streamTitle: 'Группа выходного дня',
         maxCapacity: 20,
         initialOccupied: 14
     }

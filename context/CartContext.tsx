@@ -65,16 +65,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [cartItems, user]);
 
-    const showToast = (message: string, type: ToastType) => {
+    const showToast = React.useCallback((message: string, type: ToastType) => {
         const id = Math.random().toString(36).substring(2, 9);
         setToasts(prev => [...prev, { id, message, type }]);
-    };
+    }, []);
 
-    const removeToast = (id: string) => {
+    const removeToast = React.useCallback((id: string) => {
         setToasts(prev => prev.filter(t => t.id !== id));
-    };
+    }, []);
 
-    const addToCart = (product: Product, quantity: number, size?: string, color?: string, customName?: string, customNumber?: string, measurements?: Record<string, string>, fitStyle?: string) => {
+    const addToCart = React.useCallback((product: Product, quantity: number, size?: string, color?: string, customName?: string, customNumber?: string, measurements?: Record<string, string>, fitStyle?: string) => {
         const cartItemId = `${product.id}-${size || 'nosize'}-${color || 'nocolor'}-${customName || 'noname'}-${customNumber || 'nonumber'}-${JSON.stringify(measurements || {})}-${fitStyle || 'standard'}`;
 
         setCartItems(prev => {
@@ -104,9 +104,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }];
         });
         setIsCartOpen(true);
-    };
+    }, [showToast]);
 
-    const removeFromCart = (cartItemId: string) => {
+    const removeFromCart = React.useCallback((cartItemId: string) => {
         setCartItems(prev => {
             const item = prev.find(i => i.id === cartItemId);
             if (item) {
@@ -114,54 +114,71 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             return prev.filter(item => item.id !== cartItemId);
         });
-    };
+    }, [showToast]);
 
-    const updateQuantity = (cartItemId: string, quantity: number) => {
+    const updateQuantity = React.useCallback((cartItemId: string, quantity: number) => {
         if (quantity < 1) {
             removeFromCart(cartItemId);
             return;
         }
 
-        const item = cartItems.find(i => i.id === cartItemId);
-        if (item && item.product.stock) {
-            const stockKey = item.selectedSize || 'N/A';
-            const availableStock = item.product.stock[stockKey] ?? 999;
-            if (quantity > availableStock) {
-                showToast(`Максимально доступное количество: ${availableStock}`, 'warning');
-                return;
+        setCartItems(prev => {
+            const item = prev.find(i => i.id === cartItemId);
+            if (item && item.product.stock) {
+                const stockKey = item.selectedSize || 'N/A';
+                const availableStock = item.product.stock[stockKey] ?? 999;
+                if (quantity > availableStock) {
+                    showToast(`Максимально доступное количество: ${availableStock}`, 'warning');
+                    return prev;
+                }
             }
-        }
 
-        setCartItems(prev =>
-            prev.map(item =>
+            return prev.map(item =>
                 item.id === cartItemId
                     ? { ...item, quantity }
                     : item
-            )
-        );
-    };
+            );
+        });
+    }, [removeFromCart, showToast]);
 
-    const clearCart = () => {
+    const clearCart = React.useCallback(() => {
         setCartItems([]);
         showToast('Корзина очищена', 'info');
-    };
+    }, [showToast]);
 
-    const cartTotal = cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
-    const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
+    const cartTotal = React.useMemo(() => {
+        return cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+    }, [cartItems]);
+
+    const cartCount = React.useMemo(() => {
+        return cartItems.reduce((count, item) => count + item.quantity, 0);
+    }, [cartItems]);
+
+    const contextValue = React.useMemo(() => ({
+        cartItems,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        cartTotal,
+        cartCount,
+        isCartOpen,
+        setIsCartOpen,
+        showToast
+    }), [
+        cartItems,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        cartTotal,
+        cartCount,
+        isCartOpen,
+        showToast
+    ]);
 
     return (
-        <CartContext.Provider value={{
-            cartItems,
-            addToCart,
-            removeFromCart,
-            updateQuantity,
-            clearCart,
-            cartTotal,
-            cartCount,
-            isCartOpen,
-            setIsCartOpen,
-            showToast
-        }}>
+        <CartContext.Provider value={contextValue}>
             {children}
             <ShopToastContainer toasts={toasts} onClose={removeToast} />
         </CartContext.Provider>

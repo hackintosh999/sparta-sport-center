@@ -139,6 +139,24 @@
       "skillPath": "skills/product-launch-video/SKILL.md",
       "computedHash": "e25d6fd6b7993e4fbf67a1fe60fb80b47f839cdc1290fd1426691a98e9ac5c50"
     },
+    "remotion-best-practices": {
+      "source": "remotion-dev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/remotion-best-practices/SKILL.md",
+      "computedHash": "89856a7a8ef459652b7aef120f59b0aa76588ce8f26f6265b3b5a58424392e5d"
+    },
+    "remotion-create": {
+      "source": "remotion-dev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/remotion-create/SKILL.md",
+      "computedHash": "8b1f9a163190880614a6c806dd5a82bd678c7d58996218f0601038da4391bc2c"
+    },
+    "remotion-render": {
+      "source": "remotion-dev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/remotion-render/SKILL.md",
+      "computedHash": "55b76da481b58b5b173985970f099bd683f0d9152755bffed2983916183fe61a"
+    },
     "remotion-to-hyperframes": {
       "source": "heygen-com/hyperframes",
       "sourceType": "github",

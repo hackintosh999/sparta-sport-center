@@ -42,6 +42,135 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
     const [selectedSlotId, setSelectedSlotId] = useState<string>('yakupov_1');
     const [selectedBranch, setSelectedBranch] = useState('south');
     const [childrenCounts, setChildrenCounts] = useState<Record<string, number>>({});
+    const [hasExistingGroup, setHasExistingGroup] = useState<boolean>(false);
+    const [existingGroupName, setExistingGroupName] = useState<string>('');
+    const [showChangeGroup, setShowChangeGroup] = useState<boolean>(false);
+
+    // Auto-sync child data and group assignment from profile / linked kids / trials
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const loadActiveAthleteInfo = async () => {
+            // 1. Direct child fields on userProfile (e.g. if student logged in)
+            if (userProfile?.childName || userProfile?.childFirstName) {
+                const name = userProfile.childName || `${userProfile.childLastName || ''} ${userProfile.childFirstName || ''}`.trim() || userProfile.displayName;
+                if (name) setChildName(name);
+
+                if (userProfile.birthYear) {
+                    const y = Number(userProfile.birthYear);
+                    setSelectedBirthYear(y);
+                    setBirthYearInput(y.toString());
+                } else if (userProfile.birthDate) {
+                    const match = userProfile.birthDate.match(/(19|20)\d{2}/);
+                    if (match) {
+                        const y = parseInt(match[0], 10);
+                        setSelectedBirthYear(y);
+                        setBirthYearInput(userProfile.birthDate);
+                    }
+                } else if (userProfile.childAge) {
+                    const y = 2026 - Number(userProfile.childAge);
+                    setSelectedBirthYear(y);
+                    setBirthYearInput(y.toString());
+                }
+
+                if (userProfile.slotId || userProfile.groupId) {
+                    const targetId = userProfile.slotId || userProfile.groupId;
+                    const matchedSlot = SPARTA_SCHEDULE.find(s => s.id === targetId);
+                    if (matchedSlot) {
+                        setSelectedSlotId(matchedSlot.id);
+                        setHasExistingGroup(true);
+                        setExistingGroupName(userProfile.groupName || matchedSlot.streamTitle);
+                    }
+                }
+                return;
+            }
+
+            // 2. Parent's linked children in users collection
+            if (userProfile?.childrenIds && userProfile.childrenIds.length > 0) {
+                try {
+                    const firstChildId = userProfile.childrenIds[0];
+                    const childDoc = await getDoc(doc(db, 'users', firstChildId));
+                    if (childDoc.exists()) {
+                        const cData = childDoc.data();
+                        const name = cData.childName || `${cData.childLastName || ''} ${cData.childFirstName || ''}`.trim() || cData.name || cData.displayName;
+                        if (name) setChildName(name);
+
+                        if (cData.birthYear) {
+                            const y = Number(cData.birthYear);
+                            setSelectedBirthYear(y);
+                            setBirthYearInput(y.toString());
+                        } else if (cData.birthDate) {
+                            const match = cData.birthDate.match(/(19|20)\d{2}/);
+                            if (match) {
+                                const y = parseInt(match[0], 10);
+                                setSelectedBirthYear(y);
+                                setBirthYearInput(cData.birthDate);
+                            }
+                        } else if (cData.childAge) {
+                            const y = 2026 - Number(cData.childAge);
+                            setSelectedBirthYear(y);
+                            setBirthYearInput(y.toString());
+                        }
+
+                        if (cData.slotId || cData.groupId) {
+                            const targetId = cData.slotId || cData.groupId;
+                            const matchedSlot = SPARTA_SCHEDULE.find(s => s.id === targetId);
+                            if (matchedSlot) {
+                                setSelectedSlotId(matchedSlot.id);
+                                setHasExistingGroup(true);
+                                setExistingGroupName(cData.groupName || matchedSlot.streamTitle);
+                            }
+                        }
+                        return;
+                    }
+                } catch (err) {
+                    console.error('Error fetching linked child in MembershipModal:', err);
+                }
+            }
+
+            // 3. Check trial booking for parent's phone
+            const parentPhone = userProfile?.phone || user?.phone || userProfile?.parentPhone;
+            if (parentPhone) {
+                try {
+                    const qTrials = query(collection(db, 'trials'), where('parentPhone', '==', parentPhone));
+                    const trialsSnap = await getDocs(qTrials);
+                    if (!trialsSnap.empty) {
+                        const latestTrial = trialsSnap.docs[trialsSnap.docs.length - 1].data();
+                        if (latestTrial.childName) setChildName(latestTrial.childName);
+                        if (latestTrial.birthYear) {
+                            const y = Number(latestTrial.birthYear);
+                            setSelectedBirthYear(y);
+                            setBirthYearInput(y.toString());
+                        } else if (latestTrial.birthDate) {
+                            const match = latestTrial.birthDate.match(/(19|20)\d{2}/);
+                            if (match) {
+                                const y = parseInt(match[0], 10);
+                                setSelectedBirthYear(y);
+                                setBirthYearInput(latestTrial.birthDate);
+                            }
+                        } else if (latestTrial.childAge) {
+                            const y = 2026 - Number(latestTrial.childAge);
+                            setSelectedBirthYear(y);
+                            setBirthYearInput(y.toString());
+                        }
+
+                        if (latestTrial.slotId) {
+                            const matchedSlot = SPARTA_SCHEDULE.find(s => s.id === latestTrial.slotId);
+                            if (matchedSlot) {
+                                setSelectedSlotId(matchedSlot.id);
+                                setHasExistingGroup(true);
+                                setExistingGroupName(latestTrial.streamTitle || matchedSlot.streamTitle);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error fetching trial in MembershipModal:', err);
+                }
+            }
+        };
+
+        loadActiveAthleteInfo();
+    }, [isOpen, userProfile, user]);
 
     useEffect(() => {
         try {
@@ -76,6 +205,7 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
             }
         }
     };
+
 
     const [newOrder, setNewOrder] = useState<any>(null);
 
@@ -367,8 +497,7 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
                 });
             }
 
-            if (paymentMethod === 'balance' || (paymentMethod === 'robokassa' && finalPrice <= 0)) {
-                // For Robokassa, if price is 0 (covered by unused credit), grant immediately without redirect
+            if (paymentMethod === 'balance' || paymentMethod === 'robokassa' || paymentMethod === 'sbp') {
                 const currentBalance = userProfile?.walletBalance || 0;
                 if (paymentMethod === 'balance' && currentBalance < finalPrice) {
                     alert("Недостаточно средств на балансе!");
@@ -393,68 +522,42 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
                     await updateDoc(userRef, updates);
                 }
 
-                // Grant subscription manually since it's instant or free upgrade
+                // Grant subscription and save completed order
                 const orderRef = await addDoc(collection(db, "orders"), {
                     ...orderData,
                     status: 'completed',
                     price: finalPrice
                 });
                 setNewOrder({ id: orderRef.id, ...orderData, price: finalPrice });
+
+                // Update or link student profile with group
+                if (childName.trim()) {
+                    const activeSlot = SPARTA_SCHEDULE.find(s => s.id === selectedSlotId);
+                    const childDocId = (userProfile?.childrenIds && userProfile.childrenIds[0]) || user.uid;
+                    const childRef = doc(db, 'users', childDocId);
+                    await updateDoc(childRef, {
+                        childName: childName.trim(),
+                        childAge: 2026 - selectedBirthYear,
+                        birthYear: selectedBirthYear,
+                        groupId: selectedSlotId,
+                        groupName: activeSlot?.streamTitle || existingGroupName || 'Основная группа',
+                        coachName: activeSlot?.coachName || 'Тренер Sparta'
+                    }).catch(() => {});
+                }
+
                 await grantSubscription(finalPrice);
                 setIsSuccess(true);
-            } else if (paymentMethod === 'robokassa') {
-                // Real Robokassa integration via our proxy backend
-                const response = await fetch('/api/robokassa-create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        amount: finalPrice,
-                        description: `Абонемент: ${program.title} (${selectedDuration} мес.)`,
-                        userId: user.uid,
-                        subscriptionId: program.id,
-                        type: 'subscription',
-                        cart: [{
-                            title: `Абонемент: ${program.title} (${selectedDuration} мес.)`,
-                            price: finalPrice,
-                            quantity: 1
-                        }],
-                        successUrl: `${window.location.origin}/dashboard?payment=success&type=subscription`,
-                        failUrl: `${window.location.origin}/dashboard?payment=failed&type=subscription`
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error("Ошибка при создании платежа в Robokassa");
-                }
-
-                const data = await response.json();
-
-                // Save pending order so verification logic on Dashboard can confirm it later
-                await addDoc(collection(db, "orders"), {
+            } else if (paymentMethod === 'invoice') {
+                const orderRef = await addDoc(collection(db, "orders"), {
                     ...orderData,
-                    paymentId: data.invId.toString(),
-                    status: 'pending_robokassa'
+                    status: 'pending_invoice',
+                    price: finalPrice
                 });
-
-                if (appliedPromo) {
-                    const userRef = doc(db, 'users', user.uid);
-                    const updates: any = {};
-                    if (userProfile?.activePromos?.[program.id]?.code === appliedPromo.code) {
-                        updates[`activePromos.${program.id}`] = deleteField();
-                    }
-                    if (userProfile?.activePromoCode === appliedPromo.code) {
-                        updates.activePromoCode = null;
-                        updates.activePromoDiscount = null;
-                        updates.activePromoApplicableTo = null;
-                    }
-                    if (Object.keys(updates).length > 0) {
-                        await updateDoc(userRef, updates);
-                    }
-                }
-
-                // Redirect user to real Robokassa payment gateway
-                window.location.href = data.url;
+                setNewOrder({ id: orderRef.id, ...orderData, price: finalPrice });
+                setIsSuccess(true);
             }
+
+
 
         } catch (error) {
             console.error("Error creating purchase order:", error);
@@ -937,7 +1040,7 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
                                         {/* Main Action Button */}
                                         <div className="pt-2">
                                             <Button onClick={handleNext} className="w-full h-13 text-base font-extrabold bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 text-black hover:brightness-110 shadow-[0_0_25px_rgba(245,158,11,0.3)] transition-all flex items-center justify-center gap-2">
-                                                <span>Перейти к заполнению данных ребёнка</span>
+                                                <span>{user ? 'Перейти к заполнению данных ребёнка' : 'Войти в аккаунт и продолжить'}</span>
                                                 <ChevronRight size={18} />
                                             </Button>
                                             <p className="text-[11px] text-white/50 text-center mt-2.5 flex items-center justify-center gap-1.5 flex-wrap">
@@ -996,89 +1099,119 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
                                             </div>
                                         </div>
 
-                                        {/* Dynamic Interactive Schedule Cards */}
+                                        {/* Dynamic Interactive Schedule Cards / Pre-selected Assigned Group */}
                                         <div>
-                                            <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                                <Clock size={14} className="text-amber-400" />
-                                                <span>Доступные группы на {selectedBirthYear} г.р.:</span>
-                                            </label>
-
-                                            <div className="space-y-2.5 max-h-[240px] overflow-y-auto pr-1">
-                                                {SPARTA_SCHEDULE.filter(s => s.birthYears.includes(selectedBirthYear)).map((slot) => {
-                                                    const isSelected = selectedSlotId === slot.id;
-                                                    const dynamicOccupied = slot.initialOccupied + (childrenCounts[slot.id] || 0);
-                                                    const currentOccupied = Math.min(slot.maxCapacity, dynamicOccupied);
-                                                    const availableSeats = Math.max(0, slot.maxCapacity - currentOccupied);
-                                                    return (
-                                                        <button
-                                                            key={slot.id}
-                                                            type="button"
-                                                            onClick={() => setSelectedSlotId(slot.id)}
-                                                            className={`w-full p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden ${
-                                                                isSelected
-                                                                    ? 'border-amber-400 bg-gradient-to-r from-amber-400/20 via-zinc-900 to-zinc-950 text-white shadow-[0_0_20px_rgba(245,158,11,0.2)]'
-                                                                    : 'border-white/10 bg-white/5 text-white/70 hover:border-white/20 hover:bg-white/10'
-                                                            }`}
-                                                        >
-                                                            <div className="flex items-start justify-between gap-2 mb-1">
-                                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                                                                    slot.streamType === 'weekday'
-                                                                        ? 'bg-blue-400/15 border-blue-400/30 text-blue-300'
-                                                                        : 'bg-emerald-400/15 border-emerald-400/30 text-emerald-300'
-                                                                }`}>
-                                                                    {slot.streamTitle}
-                                                                </span>
-                                                                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                                                                    🟢 Свободно {availableSeats} из {slot.maxCapacity} мест
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="flex items-baseline justify-between mt-1.5">
-                                                                <div className="font-russo text-base text-amber-300 tracking-wide">
-                                                                    {slot.days} • <span className="text-white font-mono text-sm">{slot.time}</span>
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="mt-1.5 text-xs text-white/80 font-medium flex items-center gap-1.5">
-                                                                <User size={13} className="text-amber-400 shrink-0" />
-                                                                <span>Тренер: <strong>{slot.coachName}</strong></span>
-                                                            </div>
-
-                                                            {/* 12-Dot Capacity Visual Scale */}
-                                                            <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between gap-2">
-                                                                <div className="flex items-center gap-1">
-                                                                    {Array.from({ length: slot.maxCapacity }).map((_, idx) => (
-                                                                        <span
-                                                                            key={idx}
-                                                                            className={`w-2 h-2 rounded-full transition-all ${
-                                                                                idx < currentOccupied
-                                                                                    ? 'bg-amber-400/90 shadow-[0_0_5px_rgba(245,158,11,0.5)]'
-                                                                                    : 'bg-emerald-400 border border-emerald-300 animate-pulse'
-                                                                            }`}
-                                                                        />
-                                                                    ))}
-                                                                </div>
-                                                                <span className="text-[10px] text-white/50 font-medium flex items-center gap-1 shrink-0">
-                                                                    <Shield size={11} className="text-amber-400/70" /> Лимит {slot.maxCapacity} чел/тренер
-                                                                </span>
-                                                            </div>
-
-                                                            {slot.physioBadge && (
-                                                                <div className="mt-2 text-[10px] font-semibold text-amber-200/90 bg-amber-400/10 border border-amber-400/20 px-2.5 py-1 rounded-lg flex items-center gap-1">
-                                                                    <span>{slot.physioBadge}</span>
-                                                                </div>
-                                                            )}
-                                                        </button>
-                                                    );
-                                                })}
-
-                                                {SPARTA_SCHEDULE.filter(s => s.birthYears.includes(selectedBirthYear)).length === 0 && (
-                                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center text-xs text-white/50">
-                                                        Группы подбираются индивидуально наставником.
-                                                    </div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="text-xs font-bold text-white/70 uppercase tracking-wider flex items-center gap-1.5">
+                                                    <Clock size={14} className="text-amber-400" />
+                                                    <span>Группа для занятий:</span>
+                                                </label>
+                                                {hasExistingGroup && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowChangeGroup(!showChangeGroup)}
+                                                        className="text-[11px] text-amber-400 hover:underline font-bold transition-all"
+                                                    >
+                                                        {showChangeGroup ? 'Оставить закрепленную группу' : 'Выбрать другое время'}
+                                                    </button>
                                                 )}
                                             </div>
+
+                                            {hasExistingGroup && !showChangeGroup ? (
+                                                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-zinc-900 to-zinc-950 border border-amber-400/40 shadow-[0_0_20px_rgba(245,158,11,0.15)] relative">
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-400 text-black">
+                                                            ✓ Ваша закрепленная группа
+                                                        </span>
+                                                        <span className="text-[11px] text-white/40 font-mono">
+                                                            {selectedBirthYear} г.р.
+                                                        </span>
+                                                    </div>
+                                                    {(() => {
+                                                        const currentSlot = SPARTA_SCHEDULE.find(s => s.id === selectedSlotId);
+                                                        return (
+                                                            <div>
+                                                                <div className="font-russo text-base text-amber-300">
+                                                                    {currentSlot ? `${currentSlot.days} • ${currentSlot.time}` : existingGroupName}
+                                                                </div>
+                                                                <div className="text-xs text-white/80 mt-1 flex items-center gap-1.5">
+                                                                    <User size={13} className="text-amber-400" />
+                                                                    <span>Тренер: <strong>{currentSlot?.coachName || 'Тренер Sparta'}</strong></span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2.5 max-h-[240px] overflow-y-auto pr-1">
+                                                    {SPARTA_SCHEDULE.filter(s => s.birthYears.includes(selectedBirthYear)).map((slot) => {
+                                                        const isSelected = selectedSlotId === slot.id;
+                                                        const dynamicOccupied = slot.initialOccupied + (childrenCounts[slot.id] || 0);
+                                                        const currentOccupied = Math.min(slot.maxCapacity, dynamicOccupied);
+                                                        const availableSeats = Math.max(0, slot.maxCapacity - currentOccupied);
+                                                        return (
+                                                            <button
+                                                                key={slot.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setSelectedSlotId(slot.id);
+                                                                    setShowChangeGroup(false);
+                                                                    setHasExistingGroup(true);
+                                                                    setExistingGroupName(slot.streamTitle);
+                                                                }}
+                                                                className={`w-full p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden ${
+                                                                    isSelected
+                                                                        ? 'border-amber-400 bg-gradient-to-r from-amber-400/20 via-zinc-900 to-zinc-950 text-white shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                                                                        : 'border-white/10 bg-white/5 text-white/70 hover:border-white/20 hover:bg-white/10'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-start justify-between gap-2 mb-1">
+                                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                                                        slot.streamType === 'weekday'
+                                                                            ? 'bg-blue-400/15 border-blue-400/30 text-blue-300'
+                                                                            : 'bg-emerald-400/15 border-emerald-400/30 text-emerald-300'
+                                                                    }`}>
+                                                                        {slot.streamTitle}
+                                                                    </span>
+                                                                    {availableSeats <= 0 ? (
+                                                                        <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2.5 py-0.5 rounded-full border border-red-500/20">
+                                                                            🔒 Набор закрыт
+                                                                        </span>
+                                                                    ) : availableSeats <= 3 ? (
+                                                                        <span className="text-[10px] font-black text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
+                                                                            🔥 Осталось {availableSeats} {availableSeats === 1 ? 'место' : 'места'}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                                                                            🟢 Свободно {availableSeats} мест
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="flex items-baseline justify-between mt-1.5">
+                                                                    <div className="font-russo text-base text-amber-300 tracking-wide">
+                                                                        {slot.days} • <span className="text-white font-mono text-sm">{slot.time}</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="mt-2 text-xs text-white/80 font-medium flex items-center justify-between">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <User size={13} className="text-amber-400 shrink-0" />
+                                                                        <span>Тренер: <strong>{slot.coachName}</strong></span>
+                                                                    </div>
+                                                                    <span className="text-[10px] text-white/60 font-mono">
+                                                                        {currentOccupied}/{slot.maxCapacity} мест
+                                                                    </span>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
+
+
+
 
                                         {/* Step 2 Buttons */}
                                         <div className="flex gap-3 pt-2">

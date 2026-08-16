@@ -8,13 +8,6 @@ export const CITIES: City[] = [
         status: 'active',
         isDefault: true,
         sortOrder: 1
-    },
-    {
-        id: 'miass',
-        name: 'Миасс',
-        shortName: 'Миасс',
-        status: 'active',
-        sortOrder: 2
     }
 ];
 
@@ -31,8 +24,8 @@ export const SPARTA_LOCATIONS: LocationItem[] = [
         lat: 55.168134,
         lon: 61.284612,
         phone: '+7 (351) 230-12-69',
-        badge: 'Главный корпус',
-        href: 'https://yandex.ru/maps/?rtext=~55.168134,61.284612&rtt=auto'
+        badge: 'Северо-Запад',
+        href: 'https://yandex.ru/maps/?text=%D0%A7%D0%B5%D0%BB%D1%8F%D0%B1%D0%B8%D0%BD%D1%81%D0%BA%2C%20%D1%83%D0%BB%D0%B8%D1%86%D0%B0%20250-%D0%BB%D0%B5%D1%82%D0%B8%D1%8F%20%D0%A7%D0%B5%D0%BB%D1%8F%D0%B1%D0%B8%D0%BD%D1%81%D0%BA%D0%B0%2C%2046'
     },
     {
         id: 'chtz',
@@ -46,7 +39,8 @@ export const SPARTA_LOCATIONS: LocationItem[] = [
         lat: 55.160421,
         lon: 61.458923,
         phone: '+7 (351) 230-12-69',
-        href: 'https://yandex.ru/maps/?rtext=~55.160421,61.458923&rtt=auto'
+        badge: 'ЧТЗ',
+        href: 'https://yandex.ru/maps/?text=%D0%A7%D0%B5%D0%BB%D1%8F%D0%B1%D0%B8%D0%BD%D1%81%D0%BA%2C%20%D1%83%D0%BB%D0%B8%D1%86%D0%B0%20%D0%9A%D0%B0%D1%80%D0%BF%D0%B5%D0%BD%D0%BA%D0%BE%2C%205%D0%91'
     },
     {
         id: 'gagarin',
@@ -60,27 +54,13 @@ export const SPARTA_LOCATIONS: LocationItem[] = [
         lat: 55.169820,
         lon: 61.371240,
         phone: '+7 (351) 230-12-69',
-        badge: 'Центральный зал',
-        href: 'https://yandex.ru/maps/?rtext=~55.169820,61.371240&rtt=auto'
-    },
-    {
-        id: 'miass_ecotime',
-        cityId: 'miass',
-        name: 'СК «Экотайм»',
-        shortName: 'Экотайм',
-        address: 'ул. 8 Марта, 150',
-        city: 'Миасс',
-        details: 'Спортивный арена-комплекс, 1 этаж',
-        parking: 'Бесплатная парковка перед спортивным комплексом',
-        lat: 55.048000,
-        lon: 60.108000,
-        phone: '+7 (351) 230-12-69',
-        badge: 'Филиал Миасс',
-        href: 'https://yandex.ru/maps/?rtext=~55.048000,60.108000&rtt=auto'
+        badge: 'Центр',
+        href: 'https://yandex.ru/maps/?text=%D0%A7%D0%B5%D0%BB%D1%8F%D0%B1%D0%B8%D0%BD%D1%81%D0%BA%2C%20%D1%83%D0%BB%D0%B8%D1%86%D0%B0%20%D0%A2%D1%80%D1%83%D0%B4%D0%B0%2C%20183'
     }
 ];
 
+
 export const LOCATIONS_BY_CITY: Record<string, LocationItem[]> = {
-    chelyabinsk: SPARTA_LOCATIONS.filter(l => l.cityId === 'chelyabinsk'),
-    miass: SPARTA_LOCATIONS.filter(l => l.cityId === 'miass')
+    chelyabinsk: SPARTA_LOCATIONS.filter(l => l.cityId === 'chelyabinsk')
 };
+

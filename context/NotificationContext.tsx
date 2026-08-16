@@ -224,16 +224,22 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
     }, [dismissToast]);
 
+    const contextValue = React.useMemo(() => ({
+        incomingRequests,
+        activeToasts,
+        acceptRequest,
+        declineRequest,
+        dismissToast
+    }), [
+        incomingRequests,
+        activeToasts,
+        acceptRequest,
+        declineRequest,
+        dismissToast
+    ]);
+
     return (
-        <NotificationContext.Provider
-            value={{
-                incomingRequests,
-                activeToasts,
-                acceptRequest,
-                declineRequest,
-                dismissToast
-            }}
-        >
+        <NotificationContext.Provider value={contextValue}>
             {children}
         </NotificationContext.Provider>
     );

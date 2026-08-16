@@ -39,7 +39,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     }, [theme, isTransitioning]);
 
-    const toggleTheme = () => {
+    const toggleTheme = React.useCallback(() => {
         // Modern View Transitions API (Chrome/Edge)
         if (typeof document !== 'undefined' && (document as any).startViewTransition) {
             (document as any).startViewTransition(() => {
@@ -50,10 +50,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             setIsTransitioning(true);
             setTheme(prev => prev === 'light' ? 'dark' : 'light');
         }
-    };
+    }, []);
+
+    const contextValue = React.useMemo(() => ({
+        theme,
+        toggleTheme
+    }), [theme, toggleTheme]);
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme }}>
+        <ThemeContext.Provider value={contextValue}>
             <div className={`theme-transition-overlay ${isTransitioning ? 'active' : ''}`} />
             {children}
         </ThemeContext.Provider>

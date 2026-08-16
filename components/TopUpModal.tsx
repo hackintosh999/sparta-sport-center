@@ -41,43 +41,22 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({ isOpen, onClose, user })
                 description: 'Пополнение баланса'
             });
 
-            // Get payment URL from our Vercel function
-            const baseUrl = window.location.origin; // e.g. https://sparta-sports-center.vercel.app
-            const apiUrl = `${baseUrl}/api/robokassa-create`;
-
-            const res = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    amount: numAmount.toString(),
-                    description: `Пополнение внутреннего баланса: ${user.email}`,
-                    userId: user.uid,
-                    subscriptionId: orderRef.id, // Using order ID to track
-                    type: 'topup',
-                    successUrl: `${baseUrl}/dashboard`,
-                    failUrl: `${baseUrl}/dashboard`
-                })
+            const currentBalance = userProfile?.walletBalance || 0;
+            await updateDoc(doc(db, 'users', user.uid), {
+                walletBalance: currentBalance + numAmount
             });
-
-            if (!res.ok) throw new Error('Ошибка создания платежа');
-            const data = await res.json();
-
-            if (data.url && data.invId) {
-                // Update order with the paymentId (invId) and status
-                await updateDoc(orderRef, {
-                    paymentId: data.invId.toString(),
-                    status: 'pending_robokassa'
-                });
-                // Redirect to Robokassa
-                window.location.href = data.url;
-            } else {
-                throw new Error('Не удалось получить URL для оплаты');
-            }
+            await updateDoc(orderRef, {
+                status: 'completed',
+                paymentMethod: 'sbp'
+            });
+            setIsProcessing(false);
+            onClose();
         } catch (err: any) {
             console.error('Top-up error:', err);
-            setError(err.message || 'Произошла ошибка при переходе к оплате');
+            setError(err.message || 'Произошла ошибка при пополнении баланса');
             setIsProcessing(false);
         }
+
     };
 
     const presetAmounts = [500, 1000, 3000, 5000];

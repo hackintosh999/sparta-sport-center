@@ -81,52 +81,65 @@ export const CityProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [userProfile?.cityId]);
 
-    const setCity = (cityId: CityId) => {
+    const setCity = React.useCallback((cityId: CityId) => {
         setSelectedCityState(cityId);
         safeLocalStorage.setItem(STORAGE_KEY, cityId);
 
         if (user?.uid) {
             updateDoc(doc(db, "users", user.uid), { cityId }).catch(console.error);
         }
-    };
+    }, [user?.uid]);
 
-    const currentCity = cities.find(c => c.id === selectedCity) || CITIES[0];
+    const currentCity = React.useMemo(() => {
+        return cities.find(c => c.id === selectedCity) || CITIES[0];
+    }, [cities, selectedCity]);
     
     // Merge Firestore dynamic updates into SPARTA_LOCATIONS by ID
-    const mergedLocations = SPARTA_LOCATIONS.map(staticLoc => {
-        const dbMatch = dbLocations.find(d => d.id === staticLoc.id);
-        return dbMatch ? { ...staticLoc, ...dbMatch } : staticLoc;
-    });
+    const visibleLocations = React.useMemo(() => {
+        const mergedLocations = SPARTA_LOCATIONS.map(staticLoc => {
+            const dbMatch = dbLocations.find(d => d.id === staticLoc.id);
+            return dbMatch ? { ...staticLoc, ...dbMatch } : staticLoc;
+        });
 
-    // Combine with any brand-new locations created in Firestore
-    const newDbLocations = dbLocations.filter(d => !SPARTA_LOCATIONS.some(s => s.id === d.id));
-    const allCombinedLocations = [...mergedLocations, ...newDbLocations];
+        // Combine with any brand-new locations created in Firestore
+        const newDbLocations = dbLocations.filter(d => !SPARTA_LOCATIONS.some(s => s.id === d.id));
+        const allCombinedLocations = [...mergedLocations, ...newDbLocations];
 
-    // Strictly filter out hidden locations (status === 'hidden')
-    const visibleLocations = allCombinedLocations.filter(l => l.status !== 'hidden');
+        // Strictly filter out hidden locations (status === 'hidden')
+        return allCombinedLocations.filter(l => l.status !== 'hidden');
+    }, [dbLocations]);
 
     // Match locations by cityId or city name
-    const cityLocations = visibleLocations.filter(l => 
-        !l.cityId || 
-        l.cityId === selectedCity || 
-        l.cityId === 'all' || 
-        (l.city && l.city.toLowerCase().includes(currentCity.name.toLowerCase()))
-    );
+    const safeLocations = React.useMemo(() => {
+        const cityLocations = visibleLocations.filter(l => 
+            !l.cityId || 
+            l.cityId === selectedCity || 
+            l.cityId === 'all' || 
+            (l.city && l.city.toLowerCase().includes(currentCity.name.toLowerCase()))
+        );
 
-    // Safe fallback: guarantee counter is never 0 if visible locations exist
-    const safeLocations = cityLocations.length > 0 ? cityLocations : visibleLocations;
+        // Safe fallback: guarantee counter is never 0 if visible locations exist
+        return cityLocations.length > 0 ? cityLocations : visibleLocations;
+    }, [visibleLocations, selectedCity, currentCity]);
+
+    const contextValue = React.useMemo(() => ({
+        selectedCity,
+        city: currentCity,
+        setCity,
+        cities,
+        locations: safeLocations,
+        allLocations: visibleLocations
+    }), [
+        selectedCity,
+        currentCity,
+        setCity,
+        cities,
+        safeLocations,
+        visibleLocations
+    ]);
 
     return (
-        <CityContext.Provider
-            value={{
-                selectedCity,
-                city: currentCity,
-                setCity,
-                cities,
-                locations: safeLocations,
-                allLocations: visibleLocations
-            }}
-        >
+        <CityContext.Provider value={contextValue}>
             {children}
         </CityContext.Provider>
     );

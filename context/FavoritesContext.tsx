@@ -20,7 +20,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
     }, []);
 
-    const toggleFavorite = (productId: string) => {
+    const toggleFavorite = React.useCallback((productId: string) => {
         setFavorites(prev => {
             const newFavorites = prev.includes(productId)
                 ? prev.filter(id => id !== productId)
@@ -29,12 +29,18 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             safeLocalStorage.setItem('sparta_favorites', JSON.stringify(newFavorites));
             return newFavorites;
         });
-    };
+    }, []);
 
-    const isFavorite = (productId: string) => favorites.includes(productId);
+    const isFavorite = React.useCallback((productId: string) => favorites.includes(productId), [favorites]);
+
+    const contextValue = React.useMemo(() => ({
+        favorites,
+        toggleFavorite,
+        isFavorite
+    }), [favorites, toggleFavorite, isFavorite]);
 
     return (
-        <FavoritesContext.Provider value={{ favorites, toggleFavorite, isFavorite }}>
+        <FavoritesContext.Provider value={contextValue}>
             {children}
         </FavoritesContext.Provider>
     );

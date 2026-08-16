@@ -302,14 +302,14 @@ const Navbar = ({ onOpenTrial, onOpenAuth }: { onOpenTrial: () => void, onOpenAu
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setMobileMenuOpen(false)}
-                            className="fixed inset-0 bg-black/80 backdrop-blur-md z-40 xl:hidden"
+                            className="fixed inset-0 bg-black/80 backdrop-blur-md z-40 xl:hidden pointer-events-auto"
                         />
                         <motion.div
                             initial={{ opacity: 0, y: -20, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -20, scale: 0.95 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed top-20 left-4 right-4 bg-[#111]/95 border border-white/10 rounded-[28px] p-6 flex flex-col gap-5 items-center shadow-2xl z-50 max-h-[85vh] overflow-y-auto custom-scrollbar xl:hidden backdrop-blur-2xl"
+                            className="fixed top-20 left-4 right-4 bg-[#111]/95 border border-white/10 rounded-[28px] p-6 flex flex-col gap-5 items-center shadow-2xl z-50 max-h-[85vh] overflow-y-auto custom-scrollbar xl:hidden backdrop-blur-2xl pointer-events-auto"
                         >
                             {NAV_ITEMS.map((item) => (
                                 <a
@@ -404,11 +404,14 @@ const LocationCard: React.FC<{ onOpenRoute?: (locId: string) => void }> = ({ onO
 };
 
 const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRoute?: () => void }) => {
-    const { requestedGroupIds } = useAuth();
+    const { user, userProfile, requestedGroupIds } = useAuth();
+    const navigate = useNavigate();
     const { locations, city } = useCity();
     const hasRequestedTrial = requestedGroupIds.length > 0;
     const { scrollY } = useScroll();
     const y = useTransform(scrollY, [0, 500], [0, 200]);
+
+    const isEnrolled = !!user;
 
     return (
         <section className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden pt-32 pb-20">
@@ -441,10 +444,23 @@ const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRou
 
                     {/* Primary Action Buttons - Immediate Focus */}
                     <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center w-full max-w-2xl mx-auto mb-10">
-                        <Button className="group w-full sm:w-auto px-6 sm:px-8 py-4 text-sm sm:text-base md:text-lg font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-[0_0_30px_rgba(212,175,55,0.3)]" onClick={onOpenTrial}>
-                            <span className="whitespace-nowrap">⚡ Бесплатное пробное занятие</span>
-                            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1 shrink-0 group-hover:translate-x-1 transition-transform inline-block" />
-                        </Button>
+                        {isEnrolled ? (
+                            <Button 
+                                className="group w-full sm:w-auto px-6 sm:px-8 py-4 text-sm sm:text-base md:text-lg font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-[0_0_30px_rgba(212,175,55,0.3)]" 
+                                onClick={() => navigate('/dashboard')}
+                            >
+                                <span className="whitespace-nowrap">Личный кабинет</span>
+                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1 shrink-0 group-hover:translate-x-1 transition-transform inline-block" />
+                            </Button>
+                        ) : (
+                            <Button 
+                                className="group w-full sm:w-auto px-6 sm:px-8 py-4 text-sm sm:text-base md:text-lg font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-[0_0_30px_rgba(212,175,55,0.3)]" 
+                                onClick={onOpenTrial}
+                            >
+                                <span className="whitespace-nowrap">Прийти на день знакомства</span>
+                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1 shrink-0 group-hover:translate-x-1 transition-transform inline-block" />
+                            </Button>
+                        )}
                         <Button
                             variant="outline"
                             className="w-full sm:w-auto px-6 py-4 text-sm sm:text-base whitespace-nowrap"
@@ -484,7 +500,7 @@ const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRou
                 </motion.div>
             </Container>
 
-            <motion.div style={{ y }} className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-sparta-black to-transparent z-10" />
+            <motion.div style={{ y }} className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-sparta-black to-transparent z-10 pointer-events-none" />
         </section>
     );
 };
@@ -651,17 +667,9 @@ const Programs = ({
     }, []);
 
     const getDurationLabel = (d: number) => {
-        if (d === 1) return 'Месяц';
-        if (d >= 2 && d <= 4) return 'Месяца';
-        return 'Месяцев';
-    };
-
-    const getDurationDiscountBadge = (d: number) => {
-        if (d === 1) return 'Старт';
-        if (d === 3) return 'Рекомендуемый';
-        if (d === 6) return 'Развитие';
-        if (d === 12) return 'Прогресс';
-        return null;
+        if (d === 1) return '1 месяц';
+        if (d >= 2 && d <= 4) return `${d} месяца`;
+        return `${d} месяцев`;
     };
 
     const displayPrograms = (loading || programs.length === 0) ? PROGRAMS : programs;
@@ -687,30 +695,22 @@ const Programs = ({
                     </div>
                 </div>
 
-                {/* Duration Selector Tabs - Touch Ergonomic & Framer Motion Sliding Indicator */}
+                {/* Duration Selector Tabs - Clean Minimalist Segmented Control */}
                 <div className="flex justify-center mb-10 md:mb-14">
-                    <div className="bg-white/5 p-1.5 rounded-2xl border border-white/10 grid grid-cols-4 gap-1 w-full max-w-xl relative backdrop-blur-md">
+                    <div className="bg-white/5 p-1.5 rounded-2xl border border-white/10 grid grid-cols-4 gap-1.5 w-full max-w-lg relative backdrop-blur-md">
                         {tabs.map((d) => {
-                            const discount = getDurationDiscountBadge(d);
                             const isActive = duration === d;
                             return (
                                 <button
                                     key={d}
                                     onClick={() => setDuration(d)}
-                                    className={`relative min-h-[44px] py-2 px-2 sm:px-4 rounded-xl font-manrope font-bold text-xs sm:text-sm transition-all duration-200 z-10 flex flex-col sm:flex-row items-center justify-center gap-1 select-none cursor-pointer ${
-                                        isActive ? 'text-black font-extrabold' : 'text-white/60 hover:text-white'
+                                    className={`relative py-3 px-2 sm:px-4 rounded-xl font-manrope text-xs sm:text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center select-none cursor-pointer whitespace-nowrap ${
+                                        isActive
+                                            ? 'text-black font-extrabold shadow-sm'
+                                            : 'text-white/60 hover:text-white'
                                     }`}
                                 >
-                                    <span>{d} {getDurationLabel(d).toLowerCase()}</span>
-                                    {discount && (
-                                        <span className={`text-[9px] sm:text-[10px] font-black px-1.5 py-0.2 rounded-md ${
-                                            isActive 
-                                                ? 'bg-black/20 text-black' 
-                                                : 'bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30'
-                                        }`}>
-                                            {discount}
-                                        </span>
-                                    )}
+                                    <span>{getDurationLabel(d)}</span>
                                     {isActive && (
                                         <motion.div
                                             layoutId="activeDurationBg"
@@ -778,7 +778,7 @@ const Programs = ({
                                                 className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700 ease-out"
                                             />
                                             {/* Gradient Mask to smoothly transition image to card body */}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent z-10" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent z-10 pointer-events-none" />
 
                                             {/* Floating Top Badge */}
                                             <div className="absolute top-4 right-4 z-20">
@@ -1156,14 +1156,6 @@ const LandingPage: React.FC = () => {
 
     const isStaff = userProfile?.role && STAFF_ROLES.includes(userProfile.role);
 
-    // Persistence: Check if we should auto-open the wizard (post-registration/login)
-    useEffect(() => {
-        if (localStorage.getItem('sparta_show_wizard') === 'true' && !isStaff) {
-            setIsWizardOpen(true);
-            localStorage.removeItem('sparta_show_wizard');
-        }
-    }, [user, userProfile, isStaff]); // Re-check when user or profile state resolves
-
     // Handle payment redirects from Robokassa
     useEffect(() => {
         const queryParams = new URLSearchParams(window.location.search);
@@ -1185,35 +1177,10 @@ const LandingPage: React.FC = () => {
     };
 
     const handleAuthSuccess = async () => {
-        const currentUser = auth.currentUser;
-        
-        // Ensure AuthModal closes first to prevent backdrop overlap issues
         setIsAuthOpen(false);
-
-        if (currentUser) {
-            try {
-                const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-                const userData = userDoc.data();
-                const userRole = userData?.role;
-                const isUserStaff = userRole && STAFF_ROLES.includes(userRole);
-
-                if (userDoc.exists() && (userData?.profileCompleted || isUserStaff)) {
-                    navigate('/dashboard');
-                } else {
-                    localStorage.setItem('sparta_show_wizard', 'true');
-                    // Add slight delay to allow AuthModal to clean up its backdrop
-                    setTimeout(() => setIsWizardOpen(true), 100);
-                }
-            } catch (error) {
-                console.error("Error checking profile:", error);
-                localStorage.setItem('sparta_show_wizard', 'true');
-                setTimeout(() => setIsWizardOpen(true), 100);
-            }
-        } else {
-            localStorage.setItem('sparta_show_wizard', 'true');
-            setTimeout(() => setIsWizardOpen(true), 100);
-        }
+        navigate('/dashboard');
     };
+
 
     const handleJoinClick = (group?: Group) => {
         if (group) {
@@ -1222,18 +1189,7 @@ const LandingPage: React.FC = () => {
             setSelectedGroup(null);
         }
 
-        if (user) {
-            if (!isStaff) {
-                setIsWizardOpen(true);
-            } else {
-                // For staff, we just show a message or redirect if they click join, 
-                // but usually they shouldn't be "joining" groups as students.
-                navigate('/dashboard');
-            }
-        } else {
-            // Force login for trial requests as well to maintain consistency and tied leads
-            setIsAuthOpen(true);
-        }
+        setIsWizardOpen(true);
     };
 
     return (
@@ -1416,16 +1372,20 @@ const LandingPage: React.FC = () => {
             />
 
             <AnimatePresence>
-                {isWizardOpen && (user || auth.currentUser) && !isStaff && (
+                {isWizardOpen && (
                     <SmartEnrollmentWizard
-                        user={{
+                        key="sparta-enrollment-wizard-modal"
+                        user={(user || auth.currentUser) ? {
                             uid: (user || auth.currentUser)?.uid || '',
                             email: (user || auth.currentUser)?.email || '',
                             displayName: (user || auth.currentUser)?.displayName || '',
                             ...userProfile
-                        }}
+                        } : null}
                         selectedGroup={selectedGroup}
-                        onComplete={() => setIsWizardOpen(false)}
+                        onComplete={() => {
+                            sessionStorage.removeItem('sparta_wizard_step');
+                            setIsWizardOpen(false);
+                        }}
                         onContactLink={() => setIsContactOpen(true)}
                     />
                 )}

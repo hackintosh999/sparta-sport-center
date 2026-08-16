@@ -189,10 +189,10 @@ app.post('/api/robokassa-create', async (req, res) => {
 
         const MERCHANT_LOGIN = (process.env.ROBOKASSA_MERCHANT_LOGIN || 'test_merchant').trim();
         const IS_TEST_RAW = process.env.IS_TEST_MODE;
-        const IS_TEST = String(IS_TEST_RAW || '').trim() === 'true';
+        const IS_TEST = !process.env.ROBOKASSA_MERCHANT_LOGIN || process.env.ROBOKASSA_MERCHANT_LOGIN === 'test_merchant' || String(IS_TEST_RAW || '').trim() === 'true';
 
-        const PASS1_RAW = IS_TEST ? process.env.ROBOKASSA_TEST_PASSWORD_1 : process.env.ROBOKASSA_PASSWORD_1;
-        const PASS1 = (PASS1_RAW || 'test_pass1').trim();
+        const PASS1_RAW = IS_TEST ? (process.env.ROBOKASSA_TEST_PASSWORD_1 || 'test_pass1') : (process.env.ROBOKASSA_PASSWORD_1 || 'test_pass1');
+        const PASS1 = String(PASS1_RAW).trim();
 
         console.log(`[DEBUG] Robokassa: Merchant=[${MERCHANT_LOGIN}], IS_TEST=[${IS_TEST}], Pass1Length=${PASS1.length}`);
 
@@ -225,6 +225,7 @@ app.post('/api/robokassa-create', async (req, res) => {
             url: finalUrl,
             invId: invId
         });
+
     } catch (error) {
         console.error('Robokassa creation error:', error);
         return res.status(500).json({ error: 'Internal server error' });

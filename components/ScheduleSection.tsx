@@ -45,7 +45,7 @@ export const ScheduleSection = () => {
     return (
         <section id="schedule" className="py-24 relative overflow-hidden bg-black">
             {/* Background Overlay */}
-            <div className="absolute inset-0 z-0 opacity-40">
+            <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
                 <img
                     src="/bg-schedule-v6.png"
                     alt="Stadium Background"

@@ -1,5 +1,6 @@
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, updateDoc, setDoc, serverTimestamp, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
+import { SPARTA_SCHEDULE } from '../constants/spartaSchedule';
 
 export const linkStudentToGroup = async (
     parentUid: string,
@@ -65,8 +66,26 @@ export const linkStudentToGroup = async (
             }
         }
 
-        const groupId = matchedDoc?.data?.groupId || '';
-        const groupName = matchedDoc?.data?.groupName || 'Группа';
+        // Auto-assign matching group by age if not present in registry
+        let finalGroupId = matchedDoc?.data?.groupId || '';
+        let finalGroupName = matchedDoc?.data?.groupName || '';
+        let finalCoachName = matchedDoc?.data?.coachName || '';
+
+        if (!finalGroupId) {
+            const currentYear = new Date().getFullYear();
+            const effectiveAge = age && age > 3 && age < 16 ? age : 7;
+            const childBirthYear = currentYear - effectiveAge;
+
+            const matchedSlot = SPARTA_SCHEDULE.find(slot => 
+                slot.birthYears && slot.birthYears.includes(childBirthYear)
+            ) || SPARTA_SCHEDULE[0];
+
+            if (matchedSlot) {
+                finalGroupId = matchedSlot.id;
+                finalGroupName = `${matchedSlot.streamTitle} (${matchedSlot.ageGroupLabel})`;
+                finalCoachName = matchedSlot.coachName;
+            }
+        }
 
         // 1. Create/Update child profile in users with groupId, parentId, role: 'user', status: 'active'
         const nameParts = cleanFullName.split(/\s+/);
@@ -74,7 +93,6 @@ export const linkStudentToGroup = async (
         const childLastName = nameParts.length > 1 ? nameParts[0] : '';
 
         // Search for existing child profile by parentId OR child name OR phone
-        // CRITICAL: Never match the parent's own document (parentUid)
         let existingChildDoc: { id: string; data: any } | null = null;
         
         const childQuery = query(collection(db, 'users'), where('parentId', '==', parentUid));
@@ -84,11 +102,9 @@ export const linkStudentToGroup = async (
         } else {
             const allUsersSnap = await getDocs(collection(db, 'users'));
             for (const uDoc of allUsersSnap.docs) {
-                // NEVER match the registering parent's own document
                 if (uDoc.id === parentUid) continue;
                 
                 const uData = uDoc.data();
-                // Skip parent-role docs — we only want child/student docs
                 if (uData.role === 'parent') continue;
                 
                 const uName = (uData.childName || uData.childFullName || uData.name || '').trim().toLowerCase();
@@ -106,6 +122,7 @@ export const linkStudentToGroup = async (
 
         let childId: string;
         const parentName = matchedDoc?.data?.parentName || '';
+        const generatedPin = Math.floor(1000 + Math.random() * 9000).toString();
 
         if (existingChildDoc) {
             childId = existingChildDoc.id;
@@ -114,8 +131,13 @@ export const linkStudentToGroup = async (
                 status: 'active',
                 updatedAt: serverTimestamp()
             };
-            if (groupId && !existingChildDoc.data.groupId) {
-                updateFields.groupId = groupId;
+            if (!existingChildDoc.data.kidPin) {
+                updateFields.kidPin = generatedPin;
+            }
+            if (finalGroupId && !existingChildDoc.data.groupId) {
+                updateFields.groupId = finalGroupId;
+                updateFields.groupName = finalGroupName;
+                updateFields.coachName = finalCoachName;
             }
             await updateDoc(doc(db, 'users', childId), updateFields);
         } else {
@@ -123,22 +145,38 @@ export const linkStudentToGroup = async (
             childId = newChildRef.id;
             await setDoc(newChildRef, {
                 id: childId,
-                groupId: groupId || '',
+                groupId: finalGroupId,
+                groupName: finalGroupName,
+                coachName: finalCoachName,
                 parentId: parentUid,
                 role: 'user',
                 status: 'active',
+                kidPin: generatedPin,
                 displayName: cleanFullName || 'Спортсмен',
                 name: cleanFullName || 'Спортсмен',
                 childName: cleanFullName,
                 childFirstName,
                 childLastName,
-                childAge: age || matchedDoc?.data?.childAge || 0,
+                childAge: age || matchedDoc?.data?.childAge || 7,
                 parentPhone: phone,
                 parentEmail: email,
                 parentName: parentName || '',
+                rating: 75,
+                skills: {
+                    dribbling: 70,
+                    speed: 75,
+                    passing: 70,
+                    shooting: 65,
+                    discipline: 85,
+                    teamwork: 80
+                },
+                badges: [
+                    { id: 'first_step', title: 'Первый шаг в Спарту', icon: '⚽', unlockedAt: new Date().toISOString() }
+                ],
                 createdAt: serverTimestamp()
             });
         }
+
 
         // 2. Update parent document in users to append child's ID into childrenIds array (WITHOUT assigning groupId to parent)
         const parentRef = doc(db, 'users', parentUid);
@@ -164,10 +202,10 @@ export const linkStudentToGroup = async (
                     linkedAt: serverTimestamp()
                 });
             }
-            return { success: true, childId, groupId: matchedDoc.data.groupId || groupId, groupName: matchedDoc.data.groupName || groupName };
+            return { success: true, childId, groupId: matchedDoc.data.groupId || finalGroupId, groupName: matchedDoc.data.groupName || finalGroupName };
         }
 
-        return { success: true, childId, groupId, groupName };
+        return { success: true, childId, groupId: finalGroupId, groupName: finalGroupName };
     } catch (error) {
         console.error("Error linking student:", error);
         return { success: false, error };

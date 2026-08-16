@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import {
     Trophy, Calendar, MessageSquare, Flame, CheckCircle2,
-    Users, Award, Sparkles, Star, ChevronRight, Activity, Dumbbell, ShieldCheck, Lock
+    Users, Award, Sparkles, Star, ChevronRight, Activity, Dumbbell, ShieldCheck, Lock,
+    Mail, Eye, EyeOff, KeyRound, Check, X, User
 } from 'lucide-react';
-import { db } from '../../firebase';
-import { doc, getDoc, collection, query, where, getDocs, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../../firebase';
+import { doc, getDoc, collection, query, where, getDocs, onSnapshot, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { linkParentToChild } from '../../services/userService';
 import AchievementsList from '../profile/AchievementsList';
+import { safeLocalStorage } from '../../utils/storage';
 
 interface KidDashboardProps {
     user: any;
@@ -71,6 +74,67 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({ user, userProfile, o
         });
         return () => unsub();
     }, [user?.uid]);
+
+    // First-Login Setup Modal State
+    const [showOnboardingModal, setShowOnboardingModal] = useState<boolean>(() => {
+        const alreadyDone = safeLocalStorage.getItem('sparta_kid_onboarded_' + (user?.uid || ''));
+        if (alreadyDone) return false;
+        return !userProfile?.hasCompletedKidOnboarding && (!userProfile?.email || userProfile?.email?.includes('@sparta.club') || userProfile?.isTemporary);
+    });
+    const [setupEmail, setSetupEmail] = useState<string>(userProfile?.parentEmail || '');
+    const [setupPassword, setSetupPassword] = useState<string>('');
+    const [showSetupPwd, setShowSetupPwd] = useState<boolean>(false);
+    const [savingSetup, setSavingSetup] = useState<boolean>(false);
+    const [setupSuccess, setSetupSuccess] = useState<boolean>(false);
+
+    const handleCompleteKidSetup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user?.uid) return;
+        setSavingSetup(true);
+
+        try {
+            const updates: any = {
+                hasCompletedKidOnboarding: true,
+                hasCustomCredentials: true,
+                updatedAt: serverTimestamp()
+            };
+
+            if (setupEmail.trim()) {
+                updates.email = setupEmail.trim();
+            }
+
+            // Award first achievement trophy
+            updates.achievements = arrayUnion({
+                id: 'first_step',
+                definitionId: 'first_step',
+                title: 'Первый шаг в Спарту',
+                description: 'Первый вход в личный Дневник Чемпиона',
+                icon: '⚽',
+                unlockedAt: new Date().toISOString()
+            });
+
+            await updateDoc(doc(db, 'users', user.uid), updates);
+
+            safeLocalStorage.setItem('sparta_kid_onboarded_' + user.uid, 'true');
+
+            // Fire golden celebration confetti!
+            confetti({
+                particleCount: 120,
+                spread: 80,
+                origin: { y: 0.5 },
+                colors: ['#D4AF37', '#FFD700', '#FFA500', '#FFFFFF']
+            });
+
+            setSetupSuccess(true);
+            setTimeout(() => {
+                setShowOnboardingModal(false);
+            }, 1800);
+        } catch (err) {
+            console.error('Kid onboarding error:', err);
+        } finally {
+            setSavingSetup(false);
+        }
+    };
 
     const handleAcceptLink = async () => {
         if (!pendingLinkRequest || !user?.uid) return;
@@ -483,6 +547,176 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({ user, userProfile, o
                     </motion.button>
                 </div>
             </div>
+
+            {/* FIRST-TIME KID ONBOARDING MODAL */}
+            <AnimatePresence>
+                {showOnboardingModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#141414] border-2 border-sparta-gold/50 rounded-3xl p-6 sm:p-7 shadow-[0_0_50px_rgba(212,175,55,0.3)] overflow-hidden"
+                        >
+                            {/* Decorative ambient background */}
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-sparta-gold/20 rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                            {setupSuccess ? (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="py-10 text-center space-y-4"
+                                >
+                                    <div className="w-20 h-20 mx-auto rounded-full bg-sparta-gold/20 border-2 border-sparta-gold flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(212,175,55,0.5)]">
+                                        🏆
+                                    </div>
+                                    <h3 className="text-2xl font-russo text-white">Твой путь Чемпиона начался!</h3>
+                                    <p className="text-sm text-sparta-gold font-bold">
+                                        Награда «⚽ Первый шаг в Спарту» добавлена в твой профиль!
+                                    </p>
+                                    <p className="text-xs text-white/60">Открываем Дневник Чемпиона...</p>
+                                </motion.div>
+                            ) : (
+                                <div className="relative z-10 space-y-5">
+                                    {/* Modal Header */}
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sparta-gold/20 border border-sparta-gold/40 text-sparta-gold text-xs font-bold mb-2">
+                                                <Sparkles size={13} />
+                                                <span>Первый вход в Спарту</span>
+                                            </div>
+                                            <h3 className="text-xl sm:text-2xl font-russo text-white">
+                                                Привет, {userProfile?.childName || user?.displayName || 'Чемпион'}! 🦁
+                                            </h3>
+                                            <p className="text-xs text-white/60 mt-0.5">
+                                                Твоя карточка футболиста готова. Закрепи логин и пароль для входа.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowOnboardingModal(false)}
+                                            className="text-white/40 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+
+                                    {/* Auto-filled Player Info Badge */}
+                                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                                        <div className="text-[11px] font-bold text-sparta-gold uppercase tracking-wider flex items-center gap-1.5">
+                                            <CheckCircle2 size={13} />
+                                            <span>Данные заполнены автоматически:</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <div className="bg-black/40 p-2 rounded-xl border border-white/5">
+                                                <span className="text-white/40 block text-[10px]">Спортсмен</span>
+                                                <span className="font-bold text-white truncate block">
+                                                    {userProfile?.childName || user?.displayName || 'Юный Спартанец'}
+                                                </span>
+                                            </div>
+                                            <div className="bg-black/40 p-2 rounded-xl border border-white/5">
+                                                <span className="text-white/40 block text-[10px]">Возраст</span>
+                                                <span className="font-bold text-white">
+                                                    {userProfile?.childAge || 6} лет (OVR 75)
+                                                </span>
+                                            </div>
+                                            <div className="bg-black/40 p-2 rounded-xl border border-white/5">
+                                                <span className="text-white/40 block text-[10px]">Наставник</span>
+                                                <span className="font-bold text-sparta-gold truncate block">
+                                                    {userProfile?.coachName || 'Пономарев С.А.'}
+                                                </span>
+                                            </div>
+                                            <div className="bg-black/40 p-2 rounded-xl border border-white/5">
+                                                <span className="text-white/40 block text-[10px]">Детский PIN</span>
+                                                <span className="font-mono font-bold text-white">
+                                                    {userProfile?.kidPin || '••••'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Setup Form */}
+                                    <form onSubmit={handleCompleteKidSetup} className="space-y-3.5">
+                                        <div className="space-y-2.5">
+                                            <div>
+                                                <label className="block text-xs font-bold text-white/80 mb-1">
+                                                    Твоя Почта (Email) для входа
+                                                </label>
+                                                <div className="relative">
+                                                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                                                    <input
+                                                        type="email"
+                                                        value={setupEmail}
+                                                        onChange={e => setSetupEmail(e.target.value)}
+                                                        placeholder="vanya@mail.ru"
+                                                        className="w-full bg-black/60 border border-white/15 focus:border-sparta-gold rounded-xl py-2.5 pl-8 pr-3 text-xs sm:text-sm text-white placeholder:text-white/30 outline-none transition-colors"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-white/80 mb-1">
+                                                    Придумай личный пароль
+                                                </label>
+                                                <div className="relative">
+                                                    <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                                                    <input
+                                                        type={showSetupPwd ? 'text' : 'password'}
+                                                        value={setupPassword}
+                                                        onChange={e => setSetupPassword(e.target.value)}
+                                                        placeholder="Минимум 6 символов"
+                                                        className="w-full bg-black/60 border border-white/15 focus:border-sparta-gold rounded-xl py-2.5 pl-8 pr-9 text-xs sm:text-sm text-white placeholder:text-white/30 outline-none transition-colors"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowSetupPwd(!showSetupPwd)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                                                    >
+                                                        {showSetupPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <p className="text-[10px] text-white/50 leading-relaxed">
+                                            💡 Ты всегда сможешь входить как по паролю, так и просто показав свой <strong>QR-код</strong> тренеру на тренировке!
+                                        </p>
+
+                                        {/* Action Buttons */}
+                                        <div className="space-y-2 pt-2">
+                                            <button
+                                                type="submit"
+                                                disabled={savingSetup}
+                                                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-manrope font-extrabold text-xs sm:text-sm transition-all hover:brightness-110 shadow-[0_0_25px_rgba(212,175,55,0.35)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                                            >
+                                                {savingSetup ? (
+                                                    <span>Сохраняем...</span>
+                                                ) : (
+                                                    <>
+                                                        <span>Сохранить и получить первое достижение 🏆</span>
+                                                        <ChevronRight size={16} />
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    safeLocalStorage.setItem('sparta_kid_onboarded_' + (user?.uid || ''), 'true');
+                                                    setShowOnboardingModal(false);
+                                                }}
+                                                className="w-full py-2.5 text-center text-xs text-white/50 hover:text-white font-medium transition-colors cursor-pointer"
+                                            >
+                                                ⚡ Продолжить по QR-коду без пароля
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

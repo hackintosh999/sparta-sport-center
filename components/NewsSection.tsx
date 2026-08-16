@@ -93,7 +93,9 @@ const NewsSection: React.FC = () => {
 
     // GSAP Background and Entrance Animations
     useEffect(() => {
-        if (!loading && gridRef.current) {
+        if (loading || !gridRef.current || !sectionRef.current) return;
+
+        const ctx = gsap.context(() => {
             // Background parallax effect
             gsap.to('.news-bg-image', {
                 y: '10%',
@@ -122,7 +124,9 @@ const NewsSection: React.FC = () => {
                     }
                 }
             );
-        }
+        }, sectionRef);
+
+        return () => ctx.revert();
     }, [loading, activeCategory, searchQuery]);
 
     // Combine and Filter Logic

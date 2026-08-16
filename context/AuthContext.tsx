@@ -226,15 +226,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 const isRootDeveloperEmail = isSuperDeveloper(userEmailLower);
 
                                 if (!data) {
-                                    const safeDefaultRole = isDirectorEmail ? 'director' : (isRootDeveloperEmail ? 'super' : 'user');
+                                    let cachedSession: any = null;
+                                    try {
+                                        const raw = safeLocalStorage.getItem('sparta_auth_user');
+                                        if (raw) cachedSession = JSON.parse(raw);
+                                    } catch {}
+
                                     const isElevated = isDirectorEmail || isRootDeveloperEmail;
+                                    const safeDefaultRole = isDirectorEmail ? 'director' : (isRootDeveloperEmail ? 'super' : (cachedSession?.role || 'parent'));
+                                    const initialDisplayName = authUser.displayName || cachedSession?.displayName || cachedSession?.parentName || (authUser.email ? authUser.email.split('@')[0] : 'Родитель');
+
                                     data = {
                                         email: authUser.email || '',
-                                        displayName: authUser.displayName || 'Разработчик Sparta',
+                                        displayName: initialDisplayName,
+                                        parentName: initialDisplayName,
+                                        phone: cachedSession?.phone || '',
                                         role: safeDefaultRole,
                                         isStaff: isElevated,
                                         isAdmin: isElevated,
-                                        status: 'active'
+                                        status: 'active',
+                                        hasPassword: true
                                     };
                                     setDoc(doc(db, "users", authUser.uid), data, { merge: true }).catch(() => {});
                                 } else if (isRootDeveloperEmail) {
@@ -631,14 +642,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }).catch(err => console.error("Google redirect result error:", err));
     }, []);
 
-    const logout = async () => {
+    const logout = React.useCallback(async () => {
         safeLocalStorage.removeItem('sparta_auth_user');
         setUser(null);
         setUserProfile(null);
         await signOut(auth);
-    };
+    }, []);
 
-    const signInWithGoogle = async () => {
+    const signInWithGoogle = React.useCallback(async () => {
         try {
             let result;
             try {
@@ -717,13 +728,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error("Google verify error:", error);
             throw error;
         }
-    };
+    }, []);
 
-    const resetPassword = async (email: string) => {
+    const resetPassword = React.useCallback(async (email: string) => {
         return sendPasswordResetEmail(auth, email);
-    };
+    }, []);
 
-    const confirmReset = async (code: string, newPassword: string) => {
+    const confirmReset = React.useCallback(async (code: string, newPassword: string) => {
         let resetEmail = '';
         try {
             resetEmail = await verifyPasswordResetCode(auth, code);
@@ -749,14 +760,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }
         return result;
-    };
+    }, []);
 
-    const verifyCode = async (code: string) => {
+    const verifyCode = React.useCallback(async (code: string) => {
         return verifyPasswordResetCode(auth, code);
-    };
+    }, []);
 
     // --- Trial Status Tracking ---
-    const refreshTrialStatus = async () => {
+    const refreshTrialStatus = React.useCallback(async () => {
         if (!user) {
             const localTrialIds = JSON.parse(safeLocalStorage.getItem('trial_requested_ids') || '[]');
             setRequestedGroupIds(localTrialIds);
@@ -792,7 +803,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
             console.error("Error refreshing trial status:", error);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
         const localTrialIds = JSON.parse(safeLocalStorage.getItem('trial_requested_ids') || '[]');
@@ -812,6 +823,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const currentIds = Array.from(ids);
                 setRequestedGroupIds(prev => {
                     const combined = Array.from(new Set([...prev, ...currentIds]));
+                    if (prev.length === combined.length && prev.every(id => combined.includes(id))) {
+                        return prev;
+                    }
                     safeLocalStorage.setItem('trial_requested_ids', JSON.stringify(combined));
                     return combined;
                 });
@@ -830,6 +844,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const currentIds = Array.from(ids);
                     setRequestedGroupIds(prev => {
                         const combined = Array.from(new Set([...prev, ...currentIds]));
+                        if (prev.length === combined.length && prev.every(id => combined.includes(id))) {
+                            return prev;
+                        }
                         safeLocalStorage.setItem('trial_requested_ids', JSON.stringify(combined));
                         return combined;
                     });
@@ -843,23 +860,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [user]);
 
+    const contextValue = React.useMemo(() => ({
+        user,
+        userProfile,
+        loading,
+        logout,
+        signInWithGoogle,
+        banDetails,
+        resetPassword,
+        confirmReset,
+        verifyCode,
+        requestedGroupIds,
+        setRequestedGroupIds,
+        refreshTrialStatus,
+        deviceId,
+        requestPushPermission
+    }), [
+        user,
+        userProfile,
+        loading,
+        logout,
+        signInWithGoogle,
+        banDetails,
+        resetPassword,
+        confirmReset,
+        verifyCode,
+        requestedGroupIds,
+        refreshTrialStatus,
+        deviceId,
+        requestPushPermission
+    ]);
+
     return (
-        <AuthContext.Provider value={{
-            user,
-            userProfile,
-            loading,
-            logout,
-            signInWithGoogle,
-            banDetails,
-            resetPassword,
-            confirmReset,
-            verifyCode,
-            requestedGroupIds,
-            setRequestedGroupIds,
-            refreshTrialStatus,
-            deviceId,
-            requestPushPermission
-        }}>
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     );

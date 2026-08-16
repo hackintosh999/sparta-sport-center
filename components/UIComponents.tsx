@@ -9,10 +9,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', className = '', ...props }) => {
-    const baseStyles = "rounded-full font-manrope font-bold transition-all duration-300 flex items-center justify-center px-8 py-4 tracking-wide";
+    const baseStyles = "rounded-full font-manrope font-bold transition duration-150 active:scale-95 active:duration-75 cursor-pointer select-none flex items-center justify-center px-8 py-4 tracking-wide";
 
     const variants = {
-        primary: "bg-gold-gradient text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:scale-105 active:scale-95",
+        primary: "bg-gold-gradient text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:brightness-105",
         outline: "border border-white/20 text-white hover:bg-white/10 hover:border-sparta-gold/50 hover:text-sparta-gold backdrop-blur-md"
     };
 

@@ -4,8 +4,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+    const isLocalApp = process.env.ELECTRON === 'true' || process.env.CAPACITOR === 'true';
     return {
-        base: './',
+        base: isLocalApp ? './' : '/',
         server: {
             port: 3000,
             host: '0.0.0.0',

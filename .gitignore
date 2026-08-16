@@ -1,6 +1,26 @@
-# Dependencies
+node_modules
+.git
+.agents
+.claude
+.claude-flow
+scratch
+graphify-out
+sparta-demo-video
+sparta-video/
+*.pdf
+*.xlsx
+
+/*.mp4
+/*.mp3
+ruvector.db
+scratch_transcript.txt
+sparta_main_hero_presentation.pdf
+sparta_presentation_landscape1.pdf
+sparta_presentation_landscape2.pdf
+sparta_presentation_main_block.pdf
 node_modules
 .pnpm-store
+
 
 # Production build outputs
 dist
@@ -28,3 +48,5 @@ yarn-error.log*
 Thumbs.db
 .vscode
 .idea
+
+.vercel

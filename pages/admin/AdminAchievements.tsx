@@ -3,8 +3,9 @@ import { db } from '../../firebase';
 import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Box, Check, Loader, Plus, Search, Trash2, X, Image as ImageIcon, UploadCloud, Trophy, Save, UserCheck, Users, Award, Sparkles, Star, RefreshCw } from 'lucide-react';
 import { AchievementDefinition } from '../../types/shop';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
 
-const Viewer3D = React.lazy(() => import('../../components/Viewer3D'));
+const Viewer3D = lazyWithRetry(() => import('../../components/Viewer3D'));
 
 // Default seed definitions
 const DEFAULT_ACHIEVEMENTS = [

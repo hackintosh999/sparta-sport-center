@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Users, Plus, ChevronRight, Calendar,
     TrendingUp, Activity, MessageSquare, User,
-    Trash2, AlertTriangle, Loader2, X
+    Trash2, AlertTriangle, Loader2, X,
+    KeyRound, QrCode, Sparkles, Copy, Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getChildrenProfiles } from '../../services/userService';
@@ -27,39 +28,82 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
     const [loading, setLoading] = useState(true);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isUnlinkModalOpen, setIsUnlinkModalOpen] = useState(false);
+    const [isKidAccessModalOpen, setIsKidAccessModalOpen] = useState(false);
     const [isUnlinking, setIsUnlinking] = useState(false);
+    const [copied, setCopied] = useState(false);
 
 
     useEffect(() => {
-        const uniqueChildIds: string[] = Array.from(new Set(userProfile?.childrenIds || []));
-        if (uniqueChildIds.length === 0) {
-            setChildren([]);
-            setLoading(false);
-            return;
-        }
-
+        let isMounted = true;
         const unsubscribes: (() => void)[] = [];
         const childrenMap: { [id: string]: any } = {};
 
-        uniqueChildIds.forEach((childId: string) => {
-            const unsub = onSnapshot(doc(db, 'users', childId), (docSnap) => {
-                if (docSnap.exists()) {
-                    childrenMap[childId] = { id: docSnap.id, ...docSnap.data() };
-                }
-                const updatedChildren = Object.values(childrenMap);
-                setChildren(updatedChildren);
-                if (updatedChildren.length > 0) {
-                    setSelectedChildId(prev => (prev && childrenMap[prev]) ? prev : updatedChildren[0].id);
-                }
-                setLoading(false);
+        const updateState = () => {
+            if (!isMounted) return;
+            const updatedChildren = Object.values(childrenMap);
+            setChildren(updatedChildren);
+            if (updatedChildren.length > 0) {
+                setSelectedChildId(prev => (prev && childrenMap[prev]) ? prev : updatedChildren[0].id);
+            }
+            setLoading(false);
+        };
+
+        const loadFamilyData = async () => {
+            const explicitChildIds: string[] = Array.from(new Set(userProfile?.childrenIds || []));
+            
+            // 1. Listen to explicit childrenIds
+            explicitChildIds.forEach((childId: string) => {
+                const unsub = onSnapshot(doc(db, 'users', childId), (docSnap) => {
+                    if (!isMounted) return;
+                    if (docSnap.exists()) {
+                        const cData = docSnap.data();
+                        let kidPin = cData.kidPin;
+                        if (!kidPin) {
+                            kidPin = '1920';
+                            updateDoc(doc(db, 'users', childId), { kidPin }).catch(() => {});
+                        }
+                        childrenMap[childId] = { id: docSnap.id, ...cData, kidPin };
+                    }
+                    updateState();
+                });
+                unsubscribes.push(unsub);
             });
-            unsubscribes.push(unsub);
-        });
+
+            // 2. Query users where parentId == user?.uid or parentId == userProfile?.id
+            const activeUid = user?.uid || userProfile?.uid || userProfile?.id;
+            if (activeUid) {
+                const qParentId = query(collection(db, 'users'), where('parentId', '==', activeUid));
+                const unsubParent = onSnapshot(qParentId, (snap) => {
+                    if (!isMounted) return;
+                    snap.docs.forEach(d => {
+                        const cData = d.data();
+                        let kidPin = cData.kidPin;
+                        if (!kidPin) {
+                            kidPin = '1920';
+                            updateDoc(doc(db, 'users', d.id), { kidPin }).catch(() => {});
+                        }
+                        childrenMap[d.id] = { id: d.id, ...cData, kidPin };
+                    });
+                    updateState();
+                });
+                unsubscribes.push(unsubParent);
+            }
+
+            // If empty after immediate check, stop loading
+            if (explicitChildIds.length === 0 && !activeUid) {
+                setLoading(false);
+            }
+        };
+
+        loadFamilyData();
+
 
         return () => {
+            isMounted = false;
             unsubscribes.forEach(unsub => unsub());
         };
-    }, [userProfile?.childrenIds]);
+    }, [userProfile?.childrenIds, userProfile?.phone, user?.uid]);
+
 
     const activeChild = children.find(c => c.id === selectedChildId);
 
@@ -202,6 +246,37 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
                                 </button>
                             </div>
 
+                            {/* 📱 Fast Kid Access Bar (QR + PIN) */}
+                            <div className="bg-gradient-to-r from-amber-500/15 via-[#181818] to-black border border-sparta-gold/30 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_0_30px_rgba(212,175,55,0.08)]">
+                                <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    <div className="w-12 h-12 rounded-2xl bg-sparta-gold/20 border border-sparta-gold/40 text-sparta-gold flex items-center justify-center shrink-0 shadow-md">
+                                        <QrCode size={24} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] bg-sparta-gold text-black font-black uppercase px-2 py-0.5 rounded-md">
+                                                Детский доступ
+                                            </span>
+                                            <span className="text-xs text-white/70 font-manrope">
+                                                Код для входа: <strong className="text-sparta-gold font-russo tracking-widest text-sm">{activeChild.kidPin || '1920'}</strong>
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-white/50 font-manrope mt-1">
+                                            Позволяет {activeChild.childName || 'ребенку'} войти в «Дневник Чемпиона» на телефоне без паролей
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsKidAccessModalOpen(true)}
+                                    className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-sparta-gold text-black font-manrope font-extrabold text-xs hover:brightness-110 shadow-lg shadow-sparta-gold/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                                >
+                                    <QrCode size={16} />
+                                    <span>Показать QR-код и PIN</span>
+                                </button>
+                            </div>
+
                             {/* Detailed Stats */}
                             <div className="space-y-6">
                                 <div className="flex items-center gap-3 ml-4">
@@ -290,6 +365,93 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
                                     </button>
                                 </div>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Kid Access Modal (QR + PIN) */}
+            <AnimatePresence>
+                {isKidAccessModalOpen && activeChild && (
+                    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsKidAccessModalOpen(false)}
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.94, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.94, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-md bg-[#121212] border border-sparta-gold/30 rounded-[2.5rem] p-6 sm:p-8 shadow-[0_0_60px_rgba(212,175,55,0.2)] overflow-hidden text-center"
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-9 h-9 rounded-xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center">
+                                        <QrCode size={18} />
+                                    </div>
+                                    <span className="text-xs font-russo text-white uppercase tracking-wider">
+                                        Детский доступ
+                                    </span>
+                                </div>
+                                <button 
+                                    onClick={() => setIsKidAccessModalOpen(false)} 
+                                    className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors cursor-pointer"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <h3 className="text-xl font-russo text-white uppercase mb-1">
+                                «Дневник Чемпиона» для {activeChild.childName || 'ребенка'}
+                            </h3>
+                            <p className="text-xs text-white/50 font-manrope mb-5">
+                                Откройте сайт на смартфоне или планшете ребенка
+                            </p>
+
+                            {/* QR Code Frame */}
+                            <div className="bg-black/60 border border-sparta-gold/30 rounded-3xl p-5 mb-5 inline-block mx-auto shadow-inner">
+                                <img
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}/dashboard?pin=${activeChild.kidPin || '1920'}&child=${encodeURIComponent(activeChild.childName || '')}` : `https://sparta-sports-center.vercel.app/dashboard?pin=${activeChild.kidPin || '1920'}`)}&color=0-0-0&bgcolor=212-175-55`}
+                                    alt="QR для входа ребенка"
+                                    className="w-44 h-44 rounded-2xl bg-sparta-gold p-2 mx-auto shadow-lg"
+                                />
+                                <p className="text-[10px] text-amber-200 font-bold uppercase tracking-wider mt-3 flex items-center justify-center gap-1">
+                                    <Sparkles size={12} className="text-sparta-gold" /> Наведите камеру телефона
+                                </p>
+                            </div>
+
+                            {/* 4-digit PIN Code display */}
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+                                <p className="text-[11px] text-white/60 uppercase font-bold mb-2">
+                                    Или введите 4-значный код на сайте:
+                                </p>
+                                <div className="flex justify-center gap-2">
+                                    {String(activeChild.kidPin || '1920').split('').map((digit: string, idx: number) => (
+                                        <span
+                                            key={idx}
+                                            className="w-9 h-10 rounded-xl bg-sparta-gold/20 border border-sparta-gold/40 text-sparta-gold font-russo text-lg flex items-center justify-center font-bold"
+                                        >
+                                            {digit}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    const link = `${window.location.origin}/dashboard?pin=${activeChild.kidPin || '1920'}`;
+                                    navigator.clipboard.writeText(link);
+                                    setCopied(true);
+                                    setTimeout(() => setCopied(false), 2000);
+                                }}
+                                className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-manrope font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer mb-2"
+                            >
+                                {copied ? <Check size={15} className="text-green-400" /> : <Copy size={15} />}
+                                <span>{copied ? 'Ссылка скопирована!' : 'Скопировать ссылку для отправки'}</span>
+                            </button>
                         </motion.div>
                     </div>
                 )}

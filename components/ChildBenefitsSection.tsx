@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Flame, Users, Sparkles, CheckCircle2, Award, ArrowRight, Zap } from 'lucide-react';
+import { ShieldCheck, Flame, Users, CheckCircle2, HeartHandshake, Sparkles, ArrowRight } from 'lucide-react';
 import { Container, SectionHeader } from './UIComponents';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 type AgeGroup = '4-7' | '8-12' | '13-14';
 
 interface BenefitItem {
     id: string;
     icon: React.ReactNode;
+    category: string;
     title: string;
-    description: string;
-    badge: string;
-    bgNumber: string;
-    tags: string[];
+    image: string;
     checklist: string[];
+    resultText: string;
     isFeatured?: boolean;
 }
 
@@ -21,136 +22,127 @@ const BENEFITS_BY_AGE: Record<AgeGroup, BenefitItem[]> = {
     '4-7': [
         {
             id: 'health-4-7',
-            icon: <Flame className="w-6 h-6 text-amber-400" />,
-            title: 'Физическое развитие & Игровая адаптация',
-            description: 'Формирование идеальной осанки, координации движений и моторики через увлекательные упражнения.',
-            badge: 'Раннее развитие',
-            bgNumber: '01',
-            tags: ['Координация', 'Ловкость', 'Осанка'],
+            icon: <Flame className="w-4 h-4 text-amber-400" />,
+            category: 'Физическое развитие',
+            title: 'Ловкость & Здоровая осанка',
+            image: '/sparta_real_dynamics.jpg',
             checklist: [
-                'Игровая методика развития внимания и реакций',
-                'Профилактика плоскостопия и искривлений',
-                'Мягкая адаптация к коллективу без стресса',
+                'Игровая гимнастика: профилактика плоскостопия и сутулости',
+                'Развитие координации, баланса и быстрой реакции',
+                'Здоровая выработка энергии без переутомления',
             ],
+            resultText: '🎯 РЕЗУЛЬТАТ: Крепкое здоровье и правильное развитие тела',
             isFeatured: true,
         },
         {
             id: 'discipline-4-7',
-            icon: <ShieldCheck className="w-6 h-6 text-amber-400" />,
-            title: 'Дисциплина через игру',
-            description: 'Первые навыки самостоятельности, умение слушать наставника и выполнять спортивные правила.',
-            badge: 'Характер',
-            bgNumber: '02',
-            tags: ['Дисциплина', 'Самоконтроль', 'Режим'],
+            icon: <ShieldCheck className="w-4 h-4 text-amber-400" />,
+            category: 'Характер и дисциплина',
+            title: 'Самостоятельность & Фокус',
+            image: '/sparta_real_award.jpg',
             checklist: [
-                'Приучение к спортивному порядку',
-                'Удержание фокуса на заданиях',
-                'Уважение к тренеру и команде',
+                'Дисциплина через игру: учим слушать тренера и правила',
+                'Удержание внимания на задачах без капризов',
+                'Первые привычки аккуратности и спортивного порядка',
             ],
+            resultText: '🎯 РЕЗУЛЬТАТ: Внимательность и самостоятельность дома',
         },
         {
             id: 'social-4-7',
-            icon: <Users className="w-6 h-6 text-amber-400" />,
-            title: 'Дружба & Общение',
-            description: 'Помогаем победить стеснительность, завести верных друзей и получить эмоции от спорта.',
-            badge: 'Социализация',
-            bgNumber: '03',
-            tags: ['Команда', 'Дружба', 'Лидерство'],
+            icon: <Users className="w-4 h-4 text-amber-400" />,
+            category: 'Социализация и среда',
+            title: 'Адаптация & Первые друзья',
+            image: '/sparta_real_huddle.jpg',
             checklist: [
-                'Преодоление страхов и стеснения',
-                'Первый опыт работы в команде',
-                'Радость от личных побед и успехов',
+                'Победа над стеснительностью: мягкий вход в коллектив',
+                'Радость командных игр и общения со сверстниками',
+                'Уверенность в себе при встрече с новыми ребятами',
             ],
+            resultText: '🎯 РЕЗУЛЬТАТ: Общительный ребенок, готовый к садику и школе',
         },
     ],
     '8-12': [
         {
             id: 'health-8-12',
-            icon: <Flame className="w-6 h-6 text-amber-400" />,
-            title: 'Атлетическая форма & Скорость',
-            description: 'Укрепление мышечного корсета, развитие выносливости, моторики и компенсация учебных нагрузок.',
-            badge: 'Фундамент формы',
-            bgNumber: '01',
-            tags: ['Скорость', 'Выносливость', 'Сила'],
+            icon: <Flame className="w-4 h-4 text-amber-400" />,
+            category: 'Физическое развитие',
+            title: 'Здоровая осанка & Выносливость',
+            image: '/sparta_real_dynamics.jpg',
             checklist: [
-                'Развитие скоростно-силовых качеств',
-                'Снятие зажимов от школьного портфеля и парт',
-                'Формирование привычки к активности',
+                'Ровная спина: снимаем зажимы от школьного портфеля и парт',
+                'Крепкий мышечный корсет и правильная координация движений',
+                'Здоровая альтернатива гаджетам — фокус на активном движении',
             ],
+            resultText: '🎯 РЕЗУЛЬТАТ: Энергичный ребенок с правильной осанкой',
             isFeatured: true,
         },
         {
             id: 'discipline-8-12',
-            icon: <ShieldCheck className="w-6 h-6 text-amber-400" />,
-            title: 'Характер & Самоконтроль',
-            description: 'Воспитание спортивного трудолюбия, воли к победе и умения брать ответственность за свой результат.',
-            badge: 'Характер',
-            bgNumber: '02',
-            tags: ['Трудолюбие', 'Целеполагание', 'Воля'],
+            icon: <ShieldCheck className="w-4 h-4 text-amber-400" />,
+            category: 'Характер и дисциплина',
+            title: 'Самоконтроль & Дисциплина',
+            image: '/sparta_real_award.jpg',
             checklist: [
-                'Спортивный режим и пунктуальность',
-                'Умение исправлять собственные ошибки',
-                'Эмоциональный самоконтроль в игре',
+                'Дисциплина без слез: ребенок сам следит за временем и формой',
+                'Характер чемпиона: учим достойно принимать неудачи и победы',
+                'Внимательность: развитие концентрации внимания на тренировках',
             ],
+            resultText: '🎯 РЕЗУЛЬТАТ: Собранность в учебе и уверенность в себе',
         },
         {
             id: 'social-8-12',
-            icon: <Users className="w-6 h-6 text-amber-400" />,
-            title: 'Командный дух & Лидерство',
-            description: 'Развитие коммуникации, поддержка партнеров на поле и проявление лидерских качеств.',
-            badge: 'Социализация',
-            bgNumber: '03',
-            tags: ['Взаимовыручка', 'Общение', 'Уважение'],
+            icon: <Users className="w-4 h-4 text-amber-400" />,
+            category: 'Социализация и среда',
+            title: 'Командный дух & Дружба',
+            image: '/sparta_real_huddle.jpg',
             checklist: [
-                'Круг сильных мотивированных друзей',
-                'Взаимовыручка в сложные моменты',
-                'Уважение к соперникам и правилам',
+                'Сильное окружение: ребенок находит верных, активных друзей',
+                'Умение работать в команде и поддерживать партнеров в игре',
+                'Уважение к правилам, тренеру и границам сверстников',
             ],
+            resultText: '🎯 РЕЗУЛЬТАТ: Умение общаться, дружить и побеждать вместе',
         },
     ],
     '13-14': [
         {
             id: 'health-13-14',
-            icon: <Flame className="w-6 h-6 text-amber-400" />,
-            title: 'Атлетизм & Игровая Подготовка',
-            description: 'Профессиональная физическая форма, подготовка к разрядам, турнирам и интенсивным нагрузкам.',
-            badge: 'Про-уровень',
-            bgNumber: '01',
-            tags: ['Атлетизм', 'Разряды', 'Форма'],
+            icon: <Flame className="w-4 h-4 text-amber-400" />,
+            category: 'Атлетизм и форма',
+            title: 'Атлетизм & Разгрузка от стресса',
+            image: '/sparta_real_dynamics.jpg',
             checklist: [
-                'Формирование подтянутого рельефного тела',
-                'Разгрузка от экзаменационных стрессов',
-                'Готовность к спортивным турнирам',
+                'Подтянутое тело, сила и скорость для соревнований',
+                'Мощная разгрузка от школьных экзаменов и уроков',
+                'Профессиональная подготовка к юношеским турнирам',
             ],
+            resultText: '🎯 РЕЗУЛЬТАТ: Спортивное телосложение и выносливость',
             isFeatured: true,
         },
         {
             id: 'discipline-13-14',
-            icon: <ShieldCheck className="w-6 h-6 text-amber-400" />,
-            title: 'Целеустремленность & Фокус',
-            description: 'Умение ставить личные цели, управлять эмоциями под давлением и распределять время.',
-            badge: 'Характер',
-            bgNumber: '02',
-            tags: ['Фокус', 'Стойкость', 'Тайм-менеджмент'],
+            icon: <ShieldCheck className="w-4 h-4 text-amber-400" />,
+            category: 'Характер и фокус',
+            title: 'Психологическая стойкость',
+            image: '/sparta_real_award.jpg',
             checklist: [
-                'Тайм-менеджмент: спорт и учеба',
-                'Психологическая стойкость в игре',
-                'Уверенность в любых ситуациях',
+                'Тайм-менеджмент: умение совмещать спорт и отличную учебу',
+                'Хладнокровие и уверенность в стрессовых ситуациях',
+                'Умение ставить личные цели и достигать их',
             ],
+            resultText: '🎯 РЕЗУЛЬТАТ: Зрелый характер и целеустремленность',
         },
         {
             id: 'social-13-14',
-            icon: <Users className="w-6 h-6 text-amber-400" />,
-            title: 'Лидерство & Наставничество',
-            description: 'Зрелая позиция в коллективе, умение вести команду за собой и работать на общий результат.',
-            badge: 'Социализация',
-            bgNumber: '03',
-            tags: ['Наставничество', 'Команда', 'Зрелость'],
+            icon: <Users className="w-4 h-4 text-amber-400" />,
+            category: 'Лидерство и окружение',
+            title: 'Лидерство & Сильная команда',
+            image: '/sparta_real_huddle.jpg',
             checklist: [
-                'Проявление характера на поле',
-                'Сильное окружение единомышленников',
-                'Навыки командного лидерства',
+                'Правильное спортивное окружение вместо вредных привычек',
+                'Лидерские качества: умение брать ответственность за команду',
+                'Уважение среди сверстников и крепкая мужская дружба',
             ],
+            resultText: '🎯 РЕЗУЛЬТАТ: Уверенный лидер с правильными ценностями',
         },
     ],
 };
@@ -160,18 +152,21 @@ interface ChildBenefitsSectionProps {
 }
 
 export const ChildBenefitsSection: React.FC<ChildBenefitsSectionProps> = ({ onOpenTrial }) => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [selectedAge, setSelectedAge] = useState<AgeGroup>('8-12');
+    const isEnrolled = !!user;
 
-    const ageTabs: { key: AgeGroup; label: string; sub: string }[] = [
-        { key: '4-7', label: '4–7 лет', sub: 'Раннее развитие' },
-        { key: '8-12', label: '8–12 лет', sub: 'Базовая подготовка' },
-        { key: '13-14', label: '13–14 лет', sub: 'Продвинутый уровень' },
+    const ageTabs: { key: AgeGroup; label: string }[] = [
+        { key: '4-7', label: '4–7 лет' },
+        { key: '8-12', label: '8–12 лет' },
+        { key: '13-14', label: '13–14 лет' },
     ];
 
     const currentBenefits = BENEFITS_BY_AGE[selectedAge];
 
     return (
-        <section id="child-benefits" className="pt-24 md:pt-44 pb-16 md:pb-20 relative overflow-hidden bg-sparta-dark/90 scroll-mt-24">
+        <section id="child-benefits" className="pt-24 md:pt-36 pb-16 md:pb-20 relative overflow-hidden bg-sparta-dark/90 scroll-mt-24">
             {/* Background Ambient Glows */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-sparta-gold/10 rounded-full blur-[130px] pointer-events-none" />
 
@@ -182,151 +177,146 @@ export const ChildBenefitsSection: React.FC<ChildBenefitsSectionProps> = ({ onOp
                     showDot={false}
                 />
 
-                {/* Age Group Selector Tabs */}
-                <div className="flex justify-center mb-8">
-                    <div className="inline-flex p-1 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md max-w-full overflow-x-auto no-scrollbar">
+                {/* Clean Minimalist Age Tabs */}
+                <div className="flex justify-center mb-10">
+                    <div className="bg-white/5 p-1.5 rounded-2xl border border-white/10 grid grid-cols-3 gap-1.5 w-full max-w-md relative backdrop-blur-md">
                         {ageTabs.map((tab) => {
                             const isActive = selectedAge === tab.key;
                             return (
                                 <button
                                     key={tab.key}
                                     onClick={() => setSelectedAge(tab.key)}
-                                    className={`relative px-4 py-2 rounded-xl font-manrope transition-all duration-300 flex flex-col items-center min-w-[110px] md:min-w-[130px] ${
+                                    className={`relative py-2.5 px-3 rounded-xl font-manrope text-xs sm:text-sm font-bold transition-all duration-200 z-10 flex items-center justify-center select-none cursor-pointer whitespace-nowrap ${
                                         isActive
-                                            ? 'text-sparta-black font-extrabold shadow-[0_2px_15px_rgba(212,175,55,0.3)]'
-                                            : 'text-white/60 hover:text-white font-medium'
+                                            ? 'text-black font-extrabold shadow-sm'
+                                            : 'text-white/60 hover:text-white'
                                     }`}
                                 >
+                                    <span>{tab.label}</span>
                                     {isActive && (
                                         <motion.div
                                             layoutId="activeAgeTab"
-                                            className="absolute inset-0 bg-gold-gradient rounded-xl -z-10"
-                                            transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                                            className="absolute inset-0 bg-gold-gradient rounded-xl -z-10 shadow-[0_0_20px_rgba(212,175,55,0.4)]"
+                                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                                         />
                                     )}
-                                    <span className="text-xs md:text-sm font-russo tracking-wide">{tab.label}</span>
-                                    <span className={`text-[9px] uppercase tracking-wider ${isActive ? 'text-black/80 font-bold' : 'text-white/40'}`}>
-                                        {tab.sub}
-                                    </span>
                                 </button>
                             );
                         })}
                     </div>
                 </div>
 
-                {/* Compact 3-Column Grid */}
+                {/* 3-Column Clean Benefits Grid with Emotional Real Photos */}
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={selectedAge}
                         initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -15 }}
-                        transition={{ duration: 0.3 }}
-                        className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch mb-6"
+                        transition={{ duration: 0.25 }}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch mb-8"
                     >
                         {currentBenefits.map((benefit) => (
                             <div
                                 key={benefit.id}
                                 className={`group relative rounded-2xl p-5 md:p-6 flex flex-col justify-between transition-all duration-300 overflow-hidden ${
                                     benefit.isFeatured
-                                        ? 'bg-gradient-to-b from-amber-500/15 via-white/[0.04] to-black/80 border border-sparta-gold/50 shadow-[0_8px_30px_rgba(212,175,55,0.15)] hover:border-sparta-gold'
-                                        : 'bg-white/5 backdrop-blur-xl border border-white/10 hover:border-sparta-gold/40 hover:bg-white/[0.08]'
+                                        ? 'bg-gradient-to-b from-amber-500/15 via-[#141414] to-black border border-sparta-gold/50 shadow-[0_8px_30px_rgba(212,175,55,0.15)] hover:border-sparta-gold'
+                                        : 'bg-[#121212] backdrop-blur-xl border border-white/10 hover:border-sparta-gold/40 hover:bg-[#161616]'
                                 }`}
                             >
-                                {/* Background Accent Number in Top Right */}
-                                <span className="absolute top-2 right-3 font-russo text-6xl md:text-7xl text-white/[0.06] group-hover:text-sparta-gold/20 transition-colors select-none pointer-events-none z-0">
-                                    {benefit.bgNumber}
-                                </span>
+                                <div>
+                                    {/* Cinematic Emotional Photo Cover with Gradient & Floating Badge */}
+                                    <div className="relative h-44 sm:h-48 w-full rounded-xl overflow-hidden mb-5 border border-white/10 group-hover:border-sparta-gold/30 transition-all">
+                                        <img
+                                            src={benefit.image}
+                                            alt={benefit.title}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                                            loading="lazy"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-black/25 to-black/10" />
 
-                                <div className="relative z-10">
-                                    {/* Header Icon + Title */}
-                                    <div className="flex items-start gap-3 mb-3 pr-12">
-                                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
-                                            benefit.isFeatured
-                                                ? 'bg-amber-500/20 border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
-                                                : 'bg-white/5 border border-white/15'
-                                        }`}>
+                                        {/* Floating Glassmorphic Category Badge */}
+                                        <div className="absolute top-3 left-3 backdrop-blur-md bg-black/75 border border-sparta-gold/35 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider text-sparta-gold flex items-center gap-1.5 shadow-md">
                                             {benefit.icon}
-                                        </div>
-                                        <div>
-                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sparta-gold px-2 py-0.5 rounded-md bg-sparta-gold/10 border border-sparta-gold/20 mb-1">
-                                                <Sparkles className="w-2.5 h-2.5 text-sparta-gold" /> {benefit.badge}
-                                            </span>
-                                            <h3 className="font-russo text-base md:text-lg text-white group-hover:text-sparta-gold transition-colors leading-snug">
-                                                {benefit.title}
-                                            </h3>
+                                            <span>{benefit.category}</span>
                                         </div>
                                     </div>
 
-                                    {/* Short Description */}
-                                    <p className="font-manrope text-white/75 text-xs md:text-sm leading-relaxed mb-4">
-                                        {benefit.description}
-                                    </p>
+                                    {/* Main Title */}
+                                    <h3 className="font-russo text-lg md:text-xl text-white group-hover:text-sparta-gold transition-colors leading-snug mb-4">
+                                        {benefit.title}
+                                    </h3>
 
-                                    {/* High-Contrast Tags */}
-                                    <div className="flex flex-wrap gap-1.5 mb-4">
-                                        {benefit.tags.map((tag, idx) => (
-                                            <span
-                                                key={idx}
-                                                className="text-[10px] font-semibold px-2.5 py-0.5 rounded-md bg-white/10 border border-white/20 text-white/90 group-hover:border-sparta-gold/40 group-hover:bg-sparta-gold/15 transition-colors"
-                                            >
-                                                #{tag}
-                                            </span>
-                                        ))}
-                                    </div>
-
-                                    {/* Checklist */}
-                                    <div className="space-y-2 pt-3 border-t border-white/10 relative z-10">
+                                    {/* Clean Actionable Checklist */}
+                                    <ul className="space-y-3 mb-6">
                                         {benefit.checklist.map((item, idx) => (
-                                            <div key={idx} className="flex items-start gap-2 text-white/85 text-xs md:text-sm font-manrope">
-                                                <CheckCircle2 className="w-3.5 h-3.5 text-sparta-gold shrink-0 mt-0.5" />
+                                            <li key={idx} className="flex items-start gap-2.5 text-white/90 text-xs sm:text-sm font-manrope leading-relaxed">
+                                                <div className="w-4 h-4 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0 border border-amber-400/40 mt-0.5">
+                                                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                                                </div>
                                                 <span>{item}</span>
-                                            </div>
+                                            </li>
                                         ))}
-                                    </div>
+                                    </ul>
                                 </div>
 
-                                {/* Clean Footer without Star/Arrow */}
-                                <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-sparta-gold/80 font-manrope relative z-10">
-                                    <span>{benefit.isFeatured ? 'Результат Sparta' : 'Воспитание личности'}</span>
+                                {/* Grounded Result Pill Footer */}
+                                <div className="pt-3.5 border-t border-white/10">
+                                    <p className="text-xs font-bold text-amber-300/95 font-manrope leading-relaxed">
+                                        {benefit.resultText}
+                                    </p>
                                 </div>
                             </div>
                         ))}
                     </motion.div>
                 </AnimatePresence>
 
-                {/* BOTTOM GUARANTEE & CTA BANNER */}
+                {/* BOTTOM WARM GUEST BANNER */}
                 <motion.div
                     initial={{ opacity: 0, y: 15 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.4 }}
-                    className="relative rounded-2xl bg-gradient-to-r from-amber-500/10 via-black/90 to-sparta-gold/15 border border-sparta-gold/30 p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg overflow-hidden"
+                    className="relative rounded-2xl bg-gradient-to-r from-amber-500/10 via-black/80 to-sparta-gold/15 border border-sparta-gold/30 p-5 md:p-6 flex flex-col md:flex-row items-center justify-between gap-5 shadow-lg overflow-hidden backdrop-blur-md"
                 >
-                    <div className="flex items-center gap-3.5 text-left">
-                        <div className="w-11 h-11 rounded-xl bg-gold-gradient text-black flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(212,175,55,0.3)]">
-                            <Award className="w-5 h-5" />
+                    <div className="flex items-start md:items-center gap-4 text-left">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400/20 to-sparta-gold/10 border border-sparta-gold/40 text-sparta-gold flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
+                            <HeartHandshake className="w-6 h-6 text-sparta-gold" />
                         </div>
                         <div>
-                            <div className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-sparta-gold">
-                                <Zap className="w-3 h-3 fill-sparta-gold" /> 95% родителей рекомендуют Sparta
+                            <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2.5 py-0.5 rounded-md mb-1.5">
+                                <Sparkles className="w-3 h-3 text-sparta-gold" />
+                                <span>Бережная адаптация & гостеприимство</span>
                             </div>
-                            <h4 className="font-russo text-sm md:text-base text-white leading-snug">
-                                Первое пробное занятие — бесплатно
+                            <h4 className="font-russo text-base md:text-lg text-white leading-snug">
+                                Первый шаг в футбол — спокойно, бережно и без давления
                             </h4>
-                            <p className="font-manrope text-white/60 text-xs mt-0.5">
-                                Оцените атмосферу и тренерский подход уже на первой тренировке.
+                            <p className="font-manrope text-white/70 text-xs sm:text-sm mt-1 max-w-xl leading-relaxed">
+                                {isEnrolled
+                                    ? 'Ваш ребенок уже в клубе Sparta! Отслеживайте тренировки, достижения и успехи в личном кабинете.'
+                                    : 'Познакомьтесь с тренером и манежем. Комплиментарный первый визит ни к чему не обязывает — мы не навязываем звонки и услуги.'}
                             </p>
                         </div>
                     </div>
 
-                    <button
-                        onClick={onOpenTrial}
-                        className="w-full md:w-auto px-6 py-2.5 rounded-xl bg-gold-gradient text-black font-russo font-bold text-xs md:text-sm uppercase tracking-wider hover:brightness-110 hover:shadow-[0_0_25px_rgba(212,175,55,0.5)] active:scale-95 transition-all duration-300 flex items-center justify-center gap-1.5 group shrink-0"
-                    >
-                        <span>Записаться бесплатно</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                    </button>
+                    {isEnrolled ? (
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="w-full md:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-manrope font-extrabold text-xs sm:text-sm hover:brightness-110 hover:shadow-[0_0_25px_rgba(212,175,55,0.4)] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 group shrink-0 cursor-pointer shadow-md"
+                        >
+                            <span>Личный кабинет</span>
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={onOpenTrial}
+                            className="w-full md:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-manrope font-extrabold text-xs sm:text-sm hover:brightness-110 hover:shadow-[0_0_25px_rgba(212,175,55,0.4)] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 group shrink-0 cursor-pointer shadow-md"
+                        >
+                            <span>Прийти на день знакомства</span>
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    )}
                 </motion.div>
             </Container>
         </section>

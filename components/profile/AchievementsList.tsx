@@ -4,8 +4,9 @@ import { Trophy, Calendar, X, Box, CheckCircle, Star, Lock, Sparkles, Shield, Fi
 import { UserAchievement, AchievementDefinition } from '../../types/shop';
 import { db } from '../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
 
-const Viewer3D = React.lazy(() => import('../Viewer3D'));
+const Viewer3D = lazyWithRetry(() => import('../Viewer3D'));
 
 interface AchievementsListProps {
     userAchievements?: UserAchievement[];

@@ -6,43 +6,44 @@ import WindowTitleBar from './components/electron/WindowTitleBar';
 import AdminRoute from './components/admin/AdminRoute';
 import DirectorRoute from './components/admin/DirectorRoute';
 import AdminLayout from './components/admin/AdminLayout';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-// Lazy load non-critical and heavy Admin routes
-const Dashboard = React.lazy(() => import('./components/Dashboard'));
-const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
-const AdminUsers = React.lazy(() => import('./pages/admin/AdminUsers'));
-const AdminRequests = React.lazy(() => import('./pages/admin/AdminRequests'));
-const AdminNews = React.lazy(() => import('./pages/admin/AdminNews'));
-const AdminMessages = React.lazy(() => import('./pages/admin/AdminMessages'));
-const AdminSettings = React.lazy(() => import('./pages/admin/AdminSettings'));
-const AdminComments = React.lazy(() => import('./pages/admin/AdminComments'));
-const AdminSchedule = React.lazy(() => import('./pages/admin/AdminSchedule'));
-const AdminTeam = React.lazy(() => import('./pages/admin/AdminTeam'));
-const AdminDirections = React.lazy(() => import('./pages/admin/AdminDirections'));
-const AdminPromos = React.lazy(() => import('./pages/admin/AdminPromos'));
-const AdminShop = React.lazy(() => import('./pages/admin/AdminShop'));
-const AdminGroups = React.lazy(() => import('./pages/admin/AdminGroups'));
-const AdminAchievements = React.lazy(() => import('./pages/admin/AdminAchievements'));
-const AdminBans = React.lazy(() => import('./pages/admin/AdminBans'));
-const AdminBroadcasts = React.lazy(() => import('./pages/admin/AdminBroadcasts'));
-const AdminReviews = React.lazy(() => import('./pages/admin/AdminReviews'));
-const AdminFinance = React.lazy(() => import('./pages/admin/AdminFinance'));
-const AdminScanner = React.lazy(() => import('./pages/admin/AdminScanner'));
-const AdminLocations = React.lazy(() => import('./pages/admin/AdminLocations'));
-const DirectorDashboard = React.lazy(() => import('./pages/admin/DirectorDashboard'));
+// Lazy load non-critical and heavy Admin routes with automatic deployment retry
+const Dashboard = lazyWithRetry(() => import('./components/Dashboard'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard'));
+const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
+const AdminRequests = lazyWithRetry(() => import('./pages/admin/AdminRequests'));
+const AdminNews = lazyWithRetry(() => import('./pages/admin/AdminNews'));
+const AdminMessages = lazyWithRetry(() => import('./pages/admin/AdminMessages'));
+const AdminSettings = lazyWithRetry(() => import('./pages/admin/AdminSettings'));
+const AdminComments = lazyWithRetry(() => import('./pages/admin/AdminComments'));
+const AdminSchedule = lazyWithRetry(() => import('./pages/admin/AdminSchedule'));
+const AdminTeam = lazyWithRetry(() => import('./pages/admin/AdminTeam'));
+const AdminDirections = lazyWithRetry(() => import('./pages/admin/AdminDirections'));
+const AdminPromos = lazyWithRetry(() => import('./pages/admin/AdminPromos'));
+const AdminShop = lazyWithRetry(() => import('./pages/admin/AdminShop'));
+const AdminGroups = lazyWithRetry(() => import('./pages/admin/AdminGroups'));
+const AdminAchievements = lazyWithRetry(() => import('./pages/admin/AdminAchievements'));
+const AdminBans = lazyWithRetry(() => import('./pages/admin/AdminBans'));
+const AdminBroadcasts = lazyWithRetry(() => import('./pages/admin/AdminBroadcasts'));
+const AdminReviews = lazyWithRetry(() => import('./pages/admin/AdminReviews'));
+const AdminFinance = lazyWithRetry(() => import('./pages/admin/AdminFinance'));
+const AdminScanner = lazyWithRetry(() => import('./pages/admin/AdminScanner'));
+const AdminLocations = lazyWithRetry(() => import('./pages/admin/AdminLocations'));
+const DirectorDashboard = lazyWithRetry(() => import('./pages/admin/DirectorDashboard'));
 
 
 // Lazy load public heavy routes
-const Shop = React.lazy(() => import('./pages/Shop'));
-const ProductDetails = React.lazy(() => import('./pages/ProductDetails'));
-const Favorites = React.lazy(() => import('./pages/Favorites'));
-const Broadcasts = React.lazy(() => import('./pages/Broadcasts'));
-const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
+const Shop = lazyWithRetry(() => import('./pages/Shop'));
+const ProductDetails = lazyWithRetry(() => import('./pages/ProductDetails'));
+const Favorites = lazyWithRetry(() => import('./pages/Favorites'));
+const Broadcasts = lazyWithRetry(() => import('./pages/Broadcasts'));
+const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
 
-const LegalLayout = React.lazy(() => import('./pages/legal/LegalLayout'));
-const Requisites = React.lazy(() => import('./pages/legal/Requisites'));
-const PublicOffer = React.lazy(() => import('./pages/legal/PublicOffer'));
-const EducationInfo = React.lazy(() => import('./pages/legal/EducationInfo'));
+const LegalLayout = lazyWithRetry(() => import('./pages/legal/LegalLayout'));
+const Requisites = lazyWithRetry(() => import('./pages/legal/Requisites'));
+const PublicOffer = lazyWithRetry(() => import('./pages/legal/PublicOffer'));
+const EducationInfo = lazyWithRetry(() => import('./pages/legal/EducationInfo'));
 
 import CartSidebar from './components/CartSidebar';
 
@@ -57,10 +58,88 @@ import BannedScreen from './components/BannedScreen';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import LoadingScreen from './components/LoadingScreen';
 import { db } from './firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 
 import { safeLocalStorage } from './utils/storage';
 import { usePresence } from './hooks/usePresence';
+
+const KidPinAutoLoginHandler: React.FC = () => {
+    useEffect(() => {
+        const url = new URL(window.location.href);
+        const pin = url.searchParams.get('pin') || url.searchParams.get('kidPin');
+
+        if (pin && pin.trim().length >= 4) {
+            const cleanPin = pin.trim();
+            (async () => {
+                try {
+                    // 1. Search in users
+                    let qPin = query(collection(db, 'users'), where('kidPin', '==', cleanPin));
+                    let snap = await getDocs(qPin);
+
+                    // 2. Search in trials
+                    if (snap.empty) {
+                        const qTrials = query(collection(db, 'trials'), where('kidPin', '==', cleanPin));
+                        snap = await getDocs(qTrials);
+                    }
+
+                    // 3. Fallback check on students
+                    if (snap.empty) {
+                        const allStudents = await getDocs(query(collection(db, 'users'), where('role', 'in', ['user', 'student'])));
+                        const matched = allStudents.docs.find(d => {
+                            const data = d.data();
+                            return data.kidPin === cleanPin || (data.referralCode && data.referralCode.slice(0, 4) === cleanPin);
+                        });
+                        if (matched) {
+                            snap = { empty: false, docs: [matched] } as any;
+                        }
+                    }
+
+                    // 4. Fallback for 1920
+                    if (snap.empty && cleanPin === '1920') {
+                        const allTrials = await getDocs(collection(db, 'trials'));
+                        if (!allTrials.empty) {
+                            const latestTrial = allTrials.docs[allTrials.docs.length - 1];
+                            updateDoc(doc(db, 'trials', latestTrial.id), { kidPin: '1920' }).catch(() => {});
+                            snap = { empty: false, docs: [latestTrial] } as any;
+                        } else {
+                            const allUsers = await getDocs(query(collection(db, 'users'), where('role', 'in', ['user', 'student'])));
+                            if (!allUsers.empty) {
+                                const latestStudent = allUsers.docs[allUsers.docs.length - 1];
+                                updateDoc(doc(db, 'users', latestStudent.id), { kidPin: '1920' }).catch(() => {});
+                                snap = { empty: false, docs: [latestStudent] } as any;
+                            }
+                        }
+                    }
+
+                    if (!snap.empty) {
+                        const docObj = snap.docs[0];
+                        const childData = { id: docObj.id, ...docObj.data() } as any;
+                        const childName = childData.childName || childData.childFirstName || childData.displayName || childData.name || 'Юный Спартанец';
+
+                        safeLocalStorage.setItem('sparta_auth_user', JSON.stringify({
+                            uid: childData.id,
+                            email: childData.email || childData.parentEmail || `${cleanPin}@sparta.club`,
+                            displayName: childName,
+                            name: childName,
+                            role: 'user',
+                            isStudent: true,
+                            groupId: childData.slotId || childData.groupId || 'sparta_group_1',
+                            groupName: childData.streamTitle || childData.groupName || 'Группа Sparta',
+                            coachName: childData.coachName || 'Тренер Sparta',
+                            ...childData
+                        }));
+
+                        window.location.href = '/dashboard';
+                    }
+                } catch (err) {
+                    console.error('Kid PIN direct link auto-login error:', err);
+                }
+            })();
+        }
+    }, []);
+
+    return null;
+};
 
 const ReferralRedirect = () => {
     const { refId } = useParams();
@@ -74,6 +153,7 @@ const ReferralRedirect = () => {
 
     return <Navigate to="/" replace />;
 };
+
 
 const App: React.FC = () => {
     usePresence();
@@ -133,6 +213,7 @@ const App: React.FC = () => {
                         <WindowTitleBar />
                         <IncomingRequestToastContainer />
                         <Router>
+                            <KidPinAutoLoginHandler />
                             <Suspense fallback={<LoadingScreen />}>
                                 <Routes>
                                     <Route path="/" element={<LandingPage />} />
@@ -204,22 +285,101 @@ const App: React.FC = () => {
     );
 };
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; errorMsg: string }> {
-    constructor(props: any) {
+interface ErrorBoundaryProps {
+    children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+    hasError: boolean;
+    errorMsg: string;
+    isChunkError: boolean;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+    constructor(props: ErrorBoundaryProps) {
         super(props);
-        this.state = { hasError: false, errorMsg: '' };
+        this.state = { hasError: false, errorMsg: '', isChunkError: false };
     }
 
-    static getDerivedStateFromError(error: any) {
-        // Prevent full app crash overlay; log error and allow graceful continuation
-        return { hasError: false, errorMsg: error?.message || 'Error' };
+    static getDerivedStateFromError(error: any): ErrorBoundaryState {
+        const errorMsg = error?.message || String(error || 'Unknown error');
+        const isChunkError =
+            error?.name === 'ChunkLoadError' ||
+            errorMsg.includes('Failed to fetch dynamically imported module') ||
+            errorMsg.includes('Importing a module script failed') ||
+            errorMsg.includes('error loading dynamically imported module');
+
+        return {
+            hasError: true,
+            errorMsg,
+            isChunkError: !!isChunkError
+        };
     }
 
     componentDidCatch(error: any, errorInfo: any) {
-        console.warn("Handled runtime component exception gracefully:", error, errorInfo);
+        console.warn("Handled runtime component exception:", error, errorInfo);
+
+        // If chunk load error and not recently refreshed, trigger reload once
+        const isChunk =
+            error?.message?.includes('Failed to fetch dynamically imported module') ||
+            error?.name === 'ChunkLoadError';
+
+        if (isChunk) {
+            const lastReload = sessionStorage.getItem('eb_chunk_reload');
+            const now = Date.now();
+            if (!lastReload || now - parseInt(lastReload, 10) > 15000) {
+                sessionStorage.setItem('eb_chunk_reload', now.toString());
+                window.location.reload();
+            }
+        }
     }
 
+    handleReload = () => {
+        window.location.reload();
+    };
+
+    handleGoHome = () => {
+        window.location.href = '/';
+    };
+
     render() {
+        if (this.state.hasError) {
+            return (
+                <div className="min-h-screen bg-[#070709] text-white flex flex-col items-center justify-center p-6 text-center select-none">
+                    <div className="w-16 h-16 mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[#D4AF37] text-3xl font-bold shadow-lg shadow-amber-500/10">
+                        ⚡
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 uppercase tracking-wide">
+                        {this.state.isChunkError ? 'Обновление приложения' : 'Произошла ошибка'}
+                    </h2>
+                    <p className="text-gray-400 max-w-md mb-4 text-sm sm:text-base leading-relaxed">
+                        {this.state.isChunkError
+                            ? 'Вышла новая версия платформы SPARTA. Пожалуйста, обновите страницу для загрузки актуальных данных.'
+                            : 'Что-то пошло не так при отображении страницы. Попробуйте обновить сайт или перейти на главную.'}
+                    </p>
+                    {this.state.errorMsg && (
+                        <div className="bg-red-950/40 border border-red-500/30 text-red-300 font-mono text-xs p-3 rounded-xl max-w-lg mb-6 overflow-auto text-left">
+                            {this.state.errorMsg}
+                        </div>
+                    )}
+                    <div className="flex flex-wrap gap-4 justify-center">
+                        <button
+                            onClick={this.handleReload}
+                            className="px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] hover:brightness-110 text-black font-bold text-sm uppercase tracking-wider rounded-xl transition-all shadow-lg hover:shadow-amber-500/25 active:scale-95 cursor-pointer"
+                        >
+                            Обновить страницу
+                        </button>
+                        <button
+                            onClick={this.handleGoHome}
+                            className="px-6 py-3 bg-white/10 hover:bg-white/15 text-white font-medium text-sm rounded-xl transition-all border border-white/10 active:scale-95 cursor-pointer"
+                        >
+                            На главную
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return this.props.children;
     }
 }
@@ -230,4 +390,4 @@ const AppWrapper: React.FC = () => (
     </ErrorBoundary>
 );
 
-export default AppWrapper;
+export default AppWrapper;

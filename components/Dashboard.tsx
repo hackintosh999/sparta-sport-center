@@ -19,6 +19,7 @@ import { collection, query, where, getDocs, doc, getDoc, onSnapshot, updateDoc, 
 import { updateProfile, EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { supabase } from '../supabase';
+import { safeLocalStorage } from '../utils/storage';
 
 const resizeImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -73,16 +74,18 @@ import ProgressSection from './profile/ProgressSection';
 import ShopReceipt from './profile/ShopReceipt';
 import AttendanceSection from './profile/AttendanceSection';
 import MessagesSection from './profile/MessagesSection';
-const CoachSection = React.lazy(() => import('./profile/CoachSection'));
-const ParentDashboard = React.lazy(() => import('./profile/ParentDashboard').then(m => ({ default: m.ParentDashboard })));
-const KidDashboard = React.lazy(() => import('./dashboard/KidDashboard').then(m => ({ default: m.KidDashboard })));
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+const CoachSection = lazyWithRetry(() => import('./profile/CoachSection'));
+const ParentDashboard = lazyWithRetry(() => import('./profile/ParentDashboard').then(m => ({ default: m.ParentDashboard })));
+const KidDashboard = lazyWithRetry(() => import('./dashboard/KidDashboard').then(m => ({ default: m.KidDashboard })));
 import ActivitySection from './profile/ActivitySection';
 import GroupChat from './profile/GroupChat';
 import FriendsSection from './profile/FriendsSection';
 import { ThemeToggle } from './ThemeToggle';
 import { LinkingRequestBanner } from './profile/LinkingRequestBanner';
+import ParentAccountSetupModal from './ParentAccountSetupModal';
 const STAFF_ROLES = ['admin', 'director', 'dev', 'developer', 'coach', 'trainer'];
-const DirectorDashboard = React.lazy(() => import('../pages/admin/DirectorDashboard'));
+const DirectorDashboard = lazyWithRetry(() => import('../pages/admin/DirectorDashboard'));
 
 const Dashboard = () => {
     const capitalize = (str: string) => {
@@ -95,7 +98,7 @@ const Dashboard = () => {
 
     const [userProfile, setUserProfile] = useState<any>(null);
 
-    const isSuperDev = isSuperDeveloper(user?.email) || userProfile?.role === 'super' || userProfile?.role === 'developer';
+    const isSuperDev = isSuperDeveloper(user?.email);
     const effectiveRole = isSuperDev ? 'super' : (userProfile?.role || 'user');
     const isStaffAccount = ['super', 'admin', 'director', 'dev', 'developer', 'coach', 'trainer'].includes(effectiveRole);
 
@@ -169,12 +172,28 @@ const Dashboard = () => {
     const [isMakeupModalOpen, setIsMakeupModalOpen] = useState(false);
     const [isMobileChatActive, setIsMobileChatActive] = useState(false);
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [isParentSetupOpen, setIsParentSetupOpen] = useState(false);
     const [emailModalMode, setEmailModalMode] = useState<'password' | 'code' | 'admin_help'>('password');
     const [newEmailInput, setNewEmailInput] = useState('');
     const [currentPasswordInput, setCurrentPasswordInput] = useState('');
     const [newPasswordInput, setNewPasswordInput] = useState('');
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
+
+    // Auto-prompt parent to setup email & password for account security if missing
+    useEffect(() => {
+        if (userProfile && (userProfile.role === 'parent' || userProfile.role === 'user' || !userProfile.role)) {
+            const hasNoEmail = !userProfile.email && !user?.email;
+            const dismissed = sessionStorage.getItem('dismissed_parent_setup');
+            if ((hasNoEmail || userProfile.needsPasswordSetup) && !dismissed) {
+                const timer = setTimeout(() => {
+                    setIsParentSetupOpen(true);
+                }, 600);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [userProfile, user]);
+
     const [otpCodeInput, setOtpCodeInput] = useState('');
     const [sentOtpCode, setSentOtpCode] = useState('');
     const [isOtpSent, setIsOtpSent] = useState(false);
@@ -1154,18 +1173,18 @@ const Dashboard = () => {
                 // ════════════════════════════════════════════════
                 // Role Guard & Auto-Repair Logic
                 // ════════════════════════════════════════════════
-                const isSuperDev = isSuperDeveloper(user?.email) || data.role === 'super' || data.role === 'developer';
+                const isSuperDev = isSuperDeveloper(user?.email);
                 const hasChildrenIds = Boolean(data.childrenIds && data.childrenIds.length > 0);
-                const isExplicitParent = data.role === 'parent';
+                const isExplicitParent = data.role === 'parent' || hasChildrenIds || Boolean(data.parentName && !data.parentId);
                 const isStaff = ['super', 'admin', 'director', 'dev', 'developer', 'coach', 'trainer'].includes(data.role);
 
                 if (isSuperDev) {
                     // Priority 1 (Whitelisted Developers): Force developer role and BYPASS auto-repair
-                    data.role = data.role === 'super' ? 'super' : 'developer';
+                    data.role = 'developer';
                     data.isStaff = true;
                     data.isAdmin = true;
                     data.status = 'active';
-                } else if (isExplicitParent || (hasChildrenIds && data.role !== 'user')) {
+                } else if (isExplicitParent || hasChildrenIds) {
                     // PARENT ACCOUNT — ensure role is 'parent' and displayName is the parent's own name
                     const childNameVal = data.childName || data.childFullName || '';
                     
@@ -1273,7 +1292,7 @@ const Dashboard = () => {
                     hasSetInitialTab.current = true;
                     if (isSuperDev || ['super', 'developer', 'dev', 'director', 'admin'].includes(data.role)) {
                         setActiveTab('analytics');
-                    } else if (data.role === 'parent') {
+                    } else if (data.role === 'parent' || (data.childrenIds && data.childrenIds.length > 0)) {
                         setActiveTab('family');
                     } else if (data.role === 'user') {
                         setActiveTab('requests');
@@ -1346,14 +1365,7 @@ const Dashboard = () => {
                     setGroupCoach(null);
                 }
 
-                // Show wizard if no group and no experience level set (new user or incomplete profile)
-                // AND user is not an admin or coach etc.
-                const staffRoles = ['admin', 'coach', 'trainer', 'director', 'dev', 'developer', 'parent'];
-                if (data.groupId) {
-                    setShowWizard(false);
-                } else if (!data.experienceLevel && !staffRoles.includes(data.role)) {
-                    setShowWizard(true);
-                }
+                setShowWizard(false);
             } else {
                 console.log("No such user document!");
             }
@@ -1450,49 +1462,11 @@ const Dashboard = () => {
                     lastSeen: serverTimestamp()
                 });
             } catch (error) {
-                console.error("Error updating lastSeen:", error);
+                // Silently handle offline/permission errors
             }
         };
 
         updateStatus();
-
-        // TEMPORARY: Purge all guest passes for this user (since they were deactivated)
-        const purgePasses = async () => {
-            const q = query(collection(db, "guest_passes"), where("ownerId", "==", user.uid));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-                console.log(`Purging ${snap.size} guest passes for user ${user.uid}...`);
-                for (const d of snap.docs) {
-                    await deleteDoc(d.ref);
-                }
-            }
-        };
-        purgePasses();
-
-        /* 
-        // Guest Pass Backfill: Grant 2 passes if user has active sub OR is an admin but 0 passes
-        // We check isPassesLoaded to ensure we don't grant prematurely while still fetching
-        const hasActiveSub = userProfile?.subscription?.status === 'active';
-        const isAdmin = ['admin', 'director', 'dev', 'developer'].includes(userProfile?.role);
-
-        if (isPassesLoaded && (hasActiveSub || isAdmin) && guestPasses.length === 0) {
-            console.log("Backfill: Awarding guest passes...");
-            const grantBackfill = async () => {
-                const uidShort = user.uid.substring(0, 4).toUpperCase();
-                for (let i = 1; i <= 2; i++) {
-                    const passId = `GUEST-${uidShort}-${Date.now().toString().slice(-4)}-${i}`;
-                    await setDoc(doc(db, "guest_passes", passId), {
-                        id: passId,
-                        ownerId: user.uid,
-                        status: 'active',
-                        createdAt: serverTimestamp(),
-                        type: 'backfill_award'
-                    });
-                }
-            };
-            grantBackfill();
-        }
-        */
 
         // Update every 45 seconds
         const interval = setInterval(updateStatus, 45000);
@@ -1500,7 +1474,45 @@ const Dashboard = () => {
         return () => {
             clearInterval(interval);
         };
-    }, [user?.uid, db, userProfile?.subscription?.status, userProfile?.role, guestPasses.length, isPassesLoaded]);
+    }, [user?.uid]);
+
+    // Auto-login child if accessed via QR-code or PIN link (?pin=1920)
+    useEffect(() => {
+        const pinParam = searchParams.get('pin');
+        if (pinParam && !user) {
+            (async () => {
+                try {
+                    const qPin = query(collection(db, 'users'), where('kidPin', '==', pinParam));
+                    let snap = await getDocs(qPin);
+                    if (snap.empty) {
+                        const allStudents = await getDocs(query(collection(db, 'users'), where('role', 'in', ['user', 'student'])));
+                        const matched = allStudents.docs.find(d => {
+                            const data = d.data();
+                            return data.kidPin === pinParam || (data.referralCode && data.referralCode.slice(0, 4) === pinParam);
+                        });
+                        if (matched) {
+                            snap = { empty: false, docs: [matched] } as any;
+                        }
+                    }
+
+                    if (!snap.empty) {
+                        const childData = { id: snap.docs[0].id, ...snap.docs[0].data() } as any;
+                        safeLocalStorage.setItem('sparta_auth_user', JSON.stringify({
+                            uid: childData.id,
+                            email: childData.email || `${pinParam}@sparta.club`,
+                            displayName: childData.childName || childData.displayName || 'Юный Спартанец',
+                            role: 'user',
+                            isStudent: true,
+                            ...childData
+                        }));
+                        window.location.href = '/dashboard';
+                    }
+                } catch (e) {
+                    console.error('Auto QR/PIN login failed:', e);
+                }
+            })();
+        }
+    }, [searchParams, user]);
 
     useEffect(() => {
         const tabParam = searchParams.get('tab');
@@ -2818,6 +2830,41 @@ const Dashboard = () => {
                             }
                             return null;
                         })()}
+
+                        {/* Parent Account Security Reminder Badge */}
+                        {(userProfile?.role === 'parent' || userProfile?.role === 'user' || !userProfile?.role) && (!userProfile?.email || userProfile?.needsPasswordSetup) && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-sparta-gold/10 to-transparent border border-sparta-gold/35 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-[0_0_25px_rgba(212,175,55,0.1)] backdrop-blur-md relative overflow-hidden"
+                            >
+                                <div className="flex items-center gap-3 relative z-10">
+                                    <div className="w-10 h-10 rounded-2xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center shrink-0 border border-sparta-gold/30 shadow-sm">
+                                        <ShieldCheck size={20} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-xs sm:text-sm font-bold text-white">
+                                                Аккаунт не защищен паролем
+                                            </p>
+                                            <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+                                                Рекомендуется
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-white/60 mt-0.5">
+                                            Привяжите Email и пароль, чтобы не потерять доступ к дневнику и абонементу ребенка при случайном выходе.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsParentSetupOpen(true)}
+                                    className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:brightness-110 text-black font-manrope font-extrabold text-xs shrink-0 shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 w-full sm:w-auto justify-center relative z-10"
+                                >
+                                    <span>Защитить аккаунт</span>
+                                    <ArrowRight size={14} />
+                                </button>
+                            </motion.div>
+                        )}
 
                         {effectiveRole === 'user' && !userProfile?.parentId && (
                             <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -4281,6 +4328,24 @@ const Dashboard = () => {
                     />
                 )
             }
+
+            {/* Parent Account Security & Email Setup Modal */}
+            <ParentAccountSetupModal
+                isOpen={isParentSetupOpen}
+                onClose={() => {
+                    sessionStorage.setItem('dismissed_parent_setup', 'true');
+                    setIsParentSetupOpen(false);
+                }}
+                parentUid={userProfile?.id || user?.uid || ''}
+                parentName={userProfile?.displayName || userProfile?.name || userProfile?.parentName || 'Родитель'}
+                parentPhone={userProfile?.phone || ''}
+                childName={userProfile?.childFirstName || userProfile?.childFullName || 'Юного спортсмена'}
+                onSuccess={(newEmail) => {
+                    setUserProfile((prev: any) => ({ ...prev, email: newEmail, hasPassword: true }));
+                    sessionStorage.setItem('dismissed_parent_setup', 'true');
+                }}
+            />
+
             {/* Receipt Modal */}
             {
                 isReceiptOpen && selectedOrder && (

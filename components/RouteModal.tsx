@@ -35,7 +35,7 @@ export const RouteModal: React.FC<RouteModalProps> = ({
         // Correct Yandex.Navigator API parameters: lat_to & lon_to
         const naviUrl = `yandexnavi://build_route_on_map?lat_to=${loc.lat}&lon_to=${loc.lon}`;
         const queryText = `${loc.city}, ${loc.address}`;
-        const webUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(queryText)}&rtext=~${loc.lat},${loc.lon}&rtt=auto`;
+        const webUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(queryText)}`;
 
         if (isMobile) {
             const start = Date.now();
