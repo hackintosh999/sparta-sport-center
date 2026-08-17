@@ -526,7 +526,7 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                                         <div className="flex items-center gap-1.5 truncate">
                                             <MapPin size={12} className="text-sparta-gold shrink-0" />
                                             <span className="truncate">
-                                                <strong>{selectedLocation.name}:</strong> {selectedLocation.address} ({selectedLocation.badge || 'Челябинск'})
+                                                <strong>{selectedLocation.name}:</strong> {selectedLocation.address} ({(selectedLocation as any).badge || selectedLocation.city || 'Челябинск'})
                                             </span>
                                         </div>
                                         {selectedLocation.href && (

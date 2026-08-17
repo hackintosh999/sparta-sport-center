@@ -80,11 +80,15 @@ const BroadcastChat: React.FC<BroadcastChatProps> = ({ broadcastId, isLive }) =>
         setNewMessage('');
         setIsAtBottom(true); // Force scroll on send
 
+        const parentChildBadge = userProfile?.childName
+            ? `${user?.displayName || userProfile?.displayName || 'Родитель'} (родитель ${userProfile.childName})`
+            : user?.displayName || userProfile?.displayName || 'Болельщик Sparta';
+
         try {
             await addDoc(collection(db, 'broadcast_messages'), {
                 broadcastId,
                 userId: user.uid,
-                userName: user.displayName || userProfile?.childName || 'Спортсмен',
+                userName: parentChildBadge,
                 userAvatar: user.photoURL || userProfile?.photoURL || '',
                 text: messageText,
                 userRole: userProfile?.role || 'user',
@@ -93,9 +97,16 @@ const BroadcastChat: React.FC<BroadcastChatProps> = ({ broadcastId, isLive }) =>
             });
         } catch (error) {
             console.error("Error sending message:", error);
-            // Optionally restore message if failed
             setNewMessage(messageText);
         }
+    };
+
+    const handleQuickShout = (text: string) => {
+        if (!user) {
+            alert("Войдите в аккаунт, чтобы поддержать команду в чате!");
+            return;
+        }
+        setNewMessage(text);
     };
 
     // Format time (HH:MM)
@@ -106,65 +117,60 @@ const BroadcastChat: React.FC<BroadcastChatProps> = ({ broadcastId, isLive }) =>
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#0F0F0F] rounded-2xl border border-white/5 overflow-hidden">
+        <div className="flex flex-col h-full bg-[#0F0F0F] rounded-2xl border border-white/10 overflow-hidden font-manrope">
             {/* Chat Header */}
             <div className="p-4 border-b border-white/5 bg-[#141414] flex items-center justify-between z-10">
                 <div className="flex items-center gap-2">
                     <MessageSquare size={18} className="text-sparta-gold" />
-                    <h3 className="text-white font-bold tracking-wider">
-                        {isLive ? 'LIVE ЧАТ' : 'ОБСУЖДЕНИЕ'}
+                    <h3 className="text-white font-bold tracking-wider text-sm">
+                        {isLive ? 'LIVE ЧАТ РОДИТЕЛЕЙ' : 'ОБСУЖДЕНИЕ'}
                     </h3>
                 </div>
-                <span className="text-white/40 text-xs font-bold bg-white/5 px-2 py-1 rounded-md">
-                    {messages.length} SMS
+                <span className="text-white/40 text-xs font-bold bg-white/5 px-2.5 py-1 rounded-full border border-white/5">
+                    {messages.length} сообщений
                 </span>
             </div>
 
             {/* Messages Area */}
             <div
-                className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent custom-scrollbar"
+                className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent custom-scrollbar min-h-[250px] max-h-[420px]"
                 onScroll={handleScroll}
             >
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-white/20 space-y-2">
-                        <MessageSquare size={32} />
-                        <p className="text-sm">Сообщений пока нет.</p>
-                        <p className="text-xs">Напишите первым!</p>
+                    <div className="h-full flex flex-col items-center justify-center text-white/30 space-y-2 py-10">
+                        <MessageSquare size={32} className="text-sparta-gold/40" />
+                        <p className="text-sm font-medium">В чате пока тихо.</p>
+                        <p className="text-xs text-white/20">Поддержите юных спартанцев первым!</p>
                     </div>
                 ) : (
                     <AnimatePresence initial={false}>
-                        {messages.map((msg, index) => {
+                        {messages.map((msg) => {
                             const isMe = msg.userId === user?.uid;
                             return (
                                 <motion.div
                                     key={msg.id}
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    className={`flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+                                    className={`flex gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
                                 >
                                     {/* Avatar */}
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/5 overflow-hidden border border-white/10 flex items-center justify-center mt-1">
+                                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-white/5 overflow-hidden border border-white/10 flex items-center justify-center mt-1">
                                         {msg.userAvatar ? (
                                             <img src={msg.userAvatar} alt="avatar" className="w-full h-full object-cover" />
                                         ) : (
-                                            <User size={14} className="text-white/40" />
+                                            <User size={13} className="text-white/40" />
                                         )}
                                     </div>
 
                                     {/* Message Bubble */}
-                                    <div className={`flex flex-col max-w-[75%] ${isMe ? 'items-end' : 'items-start'}`}>
-                                        <div className="flex items-center gap-2 mb-1 px-1">
-                                            <span className={`flex items-center gap-1 text-[10px] font-bold ${isMe ? 'text-sparta-gold' : 'text-white/60'}`}>
+                                    <div className={`flex flex-col max-w-[80%] ${isMe ? 'items-end' : 'items-start'}`}>
+                                        <div className="flex items-center gap-1.5 mb-1 px-1">
+                                            <span className={`text-[10px] font-bold ${isMe ? 'text-sparta-gold' : 'text-white/70'} truncate max-w-[170px]`}>
                                                 {isMe ? 'Вы' : msg.userName}
-                                                {msg.userRole === 'admin' && <span title="Администратор"><BadgeCheck size={10} className="text-blue-500 shrink-0" /></span>}
-                                                {msg.userRole === 'trainer' && <span title="Тренер"><Dumbbell size={10} className="text-green-500 shrink-0" /></span>}
-                                                {msg.userRole === 'director' && <span title="Директор"><Star size={10} className="text-purple-500 shrink-0" /></span>}
-                                                {msg.userRole === 'developer' && <span title="Разработчик"><Code size={10} className="text-cyan-500 shrink-0" /></span>}
-                                                {msg.userVerification?.isVerified && <span title={msg.userVerification.title}><BadgeCheck size={10} className="text-blue-500 shrink-0" /></span>}
                                             </span>
-                                            <span className="text-white/20 text-[9px]">{formatTime(msg.createdAt)}</span>
+                                            <span className="text-white/25 text-[9px]">{formatTime(msg.createdAt)}</span>
                                         </div>
-                                        <div className={`px-4 py-2.5 rounded-2xl text-sm break-words shadow-sm ${isMe
+                                        <div className={`px-3.5 py-2 rounded-2xl text-xs sm:text-sm break-words shadow-md ${isMe
                                             ? 'bg-sparta-gold text-black rounded-tr-sm font-medium'
                                             : 'bg-white/10 text-white rounded-tl-sm border border-white/5'
                                             }`}>
@@ -179,42 +185,47 @@ const BroadcastChat: React.FC<BroadcastChatProps> = ({ broadcastId, isLive }) =>
                 <div ref={messagesEndRef} className="h-1" />
             </div>
 
-            {/* Scroll to bottom button (if not at bottom) */}
-            {!isAtBottom && messages.length > 0 && (
-                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20">
+            {/* Quick Fan Shoutouts Chips */}
+            <div className="px-3 pt-2 pb-1.5 bg-[#121212] border-t border-white/5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                {[
+                    { text: '⚽ ГОООЛ!', bg: 'hover:border-amber-400' },
+                    { text: '🔥 ВПЕРЁД СПАРТА!', bg: 'hover:border-red-500' },
+                    { text: '🧤 СЕЙВ!', bg: 'hover:border-blue-400' },
+                    { text: '👏 КРАСАВЦЫ!', bg: 'hover:border-emerald-400' }
+                ].map((item, i) => (
                     <button
-                        onClick={() => { setIsAtBottom(true); scrollToBottom(); }}
-                        className="bg-black/80 backdrop-blur-md text-white border border-white/10 px-4 py-1.5 rounded-full text-xs font-bold hover:bg-white/10 transition-colors shadow-lg"
+                        key={i}
+                        type="button"
+                        onClick={() => handleQuickShout(item.text)}
+                        className={`shrink-0 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/90 transition-all ${item.bg}`}
                     >
-                        Вниз ↓
+                        {item.text}
                     </button>
-                </div>
-            )}
+                ))}
+            </div>
 
-            {/* Input Area */}
-            <div className="p-3 bg-[#111] border-t border-white/5 z-10">
+            {/* Input Form */}
+            <div className="p-3 bg-[#141414] border-t border-white/5">
                 {user ? (
-                    <form onSubmit={handleSend} className="relative flex items-center">
+                    <form onSubmit={handleSend} className="flex gap-2">
                         <input
                             type="text"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder={isLive ? "Написать в эфир..." : "Оставить комментарий..."}
-                            className="w-full bg-white/5 border border-white/10 rounded-full pl-5 pr-12 py-3 text-sm text-white focus:border-sparta-gold/50 outline-none transition-all placeholder:text-white/20"
-                            maxLength={200}
+                            placeholder="Написать в чат матча..."
+                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-colors"
                         />
                         <button
                             type="submit"
                             disabled={!newMessage.trim()}
-                            className="absolute right-2 w-8 h-8 rounded-full bg-sparta-gold text-black flex items-center justify-center hover:bg-[#ffd700] disabled:opacity-50 disabled:bg-white/10 disabled:text-white/30 transition-all"
+                            className="p-2.5 bg-sparta-gold text-black rounded-xl hover:bg-amber-300 disabled:opacity-30 disabled:hover:bg-sparta-gold transition-all shrink-0"
                         >
-                            <Send size={14} className="ml-0.5" />
+                            <Send size={15} />
                         </button>
                     </form>
                 ) : (
-                    <div className="text-center p-3 bg-white/5 rounded-xl border border-white/5">
-                        <p className="text-white/40 text-xs">Войдите, чтобы писать в чат</p>
-                        {/* Could add a mini Login button here if we wire up the modal */}
+                    <div className="text-center py-1">
+                        <p className="text-xs text-white/40">Войдите в аккаунт, чтобы писать в чат</p>
                     </div>
                 )}
             </div>
@@ -223,3 +234,5 @@ const BroadcastChat: React.FC<BroadcastChatProps> = ({ broadcastId, isLive }) =>
 };
 
 export default BroadcastChat;
+
+

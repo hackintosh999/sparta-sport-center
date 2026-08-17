@@ -22,6 +22,8 @@ export interface Product {
     sizeChartUrl?: string;
     sizeChartId?: string;
     colorImages?: Record<string, string>;
+    productionTime?: string;
+    deliveryInfo?: string;
 }
 
 export interface Review {
@@ -41,6 +43,7 @@ export interface Review {
     image?: string;
     video?: string;
     videoUrl?: string;
+    audio?: string;
     verified?: boolean;
     isVerified?: boolean;
     isFeatured?: boolean;
@@ -49,10 +52,19 @@ export interface Review {
     clubResponse?: string | any;
     role?: string;
     userRole?: string;
+    childName?: string;
+    groupName?: string;
+    userReactions?: Record<string, string>; // userId -> emoji
+    emotionTags?: string[];
     userVerification?: boolean;
     status?: 'pending' | 'approved' | 'rejected';
     isRewardClaimed?: boolean;
     respondedAt?: any;
+    isPinned?: boolean;
+    pinnedAt?: any;
+    pinnedBy?: string;
+    staffLikes?: { userId: string; name: string; role: string }[];
+    viewsCount?: number;
 }
 
 export interface ReviewReply {
@@ -62,8 +74,17 @@ export interface ReviewReply {
     userAvatar?: string;
     comment: string;
     createdAt: any;
+    updatedAt?: any;
     userRole?: string;
     userVerification?: boolean;
+    audio?: string;
+    photos?: string[];
+    video?: string;
+    replyToUser?: string;
+    replyToText?: string;
+    replyToCommentId?: string;
+    isEdited?: boolean;
+    likes?: string[];
 }
 
 export interface Order {

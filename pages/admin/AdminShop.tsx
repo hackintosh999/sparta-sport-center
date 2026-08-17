@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Save, X, Search, ShoppingBag, ImageIcon, Loader2, DollarSign, Tag, Link as LinkIcon, Upload, Layers, List, EyeOff, Eye, Copy, Check, Package, Truck, CheckCircle, Clock as ClockIcon, FileText, User as UserIcon, Phone as PhoneIcon, Filter, ExternalLink, Calendar as CalendarIcon, Printer, AlertCircle, Users, Mail, RotateCcw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Search, ShoppingBag, ImageIcon, Loader2, DollarSign, Tag, Link as LinkIcon, Upload, Layers, List, EyeOff, Eye, Copy, Check, Package, Truck, CheckCircle, Clock as ClockIcon, FileText, User as UserIcon, Phone as PhoneIcon, Filter, ExternalLink, Calendar as CalendarIcon, Printer, AlertCircle, Users, Mail, RotateCcw, Sparkles, Flame, Zap, MapPin } from 'lucide-react';
 import { db } from '../../firebase';
 import { supabase } from '../../supabase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy, getDoc, where, getDocs } from 'firebase/firestore';
@@ -15,6 +15,7 @@ const AdminShop: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [currentProduct, setCurrentProduct] = useState<Partial<Product>>({});
+    const [specRows, setSpecRows] = useState<{ id: string; key: string; value: string }[]>([]);
 
     // Image States
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -29,11 +30,13 @@ const AdminShop: React.FC = () => {
     const [colorImagePreviews, setColorImagePreviews] = useState<Record<string, string>>({});
 
     const [isSaving, setIsSaving] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState('Все');
+
+    // Tabs & Filters
+    const [mainTab, setMainTab] = useState<'products' | 'orders' | 'verification' | 'sizes' | 'size-charts'>('products');
+    const [activeTab, setActiveTab] = useState<'info' | 'media' | 'stock' | 'extra'>('info');
+    const [selectedCategory, setSelectedCategory] = useState<string>('Все');
     const [customColor, setCustomColor] = useState('');
     const [customSize, setCustomSize] = useState('');
-    const [activeTab, setActiveTab] = useState<'info' | 'media' | 'stock' | 'extra'>('info');
-    const [mainTab, setMainTab] = useState<'products' | 'orders' | 'size-charts'>('products');
     const [sizeCharts, setSizeCharts] = useState<SizeChart[]>([]);
     const [isEditingSizeChart, setIsEditingSizeChart] = useState(false);
     const [currentSizeChart, setCurrentSizeChart] = useState<Partial<SizeChart>>({});
@@ -61,13 +64,17 @@ const AdminShop: React.FC = () => {
 
     const categories = ['Все', 'Экипировка', 'Форма', 'Аксессуары', 'Сувениры'];
 
-    // Initial Fetch - Products
+    // Initial Fetch - Products in Real Time
     useEffect(() => {
-        const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+        const unsubscribe = onSnapshot(collection(db, 'products'), (snapshot) => {
+            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+            setProducts(list);
+            if (mainTab === 'products') setLoading(false);
+        }, (error) => {
+            console.error("Error fetching products:", error);
             if (mainTab === 'products') setLoading(false);
         });
+
         return () => unsubscribe();
     }, [mainTab]);
 
@@ -302,6 +309,15 @@ const AdminShop: React.FC = () => {
                 newColorImages[color] = await uploadToSupabase(new File([blob], file.name, { type: 'image/jpeg' }), 'colors');
             }
 
+            const finalSpecs: Record<string, string> = {};
+            specRows.forEach(row => {
+                const k = row.key ? row.key.trim() : '';
+                const v = row.value !== undefined && row.value !== null ? String(row.value).trim() : '';
+                if (k && v) {
+                    finalSpecs[k] = v;
+                }
+            });
+
             const productData = {
                 title: currentProduct.title || '',
                 price: Number(currentProduct.price) || 0,
@@ -316,10 +332,10 @@ const AdminShop: React.FC = () => {
                 colorImages: newColorImages,
                 sizes: currentProduct.sizes || [],
                 gallery: galleryUrls,
-                specifications: Object.fromEntries(
-                    Object.entries(currentProduct.specifications || {}).filter(([k, v]: [string, any]) => k.trim() !== '' && v.trim() !== '')
-                ),
+                specifications: finalSpecs,
                 isCustomizable: !!currentProduct.isCustomizable,
+                productionTime: currentProduct.productionTime || '',
+                deliveryInfo: currentProduct.deliveryInfo || '',
                 sizeChartUrl: currentProduct.sizeChartUrl || '',
                 orderLink: currentProduct.orderLink || '',
                 updatedAt: serverTimestamp()
@@ -336,6 +352,7 @@ const AdminShop: React.FC = () => {
 
             setIsEditing(false);
             setCurrentProduct({});
+            setSpecRows([]);
             setImageFile(null);
             setImagePreview(null);
             setGalleryFiles([]);
@@ -640,19 +657,30 @@ const AdminShop: React.FC = () => {
         }
     };
 
-    const handleSpecChange = (key: string, value: string, oldKey?: string) => {
-        const newSpecs = { ...currentProduct.specifications };
-        if (oldKey && oldKey !== key) {
-            delete newSpecs[oldKey];
-        }
-        newSpecs[key] = value;
-        setCurrentProduct({ ...currentProduct, specifications: newSpecs });
+    const addSpecRow = () => {
+        setSpecRows(prev => [...prev, { id: Math.random().toString(36).substring(2, 9), key: '', value: '' }]);
     };
 
-    const removeSpec = (key: string) => {
-        const newSpecs = { ...currentProduct.specifications };
-        delete newSpecs[key];
-        setCurrentProduct({ ...currentProduct, specifications: newSpecs });
+    const addSpecPreset = (presetKey: string, presetVal: string) => {
+        setSpecRows(prev => {
+            const existing = prev.find(p => p.key.trim().toLowerCase() === presetKey.toLowerCase());
+            if (existing) {
+                return prev.map(p => p.id === existing.id ? { ...p, value: presetVal } : p);
+            }
+            return [...prev, { id: Math.random().toString(36).substring(2, 9), key: presetKey, value: presetVal }];
+        });
+    };
+
+    const updateSpecKey = (id: string, newKey: string) => {
+        setSpecRows(prev => prev.map(item => item.id === id ? { ...item, key: newKey } : item));
+    };
+
+    const updateSpecValue = (id: string, newValue: string) => {
+        setSpecRows(prev => prev.map(item => item.id === id ? { ...item, value: newValue } : item));
+    };
+
+    const removeSpecRow = (id: string) => {
+        setSpecRows(prev => prev.filter(item => item.id !== id));
     };
 
     const filteredProducts = products.filter(p => {
@@ -869,6 +897,7 @@ const AdminShop: React.FC = () => {
                         <button
                             onClick={() => {
                                 setCurrentProduct({ category: 'Экипировка', specifications: {}, isHidden: false, badges: [], stock: {}, isCustomizable: false });
+                                setSpecRows([]);
                                 setImagePreview(null);
                                 setImageFile(null);
                                 setGalleryFiles([]);
@@ -1042,8 +1071,30 @@ const AdminShop: React.FC = () => {
 
                                             {/* Quick Info Overlays */}
                                             <div className="absolute top-2 left-2 flex flex-col gap-1 z-20">
-                                                {product.badges?.includes('hit') && <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-black rounded shadow-sm uppercase tracking-wider">ХИТ</span>}
-                                                {product.badges?.includes('new') && <span className="px-2 py-0.5 bg-green-500 text-white text-[10px] font-black rounded shadow-sm uppercase tracking-wider">NEW</span>}
+                                                {product.badges?.includes('hit') && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-[10px] font-black rounded shadow-sm uppercase tracking-wider">
+                                                        <Flame size={10} className="fill-white" />
+                                                        <span>ХИТ</span>
+                                                    </span>
+                                                )}
+                                                {product.badges?.includes('new') && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500 text-white text-[10px] font-black rounded shadow-sm uppercase tracking-wider">
+                                                        <Sparkles size={10} className="fill-white" />
+                                                        <span>NEW</span>
+                                                    </span>
+                                                )}
+                                                {product.badges?.includes('last_chance') && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-500 text-white text-[10px] font-black rounded shadow-sm uppercase tracking-wider">
+                                                        <Zap size={10} className="fill-white" />
+                                                        <span>ШАНС</span>
+                                                    </span>
+                                                )}
+                                                {product.isCustomizable && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500 text-black text-[10px] font-black rounded shadow-sm uppercase tracking-wider">
+                                                        <Sparkles size={10} className="fill-black" />
+                                                        <span>ПОШИВ</span>
+                                                    </span>
+                                                )}
                                             </div>
 
                                             {/* Stock Badge */}
@@ -1056,6 +1107,12 @@ const AdminShop: React.FC = () => {
                                                 <button
                                                     onClick={() => {
                                                         setCurrentProduct(product);
+                                                        const initialSpecs = Object.entries(product.specifications || {}).map(([k, v]) => ({
+                                                            id: Math.random().toString(36).substring(2, 9),
+                                                            key: k,
+                                                            value: String(v)
+                                                        }));
+                                                        setSpecRows(initialSpecs);
                                                         setImagePreview(product.imageUrl);
                                                         setGalleryFiles([]);
                                                         setGalleryPreviews([]);
@@ -1629,15 +1686,131 @@ const AdminShop: React.FC = () => {
                                                     </div>
                                                 </div>
                                             </div>
+
                                             <div>
                                                 <label className="block text-gray-400 text-xs font-black uppercase tracking-widest mb-2">Описание</label>
                                                 <textarea
-                                                    rows={5}
+                                                    rows={3}
                                                     value={currentProduct.description || ''}
                                                     onChange={e => setCurrentProduct({ ...currentProduct, description: e.target.value })}
                                                     className="w-full bg-black border border-white/10 rounded-xl p-4 text-white focus:border-yellow-500/50 focus:outline-none"
                                                     placeholder="Расскажите о товаре..."
                                                 />
+                                            </div>
+
+                                            {/* Quick Badges & Customization */}
+                                            <div className="bg-white/5 p-5 rounded-2xl border border-white/10 space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <label className="text-white text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                                                            <Sparkles className={currentProduct.isCustomizable ? "text-yellow-400" : "text-gray-500"} size={16} />
+                                                            Печать фамилии и номера (Индивидуальный пошив)
+                                                        </label>
+                                                        <p className="text-gray-500 text-[10px] uppercase font-bold mt-0.5">
+                                                            Показывает золотистый бейдж персонализации и поля нанесения в корзине
+                                                        </p>
+                                                    </div>
+                                                    <div
+                                                        onClick={() => setCurrentProduct({ ...currentProduct, isCustomizable: !currentProduct.isCustomizable })}
+                                                        className={`w-12 h-6 rounded-full p-0.5 cursor-pointer transition-colors duration-300 relative ${!currentProduct.isCustomizable ? 'bg-gray-700' : 'bg-yellow-500'}`}
+                                                    >
+                                                        <div className={`w-5 h-5 bg-white rounded-full shadow-lg transition-transform duration-300 ${!currentProduct.isCustomizable ? 'translate-x-0' : 'translate-x-6'}`} />
+                                                    </div>
+                                                </div>
+
+                                                <div className="pt-3 border-t border-white/5">
+                                                    <div className="flex items-center justify-between mb-2.5">
+                                                        <label className="text-gray-400 text-xs font-black uppercase tracking-widest">
+                                                            Ярлык на фото товара (Бейдж)
+                                                        </label>
+                                                        {currentProduct.badges && currentProduct.badges.length > 0 ? (
+                                                            <span className="text-[10px] font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                                <Check size={10} /> Активен: {currentProduct.badges.includes('hit') ? 'Хит продаж' : currentProduct.badges.includes('new') ? 'Новинка' : 'Последний шанс'}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
+                                                                Без ярлыка
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2.5">
+                                                        {[
+                                                            { 
+                                                                id: 'hit', 
+                                                                label: 'Хит продаж', 
+                                                                icon: Flame, 
+                                                                activeStyle: 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/40 font-black',
+                                                                inactiveStyle: 'bg-white/5 border-white/10 text-gray-400 hover:border-red-500/40 hover:text-red-400' 
+                                                            },
+                                                            { 
+                                                                id: 'new', 
+                                                                label: 'Новинка', 
+                                                                icon: Sparkles, 
+                                                                activeStyle: 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/40 font-black',
+                                                                inactiveStyle: 'bg-white/5 border-white/10 text-gray-400 hover:border-emerald-500/40 hover:text-emerald-400' 
+                                                            },
+                                                            { 
+                                                                id: 'last_chance', 
+                                                                label: 'Последний шанс', 
+                                                                icon: Zap, 
+                                                                activeStyle: 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-600/40 font-black',
+                                                                inactiveStyle: 'bg-white/5 border-white/10 text-gray-400 hover:border-orange-500/40 hover:text-orange-400' 
+                                                            }
+                                                        ].map(b => {
+                                                            const isSelected = currentProduct.badges?.includes(b.id as any);
+                                                            const IconComp = b.icon;
+                                                            return (
+                                                                <button
+                                                                    key={b.id}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const cur = currentProduct.badges || [];
+                                                                        // Toggle badge: if clicked already selected, turn it off; else set as single active badge
+                                                                        const next = isSelected ? [] : [b.id as any];
+                                                                        setCurrentProduct({ ...currentProduct, badges: next });
+                                                                    }}
+                                                                    className={`py-3 px-3 rounded-xl border text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                                                        isSelected ? b.activeStyle : b.inactiveStyle
+                                                                    }`}
+                                                                >
+                                                                    <IconComp size={14} className={isSelected ? 'fill-white text-white' : ''} />
+                                                                    <span>{b.label}</span>
+                                                                    {isSelected && <Check size={13} strokeWidth={3} className="ml-0.5 text-white" />}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+
+                                                {/* Production & Delivery Times */}
+                                                <div className="pt-3 border-t border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-gray-400 text-xs font-black uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                                            <ClockIcon size={13} className="text-yellow-500" />
+                                                            Срок пошива / изготовления
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={currentProduct.productionTime || ''}
+                                                            onChange={e => setCurrentProduct({ ...currentProduct, productionTime: e.target.value })}
+                                                            className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-white text-xs font-bold focus:border-yellow-500 outline-none"
+                                                            placeholder="Например: 3-5 рабочих дней"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-gray-400 text-xs font-black uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                                            <MapPin size={13} className="text-yellow-500" />
+                                                            Место / способ получения
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={currentProduct.deliveryInfo || ''}
+                                                            onChange={e => setCurrentProduct({ ...currentProduct, deliveryInfo: e.target.value })}
+                                                            className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-white text-xs font-bold focus:border-yellow-500 outline-none"
+                                                            placeholder="Например: Выдача у тренера в манеже"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -1983,33 +2156,64 @@ const AdminShop: React.FC = () => {
                                                     </p>
                                                 </div>
 
+                                                <div className="mb-8 pb-6 border-b border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-gray-400 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                                            <ClockIcon size={14} className="text-yellow-500" />
+                                                            Срок пошива / изготовления
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={currentProduct.productionTime || ''}
+                                                            onChange={e => setCurrentProduct({ ...currentProduct, productionTime: e.target.value })}
+                                                            className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white font-bold focus:border-yellow-500 outline-none"
+                                                            placeholder="Например: 3-5 рабочих дней"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-gray-400 text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                                            <MapPin size={14} className="text-yellow-500" />
+                                                            Место / способ получения
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={currentProduct.deliveryInfo || ''}
+                                                            onChange={e => setCurrentProduct({ ...currentProduct, deliveryInfo: e.target.value })}
+                                                            className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white font-bold focus:border-yellow-500 outline-none"
+                                                            placeholder="Например: Выдача у тренера в манеже"
+                                                        />
+                                                    </div>
+                                                </div>
+
                                                 <label className="block text-gray-400 text-xs font-black uppercase tracking-widest mb-4">Маркетинговые ярлыки (Badges)</label>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                     {[
-                                                        { id: 'hit', label: 'Хит продаж', color: 'bg-red-500', icon: '🔥' },
-                                                        { id: 'new', label: 'Новинка', color: 'bg-green-500', icon: '✨' },
-                                                        { id: 'last_chance', label: 'Последний шанс', color: 'bg-orange-500', icon: '⌛' }
+                                                        { id: 'hit', label: 'Хит продаж', color: 'bg-red-500', icon: Flame, iconColor: 'text-red-400' },
+                                                        { id: 'new', label: 'Новинка', color: 'bg-green-500', icon: Sparkles, iconColor: 'text-green-400' },
+                                                        { id: 'last_chance', label: 'Последний шанс', color: 'bg-orange-500', icon: Zap, iconColor: 'text-orange-400' }
                                                     ].map(badge => {
                                                         const isSelected = currentProduct.badges?.includes(badge.id as any);
+                                                        const IconComp = badge.icon;
                                                         return (
                                                             <div
                                                                 key={badge.id}
                                                                 onClick={() => {
-                                                                    const cur = currentProduct.badges || [];
-                                                                    const next = isSelected ? cur.filter(b => b !== badge.id) : [...cur, badge.id as any];
+                                                                    const next = isSelected ? [] : [badge.id as any];
                                                                     setCurrentProduct({ ...currentProduct, badges: next });
                                                                 }}
                                                                 className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group ${isSelected
-                                                                    ? `border-${badge.color.split('-')[1]}-500/50 bg-${badge.color.split('-')[1]}-500/10`
+                                                                    ? `border-${badge.color.split('-')[1]}-500 bg-${badge.color.split('-')[1]}-500/20 shadow-lg shadow-${badge.color.split('-')[1]}-500/20`
                                                                     : 'border-white/5 bg-black/40 hover:border-white/20'
                                                                     }`}
                                                             >
                                                                 <div className="flex items-center gap-3">
-                                                                    <span className="text-lg">{badge.icon}</span>
-                                                                    <span className={`text-sm font-black uppercase tracking-tight ${isSelected ? 'text-white' : 'text-gray-500'}`}>{badge.label}</span>
+                                                                    <div className={`p-2 rounded-xl ${isSelected ? `bg-${badge.color.split('-')[1]}-500 text-white` : `bg-white/5 ${badge.iconColor}`}`}>
+                                                                        <IconComp size={18} className={isSelected ? 'fill-current text-white' : ''} />
+                                                                    </div>
+                                                                    <span className={`text-sm font-black uppercase tracking-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>{badge.label}</span>
                                                                 </div>
-                                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? `bg-${badge.color.split('-')[1]}-500 border-transparent` : 'border-gray-700 group-hover:border-gray-500'}`}>
-                                                                    {isSelected && <Check size={12} className="text-white" />}
+                                                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? `bg-${badge.color.split('-')[1]}-500 border-transparent shadow-md` : 'border-gray-700 group-hover:border-gray-500'}`}>
+                                                                    {isSelected && <Check size={13} strokeWidth={3} className="text-white" />}
                                                                 </div>
                                                             </div>
                                                         );
@@ -2018,44 +2222,74 @@ const AdminShop: React.FC = () => {
                                             </div>
 
                                             {/* Specifications */}
-                                            <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
-                                                <div className="flex justify-between items-center mb-6">
-                                                    <h3 className="text-white font-black uppercase tracking-widest">Характеристики</h3>
+                                            <div className="bg-white/5 p-6 rounded-3xl border border-white/10 space-y-4">
+                                                <div className="flex justify-between items-center">
+                                                    <div>
+                                                        <h3 className="text-white font-black uppercase tracking-widest text-sm">Характеристики товара</h3>
+                                                        <p className="text-gray-400 text-xs mt-0.5">Отображаются родителям на странице товара в виде аккуратного списка</p>
+                                                    </div>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setCurrentProduct({ ...currentProduct, specifications: { ...currentProduct.specifications, '': '' } })}
-                                                        className="text-xs bg-white/10 text-white px-3 py-2 rounded-lg font-black uppercase tracking-widest hover:bg-white/20 transition-colors"
+                                                        onClick={addSpecRow}
+                                                        className="text-xs bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-2 rounded-xl font-russo uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_15px_rgba(234,179,8,0.2)]"
                                                     >
-                                                        + Добавить
+                                                        + Своя строка
                                                     </button>
                                                 </div>
-                                                <div className="space-y-3">
-                                                    {Object.entries(currentProduct.specifications || {}).map(([key, value]: [string, any], idx) => (
-                                                        <div key={idx} className="flex gap-2 group">
+
+                                                {/* Быстрые шаблоны */}
+                                                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                                                    <span className="text-[11px] font-bold text-gray-500 uppercase mr-1">Быстрый шаблон:</span>
+                                                    {[
+                                                        { label: '+ Комплект', key: 'Комплект', val: 'Игровая футболка + шорты' },
+                                                        { label: '+ Ткань', key: 'Ткань', val: 'Дышащий спортивный полиэстер' },
+                                                        { label: '+ Нанесение', key: 'Нанесение', val: 'Фамилия и номер включены' },
+                                                        { label: '+ Уход', key: 'Уход', val: 'Стирка при 30°C (без глажки)' },
+                                                        { label: '+ Материал', key: 'Материал', val: '100% полиэстер' },
+                                                        { label: '+ Сезон', key: 'Сезон', val: 'Всесезонный' },
+                                                        { label: '+ Производство', key: 'Производство', val: 'Россия' },
+                                                    ].map(preset => (
+                                                        <button
+                                                            key={preset.key}
+                                                            type="button"
+                                                            onClick={() => addSpecPreset(preset.key, preset.val)}
+                                                            className="px-2.5 py-1 bg-white/5 hover:bg-yellow-500/20 hover:border-yellow-500/40 text-gray-300 hover:text-yellow-400 rounded-lg text-xs font-bold border border-white/10 transition-colors cursor-pointer"
+                                                        >
+                                                            {preset.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                {/* Список характеристик */}
+                                                <div className="space-y-3 pt-2">
+                                                    {specRows.map((row) => (
+                                                        <div key={row.id} className="flex gap-2 items-center group">
                                                             <input
-                                                                placeholder="Напр. Состав"
-                                                                value={key}
-                                                                onChange={(e) => handleSpecChange(e.target.value, value, key)}
-                                                                className="flex-1 bg-black border border-white/10 rounded-xl p-3 text-sm font-bold text-white focus:border-yellow-500 outline-none"
+                                                                placeholder="Название (напр. Комплект / Ткань)"
+                                                                value={row.key}
+                                                                onChange={(e) => updateSpecKey(row.id, e.target.value)}
+                                                                className="w-1/3 bg-black border border-white/10 rounded-xl p-3 text-xs font-bold text-white focus:border-yellow-500 outline-none"
                                                             />
                                                             <input
-                                                                placeholder="Напр. 100% Хлопок"
-                                                                value={value}
-                                                                onChange={(e) => handleSpecChange(key, e.target.value)}
-                                                                className="flex-1 bg-black border border-white/10 rounded-xl p-3 text-sm text-gray-400 focus:border-yellow-500 outline-none"
+                                                                placeholder="Значение (напр. Футболка + шорты / Полиэстер)"
+                                                                value={row.value}
+                                                                onChange={(e) => updateSpecValue(row.id, e.target.value)}
+                                                                className="flex-1 bg-black border border-white/10 rounded-xl p-3 text-xs text-gray-300 focus:border-yellow-500 outline-none"
                                                             />
                                                             <button
                                                                 type="button"
-                                                                onClick={() => removeSpec(key)}
-                                                                className="p-3 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                onClick={() => removeSpecRow(row.id)}
+                                                                className="p-2.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer flex-shrink-0"
+                                                                title="Удалить характеристику"
                                                             >
-                                                                <Trash2 size={20} />
+                                                                <Trash2 size={18} />
                                                             </button>
                                                         </div>
                                                     ))}
-                                                    {Object.keys(currentProduct.specifications || {}).length === 0 && (
-                                                        <div className="text-center py-6 border-2 border-dashed border-white/5 rounded-2xl">
-                                                            <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.2em]">Список характеристик пуст</p>
+                                                    {specRows.length === 0 && (
+                                                        <div className="text-center py-8 border-2 border-dashed border-white/5 rounded-2xl">
+                                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Характеристики пока не добавлены</p>
+                                                            <p className="text-gray-600 text-[11px] mt-1">Используйте кнопки шаблонов выше или кнопку «+ Своя строка»</p>
                                                         </div>
                                                     )}
                                                 </div>

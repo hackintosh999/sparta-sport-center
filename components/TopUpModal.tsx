@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet, ArrowRight, Loader } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 interface TopUpModalProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface TopUpModalProps {
 }
 
 export const TopUpModal: React.FC<TopUpModalProps> = ({ isOpen, onClose, user }) => {
+    const { userProfile } = useAuth();
     const [amount, setAmount] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);

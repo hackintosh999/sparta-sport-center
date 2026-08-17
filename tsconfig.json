@@ -28,10 +28,13 @@
         "noEmit": true
     },
     "exclude": [
+        "node_modules",
         "dist",
         "build",
         "scripts",
         "scratch",
-        "tmp"
+        "tmp",
+        "sparta-video",
+        "sparta-demo-video"
     ]
 }

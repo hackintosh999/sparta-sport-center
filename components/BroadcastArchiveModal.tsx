@@ -62,15 +62,23 @@ const BroadcastArchiveModal: React.FC<BroadcastArchiveModalProps> = ({ isOpen, o
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 h-full">
                                 {/* Video Column */}
                                 <div className="lg:col-span-2 flex flex-col gap-6">
-                                    <div className="w-full relative pt-[56.25%] bg-black rounded-xl overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.5)] border border-white/5">
-                                        <iframe
-                                            src={broadcast.videoUrl}
-                                            className="absolute top-0 left-0 w-full h-full"
-                                            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                                            allowFullScreen
-                                            frameBorder="0"
-                                            title={broadcast.title}
-                                        />
+                                    <div className="w-full relative pt-[56.25%] bg-black rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.7)] border border-white/10">
+                                        {broadcast.videoUrl?.startsWith('blob:') || broadcast.videoUrl?.endsWith('.mp4') || broadcast.videoUrl?.endsWith('.webm') ? (
+                                            <video
+                                                src={broadcast.videoUrl}
+                                                controls
+                                                autoPlay
+                                                className="absolute top-0 left-0 w-full h-full object-contain"
+                                            />
+                                        ) : (
+                                            <iframe
+                                                src={broadcast.videoUrl}
+                                                className="absolute top-0 left-0 w-full h-full border-0"
+                                                allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                                                allowFullScreen
+                                                title={broadcast.title}
+                                            />
+                                        )}
                                     </div>
                                     <div className="text-white/80 text-base md:text-lg leading-relaxed bg-[#141414] p-6 rounded-xl border border-white/5">
                                         <h3 className="text-xl font-bold text-white mb-2">Описание видео</h3>

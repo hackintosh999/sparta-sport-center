@@ -65,14 +65,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [cartItems, user]);
 
-    const showToast = React.useCallback((message: string, type: ToastType) => {
-        const id = Math.random().toString(36).substring(2, 9);
-        setToasts(prev => [...prev, { id, message, type }]);
-    }, []);
-
     const removeToast = React.useCallback((id: string) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     }, []);
+
+    const showToast = React.useCallback((message: string, type: ToastType = 'success') => {
+        const id = Math.random().toString(36).substring(2, 9);
+        // Show only the latest toast to prevent duplication and stacking
+        setToasts([{ id, message, type }]);
+        setTimeout(() => {
+            removeToast(id);
+        }, 3000);
+    }, [removeToast]);
 
     const addToCart = React.useCallback((product: Product, quantity: number, size?: string, color?: string, customName?: string, customNumber?: string, measurements?: Record<string, string>, fitStyle?: string) => {
         const cartItemId = `${product.id}-${size || 'nosize'}-${color || 'nocolor'}-${customName || 'noname'}-${customNumber || 'nonumber'}-${JSON.stringify(measurements || {})}-${fitStyle || 'standard'}`;

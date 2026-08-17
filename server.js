@@ -341,33 +341,51 @@ app.post('/api/upload-media', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const bucket = req.body.bucket || 'review-media';
-        const path = req.body.path || `chat-media/${Date.now()}_${req.file.originalname.replace(/[^a-z0-9.]/gi, '_').toLowerCase()}`;
+        const cleanName = req.file.originalname.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+        const path = req.body.path || `reviews/${Date.now()}_${cleanName}`;
+        const requestedBucket = req.body.bucket || 'shop-products';
+        const bucketsToTry = [requestedBucket, 'shop-products', 'exercises-media', 'chat-media'].filter((v, i, a) => a.indexOf(v) === i);
 
-        console.log(`Proxy uploading to Supabase: bucket=${bucket}, path=${path}, size=${req.file.size}`);
+        console.log(`Proxy uploading to Supabase: path=${path}, size=${req.file.size} bytes`);
 
-        const { data, error } = await supabase.storage
-            .from(bucket)
-            .upload(path, req.file.buffer, {
-                contentType: req.file.mimetype,
-                upsert: false
-            });
+        let uploadedUrl = null;
+        let lastError = null;
 
-        if (error) {
-            console.error('Supabase Proxy Upload Error:', error);
-            // Try to create bucket if it doesn't exist? (Usually requires more permissions)
-            return res.status(500).json({
-                error: error.message,
-                details: 'Make sure the bucket exists and is public in Supabase storage.'
-            });
+        for (const bucket of bucketsToTry) {
+            try {
+                const { data, error } = await supabase.storage
+                    .from(bucket)
+                    .upload(path, req.file.buffer, {
+                        contentType: req.file.mimetype || 'application/octet-stream',
+                        upsert: true
+                    });
+
+                if (!error && data) {
+                    const { data: publicData } = supabase.storage
+                        .from(bucket)
+                        .getPublicUrl(path);
+
+                    if (publicData?.publicUrl) {
+                        uploadedUrl = publicData.publicUrl;
+                        console.log(`Upload successful to [${bucket}]: ${uploadedUrl}`);
+                        break;
+                    }
+                } else if (error) {
+                    console.warn(`Upload attempt failed for [${bucket}]:`, error.message);
+                    lastError = error;
+                }
+            } catch (err) {
+                console.warn(`Exception on bucket [${bucket}]:`, err.message);
+                lastError = err;
+            }
         }
 
-        const { data: { publicUrl } } = supabase.storage
-            .from(bucket)
-            .getPublicUrl(path);
+        if (uploadedUrl) {
+            return res.json({ publicUrl: uploadedUrl });
+        }
 
-        console.log(`Upload successful: ${publicUrl}`);
-        res.json({ publicUrl });
+        console.error('All Supabase buckets failed for upload:', lastError);
+        res.status(500).json({ error: 'All storage buckets failed', message: lastError?.message });
     } catch (error) {
         console.error('Proxy Unexpected Error:', error);
         res.status(500).json({ error: 'Internal server error', message: error.message });

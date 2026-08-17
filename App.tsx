@@ -38,6 +38,7 @@ const Shop = lazyWithRetry(() => import('./pages/Shop'));
 const ProductDetails = lazyWithRetry(() => import('./pages/ProductDetails'));
 const Favorites = lazyWithRetry(() => import('./pages/Favorites'));
 const Broadcasts = lazyWithRetry(() => import('./pages/Broadcasts'));
+const CameraStreamer = lazyWithRetry(() => import('./pages/CameraStreamer'));
 const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
 
 const LegalLayout = lazyWithRetry(() => import('./pages/legal/LegalLayout'));
@@ -221,6 +222,7 @@ const App: React.FC = () => {
                                     <Route path="/shop/favorites" element={<Favorites />} />
                                     <Route path="/shop/:id" element={<ProductDetails />} />
                                     <Route path="/broadcasts" element={<Broadcasts />} />
+                                    <Route path="/camera-streamer" element={<CameraStreamer />} />
                                     <Route path="/dashboard" element={<Dashboard />} />
                                     <Route path="/reset-password" element={<ResetPassword />} />
                                     <Route path="/settings" element={<Navigate to="/dashboard" replace />} />

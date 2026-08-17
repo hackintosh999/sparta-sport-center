@@ -19,6 +19,8 @@ interface MembershipModalProps {
 }
 
 import { SPARTA_SCHEDULE, ScheduleSlot, declineChildName } from '../constants/spartaSchedule';
+import { buildRobokassaUrl } from '../utils/robokassa';
+
 
 const MembershipModal: React.FC<MembershipModalProps> = ({
     isOpen,
@@ -129,7 +131,7 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
             }
 
             // 3. Check trial booking for parent's phone
-            const parentPhone = userProfile?.phone || user?.phone || userProfile?.parentPhone;
+            const parentPhone = userProfile?.phone || (user as any)?.phone || userProfile?.parentPhone;
             if (parentPhone) {
                 try {
                     const qTrials = query(collection(db, 'trials'), where('parentPhone', '==', parentPhone));
@@ -497,7 +499,7 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
                 });
             }
 
-            if (paymentMethod === 'balance' || paymentMethod === 'robokassa' || paymentMethod === 'sbp') {
+            if (paymentMethod === 'balance' || ((paymentMethod === 'robokassa' || paymentMethod === 'sbp') && finalPrice <= 0)) {
                 const currentBalance = userProfile?.walletBalance || 0;
                 if (paymentMethod === 'balance' && currentBalance < finalPrice) {
                     alert("Недостаточно средств на балансе!");
@@ -555,7 +557,58 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
                 });
                 setNewOrder({ id: orderRef.id, ...orderData, price: finalPrice });
                 setIsSuccess(true);
+            } else if (paymentMethod === 'robokassa' || paymentMethod === 'sbp') {
+                // Update child profile before redirecting to payment gateway
+                if (childName.trim()) {
+                    const activeSlot = SPARTA_SCHEDULE.find(s => s.id === selectedSlotId);
+                    const childDocId = (userProfile?.childrenIds && userProfile.childrenIds[0]) || user.uid;
+                    const childRef = doc(db, 'users', childDocId);
+                    await updateDoc(childRef, {
+                        childName: childName.trim(),
+                        childAge: 2026 - selectedBirthYear,
+                        birthYear: selectedBirthYear,
+                        groupId: selectedSlotId,
+                        groupName: activeSlot?.streamTitle || existingGroupName || 'Основная группа',
+                        coachName: activeSlot?.coachName || 'Тренер Sparta'
+                    }).catch(() => {});
+                }
+
+                // Generate direct Robokassa payment URL
+                const robokassaData = buildRobokassaUrl({
+                    amount: finalPrice,
+                    description: `Абонемент: ${program.title} (${selectedDuration} мес.)`,
+                    successUrl: `${window.location.origin}/dashboard?payment=success&type=subscription`,
+                    failUrl: `${window.location.origin}/dashboard?payment=failed&type=subscription`
+                });
+
+                // Save pending order so verification logic on Dashboard can confirm it later
+                await addDoc(collection(db, "orders"), {
+                    ...orderData,
+                    paymentId: robokassaData.invId.toString(),
+                    status: 'pending_robokassa'
+                });
+
+                if (appliedPromo) {
+                    const userRef = doc(db, 'users', user.uid);
+                    const updates: any = {};
+                    if (userProfile?.activePromos?.[program.id]?.code === appliedPromo.code) {
+                        updates[`activePromos.${program.id}`] = deleteField();
+                    }
+                    if (userProfile?.activePromoCode === appliedPromo.code) {
+                        updates.activePromoCode = null;
+                        updates.activePromoDiscount = null;
+                        updates.activePromoApplicableTo = null;
+                    }
+                    if (Object.keys(updates).length > 0) {
+                        await updateDoc(userRef, updates);
+                    }
+                }
+
+                // Redirect user directly to Robokassa
+                window.location.href = robokassaData.url;
             }
+
+
 
 
 
