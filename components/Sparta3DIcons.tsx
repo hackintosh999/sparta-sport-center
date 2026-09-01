@@ -111,3 +111,6 @@ export const Trophy3D: React.FC<{ size?: number; className?: string }> = ({ size
         </g>
     </svg>
 );
+
+export { SpartaCoinIcon } from './SpartaCoinIcon';
+

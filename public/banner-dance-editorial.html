@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Всероссийская школа балета и современного танца — Editorial Minimalist (A4)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Палитра из ТЗ */
+      --bg-pearl: #F4F4F6;
+      --pistachio-accent: #D2E3C8;
+      --pistachio-dark: #3A4E38;
+      --lilac-accent: #E2D4F0;
+      --lilac-soft: rgba(226, 212, 240, 0.65);
+      --text-graphite: #2C3539;
+      --text-muted: #5C676C;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    @page {
+      size: 1240px 1754px;
+      margin: 0;
+    }
+
+    html, body {
+      width: 1240px;
+      height: 1754px;
+      margin: 0;
+      padding: 0;
+      background: var(--bg-pearl);
+      color: var(--text-graphite);
+      font-family: 'Montserrat', sans-serif;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .poster-editorial {
+      width: 1240px;
+      height: 1754px;
+      position: relative;
+      background: var(--bg-pearl);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 60px 80px 50px 80px;
+      user-select: none;
+    }
+
+    /* Мягкая акварельная дымка на фоне (фисташка слева + сирень справа) */
+    .watercolor-haze-pistachio {
+      position: absolute;
+      top: -100px;
+      left: -150px;
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(210, 227, 200, 0.45) 0%, rgba(210, 227, 200, 0.15) 50%, transparent 70%);
+      filter: blur(80px);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .watercolor-haze-lilac {
+      position: absolute;
+      top: 150px;
+      right: -150px;
+      width: 850px;
+      height: 850px;
+      background: radial-gradient(circle, rgba(226, 212, 240, 0.55) 0%, rgba(226, 212, 240, 0.2) 50%, transparent 70%);
+      filter: blur(80px);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .watercolor-haze-bottom {
+      position: absolute;
+      bottom: -100px;
+      left: 200px;
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(210, 227, 200, 0.3) 0%, rgba(226, 212, 240, 0.25) 50%, transparent 70%);
+      filter: blur(80px);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* ========================================================
+       1. ВЕРХНЯЯ ЗОНА: ВОЗДУХ И МИНИМАЛИСТИЧНЫЙ ЛОГОТИП
+       ======================================================== */
+    .top-brand-zone {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding-top: 10px;
+    }
+
+    .brand-logo-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      opacity: 0.9;
+    }
+
+    .brand-header-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--text-graphite);
+    }
+
+    /* ========================================================
+       2. ЦЕНТРАЛЬНАЯ ЗОНА: СОЛО-ТАНЦОР В ГЕОМЕТРИЧЕСКОЙ ФОРМЕ
+       ======================================================== */
+    .center-visual-zone {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 10px 0;
+    }
+
+    /* Эффект многослойности: парящий полупрозрачный сиреневый круг сзади */
+    .backdrop-lilac-circle {
+      position: absolute;
+      width: 620px;
+      height: 620px;
+      border-radius: 50%;
+      background: var(--lilac-soft);
+      filter: blur(10px);
+      z-index: 2;
+      transform: translate(25px, -15px);
+    }
+
+    .backdrop-pistachio-ring {
+      position: absolute;
+      width: 580px;
+      height: 580px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(210, 227, 200, 0.8);
+      z-index: 3;
+      transform: translate(-30px, 20px);
+    }
+
+    /* Геометрическая вертикальная форма с фото танцора */
+    .dancer-photo-capsule {
+      position: relative;
+      width: 540px;
+      height: 720px;
+      border-radius: 36px;
+      overflow: hidden;
+      background: #E8E5EE;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 25px 60px rgba(44, 53, 57, 0.12), 0 4px 12px rgba(44, 53, 57, 0.04);
+      z-index: 5;
+    }
+
+    .dancer-photo-capsule img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 20%;
+      filter: contrast(1.03) brightness(1.02);
+    }
+
+    /* ========================================================
+       3. НИЖНЯЯ ИНФОРМАЦИОННАЯ ЗОНА
+       ======================================================== */
+    .bottom-info-zone {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .main-school-title {
+      font-family: 'Playfair Display', 'Cormorant Garamond', serif;
+      font-size: 33px;
+      font-weight: 600;
+      color: var(--text-graphite);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      line-height: 1.25;
+      max-width: 980px;
+    }
+
+    /* Фисташковые горизонтальные плашки */
+    .disciplines-pills-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 22px;
+      flex-wrap: wrap;
+    }
+
+    .pistachio-pill {
+      background: var(--pistachio-accent);
+      padding: 12px 28px;
+      border-radius: 50px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-graphite);
+      letter-spacing: 0.04em;
+      box-shadow: 0 4px 15px rgba(210, 227, 200, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+
+    /* Акцентная строка ниже */
+    .season-enrollment-line {
+      font-size: 15.5px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--pistachio-dark);
+      margin-top: 20px;
+    }
+
+    /* ========================================================
+       4. ПОДВАЛ (ФУТЕР) С ТОНКОЙ ФИСТАШКОВОЙ ЛИНИЕЙ
+       ======================================================== */
+    .footer-editorial-dock {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      border-top: 1.5px solid var(--pistachio-accent);
+      padding-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-left-contacts {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .trial-booking-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-graphite);
+    }
+
+    .trial-booking-phones {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+    .trial-booking-phones strong {
+      font-weight: 700;
+      color: var(--text-graphite);
+    }
+
+    .branches-editorial-line {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .footer-right-qr-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .qr-lilac-frame {
+      width: 68px;
+      height: 68px;
+      background: #FFFFFF;
+      border: 1.5px solid var(--lilac-accent);
+      border-radius: 12px;
+      padding: 5px;
+      box-shadow: 0 4px 12px rgba(226, 212, 240, 0.4);
+    }
+
+    .qr-lilac-frame img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .qr-caption-col {
+      display: flex;
+      flex-direction: column;
+    }
+    .qr-vk-url {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-graphite);
+      letter-spacing: 0.04em;
+      text-decoration: none;
+    }
+    .qr-hint-sub {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="poster-editorial" id="poster-canvas">
+    <!-- Акварельная дымка на фоне (фисташка + сирень) -->
+    <div class="watercolor-haze-pistachio"></div>
+    <div class="watercolor-haze-lilac"></div>
+    <div class="watercolor-haze-bottom"></div>
+
+    <!-- ================= 1. ВЕРХНЯЯ ЗОНА: МИНИМАЛИСТИЧНЫЙ ЛОГОТИП ================= -->
+    <div class="top-brand-zone">
+      <div class="brand-logo-container">
+        <img src="/logo-gold.png" alt="Логотип школы" class="brand-logo-img">
+        <span class="brand-header-title">ЦСП «СПАРТА» • АКАДЕМИЯ ТАНЦА</span>
+      </div>
+    </div>
+
+    <!-- ================= 2. ЦЕНТРАЛЬНАЯ ЗОНА: СОЛО-ТАНЦОР В ГЕОМЕТРИИ ================= -->
+    <div class="center-visual-zone">
+      <!-- Эффект многослойности: сиреневый круг и фисташковое кольцо сзади -->
+      <div class="backdrop-lilac-circle"></div>
+      <div class="backdrop-pistachio-ring"></div>
+
+      <!-- Фото танцора в капсульной геометрической форме -->
+      <div class="dancer-photo-capsule">
+        <img src="/banner-assets/dance-contemporary-soma.jpg" alt="Современная хореография и балет">
+      </div>
+    </div>
+
+    <!-- ================= 3. НИЖНЯЯ ЗОНА: ЗАГОЛОВОК И ПЛАШКИ ================= -->
+    <div class="bottom-info-zone">
+      <h1 class="main-school-title">
+        ВСЕРОССИЙСКАЯ ШКОЛА БАЛЕТА И СОВРЕМЕННОГО ТАНЦА
+      </h1>
+
+      <!-- Фисташковые вытянутые плашки -->
+      <div class="disciplines-pills-row">
+        <div class="pistachio-pill">Классическая хореография</div>
+        <div class="pistachio-pill">Современный танец &amp; Contemporary</div>
+        <div class="pistachio-pill">Детский балет (от 3-х лет)</div>
+      </div>
+
+      <!-- Акцентная строка -->
+      <div class="season-enrollment-line">
+        ✦ Открыт набор на новый сезон ✦
+      </div>
+    </div>
+
+    <!-- ================= 4. ФУТЕР С ТОНКОЙ ФИСТАШКОВОЙ ЛИНИЕЙ ================= -->
+    <div class="footer-editorial-dock">
+      <div class="footer-left-contacts">
+        <div class="trial-booking-title">Запись на пробное занятие:</div>
+        <div class="trial-booking-phones">
+          <strong>+7 (919) 339-33-99</strong> • <strong>+7 (351) 230-12-69</strong>
+        </div>
+        <div class="branches-editorial-line">
+          📍 Новосибирск: ул. Большевистская, 125 • ул. Планетная, 53 • ул. Мясниковой, 25/2
+        </div>
+      </div>
+
+      <div class="footer-right-qr-wrap">
+        <div class="qr-lilac-frame">
+          <img src="/banner-assets/vk-qr-real.png" alt="QR-код ВК">
+        </div>
+        <div class="qr-caption-col">
+          <a href="https://vk.ru/sparta_fk" target="_blank" class="qr-vk-url">vk.ru/sparta_fk</a>
+          <span class="qr-hint-sub">Наведите камеру смартфона</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

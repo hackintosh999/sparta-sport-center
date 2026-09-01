@@ -429,12 +429,30 @@ const AdminRequests = () => {
                                                     )}
                                                 </div>
 
-                                                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${req.programType === 'Smart Match' ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-black/40 border-white/5'}`}>
-                                                    <Zap size={12} className={req.programType === 'Smart Match' ? 'text-indigo-400' : 'text-sparta-gold'} />
-                                                    <span className={`text-[11px] font-bold uppercase tracking-wider truncate ${req.programType === 'Smart Match' ? 'text-indigo-400' : 'text-white/50'}`}>
-                                                        {req.programType || 'Пробная тренировка'}
-                                                    </span>
-                                                </div>
+                                                {req.isMembership ? (
+                                                    <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl border ${
+                                                        req.paymentMethod === 'cash'
+                                                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                                            : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                                                    }`}>
+                                                        <div className="flex items-center gap-1.5 truncate">
+                                                            <Zap size={12} className="shrink-0" />
+                                                            <span className="text-[11px] font-extrabold uppercase tracking-wider truncate">
+                                                                {req.programType || 'Абонемент'}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-black/40 border border-white/10 shrink-0">
+                                                            {req.paymentMethod === 'cash' ? '💵 Наличные' : '💳 СБП/Банк'} {req.price ? `• ${req.price.toLocaleString('ru-RU')} ₽` : ''}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${req.programType === 'Smart Match' ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-300'}`}>
+                                                        <Zap size={12} className={req.programType === 'Smart Match' ? 'text-indigo-400' : 'text-blue-400'} />
+                                                        <span className="text-[11px] font-bold uppercase tracking-wider truncate">
+                                                            {req.programType || '🆓 Пробная тренировка'}
+                                                        </span>
+                                                    </div>
+                                                )}
 
                                                 {req.sports && req.sports.length > 0 && (
                                                     <div className="flex flex-wrap gap-1.5 pt-1">

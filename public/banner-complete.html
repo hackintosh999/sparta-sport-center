@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ЦСП Спарта Новосибирск — Финальный рекламный постер A4</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800&family=Unbounded:wght@400;600;700;800;900&family=Onest:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sparta-gold: #FFC72C;
+      --sparta-gold-light: #FCE69E;
+      --sparta-gold-grad: linear-gradient(135deg, #FFF0B8 0%, #FFC72C 50%, #D49800 100%);
+      --sparta-emerald: #00A859;
+      --sparta-emerald-grad: linear-gradient(135deg, #00D06C 0%, #00A859 60%, #00753E 100%);
+      --bg-dark: #080C0A;
+      --bg-card: rgba(13, 19, 15, 0.9);
+      --card-border: 1px solid rgba(255, 199, 44, 0.4);
+      --text-white: #FFFFFF;
+      --text-milk: #E6EDE8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #060907;
+      color: var(--text-white);
+      font-family: 'Onest', 'Montserrat', sans-serif;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .toolbar {
+      background: rgba(15, 22, 18, 0.92);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 199, 44, 0.4);
+      padding: 14px 28px;
+      border-radius: 50px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      position: sticky;
+      top: 20px;
+      z-index: 1000;
+    }
+
+    .toolbar h1 {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--sparta-gold);
+    }
+
+    .btn-action {
+      background: var(--sparta-gold-grad);
+      color: #060907;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 30px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 199, 44, 0.4);
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 199, 44, 0.6);
+    }
+
+    /* ========================================================
+       POSTER A4 (1240 × 1754 px)
+       ======================================================== */
+    .poster-a4-final {
+      width: 1240px;
+      height: 1754px;
+      position: relative;
+      background: var(--bg-dark);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 199, 44, 0.35);
+      user-select: none;
+    }
+
+    /* ФОТО МАЛЬЧИКА В ЦЕНТРЕ */
+    .hero-photo-layer {
+      position: absolute;
+      top: 360px;
+      left: 0;
+      width: 1240px;
+      height: 980px;
+      z-index: 1;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+    }
+
+    .hero-photo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 12%;
+      filter: contrast(1.07) brightness(1.03);
+      mask-image: linear-gradient(to bottom, 
+        transparent 0%, 
+        black 10%, 
+        black 70%, 
+        transparent 100%
+      );
+      -webkit-mask-image: linear-gradient(to bottom, 
+        transparent 0%, 
+        black 10%, 
+        black 70%, 
+        transparent 100%
+      );
+    }
+
+    /* Золотые софиты стадиона */
+    .stadium-lights {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 50% 25%, rgba(255, 208, 0, 0.35) 0%, transparent 60%),
+        radial-gradient(circle at 10% 40%, rgba(255, 199, 44, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 90% 40%, rgba(255, 199, 44, 0.2) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    /* --- ВЕРХНЯЯ ШАПКА --- */
+    .top-header {
+      position: relative;
+      z-index: 10;
+      padding: 50px 70px 30px 70px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(8, 12, 10, 0.98) 0%, rgba(8, 12, 10, 0.85) 75%, transparent 100%);
+    }
+
+    .top-brand-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+
+    .crest-logo {
+      width: 75px;
+      height: 75px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 15px rgba(255, 199, 44, 0.6));
+    }
+
+    .brand-title-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 199, 44, 0.12);
+      border: 1px solid rgba(255, 199, 44, 0.5);
+      border-radius: 40px;
+      padding: 8px 24px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--sparta-gold);
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00D06C;
+      box-shadow: 0 0 10px #00D06C;
+    }
+
+    .h1-title {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 44px;
+      font-weight: 900;
+      line-height: 1.2;
+      text-transform: uppercase;
+      color: var(--text-white);
+      max-width: 1100px;
+      margin-bottom: 14px;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    }
+    .h1-title span.gold {
+      background: var(--sparta-gold-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .h1-title span.city {
+      color: #00D06C;
+    }
+
+    .soul-block {
+      font-size: 18px;
+      line-height: 1.45;
+      color: var(--text-milk);
+      max-width: 950px;
+      background: rgba(13, 19, 15, 0.65);
+      backdrop-filter: blur(12px);
+      padding: 12px 28px;
+      border-radius: 16px;
+      border-left: 3px solid var(--sparta-gold);
+    }
+
+    /* --- СЕКЦИЯ "С ЗАБОТОЙ О ВАС" (3 КАРТОЧКИ) --- */
+    .care-cards-grid {
+      position: absolute;
+      bottom: 330px;
+      left: 60px;
+      width: 1120px;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .care-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: var(--card-border);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .care-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--sparta-gold-grad);
+    }
+
+    .care-card.highlight {
+      border: 1px solid rgba(0, 208, 108, 0.7);
+    }
+    .care-card.highlight::before {
+      background: var(--sparta-emerald-grad);
+    }
+
+    .care-val {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      background: var(--sparta-gold-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+    }
+    .care-card.highlight .care-val {
+      background: var(--sparta-emerald-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .care-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-white);
+    }
+    .care-desc {
+      font-size: 13px;
+      line-height: 1.35;
+      color: #B5C4BB;
+    }
+
+    /* --- ПОДВАЛ: КНОПКА CTA + ФИЛИАЛЫ + КОНТАКТЫ + QR --- */
+    .bottom-dock {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      z-index: 15;
+      padding: 0 60px 40px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: linear-gradient(to top, 
+        #060907 0%, 
+        rgba(6, 9, 7, 0.98) 75%, 
+        transparent 100%
+      );
+    }
+
+    /* Кнопка CTA */
+    .cta-button {
+      width: 100%;
+      height: 76px;
+      background: var(--sparta-emerald-grad);
+      border: 2px solid var(--sparta-gold);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      color: #FFFFFF;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      box-shadow: 0 12px 35px rgba(0, 168, 89, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+    }
+
+    /* Инфо-панель: 3 колонки (Адреса, Контакты, QR/VK) */
+    .footer-info-grid {
+      background: var(--bg-card);
+      border: var(--card-border);
+      border-radius: 20px;
+      padding: 18px 26px;
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 1fr;
+      gap: 20px;
+      align-items: center;
+      backdrop-filter: blur(20px);
+    }
+
+    .col-title {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--sparta-gold);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .address-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .address-item {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-white);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .address-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--sparta-gold);
+    }
+
+    .contacts-col {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-left: 1px solid rgba(255, 199, 44, 0.25);
+      padding-left: 20px;
+    }
+    .contact-line {
+      display: flex;
+      flex-direction: column;
+    }
+    .contact-role {
+      font-size: 12px;
+      color: #9DB0A4;
+      font-weight: 600;
+    }
+    .contact-phone {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-white);
+    }
+
+    .vk-qr-col {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-left: 1px solid rgba(255, 199, 44, 0.25);
+      padding-left: 20px;
+    }
+    .vk-qr-img {
+      width: 60px;
+      height: 60px;
+      background: white;
+      padding: 3px;
+      border-radius: 10px;
+      border: 1px solid var(--sparta-gold);
+      flex-shrink: 0;
+    }
+    .vk-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .vk-link {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      color: #00D06C;
+      text-decoration: none;
+    }
+    .vk-sub {
+      font-size: 12px;
+      color: var(--text-milk);
+      line-height: 1.2;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls -->
+  <div class="toolbar">
+    <h1>СПАРТА • ФИНАЛЬНЫЙ ПОСТЕР А4 (НОВОСИБИРСК)</h1>
+    <button class="btn-action" onclick="window.print()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+      Печать / Экспорт в PDF (300 DPI)
+    </button>
+  </div>
+
+  <div class="poster-a4-final" id="poster-a4-final">
+    <!-- Фото мальчика со стадионом -->
+    <div class="hero-photo-layer">
+      <img src="/banner-assets/sparta-boy-soccer.jpg" alt="Юный футболист Спарта" class="hero-photo-img">
+      <div class="stadium-lights"></div>
+    </div>
+
+    <!-- ================= 1. ВЕРХНЯЯ ШАПКА ================= -->
+    <div class="top-header">
+      <div class="top-brand-row">
+        <img src="/logo-gold.png" alt="Герб Спарта" class="crest-logo">
+        <div class="brand-title-badge">
+          <span class="badge-dot"></span>
+          ЦСП «СПАРТА» • НАБОР ДЕТЕЙ ОТ 4 ДО 14 ЛЕТ
+        </div>
+      </div>
+
+      <!-- Главный заголовок -->
+      <h1 class="h1-title">
+        Футбол для детей: <span class="gold">ЦСП «Спарта»</span> открывает набор в <span class="city">Новосибирске</span>
+      </h1>
+
+      <!-- Душевный блок -->
+      <div class="soul-block">
+        Учим любить футбол, играть в команде и верить в свои силы. Создаём атмосферу, куда ребёнок бежит с удовольствием на каждую тренировку.
+      </div>
+    </div>
+
+    <!-- ================= 2. БЛОК "С ЗАБОТОЙ О ВАС" (3 КАРТОЧКИ) ================= -->
+    <div class="care-cards-grid">
+      <!-- 0 руб -->
+      <div class="care-card highlight">
+        <div class="care-val">0 ₽</div>
+        <div class="care-title">Пробное занятие</div>
+        <div class="care-desc">Первая тренировка и оценка тренером — бесплатно</div>
+      </div>
+
+      <!-- Мяч в подарок -->
+      <div class="care-card">
+        <div class="care-val" style="font-size: 22px;">Мяч в подарок ⚽</div>
+        <div class="care-title">Фирменный подарок</div>
+        <div class="care-desc">Дарим мяч SPARTA к первому абонементу</div>
+      </div>
+
+      <!-- Гослицензия -->
+      <div class="care-card">
+        <div class="care-val" style="font-size: 22px;">Гослицензия 🏆</div>
+        <div class="care-title">Вычет 13% + Заморозка</div>
+        <div class="care-desc">Официальный статус и сохранение занятий при болезни</div>
+      </div>
+    </div>
+
+    <!-- ================= 3. ПОДВАЛ (CTA + АДРЕСА + КОНТАКТЫ + VK) ================= -->
+    <div class="bottom-dock">
+      <!-- Кнопка CTA -->
+      <button class="cta-button">
+        Записаться на бесплатную тренировку →
+      </button>
+
+      <!-- Инфо-панель -->
+      <div class="footer-info-grid">
+        <!-- 1. Адреса филиалов -->
+        <div>
+          <div class="col-title">📍 Филиалы в Новосибирске:</div>
+          <ul class="address-list">
+            <li class="address-item"><span class="address-dot"></span> ул. Большевистская, 125</li>
+            <li class="address-item"><span class="address-dot"></span> ул. Планетная, 53</li>
+            <li class="address-item"><span class="address-dot"></span> ул. Мясниковой, 25/2</li>
+          </ul>
+        </div>
+
+        <!-- 2. Контакты -->
+        <div class="contacts-col">
+          <div class="col-title">📞 Контакты и связь:</div>
+          <div class="contact-line">
+            <span class="contact-role">Администратор:</span>
+            <span class="contact-phone">+7 (351) 230-12-69</span>
+          </div>
+          <div class="contact-line">
+            <span class="contact-role">Директор:</span>
+            <span class="contact-phone">+7 (919) 339-33-99</span>
+          </div>
+        </div>
+
+        <!-- 3. ВКонтакте и QR -->
+        <div class="vk-qr-col">
+          <svg class="vk-qr-img" viewBox="0 0 100 100" fill="#0B0F0D">
+            <rect width="100" height="100" fill="white"/>
+            <rect x="10" y="10" width="28" height="28" fill="#0B0F0D"/>
+            <rect x="14" y="14" width="20" height="20" fill="white"/>
+            <rect x="18" y="18" width="12" height="12" fill="#0B0F0D"/>
+            <rect x="62" y="10" width="28" height="28" fill="#0B0F0D"/>
+            <rect x="66" y="14" width="20" height="20" fill="white"/>
+            <rect x="70" y="18" width="12" height="12" fill="#0B0F0D"/>
+            <rect x="10" y="62" width="28" height="28" fill="#0B0F0D"/>
+            <rect x="14" y="66" width="20" height="20" fill="white"/>
+            <rect x="18" y="70" width="12" height="12" fill="#0B0F0D"/>
+            <rect x="44" y="44" width="12" height="12" fill="#FFC72C"/>
+            <rect x="42" y="14" width="6" height="6" fill="#0B0F0D"/>
+            <rect x="52" y="14" width="6" height="6" fill="#0B0F0D"/>
+            <rect x="44" y="64" width="8" height="8" fill="#0B0F0D"/>
+            <rect x="58" y="78" width="10" height="8" fill="#0B0F0D"/>
+            <rect x="76" y="76" width="12" height="12" fill="#0B0F0D"/>
+          </svg>
+          <div class="vk-details">
+            <div class="col-title" style="margin-bottom: 2px;">ВКонтакте:</div>
+            <a class="vk-link" href="https://vk.ru/sparta_fk">vk.ru/sparta_fk</a>
+            <span class="vk-sub">Сканируйте QR для записи</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -163,7 +163,7 @@ const AdminDashboard = () => {
             setExpenses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         });
 
-        const unsubRegistry = onSnapshot(collection(db, "student_registry"), (snapshot) => {
+        const unsubRegistry = onSnapshot(collection(db, "pending_students"), (snapshot) => {
             setRegistry(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         });
 

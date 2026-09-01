@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, NavLink, useNavigate } from 'react-router-dom';
-import { Users, FileText, MessageSquare, LogOut, Home, Settings, Newspaper, MessageCircle, Calendar, Layers, Tag, Disc, ShoppingBag, Trophy, ShieldAlert, Menu, X, Video, ArrowLeft, Star, Wallet, QrCode, TrendingUp, User, MapPin } from 'lucide-react';
+import { Users, FileText, MessageSquare, LogOut, Home, Settings, Newspaper, MessageCircle, Calendar, Layers, Tag, Disc, ShoppingBag, Trophy, ShieldAlert, Menu, X, Video, ArrowLeft, Star, Wallet, QrCode, TrendingUp, User, MapPin, CreditCard } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
 import React, { useState, useEffect } from 'react';
@@ -28,10 +28,12 @@ const AdminLayout = () => {
         {
             title: "Управление",
             items: [
-                { path: '/admin', icon: Home, label: 'Главная' },
-                { path: '/admin/total-students', icon: Users, label: 'Ученики' },
+                { path: '/admin', icon: Home, label: 'Обзор' },
+                { path: '/admin/director', icon: TrendingUp, label: 'Панель Директора' },
+                { path: '/admin/scanner', icon: QrCode, label: 'QR-Сканер' },
                 { path: '/admin/requests', icon: FileText, label: 'Заявки' },
-                { path: '/admin/users', icon: User, label: 'Пользователи' },
+                { path: '/admin/groups', icon: Calendar, label: 'Группы' },
+                { path: '/admin/users', icon: Users, label: 'Пользователи' },
             ]
         },
         {
@@ -42,7 +44,6 @@ const AdminLayout = () => {
                 { path: '/admin/broadcasts', icon: Video, label: 'Трансляции' },
                 { path: '/admin/reviews', icon: Star, label: 'Отзывы' },
                 { path: '/admin/directions', icon: Layers, label: 'Направления' },
-                { path: '/admin/groups', icon: Users, label: 'Группы' },
                 { path: '/admin/team', icon: Users, label: 'Команда' },
                 { path: '/admin/achievements', icon: Trophy, label: 'Награды' },
             ]
@@ -50,6 +51,7 @@ const AdminLayout = () => {
         {
             title: "Коммерция",
             items: [
+                { path: '/admin/subscriptions', icon: CreditCard, label: 'Абонементы' },
                 { path: '/admin/shop', icon: ShoppingBag, label: 'Магазин' },
                 { path: '/admin/finance', icon: Wallet, label: 'Финансы' },
                 { path: '/admin/promos', icon: Tag, label: 'Промокоды' },

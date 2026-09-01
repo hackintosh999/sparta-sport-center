@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, X, Check, Trash2, FileUp, AlertCircle, RefreshCw, FileText, Eye, ArrowLeft, Plus, Search, CheckCircle2, PartyPopper, Users, UserPlus, Eraser } from 'lucide-react';
+import { 
+    Upload, X, Check, Trash2, FileUp, AlertCircle, RefreshCw, 
+    FileText, Eye, ArrowLeft, Plus, Search, CheckCircle2, PartyPopper, 
+    Users, UserPlus, Eraser, Download, Sparkles, Clipboard, Wand2
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Group } from '../../types/shop';
+import { db } from '../../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Group, User } from '../../types/shop';
+
+export type MergeStrategy = 'smart_upsert' | 'insert_only' | 'replace_group';
 
 export interface ImportRow {
     id: string;
@@ -31,7 +39,9 @@ interface ExcelImportModalProps {
     columns: string[];
     existingGroups: Group[];
     existingPhones?: string[];
-    onConfirmImport: (mappedRows: ImportRow[]) => Promise<void>;
+    existingUsers?: User[];
+    existingRegistry?: any[];
+    onConfirmImport: (mappedRows: ImportRow[], mergeStrategy: MergeStrategy) => Promise<void>;
     processing: boolean;
     onFileLoaded?: (rows: any[], cols: string[]) => void;
 }
@@ -50,24 +60,19 @@ const parseSpartaExcel = (fileBuffer: ArrayBuffer, fileName: string) => {
         const sheet = workbook.Sheets[sheetName];
         if (!sheet) return;
 
-        let groupName = sheetName.trim();
-        if (/^sheet\d+$/i.test(groupName)) {
-            groupName = 'Без группы';
+        let defaultGroupName = sheetName.trim();
+        if (/^sheet\d+$/i.test(defaultGroupName)) {
+            defaultGroupName = 'Без группы';
         }
 
         const objectRows: any[] = XLSX.utils.sheet_to_json(sheet);
         const arrayRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        if (objectRows && objectRows.length > 0) {
-            console.log('--- EXCEL HEADERS DETECTED ---', Object.keys(objectRows[0] || {}));
-            console.log('--- RAW ROW DATA SAMPLE ---', objectRows[0]);
-        }
-
         if (arrayRows && arrayRows.length > 0) {
             arrayRows.forEach((arrRow, rowIndex) => {
                 if (!arrRow || arrRow.length === 0) return;
 
-                const strRow = arrRow.map(c => String(c || '').trim());
+                const strRow = arrRow.map(c => String(c !== undefined && c !== null ? c : '').trim());
                 const val0 = strRow[0] || '';
                 const val1 = strRow[1] || '';
                 const val2 = strRow[2] || '';
@@ -82,23 +87,71 @@ const parseSpartaExcel = (fileBuffer: ArrayBuffer, fileName: string) => {
                 let name = '';
                 let phone = '';
                 let parentName = '';
+                let ageOrYear: string | number = '';
+                let rowGroupName = defaultGroupName;
 
                 if (typeof objRow === 'object' && objRow !== null) {
                     for (const [key, value] of Object.entries(objRow)) {
                         if (!value) continue;
                         const kLower = key.toLowerCase().replace(/[^a-zа-яё0-9]/g, '');
+
+                        // Check parent
                         if (
-                            kLower.includes('род') ||
-                            kLower.includes('представител') ||
-                            kLower.includes('мама') ||
-                            kLower.includes('папа') ||
-                            kLower.includes('parent') ||
-                            kLower.includes('опекун')
+                            !parentName && (
+                                kLower.includes('род') ||
+                                kLower.includes('представител') ||
+                                kLower.includes('мама') ||
+                                kLower.includes('папа') ||
+                                kLower.includes('parent') ||
+                                kLower.includes('опекун')
+                            )
                         ) {
                             const valStr = String(value).trim();
                             if (valStr && !/^\+?\d+$/.test(valStr)) {
                                 parentName = valStr;
-                                break;
+                            }
+                        }
+
+                        // Check group in row
+                        if (
+                            kLower.includes('групп') ||
+                            kLower.includes('секци') ||
+                            kLower.includes('направлен') ||
+                            kLower.includes('видспорт') ||
+                            kLower.includes('group')
+                        ) {
+                            const valStr = String(value).trim();
+                            if (valStr && valStr.length > 1 && !/^\d+$/.test(valStr)) {
+                                rowGroupName = valStr;
+                            }
+                        }
+
+                        // Check age / birth year
+                        if (
+                            !ageOrYear && (
+                                kLower.includes('возраст') ||
+                                kLower.includes('гр') ||
+                                kLower.includes('год') ||
+                                kLower.includes('рожд') ||
+                                kLower.includes('др') ||
+                                kLower.includes('birth') ||
+                                kLower.includes('age') ||
+                                kLower.includes('year')
+                            )
+                        ) {
+                            const valStr = String(value).trim();
+                            if (valStr) {
+                                const yearMatch = valStr.match(/\b(19\d\d|20\d\d)\b/);
+                                if (yearMatch) {
+                                    ageOrYear = yearMatch[1];
+                                } else {
+                                    const numMatch = valStr.match(/\b\d{1,2}\b/);
+                                    if (numMatch) {
+                                        ageOrYear = numMatch[0];
+                                    } else {
+                                        ageOrYear = valStr;
+                                    }
+                                }
                             }
                         }
                     }
@@ -128,6 +181,17 @@ const parseSpartaExcel = (fileBuffer: ArrayBuffer, fileName: string) => {
                     });
                 }
 
+                // Fallback check for year in cell values if still empty
+                if (!ageOrYear) {
+                    strRow.forEach(cellVal => {
+                        if (!cellVal || cellVal === '№' || cellVal === phone || cellVal === name || cellVal === parentName) return;
+                        const yearMatch = cellVal.match(/\b(200\d|201\d|202\d)\b/);
+                        if (yearMatch) {
+                            ageOrYear = yearMatch[1];
+                        }
+                    });
+                }
+
                 if (/^\d+$/.test(name) || name === '№' || name === 'ФИ') {
                     name = '';
                 }
@@ -144,8 +208,9 @@ const parseSpartaExcel = (fileBuffer: ArrayBuffer, fileName: string) => {
                         childName: toTitleCase(name),
                         name: toTitleCase(name),
                         phone: formattedPhone,
+                        age: ageOrYear,
                         parentName: parentName.trim(),
-                        groupName: groupName,
+                        groupName: rowGroupName,
                         sourceFile: fileName,
                         raw: objRow,
                         checked: true
@@ -165,6 +230,8 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
     rawRows: initialRawRows,
     existingGroups,
     existingPhones = [],
+    existingUsers = [],
+    existingRegistry = [],
     onConfirmImport,
     processing
 }) => {
@@ -182,6 +249,202 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
     const [isImportSuccess, setIsImportSuccess] = useState(false);
     const [importedSuccessCount, setImportedSuccessCount] = useState(0);
     const [importedGroupsCount, setImportedGroupsCount] = useState(0);
+    const [mergeStrategy, setMergeStrategy] = useState<MergeStrategy>('smart_upsert');
+
+    const [activeTab, setActiveTab] = useState<'upload' | 'paste'>('upload');
+    const [clipboardText, setClipboardText] = useState('');
+    const [autoFixMessage, setAutoFixMessage] = useState('');
+    const [showBatchDrawer, setShowBatchDrawer] = useState(false);
+
+    const getRowStatus = (row: ImportRow) => {
+        const cleanPhone = (row.phone || '').replace(/\D/g, '');
+        const cleanName = (row.childName || '').trim().toLowerCase();
+
+        if (!cleanName && !cleanPhone) return null;
+
+        // Check in registered users
+        const matchedUser = existingUsers?.find(u => {
+            const uPhone = (u.parentPhone || (u as any).phone || '').replace(/\D/g, '');
+            const uName = (u.childName || (u as any).displayName || (u as any).name || '').trim().toLowerCase();
+            return (cleanPhone.length >= 10 && uPhone.includes(cleanPhone.slice(-10))) || (cleanName.length > 3 && uName === cleanName);
+        });
+
+        // Check in pending registry
+        const matchedPending = existingRegistry?.find(r => {
+            const rPhone = (r.parentPhone || '').replace(/\D/g, '');
+            const rName = (r.childFullName || r.childName || '').trim().toLowerCase();
+            return (cleanPhone.length >= 10 && rPhone.includes(cleanPhone.slice(-10))) || (cleanName.length > 3 && rName === cleanName);
+        });
+
+        const match = matchedUser || matchedPending;
+        if (!match) {
+            return { type: 'new', label: '✨ Новый', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' };
+        }
+
+        const currentGroupId = matchedUser?.groupId || matchedPending?.groupId || matchedPending?.targetGroupId;
+        const currentGroupName = existingGroups.find(g => g.id === currentGroupId)?.name || matchedPending?.groupName || '';
+
+        if (currentGroupName && row.groupName && currentGroupName.toLowerCase() !== row.groupName.toLowerCase()) {
+            return { 
+                type: 'transfer', 
+                label: `⚠️ Сменит группу (${currentGroupName})`, 
+                color: 'bg-amber-500/15 text-amber-400 border-amber-500/30' 
+            };
+        }
+
+        return { type: 'update', label: '🔄 Обновится', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30' };
+    };
+
+    const handleDownloadSampleTemplate = (e?: React.MouseEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const sampleData = [
+            {
+                'ФИО Ученика': 'Алексеев Максим Дмитриевич',
+                'Возраст / Г.р.': '2016',
+                'Телефон': '+7 (999) 123-45-67',
+                'Родитель / Заметка': 'Алексеева Анна Сергеевна (Мама)',
+                'Группа': 'Футбол 2016-2017',
+                'Тренер': 'Смирнов Алексей'
+            },
+            {
+                'ФИО Ученика': 'Иванов Артем Романович',
+                'Возраст / Г.р.': '2017',
+                'Телефон': '+7 (918) 765-43-21',
+                'Родитель / Заметка': 'Иванов Роман Петрович (Папа)',
+                'Группа': 'Футбол 2016-2017',
+                'Тренер': 'Смирнов Алексей'
+            },
+            {
+                'ФИО Ученика': 'Смирнова София Павловна',
+                'Возраст / Г.р.': '7 лет',
+                'Телефон': '+7 (903) 555-88-99',
+                'Родитель / Заметка': 'Смирнова Елена (Мама)',
+                'Группа': 'Гимнастика Младшие',
+                'Тренер': 'Ковалева Ольга'
+            }
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(sampleData);
+        ws['!cols'] = [
+            { wch: 30 },
+            { wch: 15 },
+            { wch: 22 },
+            { wch: 32 },
+            { wch: 24 },
+            { wch: 22 }
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Футбол 2016-2017');
+        XLSX.writeFile(wb, 'Образец_Импорта_Спарта.xlsx');
+    };
+
+    const handleProcessClipboardText = () => {
+        if (!clipboardText.trim()) return;
+        const lines = clipboardText.trim().split(/\r?\n/);
+        const parsedStudents: any[] = [];
+
+        lines.forEach((line, idx) => {
+            let parts = line.split('\t').map(p => p.trim());
+            if (parts.length <= 1 && line.includes(';')) {
+                parts = line.split(';').map(p => p.trim());
+            } else if (parts.length <= 1 && line.includes(',')) {
+                parts = line.split(',').map(p => p.trim());
+            }
+
+            if (parts.length === 0 || !parts.some(p => p.length > 0)) return;
+
+            const lineStr = line.toLowerCase();
+            if (idx === 0 && (lineStr.includes('фио') || lineStr.includes('ученик') || lineStr.includes('телефон'))) {
+                return;
+            }
+
+            let name = parts[0] || '';
+            let age = '';
+            let phone = '';
+            let parentName = '';
+            let groupName = 'Без группы';
+
+            let startIdx = 0;
+            if (/^\d+$/.test(name) && parts.length > 1) {
+                startIdx = 1;
+                name = parts[1] || '';
+            }
+
+            const remaining = parts.slice(startIdx + 1);
+            remaining.forEach(part => {
+                if (!part) return;
+                const cleanDigits = part.replace(/\D/g, '');
+                if (cleanDigits.length >= 10 && !phone) {
+                    phone = part;
+                } else if ((/^\d{4}$/.test(part) || /^\d{1,2}$/.test(part) || part.includes('г.р') || part.includes('лет')) && !age) {
+                    age = part;
+                } else if (!parentName && /^[А-ЯЁа-яёA-Za-z\s-]+$/.test(part) && part.length > 2 && !part.toLowerCase().includes('группа') && !part.toLowerCase().includes('футбол') && !part.toLowerCase().includes('дзюдо')) {
+                    parentName = part;
+                } else if (groupName === 'Без группы') {
+                    groupName = part;
+                }
+            });
+
+            let cleanDigits = phone.replace(/\D/g, '');
+            if (cleanDigits.length >= 10) {
+                phone = `+7 (${cleanDigits.slice(-10, -7)}) ${cleanDigits.slice(-7, -4)}-${cleanDigits.slice(-4, -2)}-${cleanDigits.slice(-2)}`;
+            }
+
+            if (name.trim().length > 0) {
+                parsedStudents.push({
+                    name: toTitleCase(name),
+                    age,
+                    phone,
+                    parentName: parentName.trim(),
+                    groupName: groupName.trim() || 'Без группы',
+                    checked: true
+                });
+            }
+        });
+
+        if (parsedStudents.length > 0) {
+            addFileToQueue(`Буфер обмена (${parsedStudents.length} строк).xlsx`, 0, parsedStudents);
+            setClipboardText('');
+            setActiveTab('upload');
+            setParseError(null);
+        } else {
+            setParseError('Не удалось распознать строки. Убедитесь, что скопировали данные с именами.');
+        }
+    };
+
+    const handleAutoFixData = (fileId: string) => {
+        let count = 0;
+        setUploadedFiles(prev => prev.map(f => {
+            if (f.id !== fileId) return f;
+            const updatedRows = f.editableRows.map(r => {
+                const cleanName = toTitleCase(r.childName);
+                const cleanParent = r.parentName ? toTitleCase(r.parentName) : '';
+                let cleanPhone = r.phone;
+                const digits = r.phone.replace(/\D/g, '');
+                if (digits.length >= 10) {
+                    cleanPhone = `+7 (${digits.slice(-10, -7)}) ${digits.slice(-7, -4)}-${digits.slice(-4, -2)}-${digits.slice(-2)}`;
+                }
+                const cleanAge = String(r.age || '').trim();
+                if (cleanName !== r.childName || cleanPhone !== r.phone || cleanParent !== r.parentName || cleanAge !== r.age) {
+                    count++;
+                }
+                return {
+                    ...r,
+                    childName: cleanName,
+                    parentName: cleanParent,
+                    phone: cleanPhone,
+                    age: cleanAge
+                };
+            });
+            return { ...f, editableRows: updatedRows };
+        }));
+        setAutoFixMessage(`✓ Автоисправление: приведено в порядок строк — ${count}`);
+        setTimeout(() => setAutoFixMessage(''), 3500);
+    };
 
     useEffect(() => {
         if (initialRawRows && initialRawRows.length > 0 && uploadedFiles.length === 0) {
@@ -213,7 +476,7 @@ const findParentValue = (row: Record<string, any>) => {
             const childName = toTitleCase(rawChildName);
             const phone = normalize(s.phone || s['Телефон'] || '');
             const parentName = normalize(s.parentName || s.rawParentName || findParentValue(s.raw || s) || findParentValue(s) || '');
-            const age = normalize(s.age || s.childAge || '');
+            const age = normalize(s.age || s.childAge || s['Возраст / Г.р.'] || s['Возраст'] || s['Год рождения'] || s['Г.р.'] || s['г.р.'] || s['Год'] || s['Дата рождения'] || '');
             const groupName = normalize(s.groupName || s['Группа']) || 'Без группы';
 
             const isValidName = childName.length > 0 && !/^\d+$/.test(childName) && childName !== '№';
@@ -237,7 +500,7 @@ const findParentValue = (row: Record<string, any>) => {
             name: fileName,
             size: fileSize,
             rows: rawData,
-            columns: ['ФИО Ученика', 'Телефон', 'Родитель / Заметка', 'Группа'],
+            columns: ['ФИО Ученика', 'Возраст / Г.р.', 'Телефон', 'Родитель / Заметка', 'Группа'],
             skipFirstRow: false,
             editableRows
         };
@@ -408,7 +671,37 @@ const findParentValue = (row: Record<string, any>) => {
     const handleConfirmImportAll = async () => {
         const totalToImport = allSelectedRows.length;
         const totalGroups = totalUniqueGroups.length;
-        await onConfirmImport(allSelectedRows);
+        await onConfirmImport(allSelectedRows, mergeStrategy);
+
+        // Auto-save uploaded lists to Firestore saved_lists hub so admin never loses them
+        try {
+            for (const file of uploadedFiles) {
+                const validRows = file.editableRows.filter(r => r.childName.trim().length > 0);
+                if (validRows.length > 0) {
+                    const listName = file.name.replace(/\.[^/.]+$/, '') || file.name;
+                    const primaryGroup = validRows[0]?.groupName || 'Без группы';
+                    await addDoc(collection(db, 'saved_lists'), {
+                        name: listName,
+                        groupName: primaryGroup,
+                        totalStudents: validRows.length,
+                        students: validRows.map(r => ({
+                            id: r.id,
+                            childName: r.childName,
+                            parentName: r.parentName || '',
+                            phone: r.phone,
+                            age: r.age,
+                            groupName: r.groupName,
+                            coachName: r.coachName || ''
+                        })),
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp()
+                    });
+                }
+            }
+        } catch (saveErr) {
+            console.error('Error auto-saving lists to saved_lists:', saveErr);
+        }
+
         setImportedSuccessCount(totalToImport);
         setImportedGroupsCount(totalGroups);
         setIsImportSuccess(true);
@@ -527,23 +820,66 @@ const findParentValue = (row: Record<string, any>) => {
                 ) : (
                     <>
                         {/* Header */}
-                        <div className="flex justify-between items-center pb-4 border-b border-white/10 mb-4 shrink-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10 mb-4 shrink-0">
                             <div>
                                 <h3 className="text-xl font-bold text-white font-russo flex items-center gap-2">
                                     <Upload className="text-green-400" size={24} />
-                                    Многофайловый импорт Excel / CSV
+                                    Импорт групп и спортсменов (Excel / CSV)
                                 </h3>
                                 <p className="text-white/40 text-xs mt-0.5">
                                     Загружено файлов: <span className="text-sparta-gold font-bold">{uploadedFiles.length}</span> | Учеников в очереди: <span className="text-white font-bold">{allSelectedRows.length}</span>
                                 </p>
                             </div>
-                            <button onClick={handleCloseModal} className="text-white/40 hover:text-white p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-                                <X size={20} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadSampleTemplate}
+                                    className="px-3.5 py-2 bg-sparta-gold/15 hover:bg-sparta-gold/25 border border-sparta-gold/40 text-sparta-gold rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                                    title="Скачать готовый образец таблицы Excel"
+                                >
+                                    <Download size={15} />
+                                    <span>📥 Скачать образец Excel</span>
+                                </button>
+
+                                <button onClick={handleCloseModal} className="text-white/40 hover:text-white p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
 
-                        {/* Dropzone */}
+                        {/* Mode Switcher Tabs when no files uploaded yet */}
                         {uploadedFiles.length === 0 && (
+                            <div className="flex gap-2 mb-4 bg-white/5 p-1 rounded-2xl w-fit">
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('upload')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        activeTab === 'upload'
+                                            ? 'bg-sparta-gold text-black shadow-lg font-black'
+                                            : 'text-white/60 hover:text-white'
+                                    }`}
+                                >
+                                    <FileUp size={15} />
+                                    <span>Загрузка файла (.xlsx / .csv)</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('paste')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        activeTab === 'paste'
+                                            ? 'bg-sparta-gold text-black shadow-lg font-black'
+                                            : 'text-white/60 hover:text-white'
+                                    }`}
+                                >
+                                    <Clipboard size={15} />
+                                    <span>Быстрая вставка из буфера (Ctrl+V)</span>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Dropzone or Paste Mode */}
+                        {uploadedFiles.length === 0 && activeTab === 'upload' && (
                             <div
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
@@ -560,16 +896,73 @@ const findParentValue = (row: Record<string, any>) => {
                                 <p className="text-white/40 text-xs mb-6 text-center max-w-md">
                                     Автоматический разбор всех вкладок Excel (ФИО, Телефоны, Родители и Названия групп).
                                 </p>
-                                <button
-                                    type="button"
-                                    onClick={triggerFilePicker}
-                                    className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-green-600/20"
-                                >
-                                    <FileText size={18} />
-                                    Выбрать файлы на компьютере
-                                </button>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={triggerFilePicker}
+                                        className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-green-600/20 cursor-pointer"
+                                    >
+                                        <FileText size={18} />
+                                        Выбрать файлы на компьютере
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleDownloadSampleTemplate}
+                                        className="bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold py-3 px-5 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+                                    >
+                                        <Download size={16} className="text-sparta-gold" />
+                                        Скачать образец
+                                    </button>
+                                </div>
                                 {parseError && (
                                     <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs flex items-center gap-2">
+                                        <AlertCircle size={16} />
+                                        {parseError}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Paste Tab */}
+                        {uploadedFiles.length === 0 && activeTab === 'paste' && (
+                            <div className="flex-1 flex flex-col p-6 bg-white/[0.02] border border-white/10 rounded-2xl space-y-4">
+                                <div>
+                                    <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-1">
+                                        📋 Вставьте скопированные строки из таблицы
+                                    </h4>
+                                    <p className="text-xs text-white/40">
+                                        Выделите строки в Google Таблицах или Excel (ФИО, Телефон, Родитель, Группа) и нажмите Ctrl+V
+                                    </p>
+                                </div>
+
+                                <textarea
+                                    value={clipboardText}
+                                    onChange={(e) => setClipboardText(e.target.value)}
+                                    placeholder="Вставьте скопированные строки со списком учеников из таблицы или документа"
+                                    className="flex-1 min-h-[200px] bg-[#0a0a0a] border border-white/15 rounded-xl p-4 text-xs font-mono text-white placeholder:text-white/20 focus:border-sparta-gold focus:outline-none resize-none"
+                                />
+
+                                <div className="flex justify-between items-center pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleDownloadSampleTemplate}
+                                        className="text-xs text-sparta-gold hover:underline flex items-center gap-1.5 font-bold cursor-pointer"
+                                    >
+                                        <Download size={14} /> Скачать образец таблицы
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={!clipboardText.trim()}
+                                        onClick={handleProcessClipboardText}
+                                        className="px-6 py-3 bg-gradient-to-r from-sparta-gold to-yellow-500 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-sparta-gold/20 disabled:opacity-40 transition-all cursor-pointer"
+                                    >
+                                        Распознать и добавить ➔
+                                    </button>
+                                </div>
+
+                                {parseError && (
+                                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs flex items-center gap-2">
                                         <AlertCircle size={16} />
                                         {parseError}
                                     </div>
@@ -640,69 +1033,88 @@ const findParentValue = (row: Record<string, any>) => {
                         {activePreviewFile && (
                             <div className="flex-1 flex flex-col overflow-hidden">
                                 {/* Top Action Bar */}
-                                <div className="flex flex-wrap items-center gap-2.5 mb-3 shrink-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-2 shrink-0">
                                     <button
                                         type="button"
                                         onClick={() => setActivePreviewFileId(null)}
-                                        className="px-3.5 py-2 bg-white/5 hover:bg-white/10 text-white/80 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-white/10 shrink-0"
+                                        className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/80 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-white/10 shrink-0 cursor-pointer"
                                     >
                                         <ArrowLeft size={14} /> Назад к файлам
                                     </button>
 
-                                    <div className="relative flex-1 bg-[#0a0a0a] border border-sparta-gold/30 focus-within:border-sparta-gold rounded-xl px-3.5 py-1.5 flex items-center gap-2 shadow-md transition-all">
-                                        <Search size={15} className="text-sparta-gold shrink-0" />
+                                    <div className="relative flex-1 min-w-[200px] bg-[#0a0a0a] border border-sparta-gold/30 focus-within:border-sparta-gold rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-md transition-all">
+                                        <Search size={14} className="text-sparta-gold shrink-0" />
                                         <input
                                             type="text"
                                             value={searchQuery}
                                             onChange={e => setSearchQuery(e.target.value)}
-                                            placeholder="🔍 Поиск по ФИО или номеру телефона..."
+                                            placeholder="Поиск по ФИО, телефону, году..."
                                             className="w-full bg-transparent text-xs text-white placeholder:text-white/40 focus:outline-none font-medium"
                                         />
                                     </div>
 
                                     <button
                                         type="button"
+                                        onClick={() => handleAutoFixData(activePreviewFile.id)}
+                                        className="px-3 py-1.5 bg-sparta-gold/15 hover:bg-sparta-gold/25 text-sparta-gold border border-sparta-gold/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-md"
+                                        title="Привести имена к заглавным буквам и отформатировать телефоны"
+                                    >
+                                        <Wand2 size={14} /> 🪄 Исправить форматы
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowBatchDrawer(prev => !prev)}
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 border ${
+                                            showBatchDrawer
+                                                ? 'bg-amber-500 text-black border-amber-400 font-extrabold shadow-lg'
+                                                : 'bg-white/5 hover:bg-white/10 text-amber-300 border-amber-500/30'
+                                        }`}
+                                        title="Массово изменить группу для выбранных галочками учеников"
+                                    >
+                                        <RefreshCw size={14} className={showBatchDrawer ? "rotate-180 transition-transform" : ""} />
+                                        <span>⚡ Сменить группу ({selectedCount})</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
                                         onClick={() => handleAddBlankRow(activePreviewFile.id)}
                                         className="bg-sparta-gold/10 hover:bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30 font-bold px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                                     >
-                                        <UserPlus size={14} /> + Добавить ученика
+                                        <UserPlus size={14} /> + Добавить
                                     </button>
 
                                     <button
                                         type="button"
                                         onClick={() => handleCleanEmptyRows(activePreviewFile.id)}
-                                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0"
+                                        className="px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
                                         title="Удалить все строки без ФИО"
                                     >
                                         <Eraser size={14} /> 🧹 Очистить пустые
                                     </button>
-
-                                    <select
-                                        value={filterGroup}
-                                        onChange={e => setFilterGroup(e.target.value)}
-                                        className="bg-[#0a0a0a] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:border-sparta-gold focus:outline-none shrink-0"
-                                    >
-                                        <option value="ALL">Все группы ({activePreviewFile.editableRows.length})</option>
-                                        {activeUniqueGroups.map(g => (
-                                            <option key={g} value={g}>{g}</option>
-                                        ))}
-                                    </select>
                                 </div>
 
-                                {/* Conditional Batch Action Bar */}
-                                {selectedCount > 0 && (
-                                    <div className="flex flex-wrap items-center gap-3 bg-sparta-gold/10 border border-sparta-gold/30 p-2.5 rounded-xl mb-3 shrink-0">
-                                        <span className="text-xs text-sparta-gold font-bold shrink-0">
-                                            Выбрано: {selectedCount}
+                                {/* Notification Message */}
+                                {autoFixMessage && (
+                                    <div className="mb-2 p-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold rounded-xl flex items-center gap-2">
+                                        <Check size={14} />
+                                        <span>{autoFixMessage}</span>
+                                    </div>
+                                )}
+
+                                {/* Expandable Batch Action Drawer (Shown only when clicked) */}
+                                {showBatchDrawer && (
+                                    <div className="flex flex-wrap items-center gap-3 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-xl mb-2 shrink-0 animate-in fade-in slide-in-from-top-2">
+                                        <span className="text-xs text-amber-300 font-bold shrink-0">
+                                            🔄 Перенести {selectedCount} выбранных в группу:
                                         </span>
-                                        <div className="h-4 w-px bg-sparta-gold/30 shrink-0" />
 
                                         <select
                                             value={batchSelectGroup}
                                             onChange={e => setBatchSelectGroup(e.target.value)}
-                                            className="bg-[#0a0a0a] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-sparta-gold focus:outline-none max-w-xs truncate"
+                                            className="bg-[#0a0a0a] border border-amber-500/40 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-sparta-gold focus:outline-none max-w-xs truncate"
                                         >
-                                            <option value="">-- Выберите целевую группу --</option>
+                                            <option value="">-- Выберите новую группу --</option>
                                             {groupOptionsList.map(g => (
                                                 <option key={g} value={g}>{g}</option>
                                             ))}
@@ -721,13 +1133,69 @@ const findParentValue = (row: Record<string, any>) => {
 
                                         <button
                                             type="button"
-                                            onClick={() => handleApplyBatchGroup(activePreviewFile.id)}
-                                            className="px-3.5 py-1.5 bg-sparta-gold text-black rounded-lg text-xs font-bold hover:bg-[#ffd700] transition-colors shrink-0"
+                                            disabled={!batchSelectGroup || (batchSelectGroup === '__NEW__' && !batchCustomGroup.trim())}
+                                            onClick={() => {
+                                                handleApplyBatchGroup(activePreviewFile.id);
+                                                setShowBatchDrawer(false);
+                                            }}
+                                            className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-black rounded-lg text-xs font-bold transition-colors shrink-0 cursor-pointer"
                                         >
-                                            Назначить выделенным ({selectedCount})
+                                            Назначить ({selectedCount})
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBatchDrawer(false)}
+                                            className="text-xs text-white/40 hover:text-white ml-auto cursor-pointer"
+                                        >
+                                            ✕ Закрыть
                                         </button>
                                     </div>
                                 )}
+
+                                {/* Group Filter Quick Tabs */}
+                                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-1 shrink-0 no-scrollbar">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterGroup('ALL')}
+                                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                                            filterGroup === 'ALL'
+                                                ? 'bg-sparta-gold text-black shadow-md font-black'
+                                                : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10 border border-white/10'
+                                        }`}
+                                    >
+                                        <span>Все группы</span>
+                                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${filterGroup === 'ALL' ? 'bg-black/20 text-black' : 'bg-white/10 text-white/60'}`}>
+                                            {activePreviewFile.editableRows.length}
+                                        </span>
+                                    </button>
+
+                                    {activeUniqueGroups.map(g => {
+                                        const countInGroup = activePreviewFile.editableRows.filter(r => r.groupName.trim() === g.trim()).length;
+                                        const isSelected = filterGroup === g;
+                                        const isNoGroup = g === 'Без группы';
+
+                                        return (
+                                            <button
+                                                key={g}
+                                                type="button"
+                                                onClick={() => setFilterGroup(g)}
+                                                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                                                    isSelected
+                                                        ? 'bg-sparta-gold text-black shadow-md font-black'
+                                                        : isNoGroup
+                                                        ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20'
+                                                        : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10 border border-white/10'
+                                                }`}
+                                            >
+                                                <span className="truncate max-w-[200px]">{g}</span>
+                                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${isSelected ? 'bg-black/20 text-black' : 'bg-white/10 text-white/60'}`}>
+                                                    {countInGroup}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
 
                                 {/* Table */}
                                 <div ref={tableContainerRef} className="flex-1 overflow-auto border border-white/10 rounded-2xl bg-[#0a0a0a] mb-2 flex flex-col justify-between">
@@ -745,9 +1213,10 @@ const findParentValue = (row: Record<string, any>) => {
                                                 </th>
                                                 <th className="p-2.5 w-10">#</th>
                                                 <th className="p-2.5">ФИО Ученика</th>
+                                                <th className="p-2.5 w-24 text-center">Возраст / Г.р.</th>
                                                 <th className="p-2.5">Телефон</th>
                                                 <th className="p-2.5">Родитель / Заметка</th>
-                                                <th className="p-2.5 w-72">Группа</th>
+                                                <th className="p-2.5 w-64">Группа</th>
                                                 <th className="p-2.5 w-10 text-center"></th>
                                             </tr>
                                         </thead>
@@ -784,7 +1253,7 @@ const findParentValue = (row: Record<string, any>) => {
                                                                     type="text"
                                                                     value={row.childName}
                                                                     onChange={e => handleCellChange(activePreviewFile.id, row.id, 'childName', e.target.value)}
-                                                                    placeholder="Введите ФИО..."
+                                                                    placeholder="ФИО ученика"
                                                                     className={`w-full bg-transparent hover:bg-white/5 focus:bg-[#1a1a1a] border border-transparent focus:border-sparta-gold/50 rounded-lg px-2 py-1 text-xs text-white font-bold transition-all focus:outline-none ${
                                                                         isMissingName ? 'text-red-400 placeholder:text-red-400/50' : ''
                                                                     }`}
@@ -797,6 +1266,18 @@ const findParentValue = (row: Record<string, any>) => {
                                                             </div>
                                                         </td>
 
+                                                        {/* Age / Birth Year */}
+                                                        <td className="p-1.5 w-24">
+                                                            <input
+                                                                type="text"
+                                                                value={row.age || ''}
+                                                                onChange={e => handleCellChange(activePreviewFile.id, row.id, 'age', e.target.value)}
+                                                                placeholder="Возраст или год"
+                                                                className="w-full bg-transparent hover:bg-white/5 focus:bg-[#1a1a1a] border border-transparent focus:border-sparta-gold/50 rounded-lg px-1.5 py-1 text-xs text-white/90 font-mono text-center transition-all focus:outline-none placeholder:text-white/20"
+                                                                title="Возраст или год рождения спортсмена"
+                                                            />
+                                                        </td>
+
                                                         {/* Phone Number with Family Indicator */}
                                                         <td className="p-1.5">
                                                             <div className="flex items-center gap-1.5">
@@ -804,7 +1285,7 @@ const findParentValue = (row: Record<string, any>) => {
                                                                     type="text"
                                                                     value={row.phone}
                                                                     onChange={e => handleCellChange(activePreviewFile.id, row.id, 'phone', e.target.value)}
-                                                                    placeholder="— Не указан —"
+                                                                    placeholder="Телефон родителя"
                                                                     className={`w-full bg-transparent hover:bg-white/5 focus:bg-[#1a1a1a] border border-transparent focus:border-sparta-gold/50 rounded-lg px-2 py-1 text-xs text-white/80 font-mono transition-all focus:outline-none ${
                                                                         isMissingPhone ? 'text-amber-400 placeholder:text-amber-400/60' : ''
                                                                     }`}
@@ -823,7 +1304,7 @@ const findParentValue = (row: Record<string, any>) => {
                                                                 type="text"
                                                                 value={row.parentName || ''}
                                                                 onChange={e => handleCellChange(activePreviewFile.id, row.id, 'parentName', e.target.value)}
-                                                                placeholder="Родитель / Заметка..."
+                                                                placeholder="ФИО родителя"
                                                                 className="w-full bg-transparent hover:bg-white/5 focus:bg-[#1a1a1a] border border-transparent focus:border-sparta-gold/50 rounded-lg px-2 py-1 text-xs text-white/90 font-medium transition-all focus:outline-none placeholder:text-white/20"
                                                             />
                                                         </td>
@@ -840,7 +1321,7 @@ const findParentValue = (row: Record<string, any>) => {
                                                                             handleCellChange(activePreviewFile.id, row.id, 'groupName', val);
                                                                         }
                                                                     }}
-                                                                    className="bg-[#0a0a0a] text-white border border-white/10 rounded-xl px-2 py-1 focus:border-sparta-gold focus:outline-none max-w-[180px] truncate text-xs"
+                                                                    className="bg-[#0a0a0a] text-white border border-white/10 rounded-xl px-2 py-1 focus:border-sparta-gold focus:outline-none max-w-[160px] truncate text-xs"
                                                                 >
                                                                     {groupOptionsList.map(g => (
                                                                         <option key={g} value={g}>{g}</option>
@@ -850,27 +1331,36 @@ const findParentValue = (row: Record<string, any>) => {
                                                                     )}
                                                                 </select>
 
-                                                                {isInFileDuplicate ? (
-                                                                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0" title="Дубликат в файле импорта">
-                                                                        ⚠️ Дубликат в файле
-                                                                    </span>
-                                                                ) : isDuplicatePhone ? (
-                                                                    <span className="bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0" title="Телефон уже есть в базе">
-                                                                        ⚠️ В базе
-                                                                    </span>
-                                                                ) : isUnassignedGroup ? (
-                                                                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">
-                                                                        ⚠️ Без группы
-                                                                    </span>
-                                                                ) : matchedGroup ? (
-                                                                    <span className="bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">
-                                                                        ✓ Есть
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">
-                                                                        + Новая
-                                                                    </span>
-                                                                )}
+                                                                {(() => {
+                                                                    const status = getRowStatus(row);
+                                                                    if (isInFileDuplicate) {
+                                                                        return (
+                                                                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0" title="Дубликат в файле импорта">
+                                                                                ⚠️ Дубликат
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                    if (status) {
+                                                                        return (
+                                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 border ${status.color}`}>
+                                                                                {status.label}
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                    return isUnassignedGroup ? (
+                                                                        <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">
+                                                                            ⚠️ Без группы
+                                                                        </span>
+                                                                    ) : matchedGroup ? (
+                                                                        <span className="bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">
+                                                                            ✓ Есть
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">
+                                                                            + Новая
+                                                                        </span>
+                                                                    );
+                                                                })()}
                                                             </div>
                                                         </td>
 
@@ -879,7 +1369,7 @@ const findParentValue = (row: Record<string, any>) => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleDeleteRow(activePreviewFile.id, row.id)}
-                                                                className="text-white/30 hover:text-red-400 p-1 rounded-lg hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                                                                className="text-white/30 hover:text-red-400 p-1 rounded-lg hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
                                                                 title="Удалить строку"
                                                             >
                                                                 <Trash2 size={15} />
@@ -894,7 +1384,7 @@ const findParentValue = (row: Record<string, any>) => {
                                                 onClick={() => handleAddBlankRow(activePreviewFile.id)}
                                                 className="border-t border-dashed border-white/10 hover:border-sparta-gold/40 hover:bg-sparta-gold/5 cursor-pointer transition-all"
                                             >
-                                                <td colSpan={7} className="p-3 text-center text-xs font-bold text-sparta-gold/80 hover:text-sparta-gold">
+                                                <td colSpan={8} className="p-3 text-center text-xs font-bold text-sparta-gold/80 hover:text-sparta-gold">
                                                     <span className="flex items-center justify-center gap-1.5">
                                                         <Plus size={15} /> + Добавить новую строку вручную
                                                     </span>
@@ -909,23 +1399,59 @@ const findParentValue = (row: Record<string, any>) => {
                         {/* Footer */}
                         {uploadedFiles.length > 0 && (
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-3 shrink-0 border-t border-white/10">
-                                <div className="text-xs text-white/60 flex items-center gap-3">
-                                    <div className="flex items-center gap-1.5">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div className="text-xs text-white/60 flex items-center gap-1.5">
                                         <Check className="text-green-400" size={16} />
-                                        Итого к импорту: <span className="text-white font-bold">{allSelectedRows.length}</span> учеников из <span className="text-green-400 font-bold">{uploadedFiles.length}</span> файлов в <span className="text-sparta-gold font-bold">{totalUniqueGroups.length}</span> групп
+                                        Итого: <span className="text-white font-bold">{allSelectedRows.length}</span> учеников из <span className="text-green-400 font-bold">{uploadedFiles.length}</span> файлов
                                     </div>
-                                    {activePreviewFile && (
-                                        <span className="text-white/30 font-mono text-[11px] border-l border-white/10 pl-3">
-                                            ({fullyValidRowsCount} из {activePreviewFile.editableRows.length} полностью заполнены)
-                                        </span>
-                                    )}
+
+                                    {/* Merge Strategy Radio Selector */}
+                                    <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+                                        <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider px-2">Режим:</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setMergeStrategy('smart_upsert')}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                                mergeStrategy === 'smart_upsert'
+                                                    ? 'bg-sparta-gold text-black font-bold shadow-sm'
+                                                    : 'text-white/50 hover:text-white'
+                                            }`}
+                                            title="Обновить данные существующих детей и добавить новых без дубликатов"
+                                        >
+                                            ⚡ Умное обновление
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setMergeStrategy('insert_only')}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                                mergeStrategy === 'insert_only'
+                                                    ? 'bg-sparta-gold text-black font-bold shadow-sm'
+                                                    : 'text-white/50 hover:text-white'
+                                            }`}
+                                            title="Добавить только тех учеников, которых еще нет в базе"
+                                        >
+                                            ✨ Только новые
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setMergeStrategy('replace_group')}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                                mergeStrategy === 'replace_group'
+                                                    ? 'bg-red-500 text-white font-bold shadow-sm'
+                                                    : 'text-white/50 hover:text-white'
+                                            }`}
+                                            title="Заменить текущий состав выбранных групп на список из файла"
+                                        >
+                                            🔄 Замена состава
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center gap-3">
                                     <button
                                         type="button"
                                         onClick={handleCloseModal}
-                                        className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-xl text-xs font-bold transition-all"
+                                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
                                     >
                                         Отмена
                                     </button>
@@ -934,10 +1460,10 @@ const findParentValue = (row: Record<string, any>) => {
                                         type="button"
                                         onClick={handleConfirmImportAll}
                                         disabled={processing || allSelectedRows.length === 0}
-                                        className="px-6 py-2.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-green-600/20"
+                                        className="px-5 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-green-600/20 cursor-pointer"
                                     >
                                         {processing ? <RefreshCw className="animate-spin" size={14} /> : <Upload size={14} />}
-                                        Импортировать все ({allSelectedRows.length} учеников)
+                                        Импортировать все ({allSelectedRows.length})
                                     </button>
                                 </div>
                             </div>

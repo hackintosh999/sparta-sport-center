@@ -35,6 +35,7 @@
         "scratch",
         "tmp",
         "sparta-video",
-        "sparta-demo-video"
+        "sparta-demo-video",
+        "e2e"
     ]
 }

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Школа Балета LOTOS — Master Editorial Poster (A4 1240×1754)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,700&family=Onest:wght@400;500;600;700;800;900&family=Oswald:wght@600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --champagne-light: #FFFDF9;
+      --champagne-gold: #EADCB9;
+      --accent-gold-bright: #F7D584;
+      --accent-gold-deep: #D4A853;
+      --text-white: #FFFFFF;
+      --text-sand: #EAE3D2;
+      --emerald-dark: #1E3124;
+      --emerald-deep: #152219;
+      --text-cream-gold: #F4E4C1;
+      --sage-dark: #2D4436;
+      --text-graphite: #1C2920;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    @page {
+      size: 1240px 1754px;
+      margin: 0;
+    }
+
+    html, body {
+      width: 1240px;
+      height: 1754px;
+      margin: 0;
+      padding: 0;
+      background: #5E6751;
+      color: var(--text-white);
+      font-family: 'Montserrat', 'Onest', sans-serif;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .poster-editorial-master {
+      width: 1240px;
+      height: 1754px;
+      position: relative;
+      background: #5E6751;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    /* ================= 0. ФОН: ЧИСТЫЙ ЗАЛ С ПАРКЕТОМ ================= */
+    .bg-full-art {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      object-fit: cover;
+      object-position: center center;
+      z-index: 1;
+    }
+
+    /* Студийный контровой свет за балериной */
+    .bg-ballerina-backlight {
+      position: absolute;
+      top: 230px;
+      left: 350px;
+      width: 780px;
+      height: 980px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 55% 45%, rgba(255, 248, 230, 0.30) 0%, rgba(247, 213, 132, 0.10) 45%, rgba(247, 213, 132, 0) 75%);
+      filter: blur(110px);
+      z-index: 2;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    /* Мягкая натуральная хвойно-оливковая тень слева */
+    .bg-ambient-tint-left {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      background: linear-gradient(90deg, rgba(28, 43, 33, 0.65) 0%, rgba(28, 43, 33, 0.35) 28%, rgba(28, 43, 33, 0) 48%);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* Зеркальный теневой градиент справа */
+    .bg-ambient-tint-right {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 1240px;
+      height: 1754px;
+      background: linear-gradient(270deg, rgba(28, 43, 33, 0.55) 0%, rgba(28, 43, 33, 0.30) 25%, rgba(28, 43, 33, 0) 46%);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* ================= 1. ШАПКА: ВЕРХНИЙ ОТСТУП 55px ================= */
+    .top-header-section {
+      position: relative;
+      z-index: 10;
+      padding: 52px 65px 0 65px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    /* Левый заголовок + Герб Лотоса */
+    .brand-title-stacked {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    /* Золотой классический люкс-герб (Лотос + Балерина) */
+    .brand-crest-gold {
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+    }
+    .brand-crest-gold img {
+      width: 62px;
+      height: auto;
+      filter: drop-shadow(0 2px 12px rgba(212, 168, 83, 0.55));
+    }
+
+    .brand-title-stacked h1 {
+      font-family: 'Oswald', 'Bebas Neue', sans-serif;
+      font-size: 116px;
+      font-weight: 800;
+      line-height: 0.86;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #FFFDF9;
+      text-shadow: 0 4px 30px rgba(0, 0, 0, 0.65);
+    }
+    .brand-title-stacked .title-lotus-serif {
+      font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+      font-size: 94px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #F7D584;
+      filter: drop-shadow(0 3px 20px rgba(212, 168, 83, 0.75));
+      line-height: 1;
+      margin-top: 4px;
+    }
+    .brand-lotus-subline {
+      font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+      font-size: 27.5px;
+      font-style: italic;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: #EADCB9;
+      margin-top: 8px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Правый блок: НАБОР */
+    .top-right-editorial-block {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      padding-top: 24px;
+    }
+    .top-start-label {
+      font-size: 25px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      color: #F7D584;
+      text-transform: uppercase;
+      text-shadow: 0 2px 10px rgba(212, 168, 83, 0.5);
+    }
+    .top-start-value {
+      font-family: 'Oswald', sans-serif;
+      font-size: 48px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+      line-height: 1.1;
+    }
+
+    /* ================= 2. СРЕДНИЙ ЛЕВЫЙ БЛОК: ИЗЯЩНЫЕ ПРЕИМУЩЕСТВА ================= */
+    .middle-left-benefits-block {
+      position: absolute;
+      top: 510px;
+      left: 65px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      max-width: 500px;
+      text-align: left;
+    }
+
+    .benefit-item-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .benefit-title-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #F7D584;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+    }
+    .bullet-diamond-icon {
+      color: #F7D584;
+      font-size: 16px;
+      flex-shrink: 0;
+      filter: drop-shadow(0 0 6px rgba(247, 213, 132, 0.8));
+    }
+    .benefit-desc-line {
+      font-size: 19.5px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: #FFFFFF;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+      line-height: 1.4;
+      padding-left: 26px;
+    }
+
+    /* ================= 3. НИЖНИЙ ЛЕВЫЙ БЛОК: ФИЛИАЛЫ В НОВОСИБИРСКЕ ================= */
+    .bottom-left-editorial-block {
+      position: absolute;
+      bottom: 175px;
+      left: 65px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 490px;
+      text-align: left;
+    }
+    .focus-title-caps {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #F7D584;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 3px;
+    }
+    .gold-pin-icon {
+      width: 21px;
+      height: 21px;
+      flex-shrink: 0;
+      filter: drop-shadow(0 0 6px rgba(247, 213, 132, 0.8));
+    }
+    .address-line-item {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #FFFDF9;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+      line-height: 1.55;
+    }
+
+    /* ================= 4. СРЕДНИЙ ПРАВЫЙ БЛОК: СТРОГАЯ ЖУРНАЛЬНАЯ ТИПОГРАФИКА ================= */
+    .middle-right-guarantees {
+      position: absolute;
+      top: 820px;
+      right: 65px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 30px;
+      text-align: right;
+      max-width: 500px;
+    }
+    .guarantee-item-row {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+    .guarantee-title-line {
+      font-family: 'Oswald', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #F7D584;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+    }
+    .guarantee-desc-line {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 19px;
+      font-weight: 500;
+      color: #FFFDF9;
+      letter-spacing: 0.02em;
+      line-height: 1.35;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+    }
+
+    /* ================= 5. НИЖНИЙ ПРАВЫЙ БЛОК: КОНТАКТЫ И СМЯГЧЕННЫЙ QR ================= */
+    .bottom-right-contact-block {
+      position: absolute;
+      bottom: 165px;
+      right: 65px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      text-align: right;
+    }
+    .more-info-label {
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #F7D584;
+      text-shadow: 0 2px 10px rgba(212, 168, 83, 0.5);
+      margin-bottom: 2px;
+    }
+    .phone-single-line {
+      font-family: 'Oswald', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #FFFFFF;
+      text-shadow: 0 3px 20px rgba(0, 0, 0, 0.65);
+      line-height: 1.2;
+    }
+    .phone-single-line span {
+      color: #F7D584;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    /* Значки VK и мягкий QR-код */
+    .social-icons-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+      margin-top: 10px;
+    }
+    .round-social-badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FDE8B3 0%, #D4A853 100%);
+      color: #152219;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(212, 168, 83, 0.50);
+      flex-shrink: 0;
+    }
+    .round-social-badge svg {
+      width: 56px;
+      height: 56px;
+    }
+    .qr-social-badge {
+      width: 102px;
+      height: 102px;
+      border-radius: 12px;
+      background: #FFFDF9;
+      border: 1.8px solid #D4A853;
+      padding: 6px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40), 0 0 15px rgba(247, 213, 132, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .qr-social-badge img {
+      width: 90px;
+      height: 90px;
+      border-radius: 8px;
+      display: block;
+    }
+
+    /* ================= 6. ПРЕМИАЛЬНАЯ КНОПКА ЗАПИСИ ================= */
+    .bottom-floating-cta-wrapper {
+      position: absolute;
+      bottom: 68px;
+      left: 0;
+      width: 1240px;
+      z-index: 20;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .btn-gold-floating {
+      padding: 24px 64px;
+      min-width: 580px;
+      height: 86px;
+      background: linear-gradient(135deg, #22362A 0%, #19281F 50%, #121D16 100%);
+      color: #FFFDF9;
+      border: 1.8px solid #D4A853;
+      border-radius: 43px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 20.5px;
+      font-weight: 800;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.50), 0 0 25px rgba(212, 168, 83, 0.20);
+      cursor: pointer;
+      white-space: nowrap;
+      text-align: center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-gold-floating .btn-arrow {
+      color: #F7D584;
+      font-size: 23px;
+      font-weight: 900;
+    }
+
+    /* ================= 7. ТАКТИЛЬНАЯ ТЕКСТУРА ДОРОГОЙ ХЛОПКОВОЙ БУМАГИ ================= */
+    .paper-noise-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      pointer-events: none;
+      z-index: 99;
+      opacity: 0.042;
+      mix-blend-mode: soft-light;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+  </style>
+</head>
+<body>
+
+  <div class="poster-editorial-master" id="poster-lotus-pure-editorial">
+    
+    <!-- 0. ФОН: ЧИСТЫЙ ЗАЛ С ПАРКЕТОМ -->
+    <img src="/banner-assets/lotus-editorial-bg.jpg" alt="Балерина LOTOS" class="bg-full-art">
+    
+    <!-- Студийный свет за балериной -->
+    <div class="bg-ballerina-backlight"></div>
+
+    <!-- Мягкий рассеянный темно-оливковый градиент слева -->
+    <div class="bg-ambient-tint-left"></div>
+
+    <!-- Зеркальный теневой градиент справа -->
+    <div class="bg-ambient-tint-right"></div>
+
+    <!-- 1. ШАПКА: ГЕРБ ЛОТОСА (КЛАССИЧЕСКИЙ ЛЮКС) + ЗАГОЛОВОК + ЗОЛОТОЙ LOTOS + ПОДСТРОЧНИК -->
+    <div class="top-header-section">
+      <!-- Левый заголовок -->
+      <div class="brand-title-stacked">
+        <!-- Золотой Герб Лотоса над словом ШКОЛА -->
+        <div class="brand-crest-gold">
+          <img src="/banner-assets/lotus-ballet-crest-gold.png" alt="Герб LOTOS">
+        </div>
+        <h1>ШКОЛА</h1>
+        <h1>БАЛЕТА</h1>
+        <div class="title-lotus-serif">LOTOS</div>
+        <div class="brand-lotus-subline">«От первых шагов до большой сцены»</div>
+      </div>
+
+      <!-- Старт / Набор (справа): Золотой НАБОР: + Белый ДЕТЕЙ ОТ 3 ЛЕТ -->
+      <div class="top-right-editorial-block">
+        <div class="top-start-label">НАБОР:</div>
+        <div class="top-start-value">ДЕТЕЙ ОТ 3 ЛЕТ</div>
+      </div>
+    </div>
+
+    <!-- 2. СРЕДНИЙ ЛЕВЫЙ БЛОК: ИЗЯЩНЫЕ ПРЕИМУЩЕСТВА -->
+    <div class="middle-left-benefits-block">
+      
+      <!-- Пункт 1 -->
+      <div class="benefit-item-row">
+        <div class="benefit-title-line">
+          <span class="bullet-diamond-icon">✦</span>
+          <span>КРАСИВАЯ ОСАНКА</span>
+        </div>
+        <div class="benefit-desc-line">Крепкий мышечный корсет и лёгкая походка</div>
+      </div>
+
+      <!-- Пункт 2 -->
+      <div class="benefit-item-row">
+        <div class="benefit-title-line">
+          <span class="bullet-diamond-icon">✦</span>
+          <span>БЕРЕЖНАЯ РАСТЯЖКА</span>
+        </div>
+        <div class="benefit-desc-line">Развитие природной гибкости без боли и слёз</div>
+      </div>
+
+      <!-- Пункт 3 -->
+      <div class="benefit-item-row">
+        <div class="benefit-title-line">
+          <span class="bullet-diamond-icon">✦</span>
+          <span>ЧУВСТВО РИТМА</span>
+        </div>
+        <div class="benefit-desc-line">Музыкальность, координация и пластика</div>
+      </div>
+
+      <!-- Пункт 4 -->
+      <div class="benefit-item-row">
+        <div class="benefit-title-line">
+          <span class="bullet-diamond-icon">✦</span>
+          <span>СЦЕНИЧЕСКИЙ ОПЫТ</span>
+        </div>
+        <div class="benefit-desc-line">Открытые уроки, костюмы и выступления</div>
+      </div>
+
+    </div>
+
+    <!-- 3. НИЖНИЙ ЛЕВЫЙ БЛОК: ФИЛИАЛЫ В НОВОСИБИРСКЕ -->
+    <div class="bottom-left-editorial-block">
+      <div class="focus-title-caps">
+        <svg class="gold-pin-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" fill="#F7D584"/>
+        </svg>
+        <span>3 ФИЛИАЛА В НОВОСИБИРСКЕ:</span>
+      </div>
+      <div class="address-line-item">• ул. Большевистская, 125</div>
+      <div class="address-line-item">• ул. Планетная, 53</div>
+      <div class="address-line-item">• ул. Мясниковой, 25/2</div>
+    </div>
+
+    <!-- 4. СРЕДНИЙ ПРАВЫЙ БЛОК: СТРОГАЯ ЖУРНАЛЬНАЯ ТИПОГРАФИКА -->
+    <div class="middle-right-guarantees">
+      
+      <!-- Пункт 1: Пробный урок — 0 ₽ -->
+      <div class="guarantee-item-row">
+        <div class="guarantee-title-line">ПРОБНЫЙ УРОК — 0 ₽</div>
+        <div class="guarantee-desc-line">Знакомство с педагогом и методикой школы</div>
+      </div>
+
+      <!-- Пункт 2: Чуткие педагоги -->
+      <div class="guarantee-item-row">
+        <div class="guarantee-title-line">ЧУТКИЕ ПЕДАГОГИ</div>
+        <div class="guarantee-desc-line">Бережный подход к детям без стресса</div>
+      </div>
+
+      <!-- Пункт 3: Налоговый вычет 13% -->
+      <div class="guarantee-item-row">
+        <div class="guarantee-title-line">НАЛОГОВЫЙ ВЫЧЕТ 13%</div>
+        <div class="guarantee-desc-line">Наличие государственной лицензии</div>
+      </div>
+
+    </div>
+
+    <!-- 5. НИЖНИЙ ПРАВЫЙ БЛОК: КОНТАКТЫ И СМЯГЧЕННЫЙ QR -->
+    <div class="bottom-right-contact-block">
+      <div class="more-info-label">ЗАПИСЬ И СПРАВКИ:</div>
+      
+      <div class="phone-single-line">+7 (919) 339-33-99 <span>· директор</span></div>
+      <div class="phone-single-line">+7 (351) 230-12-69 <span>· администратор</span></div>
+      
+      <!-- Значки VK и мягкий QR-код -->
+      <div class="social-icons-row">
+        <div class="round-social-badge">
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="18" r="18" fill="url(#goldBtnGrad)"/>
+            <path d="M19.72 23.5C13.68 23.5 10.22 19.37 10.07 12.5H13.09C13.2 17.53 15.42 19.66 17.18 20.1V12.5H20.02V16.84C21.76 16.65 23.58 14.68 24.2 12.5H27.04C26.56 15.22 24.56 17.19 23.14 18.01C24.56 18.68 26.84 20.38 27.72 23.5H24.6C23.91 21.36 22.21 19.71 20.02 19.49V23.5H19.72Z" fill="#152219"/>
+          </svg>
+        </div>
+        <div class="qr-social-badge">
+          <img src="/banner-assets/vk-qr-real.png" alt="QR-код для записи">
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. ПРЕМИАЛЬНАЯ КНОПКА ЗАПИСИ (ПОДНЯТА: 68px ОТ НИЖНЕГО КРАЯ) -->
+    <div class="bottom-floating-cta-wrapper">
+      <button class="btn-gold-floating">
+        <span>ЗАПИСАТЬСЯ НА ПРОБНЫЙ УРОК</span>
+        <span class="btn-arrow">→</span>
+      </button>
+    </div>
+
+    <!-- 7. ТАКТИЛЬНАЯ ТЕКСТУРА ДОРОГОЙ ХЛОПКОВОЙ БУМАГИ -->
+    <div class="paper-noise-overlay"></div>
+
+  </div>
+
+</body>
+</html>

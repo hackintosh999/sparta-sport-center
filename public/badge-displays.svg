@@ -1,0 +1,16 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" width="260" height="64">
+  <defs>
+    <linearGradient id="pillGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0084FF" />
+      <stop offset="100%" stop-color="#0066D6" />
+    </linearGradient>
+    <filter id="pillGlow" x="-10%" y="-20%" width="120%" height="150%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0070E0" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <rect x="4" y="4" width="252" height="56" rx="28" fill="url(#pillGrad)" filter="url(#pillGlow)" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+  <circle cx="32" cy="32" r="18" fill="#FFFFFF"/>
+  <rect x="23" y="24" width="12" height="12" rx="2" stroke="#0070E0" stroke-width="1.8" fill="none"/>
+  <rect x="27" y="28" width="12" height="12" rx="2" fill="#0070E0"/>
+  <text x="145" y="39" font-family="'Montserrat', sans-serif" font-weight="800" font-size="22" fill="#FFFFFF" text-anchor="middle">2 дисплея</text>
+</svg>

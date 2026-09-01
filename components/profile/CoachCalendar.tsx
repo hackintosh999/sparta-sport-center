@@ -16,8 +16,10 @@ import {
     CheckCircle,
     Users,
     Video,
-    Film
+    Film,
+    ShieldAlert
 } from 'lucide-react';
+import { ScheduleOverrideModal } from '../schedule/ScheduleOverrideModal';
 import {
     collection,
     query,
@@ -60,6 +62,7 @@ const CoachCalendar: React.FC<CoachCalendarProps> = ({ userProfile, myGroups, ex
     const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
     const [presets, setPresets] = useState<any[]>([]);
     const [isSavingPreset, setIsSavingPreset] = useState(false);
+    const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
 
     // Form state for new topic
     const [editingTopic, setEditingTopic] = useState<{
@@ -259,22 +262,33 @@ const CoachCalendar: React.FC<CoachCalendarProps> = ({ userProfile, myGroups, ex
                     <p className="text-white/40 text-sm mt-1">Составляйте программу тренировок и следите за темами занятий</p>
                 </div>
 
-                <div className="flex items-center gap-4 bg-field border border-main rounded-2xl p-2 h-fit">
+                <div className="flex flex-wrap items-center gap-3">
                     <button
-                        onClick={() => setSelectedGroupId('all')}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedGroupId === 'all' ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-white/40 hover:text-white'}`}
+                        onClick={() => setIsOverrideModalOpen(true)}
+                        className="px-4 py-2.5 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/10"
+                        title="Отмена занятия, перенос времени или замена тренера с авто-уведомлением родителей"
                     >
-                        Все группы
+                        <ShieldAlert size={16} />
+                        <span>⚡ Форс-мажор / Отмена</span>
                     </button>
-                    {myGroups.map(g => (
+
+                    <div className="flex items-center gap-2 bg-field border border-main rounded-2xl p-1.5 h-fit">
                         <button
-                            key={g.id}
-                            onClick={() => setSelectedGroupId(g.id)}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedGroupId === g.id ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-white/40 hover:text-white'}`}
+                            onClick={() => setSelectedGroupId('all')}
+                            className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedGroupId === 'all' ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-white/40 hover:text-white'}`}
                         >
-                            {g.name}
+                            Все группы
                         </button>
-                    ))}
+                        {myGroups.map(g => (
+                            <button
+                                key={g.id}
+                                onClick={() => setSelectedGroupId(g.id)}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedGroupId === g.id ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-white/40 hover:text-white'}`}
+                            >
+                                {g.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -690,6 +704,14 @@ const CoachCalendar: React.FC<CoachCalendarProps> = ({ userProfile, myGroups, ex
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Force Majeure & Schedule Overrides Modal */}
+            <ScheduleOverrideModal
+                isOpen={isOverrideModalOpen}
+                onClose={() => setIsOverrideModalOpen(false)}
+                creatorName={userProfile?.displayName || 'Тренер'}
+                availableGroups={myGroups.map(g => ({ id: g.id, name: g.name, coachName: userProfile?.displayName }))}
+            />
         </div>
     );
 };

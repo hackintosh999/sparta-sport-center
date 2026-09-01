@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ЦСП СПАРТА — Футбол & Большой теннис (Диагональный супер-макет 100x200)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    body {
+      width: 1012px;
+      height: 2048px;
+      overflow: hidden;
+      background-color: #041017;
+      font-family: 'Montserrat', sans-serif;
+      position: relative;
+    }
+
+    .concept-rollup {
+      width: 1012px;
+      height: 2048px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Фоновый артворк */
+    .bg-artwork {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1012px;
+      height: 2048px;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Контентный слой с векторной точностью */
+    .content-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1012px;
+      height: 2048px;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 40px 55px 36px 55px;
+    }
+
+    /* ==================== 1. ВЕРХ: ШАПКА ЦСП СПАРТА ==================== */
+    .top-header-group {
+      text-align: center;
+      margin-top: 175px; /* Смещение точно под золотой герб */
+    }
+
+    .brand-main-text {
+      font-size: 42px;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.95);
+    }
+
+    /* ==================== 2. СРЕДНЯЯ ЗОНА: ЗАГОЛОВКИ ==================== */
+    .middle-titles-container {
+      position: relative;
+      height: 1050px;
+    }
+
+    /* 3D Заголовок Футбола (вверху справа) */
+    .fb-title-pos {
+      position: absolute;
+      top: 40px;
+      right: 15px;
+      text-align: right;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1.05;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #FF2A2A;
+      text-shadow: 
+        0px 2px 0px #700000,
+        0px 3px 0px #600000,
+        0px 4px 0px #500000,
+        0 8px 20px rgba(0, 0, 0, 0.95);
+      -webkit-text-stroke: 1.2px #FFE0E0;
+    }
+
+    /* 3D Заголовок Тенниса (в центре справа) */
+    .tn-title-pos {
+      position: absolute;
+      bottom: 25px;
+      right: 20px;
+      text-align: right;
+    }
+
+    .tn-title-3d {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 86px;
+      font-weight: 900;
+      line-height: 0.88;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #E0FFF8;
+      text-shadow: 
+        0px 2px 0px #0F4D52,
+        0px 3px 0px #0D454A,
+        0px 4px 0px #0B3E42,
+        0px 5px 0px #09373B,
+        0px 6px 0px #083033,
+        0px 7px 0px #06282B,
+        0px 8px 0px #052123,
+        0 14px 28px rgba(0, 0, 0, 0.75);
+      -webkit-text-stroke: 1.6px #FFFFFF;
+    }
+
+    .tn-title-3d span {
+      display: block;
+    }
+
+    .tn-sub-recruitment {
+      font-size: 32px;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9);
+      margin-top: 6px;
+    }
+
+    /* ==================== 3. КАРТОЧКИ ПРЕИМУЩЕСТВ (2x2 GRID) ==================== */
+    .bottom-cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 20px;
+      margin-bottom: 22px;
+    }
+
+    .glass-benefit-card {
+      position: relative;
+      height: 126px;
+      background: linear-gradient(135deg, rgba(8, 32, 54, 0.82) 0%, rgba(12, 45, 68, 0.78) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1.8px solid rgba(0, 255, 255, 0.6);
+      border-radius: 22px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px 12px 22px;
+    }
+
+    .card-text-side {
+      color: #FFFFFF;
+      font-size: 25px;
+      font-weight: 800;
+      line-height: 1.18;
+      letter-spacing: 0.2px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+      text-align: left;
+    }
+
+    .card-text-side .gold-accent {
+      color: #FFD700;
+      font-weight: 900;
+    }
+
+    .card-icon-side {
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.7));
+      flex-shrink: 0;
+    }
+
+    /* ==================== 4. ПОДВАЛ (4 АДРЕСА) ==================== */
+    .footer-capsule {
+      width: 100%;
+      background: rgba(5, 18, 28, 0.97);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1.8px solid #26C6DA;
+      border-radius: 26px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.75), 0 0 24px rgba(38, 198, 218, 0.25);
+      padding: 22px 34px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .footer-col {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .footer-icon-box {
+      width: 52px;
+      height: 52px;
+      flex-shrink: 0;
+    }
+
+    .footer-icon-box svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 2px 8px rgba(38, 198, 218, 0.5));
+    }
+
+    .footer-text-lines {
+      font-size: 20.5px;
+      font-weight: 700;
+      color: #FFFFFF;
+      line-height: 1.38;
+      letter-spacing: 0.2px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="concept-rollup">
+    <!-- Фоновый супер-артворк с мальчиком, девочкой и эффектами -->
+    <img src="/banner-assets/sparta-duo-concept-master.jpg" alt="ЦСП Спарта Футбол и Теннис" class="bg-artwork">
+
+    <!-- Векторный контентный слой -->
+    <div class="content-overlay">
+      
+      <!-- 1. ШАПКА -->
+      <div class="top-header-group">
+        <div class="brand-main-text">ЦСП «СПАРТА»</div>
+      </div>
+
+      <!-- 2. 3D ЗАГОЛОВКИ НА ФОНЕ СЦЕНЫ -->
+      <div class="middle-titles-container">
+        
+        <!-- Заголовок Футбола -->
+        <div class="fb-title-pos">
+          <div>СТАНЬ ЧАСТЬЮ</div>
+          <div>КОМАНДЫ!</div>
+        </div>
+
+        <!-- Заголовок Тенниса -->
+        <div class="tn-title-pos">
+          <div class="tn-title-3d">
+            <span>БОЛЬШОЙ</span>
+            <span>ТЕННИС</span>
+          </div>
+          <div class="tn-sub-recruitment">ОТКРЫВАЕТ НАБОР</div>
+        </div>
+
+      </div>
+
+      <!-- 3. КАРТОЧКИ ПРЕИМУЩЕСТВ (2x2) -->
+      <div class="bottom-cards-grid">
+        
+        <!-- 1. Пробная тренировка 0 ₽ -->
+        <div class="glass-benefit-card">
+          <div class="card-text-side">
+            <div>Пробная</div>
+            <div>тренировка <span class="gold-accent">0 ₽</span></div>
+          </div>
+          <img src="/banner-assets/icon-gift-nobg.png" alt="Пробная тренировка" class="card-icon-side">
+        </div>
+
+        <!-- 2. Заморозка при болезни -->
+        <div class="glass-benefit-card">
+          <div class="card-text-side">
+            <div>Заморозка</div>
+            <div>при болезни</div>
+          </div>
+          <img src="/banner-assets/icon-ice-nobg.png" alt="Заморозка" class="card-icon-side">
+        </div>
+
+        <!-- 3. Гос. лицензия -->
+        <div class="glass-benefit-card">
+          <div class="card-text-side">
+            <div>Гос. лицензия</div>
+          </div>
+          <img src="/banner-assets/tennis-icon-license.png" alt="Гос лицензия" class="card-icon-side">
+        </div>
+
+        <!-- 4. Налоговый вычет 13% -->
+        <div class="glass-benefit-card">
+          <div class="card-text-side">
+            <div>Налоговый</div>
+            <div>вычет <span class="gold-accent">13%</span></div>
+          </div>
+          <img src="/banner-assets/tennis-icon-tax.png" alt="Налоговый вычет" class="card-icon-side">
+        </div>
+
+      </div>
+
+      <!-- 4. ПОДВАЛ (4 АДРЕСА) -->
+      <div class="footer-capsule">
+        
+        <!-- Контакты -->
+        <div class="footer-col">
+          <div class="footer-icon-box">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="22" fill="rgba(38, 198, 218, 0.18)" stroke="#26C6DA" stroke-width="2"/>
+              <path d="M32 27.5V30.5C32 31.5 31 32.5 30 32.5C21 32 16 27 15.5 18C15.5 17 16.5 16 17.5 16H20.5C21.5 16 22.3 16.8 22.5 17.8C22.7 19 23.2 20.2 23.9 21.2C24.4 21.9 24.2 22.8 23.5 23.3L22.2 24.3C23.4 26.5 25.5 28.6 27.7 29.8L28.7 28.5C29.2 27.8 30.1 27.6 30.8 28.1C31.8 28.8 33 29.3 34.2 29.5C35.2 29.7 36 30.5 36 31.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="footer-text-lines">
+            <div>+7 919 339 33 99 (Директор)</div>
+            <div>+7 (351) 230-12-69 (Администратор)</div>
+            <div style="color: #00FFFF; font-size: 19px; font-weight: 600;">bugrova.k@bk.ru</div>
+          </div>
+        </div>
+
+        <!-- Адреса -->
+        <div class="footer-col">
+          <div class="footer-icon-box">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="22" fill="rgba(38, 198, 218, 0.18)" stroke="#26C6DA" stroke-width="2"/>
+              <path d="M24 13C19.5 13 16 16.5 16 21C16 26.5 24 35 24 35C24 35 32 26.5 32 21C32 16.5 28.5 13 24 13Z" stroke="#FFFFFF" stroke-width="2.2" stroke-linejoin="round"/>
+              <circle cx="24" cy="21" r="3.5" fill="#26C6DA"/>
+            </svg>
+          </div>
+          <div class="footer-text-lines">
+            <div>ул. Большевистская 125,</div>
+            <div>ул. Планетная 53,</div>
+            <div>ул. Мясниковой 25/2,</div>
+            <div>ул. Ласковая 18</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

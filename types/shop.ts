@@ -19,6 +19,8 @@ export interface Product {
     badges?: string[];
     stock?: number | Record<string, number>;
     isCustomizable?: boolean;
+    isMadeToOrder?: boolean; // When true, item is tailored on demand, no strict stock limit
+    lowStockThreshold?: number; // Custom threshold for "🔥 Low stock" warning (default: 3)
     sizeChartUrl?: string;
     sizeChartId?: string;
     colorImages?: Record<string, string>;
@@ -159,6 +161,7 @@ export interface ScheduleItem {
     time: string;
     activity?: string;
     endTime?: string;
+    location?: string;
 }
 
 export interface AchievementDefinition {
@@ -169,7 +172,12 @@ export interface AchievementDefinition {
     type: '2d' | '3d';
     mediaUrl: string;
     rarity: 'common' | 'rare' | 'legendary';
+    iconPreset?: string;
+    rewardCoins?: number;
+    awardType?: 'trophy' | 'diploma' | 'certificate' | 'shield';
+    motto?: string;
     createdAt: any;
+    updatedAt?: any;
 }
 
 export interface UserAchievement {

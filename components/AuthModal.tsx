@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, User, Chrome, Calendar, Phone, KeyRound, QrCode, Sparkles } from 'lucide-react';
+import { X, Mail, Lock, User, Chrome, Calendar, Phone, KeyRound, QrCode, Sparkles, CheckCircle, Shield, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, setDoc, serverTimestamp, getDoc, updateDoc, query, collection, where, getDocs } from 'firebase/firestore';
-import { linkStudentToGroup } from '../utils/studentLinking';
+import { linkStudentToGroup, findExistingSpartaStudent, ExistingStudentResult, normalizePhoneNumber } from '../utils/studentLinking';
 import { safeLocalStorage } from '../utils/storage';
 
 interface AuthModalProps {
@@ -37,6 +37,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
     const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
     const [loginPhone, setLoginPhone] = useState('');
 
+    // Live Detection State for existing Sparta students/parents
+    const [detectedStudent, setDetectedStudent] = useState<ExistingStudentResult['student'] | null>(null);
+    const [isSearchingStudent, setIsSearchingStudent] = useState(false);
+
     const [step, setStep] = useState(1);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
@@ -45,9 +49,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
     const { signInWithGoogle, resetPassword } = useAuth();
 
-    // Phone mask handler for login
-    const handleLoginPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let value = e.target.value.replace(/\D/g, '');
+    // Phone mask handler for inputs
+    const formatPhoneString = (raw: string) => {
+        let value = raw.replace(/\D/g, '');
         if (value.startsWith('8')) value = '7' + value.slice(1);
         if (!value.startsWith('7') && value.length > 0) value = '7' + value;
         
@@ -57,8 +61,58 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
         if (value.length >= 8) formatted += '-' + value.substring(7, 9);
         if (value.length >= 10) formatted += '-' + value.substring(9, 11);
         
-        setLoginPhone(value.length <= 1 ? '' : formatted);
+        return value.length <= 1 ? '' : formatted;
     };
+
+    const handleLoginPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLoginPhone(formatPhoneString(e.target.value));
+    };
+
+    const handleRegisterPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setPhone(formatPhoneString(e.target.value));
+    };
+
+    // Live Sparta Database Check during registration
+    useEffect(() => {
+        if (authMode !== 'register' || isForgotPassword) {
+            setDetectedStudent(null);
+            return;
+        }
+
+        const rawPhone = phone.replace(/\D/g, '');
+        const parentFullName = `${parentLastName} ${parentFirstName}`.trim();
+        const rawChildName = `${childLastName} ${childFirstName}`.trim();
+
+        if (rawPhone.length < 10 && rawChildName.length < 3 && parentFullName.length < 3) {
+            setDetectedStudent(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsSearchingStudent(true);
+            const res = await findExistingSpartaStudent(phone, rawChildName, email, parentFullName);
+            if (res.found && res.student) {
+                setDetectedStudent(res.student);
+                if (role === 'parent' && res.student.name && !childFirstName && !childLastName) {
+                    const parts = res.student.name.split(' ');
+                    if (parts.length > 1) {
+                        setChildLastName(parts[0]);
+                        setChildFirstName(parts.slice(1).join(' '));
+                    } else {
+                        setChildLastName(res.student.name);
+                    }
+                }
+                if (res.student.childAge && !childAge) {
+                    setChildAge(String(res.student.childAge));
+                }
+            } else {
+                setDetectedStudent(null);
+            }
+            setIsSearchingStudent(false);
+        }, 200);
+
+        return () => clearTimeout(timer);
+    }, [phone, parentLastName, parentFirstName, childLastName, childFirstName, email, role, authMode, isForgotPassword]);
 
     // Handle Phone Login for Parents
     const handlePhoneLogin = async (e: React.FormEvent) => {
@@ -82,7 +136,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 const allUsersSnap = await getDocs(collection(db, 'users'));
                 const matched = allUsersSnap.docs.find(d => {
                     const uData = d.data();
-                    const uPhone = (uData.phone || '').replace(/\D/g, '');
+                    const uPhone = (uData.phone || uData.parentPhone || '').replace(/\D/g, '');
                     return uPhone && (uPhone === cleanPhone || uPhone.endsWith(cleanPhone.slice(-10)));
                 });
                 if (matched) {
@@ -107,7 +161,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                     window.location.href = '/dashboard';
                 }, 900);
             } else {
-                setError('Аккаунт с таким номером не найден. Проверьте номер или запишитесь на занятие.');
+                setError('Аккаунт с таким номером не найден. Проверьте номер или зарегистрируйтесь.');
             }
         } catch (err: any) {
             console.error('Phone login error:', err);
@@ -252,33 +306,105 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 setSuccessMessage('Инструкции по сбросу пароля отправлены на ваш email');
                 setTimeout(() => setIsForgotPassword(false), 3000);
             } else if (isLogin) {
-                try {
-                    await signInWithEmailAndPassword(auth, email.trim(), password);
-                } catch (primaryAuthErr: any) {
-                    // Fallback authentication for staff members created with temp passwords
-                    const cleanEmail = email.trim().toLowerCase();
-                    const qStaff = query(collection(db, "users"), where("email", "==", cleanEmail));
-                    const staffSnap = await getDocs(qStaff);
+                const cleanEmail = email.trim().toLowerCase();
+                const cleanPassword = password.trim();
 
-                    if (!staffSnap.empty) {
-                        const staffDocData = { id: staffSnap.docs[0].id, ...staffSnap.docs[0].data() } as any;
+                try {
+                    await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+                } catch (primaryAuthErr: any) {
+                    console.warn("Primary Firebase Auth signIn failed, checking temporary credentials & account recovery in Firestore...", primaryAuthErr);
+
+                    // 1. Search in Firestore users collection for matching email, tempEmail, parentEmail, or phone
+                    let matchedDoc: any = null;
+
+                    // Search by email field
+                    try {
+                        const qEmail = query(collection(db, "users"), where("email", "==", cleanEmail));
+                        const snapEmail = await getDocs(qEmail);
+                        if (!snapEmail.empty) {
+                            matchedDoc = { id: snapEmail.docs[0].id, ...snapEmail.docs[0].data() };
+                        }
+                    } catch (e) {}
+
+                    // Search by tempEmail field
+                    if (!matchedDoc) {
+                        try {
+                            const qTemp = query(collection(db, "users"), where("tempEmail", "==", cleanEmail));
+                            const snapTemp = await getDocs(qTemp);
+                            if (!snapTemp.empty) {
+                                matchedDoc = { id: snapTemp.docs[0].id, ...snapTemp.docs[0].data() };
+                            }
+                        } catch (e) {}
+                    }
+
+                    // Search by parentEmail field
+                    if (!matchedDoc) {
+                        try {
+                            const qParent = query(collection(db, "users"), where("parentEmail", "==", cleanEmail));
+                            const snapParent = await getDocs(qParent);
+                            if (!snapParent.empty) {
+                                matchedDoc = { id: snapParent.docs[0].id, ...snapParent.docs[0].data() };
+                            }
+                        } catch (e) {}
+                    }
+
+                    // Search all users as ultimate fallback
+                    if (!matchedDoc) {
+                        try {
+                            const allUsersSnap = await getDocs(collection(db, "users"));
+                            for (const d of allUsersSnap.docs) {
+                                const u = d.data();
+                                const uEmail = (u.email || '').trim().toLowerCase();
+                                const uTempEmail = (u.tempEmail || '').trim().toLowerCase();
+                                const uParentEmail = (u.parentEmail || '').trim().toLowerCase();
+                                if (uEmail === cleanEmail || uTempEmail === cleanEmail || uParentEmail === cleanEmail) {
+                                    matchedDoc = { id: d.id, ...u };
+                                    break;
+                                }
+                            }
+                        } catch (e) {}
+                    }
+
+                    if (matchedDoc) {
                         const isMasterOverride = cleanEmail === 'bugrova.k@bk.ru' || cleanEmail === 'psiphonvpn37@gmail.com';
-                        const matchesTempPwd = staffDocData.tempPassword && staffDocData.tempPassword === password.trim();
+                        const storedTempPass = (matchedDoc.tempPassword || '').trim();
+                        const matchesTempPwd = storedTempPass && (storedTempPass === cleanPassword || storedTempPass.toLowerCase() === cleanPassword.toLowerCase());
 
                         if (matchesTempPwd || isMasterOverride) {
-                            safeLocalStorage.setItem('sparta_auth_user', JSON.stringify({
-                                uid: staffDocData.id,
+                            // Ensure previous Firebase Auth session is cleanly signed out so it doesn't purge local session
+                            if (auth.currentUser) {
+                                try {
+                                    await auth.signOut();
+                                } catch (soErr) {}
+                            }
+
+                            const userRole = matchedDoc.role || 'user';
+                            const isStaffRole = ['admin', 'director', 'developer', 'trainer', 'coach', 'staff', 'dev'].includes(userRole);
+                            const isAdminRole = ['admin', 'director', 'developer', 'dev'].includes(userRole);
+
+                            const sessionPayload = {
+                                uid: matchedDoc.id,
+                                id: matchedDoc.id,
                                 email: cleanEmail,
-                                displayName: staffDocData.displayName || staffDocData.childName || 'Сотрудник',
-                                role: staffDocData.role || 'admin',
-                                isStaff: true,
-                                isAdmin: true,
-                                ...staffDocData
-                            }));
-                            window.location.reload();
+                                displayName: matchedDoc.displayName || matchedDoc.childName || matchedDoc.parentName || matchedDoc.name || 'Пользователь',
+                                role: userRole,
+                                isStaff: isStaffRole,
+                                isAdmin: isAdminRole,
+                                ...matchedDoc
+                            };
+
+                            safeLocalStorage.setItem('sparta_auth_user', JSON.stringify(sessionPayload));
+
+                            setSuccessMessage(`Вход выполнен успешно! Добро пожаловать, ${sessionPayload.displayName}`);
+                            setTimeout(() => {
+                                if (onSuccess) onSuccess();
+                                onClose();
+                                window.location.reload();
+                            }, 500);
                             return;
                         }
                     }
+
                     throw primaryAuthErr;
                 }
             } else {
@@ -543,28 +669,83 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                     <div className="space-y-4 text-center font-manrope">
                                         <div className="p-3 rounded-2xl bg-sparta-gold/10 border border-sparta-gold/30 text-amber-200 text-xs flex items-center gap-2 text-left">
                                             <Sparkles size={16} className="text-sparta-gold shrink-0" />
-                                            <span>Введите 4-значный код из кабинета родителя для входа в свой «Дневник Чемпиона»</span>
+                                            <span>Введите 4-значный PIN Чемпиона из кабинета родителя</span>
                                         </div>
 
-                                        <div>
-                                            <label className="block text-xs font-bold text-white/80 mb-2 uppercase tracking-wider">
-                                                4 цифры детского кода:
-                                            </label>
-                                            <input
-                                                type="text"
-                                                maxLength={4}
-                                                value={kidPin}
-                                                onChange={(e) => {
-                                                    const val = e.target.value.replace(/\D/g, '');
-                                                    setKidPin(val);
-                                                    if (val.length === 4) {
-                                                        handleKidPinLogin(undefined, val);
+                                        {/* 4 Digit Slots */}
+                                        <div className="flex justify-center gap-3 py-2">
+                                            {[0, 1, 2, 3].map((idx) => {
+                                                const digit = kidPin[idx];
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        className={`w-12 h-14 rounded-2xl flex items-center justify-center font-russo text-2xl border-2 transition-all duration-200 ${
+                                                            digit
+                                                                ? 'bg-sparta-gold text-black border-sparta-gold shadow-lg shadow-sparta-gold/30 scale-105'
+                                                                : idx === kidPin.length
+                                                                ? 'bg-white/10 border-sparta-gold text-white animate-pulse'
+                                                                : 'bg-white/5 border-white/10 text-white/30'
+                                                        }`}
+                                                    >
+                                                        {digit ? digit : idx === kidPin.length ? '•' : ''}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Kid Touch Keypad */}
+                                        <div className="grid grid-cols-3 gap-2 max-w-[280px] mx-auto pt-1">
+                                            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
+                                                <button
+                                                    key={num}
+                                                    type="button"
+                                                    disabled={loading}
+                                                    onClick={() => {
+                                                        if (kidPin.length < 4) {
+                                                            const nextPin = kidPin + num;
+                                                            setKidPin(nextPin);
+                                                            if (nextPin.length === 4) {
+                                                                handleKidPinLogin(undefined, nextPin);
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="h-12 rounded-2xl bg-white/5 hover:bg-sparta-gold/20 active:bg-sparta-gold active:text-black border border-white/10 hover:border-sparta-gold/40 text-white font-russo text-lg transition-all cursor-pointer shadow-md disabled:opacity-50"
+                                                >
+                                                    {num}
+                                                </button>
+                                            ))}
+                                            <button
+                                                type="button"
+                                                disabled={loading || kidPin.length === 0}
+                                                onClick={() => setKidPin('')}
+                                                className="h-12 rounded-2xl bg-white/5 hover:bg-red-500/20 active:bg-red-500 border border-white/10 text-red-400 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-30"
+                                            >
+                                                Сброс
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={loading}
+                                                onClick={() => {
+                                                    if (kidPin.length < 4) {
+                                                        const nextPin = kidPin + '0';
+                                                        setKidPin(nextPin);
+                                                        if (nextPin.length === 4) {
+                                                            handleKidPinLogin(undefined, nextPin);
+                                                        }
                                                     }
                                                 }}
-                                                placeholder="••••"
-                                                className="w-44 mx-auto text-center tracking-[0.6em] font-russo text-2xl py-3 bg-black/60 border-2 border-sparta-gold/50 focus:border-sparta-gold text-sparta-gold rounded-2xl outline-none shadow-[0_0_20px_rgba(212,175,55,0.25)] block"
-                                                autoFocus
-                                            />
+                                                className="h-12 rounded-2xl bg-white/5 hover:bg-sparta-gold/20 active:bg-sparta-gold active:text-black border border-white/10 hover:border-sparta-gold/40 text-white font-russo text-lg transition-all cursor-pointer shadow-md disabled:opacity-50"
+                                            >
+                                                0
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={loading || kidPin.length === 0}
+                                                onClick={() => setKidPin(prev => prev.slice(0, -1))}
+                                                className="h-12 rounded-2xl bg-white/5 hover:bg-white/10 active:bg-white/20 border border-white/10 text-white/60 hover:text-white font-bold text-base transition-all cursor-pointer disabled:opacity-30 flex items-center justify-center"
+                                            >
+                                                ⌫
+                                            </button>
                                         </div>
 
                                         {error && (
@@ -579,15 +760,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                             </div>
                                         )}
 
-                                        <button
-                                            type="button"
-                                            disabled={loading || kidPin.length < 4}
-                                            onClick={() => handleKidPinLogin()}
-                                            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-extrabold text-xs sm:text-sm hover:brightness-110 shadow-lg transition-all disabled:opacity-40 cursor-pointer"
-                                        >
-                                            {loading ? 'Проверяем код...' : 'Войти в Дневник Чемпиона ➔'}
-                                        </button>
-
                                         <p className="text-[10px] text-white/40 pt-1">
                                             📱 Или наведите камеру телефона на QR-код в кабинете родителя для входа в 1 клик
                                         </p>
@@ -595,202 +767,292 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                 ) : (
                                     <>
                                         {!isLogin && !isForgotPassword && (
-                                            <div className="flex gap-4 mb-6 bg-white/5 p-1 rounded-xl">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setRole('user')}
-                                                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${role === 'user' ? 'bg-sparta-gold text-black shadow-lg' : 'text-white/30 hover:text-white'}`}
-                                                >
-                                                    Я ученик
-                                                </button>
+                                            <div className="flex gap-2 mb-4 bg-white/5 p-1 rounded-2xl border border-white/5">
                                                 <button
                                                     type="button"
                                                     onClick={() => setRole('parent')}
-                                                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${role === 'parent' ? 'bg-sparta-gold text-black shadow-lg' : 'text-white/30 hover:text-white'}`}
+                                                    className={`flex-1 py-2.5 px-3 text-[11px] font-russo uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                                        role === 'parent'
+                                                            ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20 font-extrabold'
+                                                            : 'text-white/40 hover:text-white hover:bg-white/5'
+                                                    }`}
                                                 >
-                                                    Я родитель
+                                                    <span>👨‍👩‍👦 Я родитель</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRole('user')}
+                                                    className={`flex-1 py-2.5 px-3 text-[11px] font-russo uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                                        role === 'user'
+                                                            ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20 font-extrabold'
+                                                            : 'text-white/40 hover:text-white hover:bg-white/5'
+                                                    }`}
+                                                >
+                                                    <span>⚽ Я спортсмен</span>
                                                 </button>
                                             </div>
                                         )}
 
+                                        <form onSubmit={handleSubmit} className="space-y-3.5 font-manrope min-h-[180px] relative">
+                                            <AnimatePresence mode="wait">
+                                                {!isLogin && !isForgotPassword ? (
+                                                    <motion.div
+                                                        key="reg-single-step"
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        exit={{ opacity: 0, x: 20 }}
+                                                        className="space-y-3"
+                                                    >
+                                                        {/* Live Sparta Student Detection Card */}
+                                                        {detectedStudent && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                                className="p-3.5 rounded-2xl bg-gradient-to-r from-sparta-gold/25 via-amber-500/15 to-sparta-gold/10 border border-sparta-gold/50 text-white text-xs shadow-lg shadow-sparta-gold/10 space-y-1.5"
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-1.5 text-sparta-gold font-bold font-russo uppercase text-[11px]">
+                                                                        <Sparkles size={14} className="text-sparta-gold animate-pulse" />
+                                                                        <span>Спортсмен найден в базе Спарты!</span>
+                                                                    </div>
+                                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[9px] border border-emerald-500/30">
+                                                                        ✓ Авто-привязка
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-white text-xs font-semibold">
+                                                                    Ребенок: <span className="text-sparta-gold font-bold">{detectedStudent.name}</span>
+                                                                </div>
+                                                                <div className="text-white/80 text-[11px] flex items-center gap-2 flex-wrap">
+                                                                    <span>⚽ Группа: <strong className="text-white">{detectedStudent.groupName}</strong></span>
+                                                                    {detectedStudent.coachName && (
+                                                                        <span className="text-white/60">• Тренер: {detectedStudent.coachName}</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 pt-0.5">
+                                                                    <CheckCircle size={11} /> Привяжется к вашему кабинету и расписанию автоматически
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
 
+                                                        {role === 'parent' ? (
+                                                            <div className="space-y-2.5">
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    <div className="relative">
+                                                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Фамилия родителя"
+                                                                            value={parentLastName}
+                                                                            onChange={(e) => setParentLastName(e.target.value)}
+                                                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
+                                                                            required
+                                                                        />
+                                                                    </div>
+                                                                    <div className="relative">
+                                                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Имя родителя"
+                                                                            value={parentFirstName}
+                                                                            onChange={(e) => setParentFirstName(e.target.value)}
+                                                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
+                                                                            required
+                                                                        />
+                                                                    </div>
+                                                                </div>
 
-                                <form onSubmit={handleSubmit} className="space-y-5 font-manrope min-h-[180px] relative">
-                                    <AnimatePresence mode="wait">
-                                        {!isLogin && !isForgotPassword ? (
-                                            <motion.div
-                                                key="reg-single-step"
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                exit={{ opacity: 0, x: 20 }}
-                                                className="space-y-4"
-                                            >
-                                                {role === 'user' ? (
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div className="relative">
-                                                            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Фамилия ученика"
-                                                                value={childLastName}
-                                                                onChange={(e) => setChildLastName(e.target.value)}
-                                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-3 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
-                                                                required
-                                                            />
-                                                        </div>
-                                                        <div className="relative">
-                                                            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Имя ученика"
-                                                                value={childFirstName}
-                                                                onChange={(e) => setChildFirstName(e.target.value)}
-                                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-3 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
-                                                                required
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-3">
-                                                        <div className="grid grid-cols-2 gap-3">
-                                                            <div className="relative">
-                                                                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Фамилия родителя"
-                                                                    value={parentLastName}
-                                                                    onChange={(e) => setParentLastName(e.target.value)}
-                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-3 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
-                                                                    required
-                                                                />
+                                                                <div className="relative">
+                                                                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                                                    <input
+                                                                        type="tel"
+                                                                        placeholder="Телефон родителя (+7 9XX XXX-XX-XX)"
+                                                                        value={phone}
+                                                                        onChange={handleRegisterPhoneChange}
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
+                                                                        required
+                                                                    />
+                                                                </div>
+
+                                                                {/* Only show child inputs if NOT detected automatically */}
+                                                                {!detectedStudent && (
+                                                                    <div className="pt-1 space-y-1">
+                                                                        <div className="flex items-center justify-between text-[10px] text-white/40 font-bold uppercase tracking-wider px-0.5">
+                                                                            <span>Имя ребенка (если еще нет в базе):</span>
+                                                                            <span className="text-white/25">опционально</span>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-3 gap-2">
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="Фамилия ребенка"
+                                                                                value={childLastName}
+                                                                                onChange={(e) => setChildLastName(e.target.value)}
+                                                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-white/25 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
+                                                                            />
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="Имя ребенка"
+                                                                                value={childFirstName}
+                                                                                onChange={(e) => setChildFirstName(e.target.value)}
+                                                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-white/25 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
+                                                                            />
+                                                                            <input
+                                                                                type="number"
+                                                                                placeholder="Возраст"
+                                                                                min={4}
+                                                                                max={18}
+                                                                                value={childAge}
+                                                                                onChange={(e) => setChildAge(e.target.value)}
+                                                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-white placeholder-white/25 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs text-center"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                            <div className="relative">
-                                                                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Имя родителя"
-                                                                    value={parentFirstName}
-                                                                    onChange={(e) => setParentFirstName(e.target.value)}
-                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-3 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
-                                                                    required
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="relative">
-                                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
-                                                            <input
-                                                                type="tel"
-                                                                placeholder="Ваш телефон (+7 9XX XXX-XX-XX)"
-                                                                value={phone}
-                                                                onChange={(e) => setPhone(e.target.value)}
-                                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope"
-                                                                required
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                <div className="relative">
-                                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
-                                                    <input
-                                                        type="email"
-                                                        placeholder="Email"
-                                                        value={email}
-                                                        onChange={(e) => setEmail(e.target.value)}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                                <div className="relative">
-                                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
-                                                    <input
-                                                        type="password"
-                                                        placeholder="Пароль (минимум 6 символов)"
-                                                        value={password}
-                                                        onChange={(e) => setPassword(e.target.value)}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all"
-                                                        required
-                                                    />
-                                                </div>
-                                                {role === 'user' && (
-                                                    <div className="relative">
-                                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
-                                                        <input
-                                                            type="tel"
-                                                            placeholder="Личный телефон (+7 9XX XXX-XX-XX)"
-                                                            value={phone}
-                                                            onChange={(e) => setPhone(e.target.value)}
-                                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </motion.div>
-                                        ) : (
-                                            <motion.div
-                                                key="login-forgot"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                className="space-y-4"
-                                            >
-                                                {/* Login Method Toggle (Email vs Phone) */}
-                                                {!isForgotPassword && (
-                                                    <div className="flex gap-2 mb-2 bg-white/5 p-1 rounded-xl">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setLoginMethod('email');
-                                                                setError('');
-                                                            }}
-                                                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${loginMethod === 'email' ? 'bg-sparta-gold text-black shadow font-black' : 'text-white/50 hover:text-white'}`}
-                                                        >
-                                                            По Email и паролю
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setLoginMethod('phone');
-                                                                setError('');
-                                                            }}
-                                                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${loginMethod === 'phone' ? 'bg-sparta-gold text-black shadow font-black' : 'text-white/50 hover:text-white'}`}
-                                                        >
-                                                            По телефону
-                                                        </button>
-                                                    </div>
-                                                )}
+                                                        ) : (
+                                                            <div className="space-y-2.5">
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    <div className="relative">
+                                                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Фамилия ученика"
+                                                                            value={childLastName}
+                                                                            onChange={(e) => setChildLastName(e.target.value)}
+                                                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
+                                                                            required
+                                                                        />
+                                                                    </div>
+                                                                    <div className="relative">
+                                                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Имя ученика"
+                                                                            value={childFirstName}
+                                                                            onChange={(e) => setChildFirstName(e.target.value)}
+                                                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
+                                                                            required
+                                                                        />
+                                                                    </div>
+                                                                </div>
 
-                                                {loginMethod === 'phone' && !isForgotPassword ? (
-                                                    <div className="space-y-3">
-                                                        <div className="p-3 rounded-2xl bg-sparta-gold/10 border border-sparta-gold/25 text-amber-200 text-xs">
-                                                            <span>📱 Введите номер телефона, указанный при записи на тренировку</span>
-                                                        </div>
+                                                                <div className="grid grid-cols-3 gap-2">
+                                                                    <div className="col-span-2 relative">
+                                                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                                                        <input
+                                                                            type="tel"
+                                                                            placeholder="Телефон (+7 9XX...)"
+                                                                            value={phone}
+                                                                            onChange={handleRegisterPhoneChange}
+                                                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="relative">
+                                                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                                                        <input
+                                                                            type="number"
+                                                                            placeholder="Возраст"
+                                                                            min={4}
+                                                                            max={18}
+                                                                            value={childAge}
+                                                                            onChange={(e) => setChildAge(e.target.value)}
+                                                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-2 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-all font-manrope text-xs text-center"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
                                                         <div className="relative">
-                                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
-                                                            <input
-                                                                type="tel"
-                                                                placeholder="+7 (999) 000-00-00"
-                                                                value={loginPhone}
-                                                                onChange={handleLoginPhoneChange}
-                                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-mono"
-                                                                required
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <div className="relative">
-                                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
+                                                            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
                                                             <input
                                                                 type="email"
-                                                                placeholder="Email"
+                                                                placeholder="Email для входа и чеков"
                                                                 value={email}
                                                                 onChange={(e) => setEmail(e.target.value)}
-                                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all"
+                                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-all text-xs font-manrope"
                                                                 required
                                                             />
                                                         </div>
 
+                                                        <div className="relative">
+                                                            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                                            <input
+                                                                type="password"
+                                                                placeholder="Пароль (минимум 6 символов)"
+                                                                value={password}
+                                                                onChange={(e) => setPassword(e.target.value)}
+                                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-all text-xs font-manrope"
+                                                                required
+                                                            />
+                                                        </div>
+                                                    </motion.div>
+                                                ) : (
+                                                    <motion.div
+                                                        key="login-forgot"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        className="space-y-4"
+                                                    >
+                                                        {/* Login Method Toggle (Email vs Phone) */}
                                                         {!isForgotPassword && (
-                                                            <div className="relative">
-                                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
+                                                            <div className="flex gap-2 mb-2 bg-white/5 p-1 rounded-xl">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setLoginMethod('email');
+                                                                        setError('');
+                                                                    }}
+                                                                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${loginMethod === 'email' ? 'bg-sparta-gold text-black shadow font-black' : 'text-white/50 hover:text-white'}`}
+                                                                >
+                                                                    По Email и паролю
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setLoginMethod('phone');
+                                                                        setError('');
+                                                                    }}
+                                                                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${loginMethod === 'phone' ? 'bg-sparta-gold text-black shadow font-black' : 'text-white/50 hover:text-white'}`}
+                                                                >
+                                                                    По телефону
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        {loginMethod === 'phone' && !isForgotPassword ? (
+                                                            <div className="space-y-3">
+                                                                <div className="p-3 rounded-2xl bg-sparta-gold/10 border border-sparta-gold/25 text-amber-200 text-xs">
+                                                                    <span>📱 Введите номер телефона, указанный при записи на тренировку</span>
+                                                                </div>
+                                                                <div className="relative">
+                                                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
+                                                                    <input
+                                                                        type="tel"
+                                                                        placeholder="+7 (999) 000-00-00"
+                                                                        value={loginPhone}
+                                                                        onChange={handleLoginPhoneChange}
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-mono"
+                                                                        required
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <div className="relative">
+                                                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
+                                                                    <input
+                                                                        type="email"
+                                                                        placeholder="Email"
+                                                                        value={email}
+                                                                        onChange={(e) => setEmail(e.target.value)}
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all"
+                                                                        required
+                                                                    />
+                                                                </div>
+
+                                                                {!isForgotPassword && (
+                                                                    <div className="relative">
+                                                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
                                                                 <input
                                                                     type="password"
                                                                     placeholder="Пароль"
@@ -847,7 +1109,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                     >
                                         {loading ? 'Загрузка...' : (
                                             isForgotPassword ? 'Сбросить пароль' :
-                                                isLogin ? 'Войти' : 'Зарегистрироваться'
+                                                isLogin ? 'Войти' : (role === 'parent' ? 'Создать кабинет родителя' : 'Создать аккаунт спортсмена')
                                         )}
                                     </button>
 

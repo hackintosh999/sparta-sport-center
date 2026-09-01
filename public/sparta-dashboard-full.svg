@@ -1,0 +1,421 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Embedded Google Fonts -->
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Russo+One&amp;display=swap');
+      .font-russo { font-family: 'Russo One', 'Inter', 'Segoe UI', sans-serif; }
+      .font-manrope { font-family: 'Manrope', 'Inter', 'Segoe UI', sans-serif; }
+    </style>
+
+    <!-- Liquid Stage Background with Deep Refraction -->
+    <radialGradient id="liquid_desk_bg" cx="40%" cy="15%" r="90%" fx="40%" fy="15%">
+      <stop offset="0%" stop-color="#191528"/>
+      <stop offset="45%" stop-color="#0E0C18"/>
+      <stop offset="75%" stop-color="#07060D"/>
+      <stop offset="100%" stop-color="#030306"/>
+    </radialGradient>
+
+    <!-- Molten Liquid Gold Gradient -->
+    <linearGradient id="liquid_gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="20%" stop-color="#FDE68A"/>
+      <stop offset="45%" stop-color="#F59E0B"/>
+      <stop offset="75%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#78350F"/>
+    </linearGradient>
+
+    <!-- Liquid Glass Panel Surface -->
+    <linearGradient id="liquid_glass_panel" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="25%" stop-color="#242138" stop-opacity="0.7"/>
+      <stop offset="70%" stop-color="#12101E" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#08070F" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <linearGradient id="liquid_border" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="40%" stop-color="#D4AF37" stop-opacity="0.35"/>
+      <stop offset="75%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <linearGradient id="liquid_sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Liquid Emerald Flow -->
+    <linearGradient id="liquid_emerald" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#A7F3D0"/>
+      <stop offset="40%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+
+    <!-- Filters for Liquid Light & Depth -->
+    <filter id="liquid_desk_shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.85"/>
+    </filter>
+
+    <filter id="liquid_gold_glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#F59E0B" flood-opacity="0.35"/>
+    </filter>
+
+    <filter id="liquid_emerald_glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#10B981" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Base Canvas -->
+  <rect width="1440" height="900" fill="url(#liquid_desk_bg)"/>
+
+  <!-- Fluid Caustic Ambient Blobs Behind Glass -->
+  <g id="Fluid_Background_Blobs">
+    <ellipse cx="440" cy="180" rx="340" ry="240" fill="#D4AF37" fill-opacity="0.09" transform="rotate(-15 440 180)"/>
+    <ellipse cx="1200" cy="300" rx="280" ry="200" fill="#8B5CF6" fill-opacity="0.07" transform="rotate(20 1200 300)"/>
+    <ellipse cx="1260" cy="740" rx="320" ry="220" fill="#E50914" fill-opacity="0.05"/>
+    <ellipse cx="600" cy="700" rx="260" ry="180" fill="#10B981" fill-opacity="0.06"/>
+  </g>
+
+  <!-- ==================== 1. LIQUID GLASS SIDEBAR (260px) ==================== -->
+  <g id="Sidebar">
+    <rect x="0" y="0" width="260" height="900" fill="#08070E" fill-opacity="0.9" stroke="url(#liquid_border)" stroke-width="1"/>
+    <path d="M4 4H256" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+    
+    <!-- Logo -->
+    <g id="Logo" transform="translate(24, 28)">
+      <rect width="42" height="42" rx="14" fill="url(#liquid_gold)" filter="url(#liquid_gold_glow)"/>
+      <ellipse cx="21" cy="12" rx="12" ry="5" fill="#FFFFFF" opacity="0.6"/>
+      <path d="M13 30L21 13L29 30L21 24L13 30Z" fill="#040306"/>
+      <text x="54" y="23" fill="#FFFFFF" class="font-russo" font-size="18" letter-spacing="0.5">SPARTA</text>
+      <text x="54" y="37" fill="#A1A1AA" class="font-manrope" font-size="10" font-weight="600" letter-spacing="1.2">SPORTS CENTER</text>
+    </g>
+
+    <!-- Nav Menu -->
+    <g id="Nav_Menu" transform="translate(16, 96)">
+      <!-- Item 1: Dashboard (Liquid Gold Active Pill) -->
+      <g>
+        <rect width="228" height="48" rx="16" fill="url(#liquid_gold)" fill-opacity="0.18" stroke="url(#liquid_gold)" stroke-width="1.2"/>
+        <path d="M10 4H218" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="0" y="8" width="4" height="32" rx="2" fill="url(#liquid_gold)"/>
+        <circle cx="28" cy="24" r="6" stroke="#FDE68A" stroke-width="2"/>
+        <text x="46" y="29" fill="#FDE68A" class="font-manrope" font-size="13" font-weight="800">Дашборд тренера</text>
+      </g>
+
+      <!-- Item 2: Schedule -->
+      <g transform="translate(0, 56)">
+        <rect width="228" height="44" rx="12" fill="transparent"/>
+        <rect x="20" y="15" width="16" height="14" rx="3" stroke="#71717A" stroke-width="1.5"/>
+        <line x1="20" y1="20" x2="36" y2="20" stroke="#71717A" stroke-width="1.5"/>
+        <text x="46" y="27" fill="#A1A1AA" class="font-manrope" font-size="13" font-weight="500">Расписание &amp; Залы</text>
+      </g>
+
+      <!-- Item 3: Attendance -->
+      <g transform="translate(0, 106)">
+        <rect width="228" height="44" rx="12" fill="transparent"/>
+        <circle cx="28" cy="22" r="7" stroke="#71717A" stroke-width="1.5"/>
+        <path d="M25 22L27 24L31 20" stroke="#71717A" stroke-width="1.5" stroke-linecap="round"/>
+        <text x="46" y="27" fill="#A1A1AA" class="font-manrope" font-size="13" font-weight="500">Журнал посещаемости</text>
+      </g>
+
+      <!-- Item 4: Students -->
+      <g transform="translate(0, 156)">
+        <rect width="228" height="44" rx="12" fill="transparent"/>
+        <circle cx="26" cy="19" r="4" stroke="#71717A" stroke-width="1.5"/>
+        <path d="M20 28C20 25.5 22.5 24 26 24C29.5 24 32 25.5 32 28" stroke="#71717A" stroke-width="1.5"/>
+        <text x="46" y="27" fill="#A1A1AA" class="font-manrope" font-size="13" font-weight="500">Мои атлеты</text>
+      </g>
+
+      <!-- Item 5: Chats -->
+      <g transform="translate(0, 206)">
+        <rect width="228" height="44" rx="12" fill="transparent"/>
+        <rect x="21" y="15" width="15" height="12" rx="3" stroke="#71717A" stroke-width="1.5"/>
+        <path d="M23 27L21 30V27H23Z" fill="#71717A"/>
+        <text x="46" y="27" fill="#A1A1AA" class="font-manrope" font-size="13" font-weight="500">Чаты с группами</text>
+        <rect x="190" y="13" width="24" height="18" rx="9" fill="#EF4444"/>
+        <text x="202" y="26" fill="#FFFFFF" class="font-manrope" font-size="10" font-weight="800" text-anchor="middle">3</text>
+      </g>
+    </g>
+
+    <!-- Liquid Glass Coach Footer Capsule -->
+    <g id="Coach_Card" transform="translate(16, 800)">
+      <rect width="228" height="76" rx="20" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_desk_shadow)"/>
+      <path d="M8 3H220" stroke="url(#liquid_sheen)" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="36" cy="38" r="20" fill="#181524" stroke="url(#liquid_gold)" stroke-width="1.5"/>
+      <text x="36" y="43" fill="url(#liquid_gold)" class="font-russo" font-size="13" text-anchor="middle">АМ</text>
+      <text x="66" y="32" fill="#FFFFFF" class="font-manrope" font-size="13" font-weight="700">Александр М.</text>
+      <text x="66" y="50" fill="#FDE68A" class="font-manrope" font-size="11" font-weight="600">Главный тренер</text>
+    </g>
+  </g>
+
+  <!-- ==================== 2. HEADER BAR ==================== -->
+  <g id="Header" transform="translate(284, 24)">
+    <text x="0" y="24" fill="#FFFFFF" class="font-russo" font-size="22">КАБИНЕТ ТРЕНЕРА</text>
+    <text x="0" y="46" fill="#A1A1AA" class="font-manrope" font-size="12" font-weight="500">Четверг, 28 августа 2026 • 4 тренировки сегодня</text>
+    
+    <!-- Liquid Emerald Hall Capsule -->
+    <g transform="translate(690, 6)">
+      <rect width="216" height="42" rx="21" fill="url(#liquid_emerald)" fill-opacity="0.18" stroke="#10B981" stroke-width="1.2" filter="url(#liquid_emerald_glow)"/>
+      <path d="M12 3H204" stroke="url(#liquid_sheen)" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="22" cy="21" r="4.5" fill="#10B981"/>
+      <text x="38" y="25" fill="#A7F3D0" class="font-manrope" font-size="12" font-weight="800">Зал №1 • Идет тренировка</text>
+    </g>
+
+    <!-- Liquid Gold Action Capsule -->
+    <g transform="translate(925, 6)">
+      <rect width="195" height="44" rx="22" fill="url(#liquid_gold)" filter="url(#liquid_gold_glow)"/>
+      <path d="M14 4H181" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.65"/>
+      <text x="97" y="27" fill="#040306" class="font-manrope" font-size="12" font-weight="900" text-anchor="middle">+ БЫСТРАЯ ОТМЕТКА</text>
+    </g>
+  </g>
+
+  <!-- ==================== 3. LIQUID GLASS KPI CARDS ==================== -->
+  <g id="KPI_Row" transform="translate(284, 96)">
+    <!-- KPI 1 -->
+    <g>
+      <rect width="265" height="106" rx="22" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_desk_shadow)"/>
+      <path d="M12 3H253" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="20" y="34" fill="#A1A1AA" class="font-manrope" font-size="12" font-weight="600">Спортсменов сегодня</text>
+      <text x="20" y="74" fill="#FFFFFF" class="font-russo" font-size="28">38</text>
+      <text x="68" y="72" fill="#A1A1AA" class="font-manrope" font-size="15" font-weight="600">/ 42 чел.</text>
+      
+      <!-- Liquid Badge -->
+      <rect x="182" y="22" width="66" height="26" rx="13" fill="url(#liquid_emerald)" fill-opacity="0.2" stroke="#10B981" stroke-width="1"/>
+      <text x="215" y="38" fill="#A7F3D0" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">90%</text>
+    </g>
+
+    <!-- KPI 2 -->
+    <g transform="translate(285, 0)">
+      <rect width="265" height="106" rx="22" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_desk_shadow)"/>
+      <path d="M12 3H253" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="20" y="34" fill="#A1A1AA" class="font-manrope" font-size="12" font-weight="600">Пробные занятия</text>
+      <text x="20" y="74" fill="#FDE68A" class="font-russo" font-size="28">4</text>
+      <text x="52" y="72" fill="#A1A1AA" class="font-manrope" font-size="14" font-weight="600">новичка</text>
+      
+      <rect x="175" y="22" width="74" height="26" rx="13" fill="url(#liquid_gold)" fill-opacity="0.2" stroke="#F59E0B" stroke-width="1"/>
+      <text x="212" y="38" fill="#FDE68A" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">Сегодня</text>
+    </g>
+
+    <!-- KPI 3 -->
+    <g transform="translate(570, 0)">
+      <rect width="265" height="106" rx="22" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_desk_shadow)"/>
+      <path d="M12 3H253" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="20" y="34" fill="#A1A1AA" class="font-manrope" font-size="12" font-weight="600">Оплачено абонементов</text>
+      <text x="20" y="74" fill="#FFFFFF" class="font-russo" font-size="28">95%</text>
+      
+      <rect x="182" y="22" width="66" height="26" rx="13" fill="url(#liquid_emerald)" fill-opacity="0.2" stroke="#10B981" stroke-width="1"/>
+      <text x="215" y="38" fill="#A7F3D0" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">+4.2%</text>
+    </g>
+
+    <!-- KPI 4 -->
+    <g transform="translate(855, 0)">
+      <rect width="265" height="106" rx="22" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_desk_shadow)"/>
+      <path d="M12 3H253" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      <text x="20" y="34" fill="#A1A1AA" class="font-manrope" font-size="12" font-weight="600">Внимание: Без оплаты</text>
+      <text x="20" y="74" fill="#EF4444" class="font-russo" font-size="28">2</text>
+      <text x="50" y="72" fill="#A1A1AA" class="font-manrope" font-size="14" font-weight="600">чел.</text>
+      
+      <rect x="182" y="22" width="66" height="26" rx="13" fill="#EF4444" fill-opacity="0.2" stroke="#EF4444" stroke-width="1"/>
+      <text x="215" y="38" fill="#EF4444" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">Требует</text>
+    </g>
+  </g>
+
+  <!-- ==================== 4. LIQUID ATTENDANCE HUB (LEFT) ==================== -->
+  <g id="Attendance_Hub" transform="translate(284, 222)">
+    <rect width="680" height="650" rx="24" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_desk_shadow)"/>
+    <path d="M16 4H664" stroke="url(#liquid_sheen)" stroke-width="1.8" stroke-linecap="round"/>
+    
+    <text x="24" y="36" fill="#FFFFFF" class="font-russo" font-size="16">ГРУППА «СПАРТА ЮНИОР 1» (8-10 ЛЕТ)</text>
+    <text x="24" y="56" fill="#A1A1AA" class="font-manrope" font-size="12">Время: 16:00 - 17:30 • Зал единоборств №1 • 12 учеников</text>
+    
+    <!-- Liquid Pill Button -->
+    <g transform="translate(506, 18)">
+      <rect width="150" height="36" rx="18" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1"/>
+      <path d="M8 3H142" stroke="url(#liquid_sheen)" stroke-width="1.2" stroke-linecap="round"/>
+      <text x="75" y="23" fill="#FFFFFF" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">Отметить всех (П)</text>
+    </g>
+
+    <!-- Table Header Bar -->
+    <rect x="24" y="74" width="632" height="34" rx="10" fill="#12101C"/>
+    <text x="40" y="95" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="700">АТЛЕТ / УЧЕНИК</text>
+    <text x="240" y="95" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="700">СТАТУС АБОНЕМЕНТА</text>
+    <text x="410" y="95" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="700">ПОСЕЩЕНИЕ</text>
+    <text x="560" y="95" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="700">ДЕЙСТВИЕ</text>
+
+    <!-- Student Row 1 (Present) -->
+    <g transform="translate(24, 118)">
+      <rect width="632" height="54" rx="16" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1"/>
+      <path d="M10 2H622" stroke="url(#liquid_sheen)" stroke-width="1" stroke-linecap="round"/>
+      <circle cx="26" cy="27" r="15" fill="#181524" stroke="url(#liquid_gold)" stroke-width="1.2"/>
+      <text x="26" y="31" fill="#FDE68A" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">МА</text>
+      <text x="52" y="24" fill="#FFFFFF" class="font-manrope" font-size="13" font-weight="700">Михаил Андреев</text>
+      <text x="52" y="40" fill="#A1A1AA" class="font-manrope" font-size="11">9 лет • Пояс: Желтый</text>
+      
+      <rect x="240" y="14" width="98" height="26" rx="13" fill="url(#liquid_emerald)" fill-opacity="0.2" stroke="#10B981" stroke-width="1"/>
+      <text x="289" y="31" fill="#A7F3D0" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">Активен (8/12)</text>
+
+      <!-- Liquid Attendance Buttons -->
+      <g transform="translate(410, 12)">
+        <rect width="36" height="30" rx="12" fill="url(#liquid_emerald)" filter="url(#liquid_emerald_glow)"/>
+        <path d="M4 2H32" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+        <text x="18" y="20" fill="#FFFFFF" class="font-manrope" font-size="12" font-weight="900" text-anchor="middle">П</text>
+      </g>
+      <g transform="translate(452, 12)">
+        <rect width="36" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+        <text x="18" y="20" fill="#71717A" class="font-manrope" font-size="12" font-weight="800" text-anchor="middle">Н</text>
+      </g>
+      <g transform="translate(494, 12)">
+        <rect width="36" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+        <text x="18" y="20" fill="#71717A" class="font-manrope" font-size="12" font-weight="800" text-anchor="middle">Б</text>
+      </g>
+
+      <rect x="556" y="12" width="62" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+      <text x="587" y="31" fill="#D4AF37" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">Чат</text>
+    </g>
+
+    <!-- Student Row 2 (Trial) -->
+    <g transform="translate(24, 180)">
+      <rect width="632" height="54" rx="16" fill="url(#liquid_glass_panel)" stroke="url(#liquid_gold)" stroke-width="1.2"/>
+      <circle cx="26" cy="27" r="15" fill="#181524" stroke="url(#liquid_gold)" stroke-width="1.2"/>
+      <text x="26" y="31" fill="#FDE68A" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">АК</text>
+      <text x="52" y="24" fill="#FFFFFF" class="font-manrope" font-size="13" font-weight="700">Артем Ковалев</text>
+      <text x="52" y="40" fill="#FDE68A" class="font-manrope" font-size="11" font-weight="700">⭐ ПРОБНОЕ ЗАНЯТИЕ</text>
+      
+      <rect x="240" y="14" width="84" height="26" rx="13" fill="url(#liquid_gold)" fill-opacity="0.2" stroke="#F59E0B" stroke-width="1"/>
+      <text x="282" y="31" fill="#FDE68A" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">Пробное</text>
+
+      <g transform="translate(410, 12)">
+        <rect width="36" height="30" rx="12" fill="url(#liquid_emerald)" filter="url(#liquid_emerald_glow)"/>
+        <text x="18" y="20" fill="#FFFFFF" class="font-manrope" font-size="12" font-weight="900" text-anchor="middle">П</text>
+      </g>
+      <g transform="translate(452, 12)">
+        <rect width="36" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+        <text x="18" y="20" fill="#71717A" class="font-manrope" font-size="12" font-weight="800" text-anchor="middle">Н</text>
+      </g>
+      <g transform="translate(494, 12)">
+        <rect width="36" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+        <text x="18" y="20" fill="#71717A" class="font-manrope" font-size="12" font-weight="800" text-anchor="middle">Б</text>
+      </g>
+
+      <g transform="translate(556, 12)">
+        <rect width="62" height="30" rx="12" fill="url(#liquid_gold)" filter="url(#liquid_gold_glow)"/>
+        <text x="31" y="20" fill="#040306" class="font-manrope" font-size="11" font-weight="900" text-anchor="middle">Инфо</text>
+      </g>
+    </g>
+
+    <!-- Student Row 3 (Expired) -->
+    <g transform="translate(24, 242)">
+      <rect width="632" height="54" rx="16" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1"/>
+      <circle cx="26" cy="27" r="15" fill="#181524"/>
+      <text x="26" y="31" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">ДС</text>
+      <text x="52" y="24" fill="#FFFFFF" class="font-manrope" font-size="13" font-weight="700">Даниил Смирнов</text>
+      <text x="52" y="40" fill="#A1A1AA" class="font-manrope" font-size="11">8 лет • Пояс: Белый</text>
+      
+      <rect x="240" y="14" width="94" height="26" rx="13" fill="#EF4444" fill-opacity="0.2" stroke="#EF4444" stroke-width="1"/>
+      <text x="287" y="31" fill="#EF4444" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">Закончился</text>
+
+      <g transform="translate(410, 12)">
+        <rect width="36" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+        <text x="18" y="20" fill="#71717A" class="font-manrope" font-size="12" font-weight="800" text-anchor="middle">П</text>
+      </g>
+      <g transform="translate(452, 12)">
+        <rect width="36" height="30" rx="12" fill="#EF4444" stroke="#DC2626" stroke-width="1"/>
+        <text x="18" y="20" fill="#FFFFFF" class="font-manrope" font-size="12" font-weight="900" text-anchor="middle">Н</text>
+      </g>
+      <g transform="translate(494, 12)">
+        <rect width="36" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+        <text x="18" y="20" fill="#71717A" class="font-manrope" font-size="12" font-weight="800" text-anchor="middle">Б</text>
+      </g>
+
+      <rect x="556" y="12" width="62" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+      <text x="587" y="31" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">Чат</text>
+    </g>
+
+    <!-- Student Row 4 (Present) -->
+    <g transform="translate(24, 304)">
+      <rect width="632" height="54" rx="16" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1"/>
+      <circle cx="26" cy="27" r="15" fill="#181524" stroke="url(#liquid_gold)" stroke-width="1.2"/>
+      <text x="26" y="31" fill="#FDE68A" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">СМ</text>
+      <text x="52" y="24" fill="#FFFFFF" class="font-manrope" font-size="13" font-weight="700">София Морозова</text>
+      <text x="52" y="40" fill="#A1A1AA" class="font-manrope" font-size="11">10 лет • Пояс: Оранжевый</text>
+      
+      <rect x="240" y="14" width="98" height="26" rx="13" fill="url(#liquid_emerald)" fill-opacity="0.2" stroke="#10B981" stroke-width="1"/>
+      <text x="289" y="31" fill="#A7F3D0" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">Активен (11/12)</text>
+
+      <g transform="translate(410, 12)">
+        <rect width="36" height="30" rx="12" fill="url(#liquid_emerald)" filter="url(#liquid_emerald_glow)"/>
+        <text x="18" y="20" fill="#FFFFFF" class="font-manrope" font-size="12" font-weight="900" text-anchor="middle">П</text>
+      </g>
+      <g transform="translate(452, 12)">
+        <rect width="36" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+        <text x="18" y="20" fill="#71717A" class="font-manrope" font-size="12" font-weight="800" text-anchor="middle">Н</text>
+      </g>
+      <g transform="translate(494, 12)">
+        <rect width="36" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+        <text x="18" y="20" fill="#71717A" class="font-manrope" font-size="12" font-weight="800" text-anchor="middle">Б</text>
+      </g>
+
+      <rect x="556" y="12" width="62" height="30" rx="12" fill="#161422" stroke="#2B283A" stroke-width="1"/>
+      <text x="587" y="31" fill="#D4AF37" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">Чат</text>
+    </g>
+  </g>
+
+  <!-- ==================== 5. LIQUID SCHEDULE TIMELINE (RIGHT) ==================== -->
+  <g id="Schedule_Timeline" transform="translate(984, 222)">
+    <rect width="420" height="650" rx="24" fill="url(#liquid_glass_panel)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_desk_shadow)"/>
+    <path d="M16 4H404" stroke="url(#liquid_sheen)" stroke-width="1.8" stroke-linecap="round"/>
+    
+    <text x="24" y="36" fill="#FFFFFF" class="font-russo" font-size="16">РАСПИСАНИЕ НА СЕГОДНЯ</text>
+    <text x="24" y="56" fill="#A1A1AA" class="font-manrope" font-size="12">Интерактивный таймлайн залов</text>
+
+    <!-- 1: Done -->
+    <g transform="translate(24, 78)">
+      <rect width="372" height="96" rx="16" fill="#12101C" stroke="#242136" stroke-width="1"/>
+      <rect x="14" y="14" width="84" height="24" rx="12" fill="#1B1828"/>
+      <text x="56" y="30" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">14:00 - 15:30</text>
+      <rect x="288" y="14" width="70" height="22" rx="11" fill="#1B1828"/>
+      <text x="323" y="29" fill="#71717A" class="font-manrope" font-size="10" font-weight="700" text-anchor="middle">Завершено</text>
+      <text x="14" y="62" fill="#FFFFFF" class="font-russo" font-size="14">Спарта Кидс (5-7 лет)</text>
+      <text x="14" y="80" fill="#A1A1AA" class="font-manrope" font-size="11">Зал 2 • 12/12 присутствовали</text>
+    </g>
+
+    <!-- 2: LIVE NOW with glowing border -->
+    <g transform="translate(24, 186)">
+      <rect width="372" height="114" rx="18" fill="url(#liquid_emerald)" fill-opacity="0.12" stroke="#10B981" stroke-width="1.5" filter="url(#liquid_emerald_glow)"/>
+      <path d="M12 3H360" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      <rect x="14" y="14" width="86" height="26" rx="13" fill="#10B981" fill-opacity="0.25"/>
+      <text x="57" y="31" fill="#A7F3D0" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">16:00 - 17:30</text>
+      
+      <rect x="266" y="14" width="94" height="24" rx="12" fill="url(#liquid_emerald)"/>
+      <circle cx="278" cy="26" r="3" fill="#FFFFFF"/>
+      <text x="320" y="30" fill="#FFFFFF" class="font-manrope" font-size="10" font-weight="800" text-anchor="middle">ИДЕТ СЕЙЧАС</text>
+
+      <text x="14" y="66" fill="#FFFFFF" class="font-russo" font-size="15">Спарта Юниор 1 (8-10 лет)</text>
+      <text x="14" y="86" fill="#A1A1AA" class="font-manrope" font-size="11">Зал 1 • Идет отметка посещаемости</text>
+      
+      <!-- Liquid Progress -->
+      <rect x="14" y="96" width="344" height="6" rx="3" fill="#181528"/>
+      <rect x="14" y="96" width="200" height="6" rx="3" fill="url(#liquid_emerald)"/>
+    </g>
+
+    <!-- 3: Next -->
+    <g transform="translate(24, 312)">
+      <rect width="372" height="96" rx="16" fill="#12101C" stroke="#242136" stroke-width="1"/>
+      <rect x="14" y="14" width="84" height="24" rx="12" fill="#1B1828"/>
+      <text x="56" y="30" fill="#FDE68A" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">18:00 - 19:30</text>
+      <rect x="276" y="14" width="82" height="24" rx="12" fill="url(#liquid_gold)" fill-opacity="0.18" stroke="#F59E0B" stroke-width="0.8"/>
+      <text x="317" y="30" fill="#FDE68A" class="font-manrope" font-size="10" font-weight="800" text-anchor="middle">Следующая</text>
+      <text x="14" y="62" fill="#FFFFFF" class="font-russo" font-size="14">Спарта Профи (14-17 лет)</text>
+      <text x="14" y="80" fill="#A1A1AA" class="font-manrope" font-size="11">Зал 1 • 14 записано • 2 пробных</text>
+    </g>
+
+    <!-- 4: Evening -->
+    <g transform="translate(24, 420)">
+      <rect width="372" height="96" rx="16" fill="#12101C" stroke="#242136" stroke-width="1"/>
+      <rect x="14" y="14" width="84" height="24" rx="12" fill="#1B1828"/>
+      <text x="56" y="30" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="700" text-anchor="middle">20:00 - 21:30</text>
+      <text x="14" y="62" fill="#FFFFFF" class="font-russo" font-size="14">Взрослая группа (18+)</text>
+      <text x="14" y="80" fill="#A1A1AA" class="font-manrope" font-size="11">Зал единоборств • Силовая подготовка</text>
+    </g>
+  </g>
+</svg>

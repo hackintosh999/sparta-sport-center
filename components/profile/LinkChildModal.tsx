@@ -1,55 +1,161 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, User, Check, Loader2, AlertCircle, Phone, Sparkles } from 'lucide-react';
+import { X, Search, User, Check, Loader2, AlertCircle, Phone, Sparkles, Trophy, Users, Plus, MapPin, Calendar, ShieldCheck } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { findChildToLink, linkParentToChild, linkParentToRegistryChild, sendLinkingRequest } from '../../services/userService';
-import { Button } from '../UIComponents';
+import { findChildToLink, linkParentToChild, linkParentToRegistryChild, createAndLinkChild } from '../../services/userService';
+import { SPARTA_LOCATIONS } from '../../constants/cities';
 
 interface LinkChildModalProps {
     isOpen: boolean;
     onClose: () => void;
     parentId: string;
-    parentName: string;
+    parentName?: string;
+    initialPhone?: string;
     onSuccess: () => void;
 }
 
-export const LinkChildModal: React.FC<LinkChildModalProps> = ({ isOpen, onClose, parentId, parentName, onSuccess }) => {
+export const LinkChildModal: React.FC<LinkChildModalProps> = ({
+    isOpen,
+    onClose,
+    parentId,
+    parentName = '',
+    initialPhone = '',
+    onSuccess
+}) => {
+    const [mode, setMode] = useState<'create' | 'search'>('create');
+
+    // Create State
+    const [newChildName, setNewChildName] = useState('');
+    const [newBirthYear, setNewBirthYear] = useState('2018');
+    const [selectedBranchId, setSelectedBranchId] = useState('newton');
+    const [isCreating, setIsCreating] = useState(false);
+
+    // Search State
     const [childName, setChildName] = useState('');
-    const [phone, setPhone] = useState('');
+    const [phone, setPhone] = useState(initialPhone);
     const [isSearching, setIsSearching] = useState(false);
     const [isLinking, setIsLinking] = useState(false);
-    const [error, setError] = useState('');
-    const [successMsg, setSuccessMsg] = useState('');
     const [results, setResults] = useState<any[]>([]);
 
+    const [error, setError] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
+
+    const formatPhone = (raw: string) => {
+        let value = raw.replace(/\D/g, '');
+        if (value.startsWith('8')) value = '7' + value.slice(1);
+        if (!value.startsWith('7') && value.length > 0) value = '7' + value;
+        
+        let formatted = '+7';
+        if (value.length > 1) formatted += ' (' + value.substring(1, 4);
+        if (value.length >= 5) formatted += ') ' + value.substring(4, 7);
+        if (value.length >= 8) formatted += '-' + value.substring(7, 9);
+        if (value.length >= 10) formatted += '-' + value.substring(9, 11);
+        
+        return value.length <= 1 ? '' : formatted;
+    };
+
+    // Pre-fill phone if available
+    useEffect(() => {
+        if (isOpen) {
+            setError('');
+            setSuccessMsg('');
+            if (initialPhone && !phone) {
+                setPhone(formatPhone(initialPhone));
+            }
+        }
+    }, [isOpen, initialPhone]);
+
     // Real-time search effect
-    React.useEffect(() => {
-        const delayDebounceFn = setTimeout(async () => {
-            if (childName.length >= 3 || (phone.replace(/\D/g, '').length >= 4)) {
+    useEffect(() => {
+        if (!isOpen || mode !== 'search') return;
+
+        const cleanDigits = phone.replace(/\D/g, '');
+        const cleanQuery = childName.trim();
+
+        if (cleanQuery.length >= 2 || cleanDigits.length >= 7) {
+            const timer = setTimeout(async () => {
                 setIsSearching(true);
                 setError('');
                 setSuccessMsg('');
                 try {
-                    const found = await findChildToLink(childName, phone);
+                    const found = await findChildToLink(cleanQuery, phone, parentId);
                     setResults(found);
                     if (found.length === 0) {
-                        setError('Спортсмен не найден. Проверьте правильность ФИО или телефона.');
+                        setError('Спортсмен пока не найден. Вы можете сразу создать профиль во вкладке «➕ Создать профиль».');
                     }
                 } catch (err) {
+                    console.error('Search error:', err);
                     setError('Ошибка при поиске.');
                 } finally {
                     setIsSearching(false);
                 }
+            }, 200);
+
+            return () => clearTimeout(timer);
+        } else {
+            setResults([]);
+            setError('');
+        }
+    }, [childName, phone, isOpen, parentId, mode]);
+
+    // Create & Link New Child
+    const handleCreateChild = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!parentId || !newChildName.trim()) {
+            setError('Пожалуйста, укажите имя или фамилию ребенка.');
+            return;
+        }
+
+        const year = parseInt(newBirthYear, 10);
+        if (isNaN(year) || year < 2010 || year > 2024) {
+            setError('Укажите корректный год рождения (от 2010 до 2024).');
+            return;
+        }
+
+        setIsCreating(true);
+        setError('');
+        setSuccessMsg('');
+
+        try {
+            const matchedBranch = SPARTA_LOCATIONS.find(l => l.id === selectedBranchId) || SPARTA_LOCATIONS[0];
+            const cleanChildAge = 2026 - year;
+
+            const res = await createAndLinkChild(parentId, {
+                childName: newChildName.trim(),
+                birthYear: year,
+                childAge: cleanChildAge,
+                branchId: matchedBranch.id,
+                branchName: matchedBranch.name,
+                cityId: matchedBranch.cityId,
+                cityName: (matchedBranch as any).cityName || 'Челябинск',
+                groupName: `Группа ${year} г.р.`,
+                coachName: 'Якупов Павел Валерьевич'
+            });
+
+            if (res.success) {
+                confetti({
+                    particleCount: 130,
+                    spread: 90,
+                    origin: { y: 0.6 },
+                    colors: ['#D4AF37', '#FFFFFF', '#10B981']
+                });
+                setSuccessMsg(`✓ Спортсмен ${newChildName.trim()} успешно добавлен в вашу семью!`);
+                setTimeout(() => {
+                    onSuccess();
+                    onClose();
+                }, 1000);
             } else {
-                setResults([]);
-                setError('');
-                setSuccessMsg('');
+                setError(res.message || 'Ошибка при создании профиля.');
             }
-        }, 600);
+        } catch (err: any) {
+            console.error('Create child error:', err);
+            setError(err.message || 'Ошибка при создании профиля.');
+        } finally {
+            setIsCreating(false);
+        }
+    };
 
-        return () => clearTimeout(delayDebounceFn);
-    }, [childName, phone]);
-
+    // Link Existing Child
     const handleLink = async (candidate: any) => {
         if (!parentId) return;
 
@@ -59,17 +165,24 @@ export const LinkChildModal: React.FC<LinkChildModalProps> = ({ isOpen, onClose,
 
         try {
             if (candidate.type === 'user') {
-                const res = await sendLinkingRequest(parentId, parentName, candidate.id);
+                const res = await linkParentToChild(parentId, candidate.id);
                 if (res.success) {
-                    setSuccessMsg(`Запрос отправлен ${candidate.name}. Ребенку нужно подтвердить его в своем кабинете.`);
+                    confetti({
+                        particleCount: 120,
+                        spread: 90,
+                        origin: { y: 0.6 },
+                        colors: ['#D4AF37', '#FFFFFF', '#10B981']
+                    });
+                    setSuccessMsg(`✓ Спортсмен ${candidate.name} успешно привязан к вашему кабинету!`);
                     setTimeout(() => {
                         onSuccess();
                         onClose();
-                    }, 3000);
+                    }, 1000);
                 } else {
-                    setError(res.message || 'Не удалось отправить запрос.');
+                    setError(res.message || 'Не удалось привязать ребенка.');
                 }
             } else {
+                // Link from pending_students
                 const result = await linkParentToRegistryChild(parentId, candidate.id, candidate.name);
                 if (result.success) {
                     confetti({
@@ -78,13 +191,17 @@ export const LinkChildModal: React.FC<LinkChildModalProps> = ({ isOpen, onClose,
                         origin: { y: 0.6 },
                         colors: ['#D4AF37', '#FFFFFF', '#000000']
                     });
-                    onSuccess();
-                    onClose();
+                    setSuccessMsg(`✓ Спортсмен ${candidate.name} успешно привязан из реестра!`);
+                    setTimeout(() => {
+                        onSuccess();
+                        onClose();
+                    }, 1000);
                 } else {
                     setError(result.error || 'Ошибка при привязке.');
                 }
             }
         } catch (err: any) {
+            console.error('Link error:', err);
             setError('Ошибка при привязке.');
         } finally {
             setIsLinking(false);
@@ -93,125 +210,293 @@ export const LinkChildModal: React.FC<LinkChildModalProps> = ({ isOpen, onClose,
 
     if (!isOpen) return null;
 
+    const matchedLocation = SPARTA_LOCATIONS.find(l => l.id === selectedBranchId) || SPARTA_LOCATIONS[0];
+    const calcAge = 2026 - (parseInt(newBirthYear, 10) || 2018);
+
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                    className="absolute inset-0 bg-black/85 backdrop-blur-md"
                 />
 
                 <motion.div
-                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    initial={{ scale: 0.93, opacity: 0, y: 20 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                    className="relative w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+                    exit={{ scale: 0.93, opacity: 0, y: 20 }}
+                    className="relative w-full max-w-lg bg-[#141418] border border-sparta-gold/30 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-left font-manrope"
                 >
                     {/* Background glow */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-sparta-gold/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-sparta-gold/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
 
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-8">
-                            <div>
-                                <h3 className="text-2xl font-russo text-white uppercase tracking-wider">Привязать ребенка</h3>
-                                <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Поиск по реестру и базе</p>
+                    <div className="relative z-10 space-y-5">
+                        {/* Header */}
+                        <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center border border-sparta-gold/40 shadow-md">
+                                    <Users size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl sm:text-2xl font-russo text-white uppercase tracking-wider">
+                                        Дети в семье
+                                    </h3>
+                                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mt-0.5">
+                                        Добавление любого количества спортсменов
+                                    </p>
+                                </div>
                             </div>
-                            <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-white/30 hover:text-white transition-colors">
-                                <X size={24} />
+                            <button
+                                onClick={onClose}
+                                className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors cursor-pointer"
+                            >
+                                <X size={20} />
                             </button>
                         </div>
 
-                        <div className="space-y-6">
-                            <div className="space-y-4">
-                                <div className="relative">
-                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
-                                    <input
-                                        type="text"
-                                        value={childName}
-                                        onChange={(e) => setChildName(e.target.value)}
-                                        placeholder="ФИО РЕБЕНКА"
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pl-12 text-white placeholder:text-white/20 outline-none focus:border-sparta-gold transition-all text-sm font-bold uppercase tracking-widest"
-                                    />
-                                </div>
-                                <div className="relative">
-                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
-                                    <input
-                                        type="tel"
-                                        value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
-                                        placeholder="ТЕЛЕФОН РОДИТЕЛЯ"
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pl-12 text-white placeholder:text-white/20 outline-none focus:border-sparta-gold transition-all text-sm font-bold uppercase tracking-widest"
-                                    />
-                                </div>
-                            </div>
+                        {/* Mode Switcher Tabs */}
+                        <div className="grid grid-cols-2 gap-1.5 p-1 bg-white/5 border border-white/10 rounded-2xl">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMode('create');
+                                    setError('');
+                                    setSuccessMsg('');
+                                }}
+                                className={`py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                    mode === 'create'
+                                        ? 'bg-sparta-gold text-black shadow-md font-black'
+                                        : 'text-white/60 hover:text-white'
+                                }`}
+                            >
+                                <Plus size={14} />
+                                <span>Создать профиль</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMode('search');
+                                    setError('');
+                                    setSuccessMsg('');
+                                }}
+                                className={`py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                    mode === 'search'
+                                        ? 'bg-sparta-gold text-black shadow-md font-black'
+                                        : 'text-white/60 hover:text-white'
+                                }`}
+                            >
+                                <Search size={14} />
+                                <span>Найти в базе</span>
+                            </button>
+                        </div>
 
-                            {isSearching && (
-                                <div className="flex items-center justify-center py-4 gap-3 text-sparta-gold/60">
-                                    <Loader2 className="animate-spin" size={20} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Анализ данных...</span>
+                        {/* MODE 1: CREATE NEW CHILD */}
+                        {mode === 'create' && (
+                            <form onSubmit={handleCreateChild} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                                        👦 Имя и фамилия ребёнка:
+                                    </label>
+                                    <div className="relative">
+                                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                        <input
+                                            type="text"
+                                            value={newChildName}
+                                            onChange={(e) => setNewChildName(e.target.value)}
+                                            placeholder="Например: Артём Иванов"
+                                            required
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-semibold"
+                                        />
+                                    </div>
                                 </div>
-                            )}
 
-                            {results.length > 0 && (
-                                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                    <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-2">Найдено соответствий: {results.length}</p>
-                                    {results.map((candidate) => (
-                                        <motion.div
-                                            key={candidate.id}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            className="group p-4 bg-white/5 border border-white/10 rounded-2xl hover:border-sparta-gold/50 transition-all cursor-pointer"
-                                            onClick={() => handleLink(candidate)}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                                            📅 Год рождения:
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="2010"
+                                            max="2024"
+                                            value={newBirthYear}
+                                            onChange={(e) => setNewBirthYear(e.target.value)}
+                                            required
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-3.5 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-mono font-bold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                                            📍 Филиал Спарты:
+                                        </label>
+                                        <select
+                                            value={selectedBranchId}
+                                            onChange={(e) => setSelectedBranchId(e.target.value)}
+                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl py-3 px-3 text-white outline-none focus:border-sparta-gold transition-all text-xs font-semibold cursor-pointer"
                                         >
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <h4 className="text-white font-bold text-sm uppercase tracking-wide">{candidate.name}</h4>
-                                                    <div className="flex gap-2 mt-1">
-                                                        <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/5">
-                                                            {candidate.type === 'user' ? 'Активен' : 'В реестре'}
+                                            {SPARTA_LOCATIONS.map(loc => (
+                                                <option key={loc.id} value={loc.id}>
+                                                    {loc.name} {(loc as any).cityName ? `(${(loc as any).cityName})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Preview Card */}
+                                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between text-xs">
+                                    <div className="space-y-0.5">
+                                        <span className="text-[10px] uppercase font-bold text-sparta-gold">
+                                            Группа {newBirthYear} г.р. ({calcAge > 0 ? `${calcAge} лет` : '...'})
+                                        </span>
+                                        <p className="text-white/80 font-semibold">{matchedLocation.name}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                                        <ShieldCheck size={13} />
+                                        <span>Готов к привязке</span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isCreating || !newChildName.trim()}
+                                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-sparta-gold via-yellow-400 to-sparta-gold hover:brightness-110 disabled:opacity-50 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 cursor-pointer"
+                                >
+                                    {isCreating ? (
+                                        <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Plus size={16} />
+                                            <span>Создать и привязать к семье</span>
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+                        )}
+
+                        {/* MODE 2: SEARCH IN REGISTRY */}
+                        {mode === 'search' && (
+                            <div className="space-y-4">
+                                <div className="space-y-3">
+                                    <div className="relative">
+                                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                        <input
+                                            type="text"
+                                            value={childName}
+                                            onChange={(e) => setChildName(e.target.value)}
+                                            placeholder="Фамилия или имя ребенка"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-semibold"
+                                        />
+                                    </div>
+
+                                    <div className="relative">
+                                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                        <input
+                                            type="tel"
+                                            value={phone}
+                                            onChange={(e) => setPhone(formatPhone(e.target.value))}
+                                            placeholder="Телефон родителя (+7 9XX XXX-XX-XX)"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-semibold"
+                                        />
+                                    </div>
+                                </div>
+
+                                {isSearching && (
+                                    <div className="flex items-center justify-center py-3 gap-2.5 text-sparta-gold">
+                                        <Loader2 className="animate-spin" size={16} />
+                                        <span className="text-[11px] font-bold uppercase tracking-wider">Ищем в реестре Спарты...</span>
+                                    </div>
+                                )}
+
+                                {results.length > 0 && (
+                                    <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+                                        <p className="text-[10px] font-bold text-sparta-gold uppercase tracking-wider">
+                                            Найдено в базе Спарты: {results.length}
+                                        </p>
+                                        {results.map((candidate) => (
+                                            <motion.div
+                                                key={candidate.id}
+                                                initial={{ opacity: 0, y: 5 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                onClick={() => !isLinking && handleLink(candidate)}
+                                                className="p-3.5 rounded-2xl bg-white/5 hover:bg-sparta-gold/15 border border-white/10 hover:border-sparta-gold/50 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                                            >
+                                                <div className="space-y-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-base">⚽</span>
+                                                        <h4 className="text-white font-russo text-sm uppercase truncate group-hover:text-sparta-gold transition-colors">
+                                                            {candidate.name}
+                                                        </h4>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-white/60">
+                                                        {candidate.age ? (
+                                                            <span className="px-2 py-0.5 rounded-md bg-white/10 text-white/80 font-bold">
+                                                                {candidate.age} лет
+                                                            </span>
+                                                        ) : null}
+                                                        <span className="px-2 py-0.5 rounded-md bg-sparta-gold/20 text-sparta-gold font-bold">
+                                                            {candidate.groupName || 'Группа Sparta'}
                                                         </span>
-                                                        {candidate.age && (
-                                                            <span className="text-[8px] font-black uppercase text-sparta-gold/60">{candidate.age} лет</span>
+                                                        {candidate.type === 'pending' && (
+                                                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold">
+                                                                В реестре клуба
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="w-8 h-8 rounded-full bg-sparta-gold/10 flex items-center justify-center text-sparta-gold group-hover:bg-sparta-gold group-hover:text-black transition-all">
-                                                    {isLinking ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3} />}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </div>
-                            )}
 
-                            {error && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-400 text-xs"
-                                >
-                                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                                    <p className="font-bold leading-relaxed">{error}</p>
-                                </motion.div>
-                            )}
+                                                <button
+                                                    type="button"
+                                                    disabled={isLinking}
+                                                    className="px-3.5 py-2 rounded-xl bg-sparta-gold text-black font-extrabold text-xs shrink-0 shadow-md group-hover:scale-105 transition-all flex items-center gap-1.5 cursor-pointer"
+                                                >
+                                                    {isLinking ? (
+                                                        <Loader2 size={14} className="animate-spin" />
+                                                    ) : (
+                                                        <>
+                                                            <Check size={14} />
+                                                            <span>Привязать</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                            {successMsg && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-start gap-3 text-green-400 text-xs"
-                                >
-                                    <Check size={16} className="shrink-0 mt-0.5" />
-                                    <p className="font-bold leading-relaxed">{successMsg}</p>
-                                </motion.div>
-                            )}
-                        </div>
+                        {/* Error Message */}
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-2.5 text-red-400 text-xs"
+                            >
+                                <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                                <p className="font-semibold leading-relaxed">{error}</p>
+                            </motion.div>
+                        )}
+
+                        {/* Success Message */}
+                        {successMsg && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center gap-2.5 text-emerald-300 text-xs font-bold"
+                            >
+                                <Check size={16} className="shrink-0 text-emerald-400" />
+                                <p>{successMsg}</p>
+                            </motion.div>
+                        )}
                     </div>
                 </motion.div>
             </div>
         </AnimatePresence>
     );
 };
+
+export default LinkChildModal;

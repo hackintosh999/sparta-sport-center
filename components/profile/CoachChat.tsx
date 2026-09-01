@@ -43,6 +43,7 @@ import {
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { ChatAttachmentMenu } from './ChatAttachmentMenu';
 
 interface CoachChatProps {
     user: any; // Auth user (current viewer)
@@ -58,6 +59,7 @@ const CoachChat: React.FC<CoachChatProps> = ({ user, userProfile, otherUser, isC
     const [isLoading, setIsLoading] = useState(true);
     const [isSending, setIsSending] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [chatSearchQuery, setChatSearchQuery] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -70,6 +72,9 @@ const CoachChat: React.FC<CoachChatProps> = ({ user, userProfile, otherUser, isC
     const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
     const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const galleryInputRef = useRef<HTMLInputElement>(null);
+    const docInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const coachId = isCoachViewing ? (userProfile?.coachId || user.uid) : (otherUser.id || otherUser.uid);
     const studentId = isCoachViewing ? (otherUser.id || otherUser.uid) : user.uid;
@@ -573,24 +578,37 @@ const CoachChat: React.FC<CoachChatProps> = ({ user, userProfile, otherUser, isC
                     )}
 
                     <div className="relative flex items-end gap-3 bg-white/5 border border-white/10 rounded-2xl p-2.5 transition-all focus-within:border-sparta-gold/50 focus-within:bg-white/[0.08]">
+                        {/* Redesigned Dual-Platform Attachment Menu (PC Popover & Mobile Bottom Sheet) */}
+                        <ChatAttachmentMenu
+                            isOpen={showAttachmentMenu}
+                            onClose={() => setShowAttachmentMenu(false)}
+                            onSelectGallery={() => galleryInputRef.current?.click()}
+                            onSelectDoc={() => docInputRef.current?.click()}
+                            onSelectCamera={() => cameraInputRef.current?.click()}
+                            isTrainerOrAdmin={isCoachViewing}
+                        />
+
                         {!isRecording ? (
                             <>
                                 <div className="flex items-center gap-1 self-center pl-1">
                                     <button
+                                        type="button"
                                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                                         className={`p-2 rounded-xl transition-all ${showEmojiPicker ? 'bg-sparta-gold text-black' : 'hover:bg-white/5 text-white/20'}`}
                                     >
                                         <Smile size={18} />
                                     </button>
-                                    <label className="p-2 rounded-xl hover:bg-white/5 text-white/20 transition-all cursor-pointer">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                                        className={`p-2 rounded-xl transition-all ${showAttachmentMenu ? 'bg-sparta-gold text-black' : 'hover:bg-white/5 text-white/20'}`}
+                                        title="Прикрепить вложение"
+                                    >
                                         <Paperclip size={18} />
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleFileSelect}
-                                            accept="image/*,video/*,application/pdf"
-                                        />
-                                    </label>
+                                    </button>
+                                    <input ref={galleryInputRef} type="file" className="hidden" onChange={handleFileSelect} accept="image/*,video/*" />
+                                    <input ref={docInputRef} type="file" className="hidden" onChange={handleFileSelect} accept=".pdf,.doc,.docx,.zip,.xls,.xlsx,.txt" />
+                                    <input ref={cameraInputRef} type="file" className="hidden" onChange={handleFileSelect} accept="image/*" capture="environment" />
                                 </div>
                                 <textarea
                                     value={newMessage}

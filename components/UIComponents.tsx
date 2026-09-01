@@ -81,7 +81,6 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, a
     );
 };
 
-// --- Container ---
 export const Container: React.FC<{ children: React.ReactNode; className?: string; fluid?: boolean }> = ({ children, className = '', fluid = true }) => {
-    return <div className={`${fluid ? 'max-w-none w-full' : 'max-w-7xl mx-auto'} px-4 sm:px-6 md:px-12 lg:px-16 2xl:px-24 transition-all duration-500 ${className}`}>{children}</div>;
+    return <div className={`${fluid ? 'max-w-none w-full px-2 sm:px-4 md:px-6 lg:px-8' : 'max-w-7xl mx-auto px-4 sm:px-6 md:px-12 lg:px-16 2xl:px-24'} transition-all duration-500 ${className}`}>{children}</div>;
 };

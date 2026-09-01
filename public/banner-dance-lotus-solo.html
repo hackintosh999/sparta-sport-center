@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Школа балета LOTUS — Премиальный плакат А4 (1240 × 1754)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Montserrat:ital,wght@0,600;0,700;0,800;0,900;1,600;1,700&family=Onest:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600;1,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --pine-dark: #16221A;
+      --pine-rich: #1C2920;
+      --lotus-sage: #2D4636;
+      --sage-light: #526B5C;
+      --sand-gold: #D4A853;
+      --sand-gold-light: #E5BE6C;
+      --graphite-text: #1C221E;
+      --graphite-soft: #38423C;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    @page {
+      size: 1240px 1754px;
+      margin: 0;
+    }
+
+    html, body {
+      width: 1240px;
+      height: 1754px;
+      margin: 0;
+      padding: 0;
+      background: #E6EAE5;
+      color: var(--graphite-text);
+      font-family: 'Onest', 'Montserrat', sans-serif;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .poster-a4-lotus {
+      width: 1240px;
+      height: 1754px;
+      position: relative;
+      background: #E6EAE5;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    /* ================= 0. ВЕЛИКОЛЕПНЫЙ АРТ-ФОН С БАЛЕРИНОЙ И ШЕЛКОМ ================= */
+    .bg-lotus-art {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      object-fit: cover;
+      object-position: center top;
+      z-index: 1;
+    }
+
+    /* Мягкий светлый виньеточный фильтр сверху для идеальной типографики */
+    .top-light-halo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 480px;
+      background: linear-gradient(180deg, 
+        rgba(235, 241, 237, 0.88) 0%, 
+        rgba(235, 241, 237, 0.55) 60%, 
+        rgba(235, 241, 237, 0) 100%
+      );
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* ================= 1. ШАПКА: ЛОГОТИП И ЗАГОЛОВОК ================= */
+    .header-lotus-block {
+      position: relative;
+      z-index: 10;
+      padding: 42px 60px 0 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    /* Деликатные золотые и шалфейные орбиты */
+    .orbit-decor-rings {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 920px;
+      height: 380px;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .orbit-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+    }
+    .ring-1 { width: 620px; height: 260px; transform: translate(-50%, -50%) rotate(-6deg); border-color: rgba(212, 168, 83, 0.4); }
+    .ring-2 { width: 800px; height: 340px; transform: translate(-50%, -50%) rotate(4deg); border-color: rgba(255, 255, 255, 0.5); }
+
+    /* Шалфейно-зеленый логотип LOTUS (Вариант 4) */
+    .brand-logo-lotus-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .lotus-symbol-svg {
+      width: 44px;
+      height: 44px;
+      margin-bottom: 4px;
+    }
+    .lotus-logo-title {
+      font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: 0.26em;
+      color: var(--lotus-sage);
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .lotus-logo-sub {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.3em;
+      color: var(--sage-light);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* Главный акцентный заголовок */
+    .main-title-lotus-h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 68px;
+      font-weight: 700;
+      line-height: 0.98;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--graphite-text);
+      text-shadow: 0 2px 25px rgba(255, 255, 255, 0.95);
+      margin-bottom: 12px;
+    }
+    .main-title-lotus-h1 .title-badge-pill {
+      display: inline-block;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 16.5px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      color: #FFFFFF;
+      background: linear-gradient(135deg, #2D4636 0%, #1C2E23 100%);
+      padding: 6px 24px;
+      border-radius: 24px;
+      margin-top: 8px;
+      box-shadow: 0 6px 18px rgba(45, 70, 54, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    /* Подстрочник в кавычках */
+    .main-subtitle-p {
+      max-width: 860px;
+      font-size: 17.5px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--graphite-soft);
+      font-style: italic;
+      text-shadow: 0 1px 12px rgba(255, 255, 255, 0.95);
+    }
+
+    /* =========================================================================
+       2. БЛОК ЦЕННОСТЕЙ: СТЕКЛЯННЫЕ ПЛАШКИ GLASSMORPHISM СЛЕВА И СПРАВА
+       БАЛЕРИНА В ЦЕНТРЕ ПОЛНОСТЬЮ ОТКРЫТА
+       ========================================================================= */
+    .lotus-values-wings-container {
+      position: absolute;
+      top: 660px;
+      left: 0;
+      width: 1240px;
+      height: 700px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Левая колонка (2 плашки) */
+    .values-wing-left {
+      position: absolute;
+      top: 80px;
+      left: 45px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      pointer-events: auto;
+    }
+
+    /* Правая колонка (2 плашки) */
+    .values-wing-right {
+      position: absolute;
+      top: 80px;
+      right: 45px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      pointer-events: auto;
+    }
+
+    /* Стеклянная матовая плашка Glassmorphism */
+    .lotus-glass-capsule {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      border-top: 2px solid rgba(255, 255, 255, 0.98);
+      border-radius: 22px;
+      padding: 14px 22px 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 440px;
+      box-shadow: 
+        0 14px 35px rgba(28, 41, 32, 0.08),
+        inset 0 1px 2px rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      position: relative;
+    }
+
+    /* 3D Иконка */
+    .capsule-3d-icon-box {
+      width: 52px;
+      height: 52px;
+      min-width: 52px;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .capsule-3d-icon-box img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.16));
+    }
+
+    .capsule-text-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .capsule-main-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--pine-rich);
+      line-height: 1.2;
+    }
+    .capsule-sub-desc {
+      font-size: 14px;
+      font-weight: 600;
+      color: #3C4A42;
+      line-height: 1.35;
+    }
+
+    /* Золотые акцентные искры */
+    .sparkle-decor {
+      position: absolute;
+      color: #D4A853;
+      font-size: 16px;
+      pointer-events: none;
+      filter: drop-shadow(0 0 6px rgba(212, 168, 83, 0.8));
+    }
+
+    /* =========================================================================
+       3. БЛОК ГАРАНТИЙ (3 АККУРАТНЫЕ ПЛАШКИ В РЯД)
+       ========================================================================= */
+    .guarantees-lotus-row {
+      position: relative;
+      z-index: 12;
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 45px;
+      margin-top: auto;
+      margin-bottom: 18px;
+    }
+
+    .guarantee-glass-card {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      border-top: 2px solid rgba(255, 255, 255, 0.98);
+      border-radius: 18px;
+      padding: 14px 20px;
+      box-shadow: 
+        0 12px 28px rgba(28, 41, 32, 0.07),
+        inset 0 1px 2px rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      justify-content: center;
+      gap: 3px;
+    }
+    .guarantee-bold-title {
+      font-size: 16.5px;
+      font-weight: 800;
+      color: var(--pine-rich);
+      line-height: 1.2;
+    }
+    .guarantee-soft-desc {
+      font-size: 14px;
+      font-weight: 600;
+      color: #3C4A42;
+      line-height: 1.2;
+    }
+
+    /* =========================================================================
+       4. МОНОЛИТНЫЙ ФУТЕР (ГЛУБОКИЙ ХВОЙНЫЙ #1C2920)
+       ========================================================================= */
+    .footer-pine-dock {
+      position: relative;
+      z-index: 15;
+      margin: 0 40px 32px 40px;
+      background: linear-gradient(135deg, #1C2920 0%, #142018 100%);
+      border-radius: 24px;
+      padding: 20px 32px;
+      box-shadow: 0 20px 50px rgba(20, 32, 24, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      color: #FFFFFF;
+    }
+
+    /* Филиалы (слева) */
+    .footer-branches-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 320px;
+    }
+    .branches-header-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #D4A853;
+      letter-spacing: 0.02em;
+    }
+    .branch-line-item {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #D6E0D9;
+      line-height: 1.35;
+    }
+
+    /* Центральная кнопка CTA */
+    .footer-button-col {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+    .btn-gold-lotus {
+      width: 100%;
+      max-width: 380px;
+      height: 62px;
+      background: linear-gradient(135deg, #E5BE6C 0%, #D4A853 50%, #C49642 100%);
+      color: #16221A;
+      border: 2px solid #FFFFFF;
+      border-radius: 31px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 15.5px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(212, 168, 83, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    /* Контакты и QR (справа) */
+    .footer-contacts-col {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .phones-text-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-align: right;
+    }
+    .phones-header-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #A3B5AA;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .phone-item-number {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 15.5px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 0.02em;
+    }
+
+    .qr-card-container {
+      width: 74px;
+      height: 74px;
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 4px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-card-container img {
+      width: 66px;
+      height: 66px;
+      display: block;
+    }
+
+    /* 5. Фактура матовой бумаги */
+    .paper-grain-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      pointer-events: none;
+      z-index: 99;
+      opacity: 0.025;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+  </style>
+</head>
+<body>
+
+  <div class="poster-a4-lotus" id="poster-lotus-solo">
+    
+    <!-- 0. ФОН: ВИЗУАЛЬНЫЙ АРТ С БАЛЕРИНОЙ И ШЕЛКОМ -->
+    <img src="/banner-assets/lotus-ballet-hero-art.jpg" alt="Балерина LOTUS" class="bg-lotus-art">
+    <div class="top-light-halo"></div>
+
+    <!-- 1. ШАПКА: ЛОГОТИП И ЗАГОЛОВОК -->
+    <div class="header-lotus-block">
+      <!-- Тонкие орбиты -->
+      <div class="orbit-decor-rings">
+        <div class="orbit-ring ring-1"></div>
+        <div class="orbit-ring ring-2"></div>
+      </div>
+
+      <!-- Шалфейно-зелёный логотип LOTUS (Вариант 4) -->
+      <div class="brand-logo-lotus-wrap">
+        <svg class="lotus-symbol-svg" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 6C24 6 17 18 17 28C17 33 20 37 24 39C28 37 31 33 31 28C31 18 24 6 24 6Z" fill="#2D4636"/>
+          <path d="M24 39C20 37 12 33 9 24C6 15 13 14 13 14C13 14 11 25 24 33" fill="#3D5A47" fill-opacity="0.8"/>
+          <path d="M24 39C28 37 36 33 39 24C42 15 35 14 35 14C35 14 37 25 24 33" fill="#3D5A47" fill-opacity="0.8"/>
+        </svg>
+        <div class="lotus-logo-title">LOTUS</div>
+        <div class="lotus-logo-sub">KIDS' BALLET SCHOOL</div>
+      </div>
+
+      <!-- Главный акцентный заголовок -->
+      <h1 class="main-title-lotus-h1">
+        <div>ШКОЛА БАЛЕТА LOTUS</div>
+        <div class="title-badge-pill">ОТКРЫВАЕМ НАБОР • ДЕТИ ОТ 3 ЛЕТ</div>
+      </h1>
+
+      <!-- Подстрочник -->
+      <p class="main-subtitle-p">
+        «Бережное развитие грации, здоровой осанки и любви к танцу с ранних лет.»
+      </p>
+    </div>
+
+    <!-- 2. БЛОК ЦЕННОСТЕЙ: СТЕКЛЯННЫЕ ПЛАШКИ GLASSMORPHISM СЛЕВА И СПРАВА -->
+    <div class="lotus-values-wings-container">
+      
+      <!-- ЛЕВАЯ КОЛОНКА (2 ценности) -->
+      <div class="values-wing-left">
+        <!-- Ценность 1: Осанка -->
+        <div class="lotus-glass-capsule">
+          <div class="capsule-3d-icon-box">
+            <img src="/banner-assets/icon-3d-ballet.png" alt="3D Пуанты">
+          </div>
+          <div class="capsule-text-wrapper">
+            <div class="capsule-main-title">🩰 Красивая осанка</div>
+            <div class="capsule-sub-desc">формирование крепкого мышечного корсета и лёгкой походки.</div>
+          </div>
+          <span class="sparkle-decor" style="top: -6px; right: 16px;">✦</span>
+        </div>
+
+        <!-- Ценность 2: Бережная растяжка -->
+        <div class="lotus-glass-capsule">
+          <div class="capsule-3d-icon-box">
+            <img src="/banner-assets/icon-3d-stretch.png" alt="3D Лотос">
+          </div>
+          <div class="capsule-text-wrapper">
+            <div class="capsule-main-title">🌿 Бережная растяжка</div>
+            <div class="capsule-sub-desc">развитие природной гибкости без боли и слёз.</div>
+          </div>
+          <span class="sparkle-decor" style="bottom: -6px; right: 28px;">✦</span>
+        </div>
+      </div>
+
+      <!-- ПРАВАЯ КОЛОНКА (2 ценности) -->
+      <div class="values-wing-right">
+        <!-- Ценность 3: Чувство ритма -->
+        <div class="lotus-glass-capsule">
+          <div class="capsule-3d-icon-box">
+            <img src="/banner-assets/icon-3d-rhythm.png" alt="3D Ритм">
+          </div>
+          <div class="capsule-text-wrapper">
+            <div class="capsule-main-title">🎶 Чувство ритма</div>
+            <div class="capsule-sub-desc">умение слышать классическую музыку и владеть телом.</div>
+          </div>
+          <span class="sparkle-decor" style="top: -6px; left: 16px;">✦</span>
+        </div>
+
+        <!-- Ценность 4: Сценический опыт -->
+        <div class="lotus-glass-capsule">
+          <div class="capsule-3d-icon-box">
+            <img src="/banner-assets/icon-3d-trophy.png" alt="3D Сцена">
+          </div>
+          <div class="capsule-text-wrapper">
+            <div class="capsule-main-title">✨ Сценический опыт</div>
+            <div class="capsule-sub-desc">открытые уроки, красивые костюмы и первые аплодисменты.</div>
+          </div>
+          <span class="sparkle-decor" style="bottom: -6px; left: 28px;">✦</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3. БЛОК ГАРАНТИЙ (3 ПЛАШКИ В РЯД) -->
+    <div class="guarantees-lotus-row">
+      <!-- Гарантия 1 -->
+      <div class="guarantee-glass-card">
+        <div class="guarantee-bold-title">0 ₽</div>
+        <div class="guarantee-soft-desc">Первое пробное занятие</div>
+      </div>
+
+      <!-- Гарантия 2 -->
+      <div class="guarantee-glass-card">
+        <div class="guarantee-bold-title">Чуткие педагоги</div>
+        <div class="guarantee-soft-desc">Бережная методика</div>
+      </div>
+
+      <!-- Гарантия 3 -->
+      <div class="guarantee-glass-card">
+        <div class="guarantee-bold-title">Гослицензия</div>
+        <div class="guarantee-soft-desc">Налоговый вычет 13%</div>
+      </div>
+    </div>
+
+    <!-- 4. МОНОЛИТНЫЙ ФУТЕР (ГЛУБОКИЙ ХВОЙНЫЙ #1C2920) -->
+    <div class="footer-pine-dock">
+      <!-- Филиалы -->
+      <div class="footer-branches-col">
+        <div class="branches-header-title">📍 Адреса филиалов в Новосибирске:</div>
+        <div class="branch-line-item">• ул. Большевистская, 125</div>
+        <div class="branch-line-item">• ул. Планетная, 53</div>
+        <div class="branch-line-item">• ул. Мясниковой, 25/2</div>
+      </div>
+
+      <!-- Кнопка CTA -->
+      <div class="footer-button-col">
+        <button class="btn-gold-lotus">
+          ЗАПИСАТЬСЯ НА ПРОБНЫЙ УРОК →
+        </button>
+      </div>
+
+      <!-- Контакты и QR -->
+      <div class="footer-contacts-col">
+        <div class="phones-text-group">
+          <div class="phones-header-title">Телефоны руководства</div>
+          <div class="phone-item-number">+7 (913) 765-4321</div>
+          <div class="phone-item-number">+7 (383) 221-1222</div>
+        </div>
+
+        <div class="qr-card-container">
+          <img src="/banner-assets/vk-qr-real.png" alt="ВКонтакте QR">
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. ФАКТУРА МАТОВОЙ БУМАГИ -->
+    <div class="paper-grain-overlay"></div>
+
+  </div>
+
+</body>
+</html>

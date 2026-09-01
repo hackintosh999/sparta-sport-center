@@ -53,6 +53,12 @@ export interface UserItem {
     linkedChildId?: string;
     isStaff?: boolean;
     isAdmin?: boolean;
+    tempEmail?: string;
+    tempPassword?: string;
+    isTemporaryCredentials?: boolean;
+    kidPin?: string;
+    parentId?: string;
+    childrenIds?: string[];
 }
 
 export type User = UserItem;

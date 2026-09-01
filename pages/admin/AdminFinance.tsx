@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, orderBy, onSnapshot, where, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, Timestamp, deleteDoc, doc, writeBatch, getDocs, getDoc, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -27,15 +27,49 @@ import {
     Zap,
     History,
     Eye,
-    EyeOff
+    EyeOff,
+    CheckCircle2,
+    Clock,
+    Phone,
+    UserCheck,
+    AlertTriangle,
+    Loader2,
+    Sparkles,
+    MessageCircle
 } from 'lucide-react';
-import { deleteDoc, doc, writeBatch, getDocs, addDoc } from 'firebase/firestore';
+import { SPARTA_SCHEDULE } from '../../constants/spartaSchedule';
 
 import { format, subDays, startOfDay, endOfDay, isWithinInterval, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts';
 
 const COLORS = ['#34d399', '#a855f7', '#3b82f6', '#f59e0b'];
+
+interface PendingOrder {
+    id: string;
+    amount: number;
+    price: number;
+    planTitle: string;
+    planId: string;
+    duration: number;
+    userName: string;
+    userEmail: string;
+    childName?: string;
+    childBirthYear?: number;
+    parentPhone?: string;
+    selectedScheduleId?: string;
+    coachName?: string;
+    scheduleDays?: string;
+    scheduleTime?: string;
+    selectedBranch?: string;
+    paymentMethod: string;
+    status: string;
+    date: Date;
+    userId?: string;
+    receiptUrl?: string;
+    receiptVerification?: any;
+    receiptOperationId?: string;
+}
 
 interface Transaction {
     id: string;
@@ -80,6 +114,9 @@ const AdminFinance = () => {
     const [useRealMoneyOnly, setUseRealMoneyOnly] = useState(true);
     const [expenseCategory, setExpenseCategory] = useState<string>('other');
     const [expenseDescription, setExpenseDescription] = useState('');
+    const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
+    const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+    const [previewReceipt, setPreviewReceipt] = useState<{ url: string; order: PendingOrder } | null>(null);
 
     const currentDay = new Date().getDate() || 1;
     const daysInMonth = endOfMonth(new Date()).getDate();
@@ -100,6 +137,40 @@ const AdminFinance = () => {
         const qExpenses = query(collection(db, 'expenses'), orderBy('date', 'desc'));
 
         const unsubscribeOrders = onSnapshot(qOrders, (snapshot) => {
+            const pendingList: PendingOrder[] = [];
+            snapshot.docs.forEach((docSnap) => {
+                const data = docSnap.data();
+                const st = data.status;
+                if (['pending_transfer', 'pending_cash', 'pending_invoice', 'pending_robokassa', 'pending'].includes(st)) {
+                    pendingList.push({
+                        id: docSnap.id,
+                        amount: data.totalAmount || data.price || data.amount || 0,
+                        price: data.price || data.totalAmount || data.amount || 0,
+                        planTitle: data.planTitle || 'Абонемент',
+                        planId: data.planId || 'standard',
+                        duration: data.duration || 1,
+                        userName: data.userName || 'Родитель',
+                        userEmail: data.email || data.userEmail || '',
+                        childName: data.childName || '',
+                        childBirthYear: data.childBirthYear,
+                        parentPhone: data.parentPhone || '',
+                        selectedScheduleId: data.selectedScheduleId || '',
+                        coachName: data.coachName || '',
+                        scheduleDays: data.scheduleDays || '',
+                        scheduleTime: data.scheduleTime || '',
+                        selectedBranch: data.selectedBranch || '',
+                        paymentMethod: data.paymentMethod || 'sbp',
+                        status: data.status,
+                        date: data.date?.toDate() || data.createdAt?.toDate() || new Date(),
+                        userId: data.userId || '',
+                        receiptUrl: data.receiptUrl || undefined,
+                        receiptVerification: data.receiptVerification || undefined,
+                        receiptOperationId: data.receiptOperationId || undefined
+                    });
+                }
+            });
+            setPendingOrders(pendingList);
+
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added" || change.type === "modified") {
                     const data = change.doc.data();
@@ -152,10 +223,10 @@ const AdminFinance = () => {
                         type: 'shop_order' as const,
                         date: data.createdAt?.toDate() || new Date(),
                         userName: data.customerName,
-                        userEmail: data.email,
+                        userEmail: data.customerEmail,
                         status: data.status,
                         method,
-                        details: data.items || null
+                        details: data.items
                     });
                 }
                 if (change.type === "removed") shopMap.delete(change.doc.id);
@@ -183,6 +254,127 @@ const AdminFinance = () => {
             unsubscribeExpenses();
         };
     }, []);
+
+    const handleApprovePendingOrder = async (order: PendingOrder) => {
+        const confirmName = order.childName ? `для ${order.childName}` : `для ${order.userName}`;
+        if (!window.confirm(`Подтвердить получение оплаты ${order.price.toLocaleString('ru-RU')} ₽ и активировать абонемент «${order.planTitle}» ${confirmName}?`)) {
+            return;
+        }
+
+        setActionLoadingId(order.id);
+        try {
+            // 1. Mark order as completed
+            const orderRef = doc(db, 'orders', order.id);
+            await updateDoc(orderRef, {
+                status: 'completed',
+                approvedAt: Timestamp.now()
+            });
+
+            // 2. Find target user doc
+            let targetUserDocId = order.userId;
+            let targetUserData: any = null;
+
+            if (targetUserDocId) {
+                const uSnap = await getDoc(doc(db, 'users', targetUserDocId));
+                if (uSnap.exists()) {
+                    targetUserData = uSnap.data();
+                }
+            }
+
+            if (!targetUserData && order.userEmail) {
+                const qUsers = query(collection(db, 'users'), where('email', '==', order.userEmail));
+                const uSnap = await getDocs(qUsers);
+                if (!uSnap.empty) {
+                    targetUserDocId = uSnap.docs[0].id;
+                    targetUserData = uSnap.docs[0].data();
+                }
+            }
+
+            if (targetUserDocId) {
+                const expiresAtDate = new Date();
+                const durationMonths = order.duration || 1;
+                expiresAtDate.setMonth(expiresAtDate.getMonth() + durationMonths);
+
+                const activeSlot = SPARTA_SCHEDULE.find(s => s.id === order.selectedScheduleId);
+
+                const subscriptionPayload = {
+                    planId: order.planId || 'standard',
+                    title: order.planTitle || 'Абонемент',
+                    expiresAt: Timestamp.fromDate(expiresAtDate),
+                    status: 'active',
+                    startedAt: Timestamp.now(),
+                    purchasePrice: order.price
+                };
+
+                const userRef = doc(db, 'users', targetUserDocId);
+                await updateDoc(userRef, {
+                    subscription: subscriptionPayload,
+                    hasActiveMembership: true,
+                    membershipExpires: Timestamp.fromDate(expiresAtDate),
+                    groupId: order.selectedScheduleId || targetUserData?.groupId || '',
+                    groupName: activeSlot?.streamTitle || (order.scheduleDays ? `${order.scheduleDays} ${order.scheduleTime}` : (targetUserData?.groupName || 'Основная группа')),
+                    coachName: order.coachName || activeSlot?.coachName || targetUserData?.coachName || 'Тренер Sparta',
+                    childName: order.childName || targetUserData?.childName || undefined,
+                    childAge: order.childBirthYear ? (2026 - order.childBirthYear) : targetUserData?.childAge || undefined,
+                    birthYear: order.childBirthYear || targetUserData?.birthYear || undefined
+                });
+
+                // If user has linked children doc, update first child doc too
+                if (targetUserData?.childrenIds && targetUserData.childrenIds.length > 0) {
+                    const childRef = doc(db, 'users', targetUserData.childrenIds[0]);
+                    await updateDoc(childRef, {
+                        subscription: subscriptionPayload,
+                        hasActiveMembership: true,
+                        membershipExpires: Timestamp.fromDate(expiresAtDate),
+                        groupId: order.selectedScheduleId || '',
+                        groupName: activeSlot?.streamTitle || (order.scheduleDays ? `${order.scheduleDays} ${order.scheduleTime}` : 'Основная группа'),
+                        coachName: order.coachName || activeSlot?.coachName || 'Тренер Sparta',
+                        childName: order.childName || undefined
+                    }).catch(() => {});
+                }
+
+                // 3. Create notification for parent
+                if (order.userEmail) {
+                    await addDoc(collection(db, 'notifications'), {
+                        email: order.userEmail,
+                        userId: targetUserDocId,
+                        title: 'Абонемент успешно активирован! ⚽',
+                        message: `Оплата на сумму ${order.price.toLocaleString('ru-RU')} ₽ подтверждена администратором. Абонемент «${order.planTitle}» активен на ${durationMonths} мес. Ждём ${order.childName ? order.childName : 'вас'} на тренировке!`,
+                        type: 'success',
+                        isRead: false,
+                        createdAt: Timestamp.now()
+                    }).catch(() => {});
+                }
+            }
+
+            alert(`Оплата подтверждена! Абонемент успешно активирован.`);
+        } catch (err) {
+            console.error('Error approving order:', err);
+            alert('Ошибка при подтверждении оплаты');
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
+    const handleCancelPendingOrder = async (order: PendingOrder) => {
+        if (!window.confirm(`Отклонить заявку #${order.id.slice(-6).toUpperCase()} на сумму ${order.price.toLocaleString('ru-RU')} ₽?`)) {
+            return;
+        }
+
+        setActionLoadingId(order.id);
+        try {
+            const orderRef = doc(db, 'orders', order.id);
+            await updateDoc(orderRef, {
+                status: 'cancelled',
+                cancelledAt: Timestamp.now()
+            });
+        } catch (err) {
+            console.error('Error cancelling order:', err);
+            alert('Ошибка при отклонении заявки');
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
 
     // --- Analytics Logic ---
     const filteredTransactions = useMemo(() => {
@@ -883,6 +1075,247 @@ const AdminFinance = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Pending Membership Orders Queue */}
+            {pendingOrders.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-br from-amber-500/15 via-zinc-950 to-[#111] border-2 border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(245,158,11,0.15)] space-y-4"
+                >
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-amber-500/20 pb-4">
+                        <div className="flex items-center gap-3.5">
+                            <div className="p-3 bg-amber-400 text-black rounded-2xl shadow-lg shadow-amber-400/30 animate-pulse">
+                                <Clock size={24} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-xl font-russo text-white uppercase tracking-wide">
+                                        Заявки на оплату абонементов
+                                    </h2>
+                                    <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-black font-black text-xs">
+                                        {pendingOrders.length}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-white/60">
+                                    Поступления по СБП / Сбербанку, бронирование мест и оплата наличными
+                                </p>
+                            </div>
+                        </div>
+                        <div className="text-xs text-amber-300/80 font-medium">
+                            Сумма к подтверждению: <strong className="text-white font-bold">{pendingOrders.reduce((sum, o) => sum + o.price, 0).toLocaleString('ru-RU')} ₽</strong>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                        {pendingOrders.map((order) => {
+                            const isTransfer = order.paymentMethod === 'sbp' || order.status === 'pending_transfer';
+                            const isCash = order.paymentMethod === 'cash' || order.status === 'pending_cash';
+                            const isInvoice = order.paymentMethod === 'invoice' || order.status === 'pending_invoice';
+
+                            return (
+                                <div
+                                    key={order.id}
+                                    className="bg-black/70 border border-white/10 hover:border-amber-400/50 transition-all rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-lg"
+                                >
+                                    <div className="space-y-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="text-base font-bold text-white">
+                                                        {order.childName ? `${order.childName}` : order.userName}
+                                                    </h4>
+                                                    {order.childBirthYear && (
+                                                        <span className="px-2 py-0.5 rounded bg-white/10 text-white/80 text-[10px] font-bold">
+                                                            {order.childBirthYear} г.р.
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-white/50 mt-0.5">
+                                                    Родитель: {order.userName}
+                                                </p>
+                                            </div>
+                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                                                isCash ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                                                isInvoice ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                                                'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                            }`}>
+                                                {isCash ? '💵 Наличные' : isInvoice ? '📄 Счёт' : '📱 СБП / Сбер'}
+                                            </span>
+                                        </div>
+
+                                        {/* Plan and Schedule details */}
+                                        <div className="p-3 bg-white/5 rounded-xl border border-white/5 space-y-1.5 text-xs">
+                                            <div className="flex justify-between text-white/70">
+                                                <span className="text-white/40">Тариф:</span>
+                                                <span className="font-bold text-white">{order.planTitle} ({order.duration} мес.)</span>
+                                            </div>
+                                            {(order.scheduleDays || order.coachName) && (
+                                                <div className="flex justify-between text-white/70">
+                                                    <span className="text-white/40">Расписание / Тренер:</span>
+                                                    <span className="font-medium text-amber-300">
+                                                        {order.scheduleDays} {order.scheduleTime} • {order.coachName}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between items-center text-white/70 pt-1.5 border-t border-white/5">
+                                                <span className="text-white/40">К оплате:</span>
+                                                <span className="text-lg font-russo text-amber-400">{order.price.toLocaleString('ru-RU')} ₽</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Receipt attachment & AI status badge */}
+                                        {order.receiptUrl && (
+                                            <div className="p-2.5 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPreviewReceipt({ url: order.receiptUrl!, order })}
+                                                    className="flex items-center gap-2 text-xs font-bold text-amber-300 hover:text-amber-200"
+                                                >
+                                                    <img
+                                                        src={order.receiptUrl}
+                                                        alt="Receipt"
+                                                        className="w-8 h-8 rounded-lg object-cover border border-white/20"
+                                                    />
+                                                    <span>Посмотреть чек</span>
+                                                </button>
+                                                {order.receiptVerification?.verdict === 'approved' ? (
+                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                                                        ✓ AI: 100% подтверждён
+                                                    </span>
+                                                ) : order.receiptVerification?.verdict === 'duplicate_receipt' ? (
+                                                    <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/30">
+                                                        ⚠ Подозрение на повтор
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold">
+                                                        Чек загружен
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Contact info & Links */}
+                                        <div className="flex flex-wrap items-center gap-3 text-xs text-white/60">
+                                            {order.parentPhone && (
+                                                <a
+                                                    href={`tel:${order.parentPhone}`}
+                                                    className="flex items-center gap-1 text-white hover:text-amber-400 font-mono"
+                                                >
+                                                    <Phone size={13} className="text-amber-400" />
+                                                    <span>{order.parentPhone}</span>
+                                                </a>
+                                            )}
+                                            {order.parentPhone && (
+                                                <a
+                                                    href={`https://wa.me/${order.parentPhone.replace(/[^0-9]/g, '')}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="flex items-center gap-1 text-emerald-400 hover:underline text-[11px]"
+                                                >
+                                                    <MessageCircle size={13} />
+                                                    <span>WhatsApp</span>
+                                                </a>
+                                            )}
+                                            {order.userEmail && (
+                                                <span className="text-white/40 text-[11px] truncate max-w-[180px]">
+                                                    {order.userEmail}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                                        <button
+                                            type="button"
+                                            disabled={actionLoadingId === order.id}
+                                            onClick={() => handleApprovePendingOrder(order)}
+                                            className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:brightness-110 text-black font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50"
+                                        >
+                                            {actionLoadingId === order.id ? (
+                                                <Loader2 size={14} className="animate-spin" />
+                                            ) : (
+                                                <CheckCircle2 size={15} />
+                                            )}
+                                            <span>Подтвердить оплату</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={actionLoadingId === order.id}
+                                            onClick={() => handleCancelPendingOrder(order)}
+                                            className="py-2.5 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/20 transition-all disabled:opacity-50"
+                                            title="Отклонить заявку"
+                                        >
+                                            <X size={15} />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Receipt Preview Lightbox Modal */}
+            <AnimatePresence>
+                {previewReceipt && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-zinc-950 border border-white/10 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+                        >
+                            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-base font-bold text-white">Чек перевода</h3>
+                                    <p className="text-xs text-white/50">{previewReceipt.order.userName} • {previewReceipt.order.planTitle} ({previewReceipt.order.price.toLocaleString('ru-RU')} ₽)</p>
+                                </div>
+                                <button
+                                    onClick={() => setPreviewReceipt(null)}
+                                    className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            <div className="p-4 overflow-y-auto flex-1 flex flex-col items-center gap-4">
+                                <img
+                                    src={previewReceipt.url}
+                                    alt="Full Receipt"
+                                    className="max-h-[60vh] w-auto object-contain rounded-xl border border-white/10 shadow-lg"
+                                />
+                                {previewReceipt.order.receiptVerification && (
+                                    <div className="w-full p-3 bg-white/5 rounded-xl border border-white/10 text-xs space-y-1 text-white/70">
+                                        <div className="font-bold text-white">Результат анализа чека:</div>
+                                        <div>Банк: <strong className="text-amber-300">{previewReceipt.order.receiptVerification.bankName || 'Не указан'}</strong></div>
+                                        <div>Сумма в чеке: <strong className="text-amber-300">{previewReceipt.order.receiptVerification.extractedAmount || previewReceipt.order.price} ₽</strong></div>
+                                        <div>Пояснение: <span>{previewReceipt.order.receiptVerification.explanation}</span></div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="p-4 border-t border-white/10 flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        handleApprovePendingOrder(previewReceipt.order);
+                                        setPreviewReceipt(null);
+                                    }}
+                                    className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-black font-extrabold rounded-xl text-xs flex items-center justify-center gap-2"
+                                >
+                                    <CheckCircle2 size={16} />
+                                    <span>Подтвердить оплату</span>
+                                </button>
+                                <button
+                                    onClick={() => setPreviewReceipt(null)}
+                                    className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs"
+                                >
+                                    Закрыть
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Today and Goals Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

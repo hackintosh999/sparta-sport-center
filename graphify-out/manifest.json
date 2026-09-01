@@ -240,8 +240,8 @@
     "semantic_hash": "090aac3d832f43bdabdc9967a74e02b0"
   },
   ".mcp.json": {
-    "mtime": 1785588479.361981,
-    "ast_hash": "b2770b8cadcb89cf1f81fdfe914a6251",
+    "mtime": 1787035387.112837,
+    "ast_hash": "954051d6922430d495255e97b7684755",
     "semantic_hash": ""
   },
   ".swarm/schema.sql": {
@@ -250,13 +250,13 @@
     "semantic_hash": "d21b4e3318f08973dc08fbb9688312fc"
   },
   "App.tsx": {
-    "mtime": 1785866687.3078613,
-    "ast_hash": "284ccb1d9d63e5c4e88a1f3772aed2b5",
+    "mtime": 1786919119.964341,
+    "ast_hash": "bbbffd11da28886c9edcaec941546197",
     "semantic_hash": ""
   },
   "components/AuthModal.tsx": {
-    "mtime": 1785678656.7947838,
-    "ast_hash": "c913b8fc8f21d0a00e54182de5de68a1",
+    "mtime": 1787439219.501076,
+    "ast_hash": "5ded69d2b18728da4f4d35b95640e918",
     "semantic_hash": ""
   },
   "components/BannedScreen.tsx": {
@@ -265,14 +265,14 @@
     "semantic_hash": "2962fafd088a09f0ed8f325cb992a7f5"
   },
   "components/BroadcastArchiveModal.tsx": {
-    "mtime": 1785493098.9916265,
-    "ast_hash": "9b3330a2f2d4ab4f9439e88248c42d3c",
-    "semantic_hash": "9b3330a2f2d4ab4f9439e88248c42d3c"
+    "mtime": 1786918918.9110413,
+    "ast_hash": "4e79b0fb7613a94f92758f8350a2df02",
+    "semantic_hash": ""
   },
   "components/BroadcastChat.tsx": {
-    "mtime": 1785493098.9871998,
-    "ast_hash": "d1bd7ec7f6b3190a27ba8e4f4886c6cd",
-    "semantic_hash": "d1bd7ec7f6b3190a27ba8e4f4886c6cd"
+    "mtime": 1786917858.7570758,
+    "ast_hash": "30c163a89094fc4d196a985905870624",
+    "semantic_hash": ""
   },
   "components/BroadcastReactions.tsx": {
     "mtime": 1785493098.9831977,
@@ -280,9 +280,9 @@
     "semantic_hash": "63417527d59a70d88428a615a8e1020e"
   },
   "components/CartSidebar.tsx": {
-    "mtime": 1785495516.9173913,
-    "ast_hash": "dbd0f70edca0dba09fe3a090bf57724d",
-    "semantic_hash": "dbd0f70edca0dba09fe3a090bf57724d"
+    "mtime": 1787471528.7008462,
+    "ast_hash": "b461b460be5013979cd1fcd6a0566628",
+    "semantic_hash": ""
   },
   "components/ContactModal.tsx": {
     "mtime": 1785493098.9594512,
@@ -290,8 +290,8 @@
     "semantic_hash": "67ea3329f243f5998ad879fdbd6f814b"
   },
   "components/Dashboard.tsx": {
-    "mtime": 1786227695.5580058,
-    "ast_hash": "17e4f37f758efeb97ffd090f3cd3dd31",
+    "mtime": 1787595693.9420557,
+    "ast_hash": "3698639c0190320e5b1e4ee2563a3695",
     "semantic_hash": ""
   },
   "components/DocumentViewerModal.tsx": {
@@ -305,13 +305,13 @@
     "semantic_hash": "126390cc6187c269f02bc8dced3641e6"
   },
   "components/GroupsSection.tsx": {
-    "mtime": 1786346936.550014,
-    "ast_hash": "ad741884bf20989c6d1b5f9bdcf51d35",
+    "mtime": 1786777557.8947623,
+    "ast_hash": "5b0e145c385216b97964370b5b8285b9",
     "semantic_hash": ""
   },
   "components/LandingPage.tsx": {
-    "mtime": 1786356200.8272493,
-    "ast_hash": "79c9472d2dbfaf89eee565d10ceb3b65",
+    "mtime": 1787472676.4824378,
+    "ast_hash": "ce64410197ecf11b947d478c2be2f689",
     "semantic_hash": ""
   },
   "components/LeaveReviewModal.tsx": {
@@ -335,8 +335,8 @@
     "semantic_hash": "d959c51dbada77449ee373f30830d2b1"
   },
   "components/MembershipModal.tsx": {
-    "mtime": 1785586145.1680202,
-    "ast_hash": "6dde85bbf36895b5e1ecdfb886d6c041",
+    "mtime": 1787588134.669578,
+    "ast_hash": "272a8016ff796f7a278f408d910cf25c",
     "semantic_hash": ""
   },
   "components/NewsModal.tsx": {
@@ -345,8 +345,8 @@
     "semantic_hash": "cd462e8aa2ab8ba889d7898d664a5ab8"
   },
   "components/NewsSection.tsx": {
-    "mtime": 1786227623.1629841,
-    "ast_hash": "8fb50f88fef85870b421094b11449ed2",
+    "mtime": 1786701019.9851768,
+    "ast_hash": "f4b770950ecf5f2866e481ddcaab94ed",
     "semantic_hash": ""
   },
   "components/NotificationsModal.tsx": {
@@ -370,23 +370,23 @@
     "semantic_hash": "40bbda346645309a9e34715c320e7cbf"
   },
   "components/ReviewMediaModal.tsx": {
-    "mtime": 1785496015.9430628,
-    "ast_hash": "03efa2c2e729bd11e5e8b1c5b2372d57",
-    "semantic_hash": "03efa2c2e729bd11e5e8b1c5b2372d57"
+    "mtime": 1786989459.7944634,
+    "ast_hash": "dfc018cbae40f83a5856732f04c8be52",
+    "semantic_hash": ""
   },
   "components/ReviewsSection.tsx": {
-    "mtime": 1785493098.6591153,
-    "ast_hash": "1d0a2dfc7d77f14456c2bcc9d2044095",
-    "semantic_hash": "1d0a2dfc7d77f14456c2bcc9d2044095"
+    "mtime": 1786365585.3355036,
+    "ast_hash": "3109b226d82a1a3de06105176f1ed508",
+    "semantic_hash": ""
   },
   "components/SEO.tsx": {
-    "mtime": 1786344669.2775643,
-    "ast_hash": "c16420904d9386c32fed3b65ea666f0c",
+    "mtime": 1786365597.9947796,
+    "ast_hash": "0b423026b9b4c4f3e86b1f762d21bede",
     "semantic_hash": ""
   },
   "components/ScheduleSection.tsx": {
-    "mtime": 1786205504.2813761,
-    "ast_hash": "6e7908ab0c8494af1f8595f2c3e3e904",
+    "mtime": 1786700997.6898818,
+    "ast_hash": "fd14831a252009d081d3aada98f2e8d2",
     "semantic_hash": ""
   },
   "components/ShareModal.tsx": {
@@ -400,9 +400,9 @@
     "semantic_hash": "710a85fc0487496669a32d0f1300ce39"
   },
   "components/SmartEnrollmentWizard.tsx": {
-    "mtime": 1785496052.7312784,
-    "ast_hash": "d920a460864b3e2f0641a08c321d2948",
-    "semantic_hash": "d920a460864b3e2f0641a08c321d2948"
+    "mtime": 1786916006.3378112,
+    "ast_hash": "9dd3eeb28dac0c0319cfe6f539ebb46e",
+    "semantic_hash": ""
   },
   "components/SpartaVideoPlayer.tsx": {
     "mtime": 1785493098.590471,
@@ -420,9 +420,9 @@
     "semantic_hash": "cb6613fde6ad4e083182fff2ecada56b"
   },
   "components/TopUpModal.tsx": {
-    "mtime": 1785493098.5729275,
-    "ast_hash": "8fb338483b13fdfe9c24cb4c882484d2",
-    "semantic_hash": "8fb338483b13fdfe9c24cb4c882484d2"
+    "mtime": 1786916017.7812204,
+    "ast_hash": "6b6b20359b1176a8c51b238525d8f803",
+    "semantic_hash": ""
   },
   "components/TrialModal.tsx": {
     "mtime": 1785493098.5809286,
@@ -430,14 +430,14 @@
     "semantic_hash": "8259a74c78d54d4d9f7fc561db5d0c9f"
   },
   "components/UIComponents.tsx": {
-    "mtime": 1785493098.5729275,
-    "ast_hash": "1c0bc4e6165b0cdf27198e6fd78ae5a3",
-    "semantic_hash": "1c0bc4e6165b0cdf27198e6fd78ae5a3"
+    "mtime": 1787594509.941051,
+    "ast_hash": "6f21493b09a768197a0907d0a620eb19",
+    "semantic_hash": ""
   },
   "components/VideoPlayer.tsx": {
-    "mtime": 1785493098.5388563,
-    "ast_hash": "666ac381d8c1b5125204ad6d5b6546be",
-    "semantic_hash": "666ac381d8c1b5125204ad6d5b6546be"
+    "mtime": 1786989278.4068336,
+    "ast_hash": "387969491606e24a7b4e3223a87b0711",
+    "semantic_hash": ""
   },
   "components/Viewer3D.tsx": {
     "mtime": 1785493098.5388563,
@@ -450,8 +450,8 @@
     "semantic_hash": "b38f07bae12d793ddceb25b17a7a418a"
   },
   "components/admin/AdminLayout.tsx": {
-    "mtime": 1785595070.211612,
-    "ast_hash": "ee62afe0e8f731c7dcba7be87682bf4b",
+    "mtime": 1787501873.998862,
+    "ast_hash": "2392813a43335bdc7d1d0ba9913c280c",
     "semantic_hash": ""
   },
   "components/admin/AdminRoute.tsx": {
@@ -485,8 +485,8 @@
     "semantic_hash": "f02f21920323814d0c746b0e62de3b23"
   },
   "components/profile/AchievementsList.tsx": {
-    "mtime": 1785692957.6799085,
-    "ast_hash": "404980b28464ab834446ce0950a25f12",
+    "mtime": 1787386588.17443,
+    "ast_hash": "1756a8f55b2c05006bf59cb2d7e75aa4",
     "semantic_hash": ""
   },
   "components/profile/ActivitySection.tsx": {
@@ -495,24 +495,24 @@
     "semantic_hash": "86788ee567990997f6f6d087598ecf52"
   },
   "components/profile/AttendanceSection.tsx": {
-    "mtime": 1785493098.4870698,
-    "ast_hash": "58c376e12dc730fcff9a6bbcb0f54d0a",
-    "semantic_hash": "58c376e12dc730fcff9a6bbcb0f54d0a"
+    "mtime": 1787438739.8297892,
+    "ast_hash": "54a9312c34d18b79c39142a394e292bf",
+    "semantic_hash": ""
   },
   "components/profile/CoachCalendar.tsx": {
-    "mtime": 1785493098.4840689,
-    "ast_hash": "51c52b82120617a37367973838f37e18",
-    "semantic_hash": "51c52b82120617a37367973838f37e18"
+    "mtime": 1787501006.290444,
+    "ast_hash": "af3f7342d69d9c99e3b30b43fe523d2f",
+    "semantic_hash": ""
   },
   "components/profile/CoachChat.tsx": {
-    "mtime": 1785758252.2775085,
-    "ast_hash": "086a329a8cd9fa668c9c10e8cdc82f8d",
+    "mtime": 1787587470.3942938,
+    "ast_hash": "ebeebce15018f4503e32b8a0130f2ee7",
     "semantic_hash": ""
   },
   "components/profile/CoachSection.tsx": {
-    "mtime": 1785493098.4679012,
-    "ast_hash": "ddf5bf4aa9bd255a7c3dc1baf21e2e2c",
-    "semantic_hash": "ddf5bf4aa9bd255a7c3dc1baf21e2e2c"
+    "mtime": 1787474070.5769064,
+    "ast_hash": "6cfe424361308a4a63cc0ba6456abf4f",
+    "semantic_hash": ""
   },
   "components/profile/CreatePollModal.tsx": {
     "mtime": 1785493098.4102106,
@@ -520,19 +520,19 @@
     "semantic_hash": "346410ccdc4c0b99bc2ef7e74038c56b"
   },
   "components/profile/FriendsSection.tsx": {
-    "mtime": 1785877011.8224678,
-    "ast_hash": "232fa996b3b29f510e4d7c8c55beeaab",
+    "mtime": 1787398391.3582654,
+    "ast_hash": "0dbdc5a1ff13f1e53c760f06d8e051c1",
     "semantic_hash": ""
   },
   "components/profile/GroupChat.tsx": {
-    "mtime": 1786205683.6317768,
-    "ast_hash": "9d4a7cf33d582eefdc03ba65a3ad098a",
+    "mtime": 1787596102.3312335,
+    "ast_hash": "b6fb18d1238ecd97170ba84aaf923edf",
     "semantic_hash": ""
   },
   "components/profile/LinkChildModal.tsx": {
-    "mtime": 1785493098.4082105,
-    "ast_hash": "5de99d9d0f03393ca7b0969fcdc3de85",
-    "semantic_hash": "5de99d9d0f03393ca7b0969fcdc3de85"
+    "mtime": 1787439635.9804986,
+    "ast_hash": "d87d4f91ec585fa41a2b4a5f62e37c4e",
+    "semantic_hash": ""
   },
   "components/profile/LinkingRequestBanner.tsx": {
     "mtime": 1785493098.4042108,
@@ -545,18 +545,18 @@
     "semantic_hash": "e4e0d4ab3b641ecf1465dce278cdd1b3"
   },
   "components/profile/MembershipReceipt.tsx": {
-    "mtime": 1785493098.2083929,
-    "ast_hash": "7aaea1a017feb95673969378407e021b",
-    "semantic_hash": "7aaea1a017feb95673969378407e021b"
+    "mtime": 1787470479.1959195,
+    "ast_hash": "e2b070dde8d96be61f5cf310a4971737",
+    "semantic_hash": ""
   },
   "components/profile/MessagesSection.tsx": {
-    "mtime": 1785875697.845932,
-    "ast_hash": "5b942feb8f680d78de7de1e48b5d76ff",
+    "mtime": 1787597749.9547272,
+    "ast_hash": "9ea54b55c77b18a3c4c2e87452e2cdff",
     "semantic_hash": ""
   },
   "components/profile/ParentDashboard.tsx": {
-    "mtime": 1786227227.9674623,
-    "ast_hash": "3b882418bfff84b68b70814b8113c014",
+    "mtime": 1787499863.3976922,
+    "ast_hash": "18795f3c5e4071dec52e6fdc45a07a79",
     "semantic_hash": ""
   },
   "components/profile/PollMessage.tsx": {
@@ -585,9 +585,9 @@
     "semantic_hash": "800f1837acaa81b62bd204ff63c87ba2"
   },
   "components/profile/coach/DailyHub.tsx": {
-    "mtime": 1785493098.1018076,
-    "ast_hash": "af465058de0daad9d7de8426e103fe74",
-    "semantic_hash": "af465058de0daad9d7de8426e103fe74"
+    "mtime": 1787502150.069278,
+    "ast_hash": "e47d7a8d80405162d9c9958bfd234e66",
+    "semantic_hash": ""
   },
   "components/profile/coach/MessagesTab.tsx": {
     "mtime": 1785493098.0659828,
@@ -600,14 +600,14 @@
     "semantic_hash": "4d74f0e418b606b579df40218704259b"
   },
   "components/profile/coach/TrialsTab.tsx": {
-    "mtime": 1785493098.0579824,
-    "ast_hash": "2395a70524d0a84b30642871b4cf5bc4",
-    "semantic_hash": "2395a70524d0a84b30642871b4cf5bc4"
+    "mtime": 1787474112.8455408,
+    "ast_hash": "e54e9d6e40fe58bc9380aaed325ab7e5",
+    "semantic_hash": ""
   },
   "components/shop/ShopToast.tsx": {
-    "mtime": 1785495789.6570218,
-    "ast_hash": "bc4c4b464c4f3bd721b1c3f0c9f64a97",
-    "semantic_hash": "bc4c4b464c4f3bd721b1c3f0c9f64a97"
+    "mtime": 1786976622.5170658,
+    "ast_hash": "aa4b4786da557b231846bc28ea61acd0",
+    "semantic_hash": ""
   },
   "constants/SupportFAQ.ts": {
     "mtime": 1785495707.4675255,
@@ -620,24 +620,24 @@
     "semantic_hash": "5f56b24eaf33f34831b32e268f604142"
   },
   "context/AuthContext.tsx": {
-    "mtime": 1785677844.3482292,
-    "ast_hash": "0d3502e616730e816c129f30adbee01d",
+    "mtime": 1786912529.4605901,
+    "ast_hash": "0c1f72dd401ac053dd822509a33cae7c",
     "semantic_hash": ""
   },
   "context/CartContext.tsx": {
-    "mtime": 1785494870.686701,
-    "ast_hash": "735fb2e9c504f807128928edfd1b88ea",
-    "semantic_hash": "735fb2e9c504f807128928edfd1b88ea"
+    "mtime": 1786976613.2420645,
+    "ast_hash": "45fd98eef792980746e3dd115f2bfb9f",
+    "semantic_hash": ""
   },
   "context/FavoritesContext.tsx": {
-    "mtime": 1785494870.6807008,
-    "ast_hash": "0bd4a4568a3c773824af3476edef6e8c",
-    "semantic_hash": "0bd4a4568a3c773824af3476edef6e8c"
+    "mtime": 1786700857.1059115,
+    "ast_hash": "c549b667ddb60edb907df314a4880068",
+    "semantic_hash": ""
   },
   "context/ThemeContext.tsx": {
-    "mtime": 1785494870.685702,
-    "ast_hash": "0f0b8e19efbc141bf536bdc185d3fc30",
-    "semantic_hash": "0f0b8e19efbc141bf536bdc185d3fc30"
+    "mtime": 1786700907.5358098,
+    "ast_hash": "e24dcdf923d7b66500e42590a601ee70",
+    "semantic_hash": ""
   },
   "data/programs.ts": {
     "mtime": 1785583835.024486,
@@ -660,9 +660,9 @@
     "semantic_hash": "e733e627e10c0159508485ddb55c74a2"
   },
   "index.tsx": {
-    "mtime": 1785493098.0349941,
-    "ast_hash": "098b9b7611f49ccb7a99d723c2953a29",
-    "semantic_hash": "098b9b7611f49ccb7a99d723c2953a29"
+    "mtime": 1786699531.750762,
+    "ast_hash": "40259d578f051935297b14c0cb526aac",
+    "semantic_hash": ""
   },
   "lib/supabase.ts": {
     "mtime": 1785495435.6239462,
@@ -680,14 +680,14 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786357638.235258,
-    "ast_hash": "9a5d5cbbaace87963695d0fbca0df888",
+    "mtime": 1787040430.5456593,
+    "ast_hash": "20aa036098bcde4e10b959ad0daa65db",
     "semantic_hash": ""
   },
   "pages/Broadcasts.tsx": {
-    "mtime": 1785494870.646736,
-    "ast_hash": "00a94e69b8de1536fbd9eec91809721b",
-    "semantic_hash": "00a94e69b8de1536fbd9eec91809721b"
+    "mtime": 1786919912.9749453,
+    "ast_hash": "b222786e37db19a40fbcb286ca52abfb",
+    "semantic_hash": ""
   },
   "pages/Favorites.tsx": {
     "mtime": 1785494870.642735,
@@ -695,8 +695,8 @@
     "semantic_hash": "8c37588307fad44e92b355b4fa36dbc3"
   },
   "pages/ProductDetails.tsx": {
-    "mtime": 1786205519.5875244,
-    "ast_hash": "a7b0c309036c58f844d5d6b4abc6f196",
+    "mtime": 1787444773.0448012,
+    "ast_hash": "1b8d25f47109df8053ad88902bd56a92",
     "semantic_hash": ""
   },
   "pages/ResetPassword.tsx": {
@@ -705,13 +705,13 @@
     "semantic_hash": "27e13739676e52a4dc05baa2af08e703"
   },
   "pages/Shop.tsx": {
-    "mtime": 1786205512.2202318,
-    "ast_hash": "719ee7b7c09b4f3eb3b175731e34a482",
+    "mtime": 1787441357.2838712,
+    "ast_hash": "af0bf81275b908669ce1debf515517d3",
     "semantic_hash": ""
   },
   "pages/admin/AdminAchievements.tsx": {
-    "mtime": 1785692950.5077393,
-    "ast_hash": "c03c023fef3df8b77aef5d657f05e0e0",
+    "mtime": 1787386832.615985,
+    "ast_hash": "af3ba10b86ab7a4797aa0f9160eb635b",
     "semantic_hash": ""
   },
   "pages/admin/AdminBans.tsx": {
@@ -720,9 +720,9 @@
     "semantic_hash": "596441ec33a6e453074db17f7420116e"
   },
   "pages/admin/AdminBroadcasts.tsx": {
-    "mtime": 1785494870.5707285,
-    "ast_hash": "35b9b8bdc47c3b9c65613b46fa884ce1",
-    "semantic_hash": "35b9b8bdc47c3b9c65613b46fa884ce1"
+    "mtime": 1786918925.7152815,
+    "ast_hash": "2b6180037e0305d567576bc801645180",
+    "semantic_hash": ""
   },
   "pages/admin/AdminComments.tsx": {
     "mtime": 1785494870.5697281,
@@ -730,23 +730,23 @@
     "semantic_hash": "84ef5ea4bbb12aca3dfa1ecac6038e3f"
   },
   "pages/admin/AdminDashboard.tsx": {
-    "mtime": 1785495799.2829428,
-    "ast_hash": "c9f806888d40f8c034acb725173ba1f4",
-    "semantic_hash": "c9f806888d40f8c034acb725173ba1f4"
+    "mtime": 1787434599.797886,
+    "ast_hash": "c118880d982fa5cd0373a7984790dbce",
+    "semantic_hash": ""
   },
   "pages/admin/AdminDirections.tsx": {
-    "mtime": 1785597997.721335,
-    "ast_hash": "59911296fa891bbb32c16d9b0a899162",
+    "mtime": 1786702046.0282118,
+    "ast_hash": "b797856bc3d52e6b13425f6e8b460653",
     "semantic_hash": ""
   },
   "pages/admin/AdminFinance.tsx": {
-    "mtime": 1785494870.5461354,
-    "ast_hash": "0f38f7721c8911f88b8f9b4eeb3c5816",
-    "semantic_hash": "0f38f7721c8911f88b8f9b4eeb3c5816"
+    "mtime": 1787471503.723278,
+    "ast_hash": "5eb604ea77f17c7d96e22b69a64413c9",
+    "semantic_hash": ""
   },
   "pages/admin/AdminGroups.tsx": {
-    "mtime": 1785625704.4797137,
-    "ast_hash": "7fb1f92f585ebf740ab07a774e5e9a68",
+    "mtime": 1787501999.0262024,
+    "ast_hash": "45ed0951967ee6119a3d41981e31c3c4",
     "semantic_hash": ""
   },
   "pages/admin/AdminMessages.tsx": {
@@ -765,9 +765,9 @@
     "semantic_hash": "4e8b5bf1d0a208048cc6c4f91e15a3f5"
   },
   "pages/admin/AdminRequests.tsx": {
-    "mtime": 1785494870.3556323,
-    "ast_hash": "5b71bef0a1e45976f75f162f5fb5e2e1",
-    "semantic_hash": "5b71bef0a1e45976f75f162f5fb5e2e1"
+    "mtime": 1787474032.0543873,
+    "ast_hash": "d1880aaf3fa063210b7b4cbd3500f724",
+    "semantic_hash": ""
   },
   "pages/admin/AdminReviews.tsx": {
     "mtime": 1785494870.7683609,
@@ -780,9 +780,9 @@
     "semantic_hash": "2f240ea4644170d9ddb56ad403f4e1d4"
   },
   "pages/admin/AdminSchedule.tsx": {
-    "mtime": 1785494870.7471929,
-    "ast_hash": "e20c5b063d875f2df993e54647d424a9",
-    "semantic_hash": "e20c5b063d875f2df993e54647d424a9"
+    "mtime": 1787501096.1576774,
+    "ast_hash": "8cdb1ba380d154724e018a2463ee1985",
+    "semantic_hash": ""
   },
   "pages/admin/AdminSettings.tsx": {
     "mtime": 1785494870.7397268,
@@ -790,8 +790,8 @@
     "semantic_hash": "5293c0da40df5b85fa4ef3d3346e093b"
   },
   "pages/admin/AdminShop.tsx": {
-    "mtime": 1785611444.7695224,
-    "ast_hash": "b734e79b81bbcfed39c3f06d380be81c",
+    "mtime": 1787441047.2815094,
+    "ast_hash": "8ccb6be567762426a334e23e9806bcba",
     "semantic_hash": ""
   },
   "pages/admin/AdminTeam.tsx": {
@@ -800,8 +800,8 @@
     "semantic_hash": "97b8ec135b93b61c06a2da06680c26d2"
   },
   "pages/admin/AdminUsers.tsx": {
-    "mtime": 1786205704.2331634,
-    "ast_hash": "04ab53507b2e7c1a9d287bec7250625c",
+    "mtime": 1787444781.5691833,
+    "ast_hash": "23a8483a2d3795e4ea3fd484d8674f3f",
     "semantic_hash": ""
   },
   "pages/admin/DirectorDashboard.tsx": {
@@ -835,8 +835,8 @@
     "semantic_hash": "92922baf0b9cb92c38ed3b10b76799da"
   },
   "server.js": {
-    "mtime": 1786207634.4211867,
-    "ast_hash": "ba90ff8a16aaecea1ff0596d85945964",
+    "mtime": 1787588074.2419379,
+    "ast_hash": "bf1de8ee716873c1ed207038222672b1",
     "semantic_hash": ""
   },
   "services/aiActionResolver.ts": {
@@ -845,13 +845,13 @@
     "semantic_hash": ""
   },
   "services/scheduleSync.ts": {
-    "mtime": 1785495122.4911723,
-    "ast_hash": "d4b5fd619250ba061ba5e79f8b3fabbd",
-    "semantic_hash": "d4b5fd619250ba061ba5e79f8b3fabbd"
+    "mtime": 1787437028.787119,
+    "ast_hash": "9bf68770c3c08ab02800e5f8a5733ce8",
+    "semantic_hash": ""
   },
   "services/userService.ts": {
-    "mtime": 1785680853.5017943,
-    "ast_hash": "46caf1e050e9c92fbeb66a1c5e6f8d90",
+    "mtime": 1787439630.668715,
+    "ast_hash": "b975d09c1bd605f1078835afdd743ad2",
     "semantic_hash": ""
   },
   "src/data/programs.ts": {
@@ -875,8 +875,8 @@
     "semantic_hash": "4f94e11fc9a57cea6b04a13dc42b954a"
   },
   "tsconfig.json": {
-    "mtime": 1786227740.0840502,
-    "ast_hash": "d6b3d3672e99fd14bf777b7174c956d3",
+    "mtime": 1787333117.9428952,
+    "ast_hash": "509f8b7944117fb1d49cc16e7c3be1de",
     "semantic_hash": ""
   },
   "types.ts": {
@@ -885,9 +885,9 @@
     "semantic_hash": ""
   },
   "types/broadcast.ts": {
-    "mtime": 1785495785.7336035,
-    "ast_hash": "2a8492ab21c2712d253179a7f1c68f50",
-    "semantic_hash": "2a8492ab21c2712d253179a7f1c68f50"
+    "mtime": 1786917668.7410336,
+    "ast_hash": "35423d9f1633165e70d76ef0ad4d4807",
+    "semantic_hash": ""
   },
   "types/index.ts": {
     "mtime": 1785581037.2760618,
@@ -905,13 +905,13 @@
     "semantic_hash": "728d19b3d043f719ba7a12d4af297081"
   },
   "types/shop.ts": {
-    "mtime": 1785496430.185725,
-    "ast_hash": "99462c4f9da4fba85762ae27cec90929",
-    "semantic_hash": "99462c4f9da4fba85762ae27cec90929"
+    "mtime": 1787440970.5558596,
+    "ast_hash": "9fb3a2c1772d3ff3db08f646e32e3413",
+    "semantic_hash": ""
   },
   "types/user.ts": {
-    "mtime": 1786205693.9628234,
-    "ast_hash": "3098f6111eeb1a0a7f77ec39dc3d38c7",
+    "mtime": 1787433227.4046614,
+    "ast_hash": "06ab7819393b8cf0fa002330c36c8192",
     "semantic_hash": ""
   },
   "utils/SoundManager.ts": {
@@ -925,18 +925,18 @@
     "semantic_hash": "f8a1d907b419dbeada800369ea5e5d87"
   },
   "utils/studentLinking.ts": {
-    "mtime": 1785679048.4296577,
-    "ast_hash": "5867d55c1ecb019ff9d8be68fc9f980d",
+    "mtime": 1787499716.5562518,
+    "ast_hash": "7e396b76e906d2d2ff82504fae84352a",
     "semantic_hash": ""
   },
   "vercel.json": {
-    "mtime": 1785493097.904471,
-    "ast_hash": "59ac66f13b905b0f2d8bc1a686a41254",
-    "semantic_hash": "59ac66f13b905b0f2d8bc1a686a41254"
+    "mtime": 1786699691.7623215,
+    "ast_hash": "9e8000a093758e8a9d470a862796099a",
+    "semantic_hash": ""
   },
   "vite.config.ts": {
-    "mtime": 1786227582.3751519,
-    "ast_hash": "fd9070282abd9340fd07265ee18cfd7f",
+    "mtime": 1786699674.3203926,
+    "ast_hash": "d6fdaec267053e65e275f39b25fddf4f",
     "semantic_hash": ""
   },
   ".claude-flow/metrics/codebase-map.json": {
@@ -2080,8 +2080,8 @@
     "semantic_hash": ""
   },
   "public/logo-og.png": {
-    "mtime": 1785579685.2355278,
-    "ast_hash": "7fe61b3dd8ef856adeb19958d20afac6",
+    "mtime": 1785579685.097741,
+    "ast_hash": "42b55ea8060e383bb4992e9373fa81f9",
     "semantic_hash": ""
   },
   "public/pavel-yakupov-gold.png": {
@@ -2120,8 +2120,8 @@
     "semantic_hash": ""
   },
   "components/admin/ExcelImportModal.tsx": {
-    "mtime": 1786205677.2695243,
-    "ast_hash": "95279068798dabacd21310b2fdc13e74",
+    "mtime": 1787436562.2125275,
+    "ast_hash": "4f86bdff07ee35699db05a295d5aa420",
     "semantic_hash": ""
   },
   "PROJECT_CONTEXT.md": {
@@ -2135,48 +2135,48 @@
     "semantic_hash": ""
   },
   "public/shop/sparta-backpack.png": {
-    "mtime": 1785611229.1512008,
-    "ast_hash": "0f97402299fde400bfdd16a430c8092a",
+    "mtime": 1786978659.2302601,
+    "ast_hash": "1715144ccd91481b77eb44f1c53bd47b",
     "semantic_hash": ""
   },
   "public/shop/sparta-hat-snood.png": {
-    "mtime": 1785611228.9428287,
-    "ast_hash": "0fd8aaa223d1e96c2ef78347b0ce09ab",
+    "mtime": 1786978839.0423286,
+    "ast_hash": "08c71bb5cf80d8e17740a1190ef0e251",
     "semantic_hash": ""
   },
   "public/shop/sparta-puff-black.png": {
-    "mtime": 1785611344.8020537,
-    "ast_hash": "8cde96e81421974726fd2ec991fad5e6",
+    "mtime": 1786978394.2635398,
+    "ast_hash": "6243e90c49cee255ef059ede5e11595f",
     "semantic_hash": ""
   },
   "public/shop/sparta-puff-lion-black.png": {
-    "mtime": 1785611359.1365905,
-    "ast_hash": "4b2b92272de74857324667bdc5511042",
+    "mtime": 1786978264.0094128,
+    "ast_hash": "978488fe3bd9161e05867811b1c69cad",
     "semantic_hash": ""
   },
   "public/shop/sparta-puff-lion-green.png": {
-    "mtime": 1785611374.5353613,
-    "ast_hash": "c6beab7e5e988392bf0e5caa787d888e",
+    "mtime": 1786978280.9034169,
+    "ast_hash": "9867d03f396625d0f355b11e26e295b3",
     "semantic_hash": ""
   },
   "public/shop/sparta-tracksuit.png": {
-    "mtime": 1785611229.0540242,
-    "ast_hash": "4f637c8811d3d0783f1176a36ec516a1",
+    "mtime": 1786978554.507632,
+    "ast_hash": "0cb55d84fc615b05916f84efc1b153e7",
     "semantic_hash": ""
   },
   "public/shop/sparta-uniform-green.png": {
-    "mtime": 1785611229.050921,
-    "ast_hash": "3f75adf11a4fbc38671feedf364d7064",
+    "mtime": 1786978515.4159238,
+    "ast_hash": "5b5579a185c94ff2e201f63728e1953c",
     "semantic_hash": ""
   },
   "public/shop/sparta-uniform-grey.png": {
-    "mtime": 1785611229.0676112,
-    "ast_hash": "8b0b7a5ae640eee8a70586c23d9c121f",
+    "mtime": 1786979120.9309175,
+    "ast_hash": "92dd39014d3b5292d5a03963124ffb52",
     "semantic_hash": ""
   },
   "components/dashboard/KidDashboard.tsx": {
-    "mtime": 1786227211.7805874,
-    "ast_hash": "2de1955a3f6a458a8d8b8b65e5ae67fe",
+    "mtime": 1787594684.083617,
+    "ast_hash": "f60a05c2ffde5d5acf9b78301eb3f12d",
     "semantic_hash": ""
   },
   "hooks/useAuth.ts": {
@@ -2195,13 +2195,13 @@
     "semantic_hash": ""
   },
   "components/profile/MessageBubble.tsx": {
-    "mtime": 1785700683.5898767,
-    "ast_hash": "545b83ce7f27f32ac79813e73912c4ef",
+    "mtime": 1787586562.7606974,
+    "ast_hash": "3a5a444ee4a0d66b80b63d639fdbbbe3",
     "semantic_hash": ""
   },
   "components/profile/MessageContextMenu.tsx": {
-    "mtime": 1785701116.1338713,
-    "ast_hash": "1ded805557b5310f9fe3d44b0bd1e537",
+    "mtime": 1787596074.0867536,
+    "ast_hash": "6d3700c3e8ae40c01708d2acfb6ebaa6",
     "semantic_hash": ""
   },
   "components/profile/AudioRecorder.tsx": {
@@ -2215,8 +2215,8 @@
     "semantic_hash": ""
   },
   "hooks/useChatMessages.ts": {
-    "mtime": 1785760674.8678784,
-    "ast_hash": "178b1cfc8398c3071b3abc3fa29c0879",
+    "mtime": 1787586510.1696358,
+    "ast_hash": "f9ff38c20ef630ce118eb512a9413d70",
     "semantic_hash": ""
   },
   "components/profile/SpartaEmojiPicker.tsx": {
@@ -3825,8 +3825,8 @@
     "semantic_hash": ""
   },
   "components/ChildBenefitsSection.tsx": {
-    "mtime": 1786345371.9864533,
-    "ast_hash": "970fa5f5eb50d9fae64d7645ac69485a",
+    "mtime": 1786785643.8939047,
+    "ast_hash": "7ffe9c81e07638564f37efdb7fe87ab4",
     "semantic_hash": ""
   },
   "components/EditProfileModal.tsx": {
@@ -3845,18 +3845,18 @@
     "semantic_hash": ""
   },
   "components/WhyUsPositioningSection.tsx": {
-    "mtime": 1786345594.8598778,
-    "ast_hash": "dc191c22bc09213a35ddcad1773a6352",
+    "mtime": 1786367174.6272666,
+    "ast_hash": "6b739d7f14b53335cac81770f70a7204",
     "semantic_hash": ""
   },
   "components/dashboard/DashboardShell.tsx": {
-    "mtime": 1786206792.018044,
-    "ast_hash": "7ffc5a5a9b3a11761a9d1943684c3266",
+    "mtime": 1787339260.45665,
+    "ast_hash": "9ef37c2228175635d78fd1a2847580ae",
     "semantic_hash": ""
   },
   "context/NotificationContext.tsx": {
-    "mtime": 1785865300.3247247,
-    "ast_hash": "f3b6f85016f0ddaa9d85886b6c862aa9",
+    "mtime": 1786700879.1594763,
+    "ast_hash": "42bcc93c9f87774eabb464be38a8cde1",
     "semantic_hash": ""
   },
   "hooks/usePresence.ts": {
@@ -3865,8 +3865,8 @@
     "semantic_hash": ""
   },
   "mcp_config.json": {
-    "mtime": 1786356439.3530636,
-    "ast_hash": "7b15d9fcc346fd04488d93b934e86803",
+    "mtime": 1787035397.498419,
+    "ast_hash": "0cea0976dc749422dd3fde92b67f8679",
     "semantic_hash": ""
   },
   "services/headroomService.ts": {
@@ -3875,8 +3875,8 @@
     "semantic_hash": ""
   },
   "skills-lock.json": {
-    "mtime": 1786356953.7702389,
-    "ast_hash": "6c8b13f23f93287f0964ace091c7d1a5",
+    "mtime": 1786796182.2040818,
+    "ast_hash": "db27260529f538400d88ef408ec64bf5",
     "semantic_hash": ""
   },
   "sparta-demo-video/hyperframes.json": {
@@ -6617,6 +6617,1606 @@
   ".agents/skills/media-use/audio/assets/sfx/whoosh.mp3": {
     "mtime": 1786356944.325278,
     "ast_hash": "e7e7597bde6612d2ac1a24d5b5590b18",
+    "semantic_hash": ""
+  },
+  "api/robokassa-check.js": {
+    "mtime": 1787333639.3118887,
+    "ast_hash": "1751f485e46c072eba5964e044340aa1",
+    "semantic_hash": ""
+  },
+  "api/robokassa-create.js": {
+    "mtime": 1787333628.0851188,
+    "ast_hash": "b21efb4ae3076edb2f309234a7ad0380",
+    "semantic_hash": ""
+  },
+  "components/BroadcastCountdown.tsx": {
+    "mtime": 1786919619.1127846,
+    "ast_hash": "30c400cb985f79e4efb085452f641b79",
+    "semantic_hash": ""
+  },
+  "components/CitySelector.tsx": {
+    "mtime": 1786373748.599051,
+    "ast_hash": "b4305b3be5eab8c405e0a673aeb9e83d",
+    "semantic_hash": ""
+  },
+  "components/DirectStreamBroadcaster.tsx": {
+    "mtime": 1786966525.775374,
+    "ast_hash": "d4c118ccbf8211e939857a816de3cd07",
+    "semantic_hash": ""
+  },
+  "components/DirectStreamViewer.tsx": {
+    "mtime": 1786920710.5914195,
+    "ast_hash": "72d70ed0e3ff228b79cbfd90934d90a1",
+    "semantic_hash": ""
+  },
+  "components/ParentAccountSetupModal.tsx": {
+    "mtime": 1786912506.3984332,
+    "ast_hash": "e34fee074ee39d754a88d62c9dcbc80b",
+    "semantic_hash": ""
+  },
+  "components/PostStreamModal.tsx": {
+    "mtime": 1786918894.3973038,
+    "ast_hash": "c54e5fd23bd93d9f18c0dcb3bd03bec2",
+    "semantic_hash": ""
+  },
+  "components/ReviewCommentsDrawer.tsx": {
+    "mtime": 1786991390.3405805,
+    "ast_hash": "fc33e05cd6c17736340f75703a4fc8be",
+    "semantic_hash": ""
+  },
+  "components/RouteModal.tsx": {
+    "mtime": 1786908874.9995687,
+    "ast_hash": "6de877d5579a77e4798970d9a9751aae",
+    "semantic_hash": ""
+  },
+  "components/SmoothFlipCounter.tsx": {
+    "mtime": 1786918885.9807801,
+    "ast_hash": "26f584ef1b5ff880acf9e2c7afb56393",
+    "semantic_hash": ""
+  },
+  "components/Sparta3DIcons.tsx": {
+    "mtime": 1786919556.256645,
+    "ast_hash": "2d752fd90008d66fb2d2d517f9e19ab4",
+    "semantic_hash": ""
+  },
+  "components/VoiceReviewPlayer.tsx": {
+    "mtime": 1786988400.153725,
+    "ast_hash": "41f9570582a41bbc25d80a7f2f52cb2e",
+    "semantic_hash": ""
+  },
+  "constants/cities.ts": {
+    "mtime": 1786908519.5402792,
+    "ast_hash": "368b966f9c990ed059ecb86ad79173dc",
+    "semantic_hash": ""
+  },
+  "constants/spartaSchedule.ts": {
+    "mtime": 1786907160.0639305,
+    "ast_hash": "3aaead977d4c17c7a114251f77d4f49d",
+    "semantic_hash": ""
+  },
+  "context/CityContext.tsx": {
+    "mtime": 1786700811.017291,
+    "ast_hash": "8e963e810a6c23fccecf4e63798ff446",
+    "semantic_hash": ""
+  },
+  "pages/CameraStreamer.tsx": {
+    "mtime": 1786963893.6703112,
+    "ast_hash": "efff5b65701868466cec9b0fd5729c07",
+    "semantic_hash": ""
+  },
+  "pages/admin/AdminLocations.tsx": {
+    "mtime": 1786375652.9736204,
+    "ast_hash": "c4646278af936f02474425e6559e648c",
+    "semantic_hash": ""
+  },
+  "types/city.ts": {
+    "mtime": 1786373935.6436498,
+    "ast_hash": "5a92c51241a8b086be129cbefa92cc15",
+    "semantic_hash": ""
+  },
+  "utils/lazyWithRetry.ts": {
+    "mtime": 1786699511.8191612,
+    "ast_hash": "94161bde2531cf89276e58b16fe55232",
+    "semantic_hash": ""
+  },
+  "utils/mediaStorage.ts": {
+    "mtime": 1786986729.8402584,
+    "ast_hash": "7b8a58929a1d0f7a0cd8ec2467bdc2c9",
+    "semantic_hash": ""
+  },
+  "utils/robokassa.ts": {
+    "mtime": 1786916680.5685794,
+    "ast_hash": "3e3b6f7f341b86c2f6e2915b758de040",
+    "semantic_hash": ""
+  },
+  "utils/supabaseStorage.ts": {
+    "mtime": 1786989248.252173,
+    "ast_hash": "db4a439ea56817361ce74fe34aefc6c3",
+    "semantic_hash": ""
+  },
+  "utils/webrtcStream.ts": {
+    "mtime": 1786966392.2710304,
+    "ast_hash": "ec91b47c866d22bab1896432715764b6",
+    "semantic_hash": ""
+  },
+  "HANDOFF_NEXT_SESSION.md": {
+    "mtime": 1786371296.3241558,
+    "ast_hash": "c8b4081f784c9c9d88ed128392ff844a",
+    "semantic_hash": ""
+  },
+  "skill-observations/last-review-date.txt": {
+    "mtime": 1786363956.233167,
+    "ast_hash": "dd34e94b95abf02e177b48f0366099d9",
+    "semantic_hash": ""
+  },
+  "skill-observations/log.md": {
+    "mtime": 1786513556.880823,
+    "ast_hash": "312bc0701274e3e979b5bdd510b0355a",
+    "semantic_hash": ""
+  },
+  "public/benefit_mentor.jpg": {
+    "mtime": 1786779224.9008234,
+    "ast_hash": "380bc2a812476a7c393a72888ee5753b",
+    "semantic_hash": ""
+  },
+  "public/benefit_physics.jpg": {
+    "mtime": 1786779189.4061246,
+    "ast_hash": "d69d1139f9f8233f7563f592e52e6569",
+    "semantic_hash": ""
+  },
+  "public/benefit_team.jpg": {
+    "mtime": 1786779261.8589978,
+    "ast_hash": "b4ce88b286eb75cb413781fe614bb64a",
+    "semantic_hash": ""
+  },
+  "public/logo-gold.png": {
+    "mtime": 1785579685.097741,
+    "ast_hash": "42b55ea8060e383bb4992e9373fa81f9",
+    "semantic_hash": ""
+  },
+  "public/sparta_beginner_tariff.jpg": {
+    "mtime": 1786387773.2737086,
+    "ast_hash": "27e639ed78969a1d190eb86ac6324278",
+    "semantic_hash": ""
+  },
+  "public/sparta_champion_tariff.jpg": {
+    "mtime": 1786387884.4641564,
+    "ast_hash": "bcc07369910c408a216c9a6e29476c35",
+    "semantic_hash": ""
+  },
+  "public/sparta_clean_beginner_tariff.jpg": {
+    "mtime": 1786393180.5274074,
+    "ast_hash": "320266940f88dbe662688fd1a697e715",
+    "semantic_hash": ""
+  },
+  "public/sparta_clean_champion_tariff.jpg": {
+    "mtime": 1786393291.8415248,
+    "ast_hash": "655835b83e747f5a1cf1d1ef9e4ba1d4",
+    "semantic_hash": ""
+  },
+  "public/sparta_clean_pro_tariff.jpg": {
+    "mtime": 1786393252.477679,
+    "ast_hash": "3fd30dd1e70dc81de6493753d1eadfba",
+    "semantic_hash": ""
+  },
+  "public/sparta_logo_beginner_tariff.jpg": {
+    "mtime": 1786389001.665406,
+    "ast_hash": "d402aaa2c5410e141867c4e1c268f35d",
+    "semantic_hash": ""
+  },
+  "public/sparta_logo_champion_tariff.jpg": {
+    "mtime": 1786389072.562804,
+    "ast_hash": "b1080b6b6bd1aabee6850c348a2d42ef",
+    "semantic_hash": ""
+  },
+  "public/sparta_logo_pro_tariff.jpg": {
+    "mtime": 1786389023.3919835,
+    "ast_hash": "187b28f80b39cfffc2e9639d1b0dcfcf",
+    "semantic_hash": ""
+  },
+  "public/sparta_pro_tariff.jpg": {
+    "mtime": 1786387830.3408058,
+    "ast_hash": "276d9593bf0ee8b9a673a8aff322127e",
+    "semantic_hash": ""
+  },
+  "public/sparta_real_award.jpg": {
+    "mtime": 1786780198.6482165,
+    "ast_hash": "37a4e1bd89eb87b7669a6fd113f46795",
+    "semantic_hash": ""
+  },
+  "public/sparta_real_dynamics.jpg": {
+    "mtime": 1786780069.6699798,
+    "ast_hash": "25135a7d8d6b7c7786ab09db556a548f",
+    "semantic_hash": ""
+  },
+  "public/sparta_real_huddle.jpg": {
+    "mtime": 1786780308.5825405,
+    "ast_hash": "05cde0c4589b90d8cb220102b5754912",
+    "semantic_hash": ""
+  },
+  "api/robokassa-result.js": {
+    "mtime": 1787333559.191443,
+    "ast_hash": "a16d552170167157156b1f1086ab82bd",
+    "semantic_hash": ""
+  },
+  "components/admin/SavedListsModal.tsx": {
+    "mtime": 1787437965.432542,
+    "ast_hash": "d81714bc136e1adb23a39ac4bf3c3fee",
+    "semantic_hash": ""
+  },
+  "components/dev/DeveloperConsole.tsx": {
+    "mtime": 1787338297.1440089,
+    "ast_hash": "9032b793c567058a7901e41a0a2b5f0a",
+    "semantic_hash": ""
+  },
+  "components/profile/AnnouncementModal.tsx": {
+    "mtime": 1787586827.0213766,
+    "ast_hash": "04cdc58010162cf55d5bbd353a9d07e2",
+    "semantic_hash": ""
+  },
+  "components/profile/ChatAttachmentMenu.tsx": {
+    "mtime": 1787587419.3545294,
+    "ast_hash": "8287a9f443c807ff02eebd3cdfc5e8d7",
+    "semantic_hash": ""
+  },
+  "components/profile/ChatProfileDrawer.tsx": {
+    "mtime": 1787590038.115596,
+    "ast_hash": "0be0cadee0f9d9c39c91f9c1bea7cb36",
+    "semantic_hash": ""
+  },
+  "components/profile/FamilyScheduleSection.tsx": {
+    "mtime": 1787500902.150278,
+    "ast_hash": "56655cad0031b20b8ff27c37dbd1af49",
+    "semantic_hash": ""
+  },
+  "components/profile/MediaUploadTrayModal.tsx": {
+    "mtime": 1787591026.8130102,
+    "ast_hash": "2efd1ba66dfa615b793ab3b715ba7920",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaCreateStoryModal.tsx": {
+    "mtime": 1787597493.165489,
+    "ast_hash": "539e1fe32642e688baeb714d66a5c4a0",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaMediaGalleryModal.tsx": {
+    "mtime": 1787591867.418931,
+    "ast_hash": "9aa582db6692a87a39d1b5374c39a722",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaReactions.tsx": {
+    "mtime": 1787596040.8993046,
+    "ast_hash": "5658285fd886c15c12a0bcab75acd5c6",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaStoriesViewer.tsx": {
+    "mtime": 1787597470.8971345,
+    "ast_hash": "46f86893a13cabbe4af5249062a788d5",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/CoachQuickPlanner.tsx": {
+    "mtime": 1787342448.0038474,
+    "ast_hash": "6f717ef8f009e73220dc0bd0d03e08cc",
+    "semantic_hash": ""
+  },
+  "components/schedule/ScheduleOverrideModal.tsx": {
+    "mtime": 1787502030.323682,
+    "ast_hash": "62ccc23bf495a9cb4b8f0f201945a879",
+    "semantic_hash": ""
+  },
+  "e2e/capture-banners.spec.ts": {
+    "mtime": 1787034636.0414896,
+    "ast_hash": "56b20cca1b5cf62b8d246f5274181c48",
+    "semantic_hash": ""
+  },
+  "scripts/capture-banners-puppeteer.mjs": {
+    "mtime": 1787034674.9858966,
+    "ast_hash": "1f10de892b38888f4d7e697f2619356c",
+    "semantic_hash": ""
+  },
+  "scripts/capture-banners.mjs": {
+    "mtime": 1787034572.3973138,
+    "ast_hash": "47648d363ed84bdbcfb3e78a7608f0da",
+    "semantic_hash": ""
+  },
+  "scripts/capture-camp-banner.mjs": {
+    "mtime": 1787038903.8162348,
+    "ast_hash": "b0605f27597e1e8e3ecdfaeabe782b49",
+    "semantic_hash": ""
+  },
+  "scripts/capture-complete-banner.mjs": {
+    "mtime": 1787038156.4484332,
+    "ast_hash": "d508268a9b23440f141631450010966e",
+    "semantic_hash": ""
+  },
+  "scripts/capture-dance-banner.mjs": {
+    "mtime": 1787045634.9471874,
+    "ast_hash": "a128bac58a40a2379c1f0ad8aa322d84",
+    "semantic_hash": ""
+  },
+  "scripts/capture-grunge-banner.mjs": {
+    "mtime": 1787037020.6386833,
+    "ast_hash": "36306db171c520866ab4bbaf1a2e35bf",
+    "semantic_hash": ""
+  },
+  "scripts/capture-pinterest-banner.mjs": {
+    "mtime": 1787036559.238421,
+    "ast_hash": "0ad545a3d69d71bf7f4830be63bd6cae",
+    "semantic_hash": ""
+  },
+  "scripts/clean-duo-backdrop.py": {
+    "mtime": 1787332689.039242,
+    "ast_hash": "d344f3966247a94db1e78fd384ec59f5",
+    "semantic_hash": ""
+  },
+  "scripts/create_framed_petals.py": {
+    "mtime": 1787079551.6295333,
+    "ast_hash": "e5e990ae07008c63fae7c4a458c5ceb6",
+    "semantic_hash": ""
+  },
+  "scripts/crop-tennis-icons.py": {
+    "mtime": 1787321055.0291262,
+    "ast_hash": "037b5139be22781bfddf8c27cbbd82ed",
+    "semantic_hash": ""
+  },
+  "scripts/export-all-posters-master.mjs": {
+    "mtime": 1787328708.992028,
+    "ast_hash": "7e49814a06b831446ae7d4c8f9bfa91e",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-camp.mjs": {
+    "mtime": 1787058324.785772,
+    "ast_hash": "5a086065646f761a0e7f91ee8505322f",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-dance-editorial.mjs": {
+    "mtime": 1787049710.975461,
+    "ast_hash": "40b51768fd41c35d74c84ac683974a11",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-dance-lotus-editorial.mjs": {
+    "mtime": 1787121609.7253776,
+    "ast_hash": "6487f60a0de64b44a880962fe81f7ba4",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-dance-lotus.mjs": {
+    "mtime": 1787063597.1508994,
+    "ast_hash": "f6a1af218cb6a84f21580eaea06a4ed8",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-dance-magazine.mjs": {
+    "mtime": 1787062104.4783542,
+    "ast_hash": "65dade4b2160a748027d0b0827187af8",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-dance-modern.mjs": {
+    "mtime": 1787060565.2313917,
+    "ast_hash": "998558c94beca81ad8c9b0b2a50264fe",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-dance.mjs": {
+    "mtime": 1787048762.05001,
+    "ast_hash": "417a7ef197f2f2db7d6c9ca6f992dc16",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-sparta-a4.mjs": {
+    "mtime": 1787328257.0251994,
+    "ast_hash": "be29187c46e66a2502f7ca63099a6dcd",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-sparta-duo-concept.mjs": {
+    "mtime": 1787331918.2509358,
+    "ast_hash": "9122698552b18ba00b6590f24f078d8a",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-sparta-duo-rollup.mjs": {
+    "mtime": 1787329543.3017535,
+    "ast_hash": "2ac30562f739a50712179a74da9b56e9",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-sparta-football.mjs": {
+    "mtime": 1787310541.6531003,
+    "ast_hash": "36a7d865f8a8ff4838cac8679f4c8c0f",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-sparta-tennis-mint.mjs": {
+    "mtime": 1787328294.9708045,
+    "ast_hash": "d7390fc02024fbc51e75fecf619916b9",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-sparta-tennis.mjs": {
+    "mtime": 1787233756.9639657,
+    "ast_hash": "1b784972562cbd188257844aba8aa7aa",
+    "semantic_hash": ""
+  },
+  "scripts/export-pdf-stage-realism.mjs": {
+    "mtime": 1787059682.3540092,
+    "ast_hash": "6f16b3a58a6d93cb603607ff29ab5105",
+    "semantic_hash": ""
+  },
+  "scripts/export_crests.py": {
+    "mtime": 1787082075.1831276,
+    "ast_hash": "d4a3d67ef8ec65f87b0f2d4c1185f639",
+    "semantic_hash": ""
+  },
+  "scripts/extract-tennis-icons.py": {
+    "mtime": 1787320893.3197067,
+    "ast_hash": "723ba84ab3dd113e1fbf934cc5f7c525",
+    "semantic_hash": ""
+  },
+  "scripts/extract-transparent-petals.mjs": {
+    "mtime": 1787075557.1703837,
+    "ast_hash": "70259c1c8e58eb5c420b323704d7aa71",
+    "semantic_hash": ""
+  },
+  "scripts/extract_crest.py": {
+    "mtime": 1787081831.0465746,
+    "ast_hash": "148aede1e422f564c44479eef1aed1c2",
+    "semantic_hash": ""
+  },
+  "scripts/extract_crest_clean.py": {
+    "mtime": 1787081884.7219236,
+    "ast_hash": "f694ecb03750198d392a4f803f7480b8",
+    "semantic_hash": ""
+  },
+  "scripts/extract_exact_crest.py": {
+    "mtime": 1787081962.8485916,
+    "ast_hash": "ff4be1d85a050a04acddf013d3d4a00b",
+    "semantic_hash": ""
+  },
+  "scripts/figma-generate-banners.js": {
+    "mtime": 1787034903.9539108,
+    "ast_hash": "c0e4976c5551ac6cbd178559722dd4ed",
+    "semantic_hash": ""
+  },
+  "scripts/figma-generate-pinterest.js": {
+    "mtime": 1787036840.5073054,
+    "ast_hash": "c1cf8d6b859f2c8acb3119c5115369d7",
+    "semantic_hash": ""
+  },
+  "scripts/generate-real-qr.mjs": {
+    "mtime": 1787040475.1921785,
+    "ast_hash": "52671c91ba9310fd6dbe1081204cd9b8",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-camp.mjs": {
+    "mtime": 1787058363.917983,
+    "ast_hash": "27c95be14766597c2f125849b0dcaba3",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-complete.mjs": {
+    "mtime": 1787038240.8213632,
+    "ast_hash": "38c8b00464acfea126654b858fa51304",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-dance-lotus-editorial.mjs": {
+    "mtime": 1787082162.7000773,
+    "ast_hash": "d8273ffb51d2990037b399747759c0ca",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-dance-lotus.mjs": {
+    "mtime": 1787063550.7687368,
+    "ast_hash": "868e8d9e94f2cb1b851f2b619d302e7b",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-dance-magazine.mjs": {
+    "mtime": 1787062604.7403998,
+    "ast_hash": "2ed9564b4c6131134656c78a70ab4cf8",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-dance-modern.mjs": {
+    "mtime": 1787060607.8089776,
+    "ast_hash": "6de8457c846546f615bdffe8c84e17d0",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-dance.mjs": {
+    "mtime": 1787048834.4910846,
+    "ast_hash": "e8d8e0bd376a79a8d2349b1e25184774",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-editorial.mjs": {
+    "mtime": 1787049791.938181,
+    "ast_hash": "83eb71df2ca1827bf873815514d7c23e",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-grunge.mjs": {
+    "mtime": 1787037475.947298,
+    "ast_hash": "e791ac39809cd6438ea6138675af1cbc",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-duo-concept.mjs": {
+    "mtime": 1787331794.7843177,
+    "ast_hash": "1d61674a7e2eb34590a08fd30ed9c101",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-duo-rollup.mjs": {
+    "mtime": 1787329703.034344,
+    "ast_hash": "911be6846addb24bad1a7062a4396abb",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-football-a4.mjs": {
+    "mtime": 1787327431.1477437,
+    "ast_hash": "48412dc672df8d1cb714bc82ee4d807b",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-football.mjs": {
+    "mtime": 1787327538.325645,
+    "ast_hash": "896ab892a302647e69da6339185ddb1f",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-tennis-a4.mjs": {
+    "mtime": 1787329008.181049,
+    "ast_hash": "f6673a5e39be38eb49532193e1aeb985",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-tennis-mint.mjs": {
+    "mtime": 1787329063.0787454,
+    "ast_hash": "0d0ecc8ed8e118060dda5e4bbf74a5c9",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-tennis.mjs": {
+    "mtime": 1787238452.1966777,
+    "ast_hash": "2a14d90ee1d002a238adc8ce494e9f44",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-stage-realism.mjs": {
+    "mtime": 1787059693.649962,
+    "ast_hash": "d87839492bfb89cba1283d8ada481cbc",
+    "semantic_hash": ""
+  },
+  "scripts/generate_new_qr.py": {
+    "mtime": 1787081105.7634058,
+    "ast_hash": "991d7883368a6c546b33282eb426c851",
+    "semantic_hash": ""
+  },
+  "scripts/inspect_logo.py": {
+    "mtime": 1787082017.3289466,
+    "ast_hash": "d9bb7620f976e6975bf73887791ee112",
+    "semantic_hash": ""
+  },
+  "scripts/prepare-a4-backgrounds.py": {
+    "mtime": 1787325903.0382876,
+    "ast_hash": "82187a9b5e851e5a64255e78e39ed6bb",
+    "semantic_hash": ""
+  },
+  "scripts/process-petals-transparent.mjs": {
+    "mtime": 1787073232.0755002,
+    "ast_hash": "dcd5134ea9ffd426517c23258507cbae",
+    "semantic_hash": ""
+  },
+  "scripts/process_petals.py": {
+    "mtime": 1787075686.2004614,
+    "ast_hash": "df392001b61773f690ba45718483fd7e",
+    "semantic_hash": ""
+  },
+  "scripts/rebuild-duo-heroes.mjs": {
+    "mtime": 1787330761.2809794,
+    "ast_hash": "669b943f9ad585e71814a94f4ebba356",
+    "semantic_hash": ""
+  },
+  "scripts/render-3d-petals.mjs": {
+    "mtime": 1787072793.097581,
+    "ast_hash": "8323b116a7b057d588243dfa92c80d4a",
+    "semantic_hash": ""
+  },
+  "scripts/slice-3d-icons.mjs": {
+    "mtime": 1787060472.8881156,
+    "ast_hash": "124151167262c99290d54a21fde57940",
+    "semantic_hash": ""
+  },
+  "scripts/sync-html.mjs": {
+    "mtime": 1787043956.7067847,
+    "ast_hash": "bc5673a9b8f08dd5f7dcb7c85bbc2cee",
+    "semantic_hash": ""
+  },
+  "scripts/tint_qr.py": {
+    "mtime": 1787080976.9251707,
+    "ast_hash": "4d7fec74621e027c2bedad5527959a12",
+    "semantic_hash": ""
+  },
+  "services/scheduleOverrides.ts": {
+    "mtime": 1787500767.3303232,
+    "ast_hash": "cddc8281b2b6a9a5dd3a9d2a9569ad59",
+    "semantic_hash": ""
+  },
+  "test-results/.last-run.json": {
+    "mtime": 1787034653.7784846,
+    "ast_hash": "ff6d5dab1dfd50cea584142bc288ce9e",
+    "semantic_hash": ""
+  },
+  "utils/receiptVerifier.ts": {
+    "mtime": 1787471347.5480375,
+    "ast_hash": "c6425ec91248b9762307a7d66530d75c",
+    "semantic_hash": ""
+  },
+  "public/banner-complete.html": {
+    "mtime": 1787038142.6397934,
+    "ast_hash": "31da149ee43da72a4ecf6d0f2c0cb6e0",
+    "semantic_hash": ""
+  },
+  "public/banner-dance-editorial.html": {
+    "mtime": 1787049671.4650257,
+    "ast_hash": "08c369de4e49b86be11b937cfd76f00d",
+    "semantic_hash": ""
+  },
+  "public/banner-dance-lotus-solo.html": {
+    "mtime": 1787063519.4192886,
+    "ast_hash": "2d98dab9f48ec0a2216963585fbae370",
+    "semantic_hash": ""
+  },
+  "public/banner-dance-lotus-soma.html": {
+    "mtime": 1787048754.531169,
+    "ast_hash": "1a0d6f8d097cada88b6325e0e4cfbb70",
+    "semantic_hash": ""
+  },
+  "public/banner-dance-magazine.html": {
+    "mtime": 1787062553.3839083,
+    "ast_hash": "91f3316e67b6a92f9c2747b545f6958d",
+    "semantic_hash": ""
+  },
+  "public/banner-dance-modern-studio.html": {
+    "mtime": 1787061671.1064255,
+    "ast_hash": "958accacaa5749f845b49d314560ba64",
+    "semantic_hash": ""
+  },
+  "public/banner-dance-stage-realism.html": {
+    "mtime": 1787059652.5959303,
+    "ast_hash": "2ad6f67b5dcbc66a61898d680b7cba5b",
+    "semantic_hash": ""
+  },
+  "public/banner-grunge-style.html": {
+    "mtime": 1787037001.1719887,
+    "ast_hash": "d8541f987abc237b2b74cd857ae3bd09",
+    "semantic_hash": ""
+  },
+  "public/banner-lotus-editorial-poster.html": {
+    "mtime": 1787082130.7902079,
+    "ast_hash": "479d4965a7cc7c9405f3af149f2684ab",
+    "semantic_hash": ""
+  },
+  "public/banner-pinterest-style.html": {
+    "mtime": 1787036694.74292,
+    "ast_hash": "4607ddf8b7dfc8fdf604cabcd04df0d9",
+    "semantic_hash": ""
+  },
+  "public/banner-print-standalone.html": {
+    "mtime": 1787058330.8552003,
+    "ast_hash": "5bfb226b9e631f1799b35d61a4d7e85f",
+    "semantic_hash": ""
+  },
+  "public/banner-sparta-tennis-poster.html": {
+    "mtime": 1787129996.3196468,
+    "ast_hash": "633884336bbc120375d1199c95f000f2",
+    "semantic_hash": ""
+  },
+  "public/banner-summer-camp-style.html": {
+    "mtime": 1787044371.7710886,
+    "ast_hash": "7967840d644921bc90da5328b7caf642",
+    "semantic_hash": ""
+  },
+  "public/banners-view.html": {
+    "mtime": 1787034558.8283486,
+    "ast_hash": "35b84960cf26a2351c259f16e5a3eef7",
+    "semantic_hash": ""
+  },
+  "public/dance-editorial-standalone.html": {
+    "mtime": 1787049739.1161234,
+    "ast_hash": "ccc44758dedff63393879d44385f356b",
+    "semantic_hash": ""
+  },
+  "public/dance-modern-standalone.html": {
+    "mtime": 1787062641.468312,
+    "ast_hash": "0c9e831f44f45b07d5cd0ebe01a04c4a",
+    "semantic_hash": ""
+  },
+  "public/dance-print-standalone.html": {
+    "mtime": 1787048789.8889575,
+    "ast_hash": "8de0a7dd1408a61005229238c6accbe8",
+    "semantic_hash": ""
+  },
+  "public/dance-stage-standalone.html": {
+    "mtime": 1787059746.9388597,
+    "ast_hash": "2cd370ed7ffd86a163946fca4d52d4cf",
+    "semantic_hash": ""
+  },
+  "public/lotus-ballet-standalone.html": {
+    "mtime": 1787063649.5730557,
+    "ast_hash": "9f0e22defc39dad16556296ae86537d6",
+    "semantic_hash": ""
+  },
+  "public/lotus-editorial-swiss-standalone.html": {
+    "mtime": 1787082130.7902079,
+    "ast_hash": "479d4965a7cc7c9405f3af149f2684ab",
+    "semantic_hash": ""
+  },
+  "public/sparta-duo-diagonal-concept.html": {
+    "mtime": 1787331628.0309696,
+    "ast_hash": "b1fab509d1454ee4a66a301f529a31f6",
+    "semantic_hash": ""
+  },
+  "public/sparta-duo-rollup-master.html": {
+    "mtime": 1787330373.9678798,
+    "ast_hash": "4d54858ad087a30fc3639e188265314d",
+    "semantic_hash": ""
+  },
+  "public/sparta-football-a4.html": {
+    "mtime": 1787327401.9464245,
+    "ast_hash": "4be4dc0a2210dd2681adbedee87ca0a2",
+    "semantic_hash": ""
+  },
+  "public/sparta-football-poster.html": {
+    "mtime": 1787327648.7161326,
+    "ast_hash": "2c1063664d0c9211edf46f639a8d4422",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-a4.html": {
+    "mtime": 1787328890.2053022,
+    "ast_hash": "b04f95292ceda0ae2f378d9a4bed2e09",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-editorial-poster.html": {
+    "mtime": 1787238433.1969888,
+    "ast_hash": "646bc14ec50131ec065da4e2467a2b22",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-mint-poster.html": {
+    "mtime": 1787328959.0808244,
+    "ast_hash": "dc5d9a43fdde3d631632dd039f1c95ef",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-standalone.html": {
+    "mtime": 1787238461.5469992,
+    "ast_hash": "c498ef4b03d56cb48bc9bdbaddd40ece",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/01-football-3d-gift-transparent.png": {
+    "mtime": 1787257679.257563,
+    "ast_hash": "2e9e02c7f92b7b9fdcae46cfd43f40d5",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/01-football-3d-gift.jpg": {
+    "mtime": 1787257679.2189114,
+    "ast_hash": "347794a53e888f1e860c094af54175e9",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/02-football-3d-ice-transparent.png": {
+    "mtime": 1787257679.3684704,
+    "ast_hash": "65e0c200ee4a84ae00d15f0b053e6e50",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/02-football-3d-ice.jpg": {
+    "mtime": 1787257679.328385,
+    "ast_hash": "355933c4a40dbb00e4124b11cbbfafbf",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/03-football-3d-shield-transparent.png": {
+    "mtime": 1787257679.491702,
+    "ast_hash": "dadef3cdd5ac930fd6cbaa0d9d4449a7",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/03-football-3d-shield.jpg": {
+    "mtime": 1787257679.432852,
+    "ast_hash": "81e3297ffad0c1f2bccd8e74630f424e",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/04-football-3d-tax-13-transparent.png": {
+    "mtime": 1787257679.5954278,
+    "ast_hash": "3cee40234acfeaddfe686678766ab88f",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/04-football-3d-tax-13.jpg": {
+    "mtime": 1787257679.555271,
+    "ast_hash": "f136098b847ff6a0ab27fe19d1591d5c",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons-nobg/gift-3d-nobg.png": {
+    "mtime": 1787310390.39843,
+    "ast_hash": "5e2f0e155b2f0bf7bcd39e59448974cc",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons-nobg/ice-3d-nobg.png": {
+    "mtime": 1787310390.2949624,
+    "ast_hash": "da9a75a4584bab366d40224044b9c68f",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons-nobg/shield-3d-nobg.png": {
+    "mtime": 1787310390.3469942,
+    "ast_hash": "db32a045bfef6c3464e05ac718aec9e1",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons-nobg/tax-3d-nobg.png": {
+    "mtime": 1787310390.2529714,
+    "ast_hash": "b8e2b08f26497112c0380a5c4cb851e0",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/01-3d-gift-box-transparent.png": {
+    "mtime": 1787236689.294755,
+    "ast_hash": "dc7dfac8e28e7c546c9b73892b71af0c",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/01-3d-gift-box.jpg": {
+    "mtime": 1787236689.1292894,
+    "ast_hash": "5f4175f6fed38b54e040d69a8aa985b4",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/01-3d-icon-gift-transparent.png": {
+    "mtime": 1787236414.474773,
+    "ast_hash": "9f213892a90ef20e33708bea2d7b2cc5",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/01-3d-icon-gift.jpg": {
+    "mtime": 1787236414.233986,
+    "ast_hash": "239c2c63e4366c032becc94e4e8b54af",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/02-3d-ice-cube-transparent.png": {
+    "mtime": 1787236689.413248,
+    "ast_hash": "8f876ecefe9f4262ba31d8192bcf8382",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/02-3d-ice-cube.jpg": {
+    "mtime": 1787236689.2967546,
+    "ast_hash": "1fddddfc55a0718c9e512fd5c3e31406",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/02-3d-icon-ice-transparent.png": {
+    "mtime": 1787236414.608691,
+    "ast_hash": "f49c504f3f3a31cb78a6bb2f896671bc",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/02-3d-icon-ice.jpg": {
+    "mtime": 1787236414.4757721,
+    "ast_hash": "15677757800c311735bff204f3550ae9",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/03-3d-icon-shield-transparent.png": {
+    "mtime": 1787236414.6725807,
+    "ast_hash": "b38480debbd1b9b9e0ec796ba0beff38",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/03-3d-icon-shield.jpg": {
+    "mtime": 1787236414.6096828,
+    "ast_hash": "ff0e54b2052190eca2c63b4fc349d24d",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/03-3d-shield-license-transparent.png": {
+    "mtime": 1787236689.498841,
+    "ast_hash": "bfe6580a3bb5c1238ffcce84e00da482",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/03-3d-shield-license.jpg": {
+    "mtime": 1787236689.4142528,
+    "ast_hash": "03e964819cdc31d191bce29f803fee5e",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/04-3d-coin-deduction-transparent.png": {
+    "mtime": 1787236689.5688584,
+    "ast_hash": "4f677bf0e116959aa6daa84214888f24",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/04-3d-coin-deduction.jpg": {
+    "mtime": 1787236689.5008435,
+    "ast_hash": "3bd6b86c6a00beb41c2f618515a64895",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/04-3d-icon-coin-transparent.png": {
+    "mtime": 1787236414.7756042,
+    "ast_hash": "0ea6486e872e1c0a2cba5fd3daa8a1e1",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/3d-icons/04-3d-icon-coin.jpg": {
+    "mtime": 1787236414.673584,
+    "ast_hash": "0fcd37a1c02a86b529b97ee7c3670b69",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-ballerina-lotus.jpg": {
+    "mtime": 1787045810.7664354,
+    "ast_hash": "f8a8f05152d930affc2609dfcfeb0af0",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-contemporary-soma.jpg": {
+    "mtime": 1787045859.6925335,
+    "ast_hash": "40c657bf4e7ec2ee96a46a0fb11c0cd0",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-editorial-banner.png": {
+    "mtime": 1787049747.8259616,
+    "ast_hash": "590456e172e00bae0a7b93f30027951b",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-editorial-banner.svg": {
+    "mtime": 1787049821.1507542,
+    "ast_hash": "c8bff9756779dfc24ff97ed693fdbbf6",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-hall-children-bg.jpg": {
+    "mtime": 1787059584.1592884,
+    "ast_hash": "325dc8a97a076ea56fd97c4c9dade11f",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-kids-hero-split.jpg": {
+    "mtime": 1787059934.6831136,
+    "ast_hash": "6195e825822836ef9a26f3afe4e14b78",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-lotus-soma-banner.png": {
+    "mtime": 1787048800.068177,
+    "ast_hash": "38799bba26f56b52188db4359bfbfa5e",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-lotus-soma-banner.svg": {
+    "mtime": 1787048840.206631,
+    "ast_hash": "4125feac09a59efc9389e9ea7723fb43",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-silk-bg.jpg": {
+    "mtime": 1787046917.433669,
+    "ast_hash": "71fc2ce220c4a3b69d12b90235443bba",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-stage-realism-banner.png": {
+    "mtime": 1787062649.7800097,
+    "ast_hash": "16c68a2df718fdcea9f87d2e2ae5e1bd",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dance-stage-realism-banner.svg": {
+    "mtime": 1787062641.1362731,
+    "ast_hash": "b9a1751fc33971608c54b6beb17018a3",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dancer-ballerina-cutout.png": {
+    "mtime": 1787047407.93744,
+    "ast_hash": "369b24975d91cc95992e3188ef413023",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/dancer-contemporary-cutout.png": {
+    "mtime": 1787047407.9394383,
+    "ast_hash": "110d517cbc6ae8719dc959e4930e98b5",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/field-stadium-bg.jpg": {
+    "mtime": 1787039122.5881526,
+    "ast_hash": "f7b13a18b8aad87d90657093775e07e4",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/football-3d-icons/01-football-3d-gift-transparent.png": {
+    "mtime": 1787257679.2175248,
+    "ast_hash": "2e9e02c7f92b7b9fdcae46cfd43f40d5",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/football-3d-icons/01-football-3d-gift.jpg": {
+    "mtime": 1787257679.1765192,
+    "ast_hash": "347794a53e888f1e860c094af54175e9",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/football-3d-icons/02-football-3d-ice-transparent.png": {
+    "mtime": 1787257679.3273134,
+    "ast_hash": "65e0c200ee4a84ae00d15f0b053e6e50",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/football-3d-icons/02-football-3d-ice.jpg": {
+    "mtime": 1787257679.2866108,
+    "ast_hash": "355933c4a40dbb00e4124b11cbbfafbf",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/football-3d-icons/03-football-3d-shield-transparent.png": {
+    "mtime": 1787257679.4316545,
+    "ast_hash": "dadef3cdd5ac930fd6cbaa0d9d4449a7",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/football-3d-icons/03-football-3d-shield.jpg": {
+    "mtime": 1787257679.389646,
+    "ast_hash": "81e3297ffad0c1f2bccd8e74630f424e",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/football-3d-icons/04-football-3d-tax-13-transparent.png": {
+    "mtime": 1787257679.554214,
+    "ast_hash": "3cee40234acfeaddfe686678766ab88f",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/football-3d-icons/04-football-3d-tax-13.jpg": {
+    "mtime": 1787257679.513191,
+    "ast_hash": "f136098b847ff6a0ab27fe19d1591d5c",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-ballet.png": {
+    "mtime": 1787061333.578293,
+    "ast_hash": "4129b4c02ddbf9bce94ea3bb1e58b6de",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-freeze.jpg": {
+    "mtime": 1787058176.0604768,
+    "ast_hash": "b20bf9fec0adba3d153dea3acd65565b",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-gift.jpg": {
+    "mtime": 1787041233.8232265,
+    "ast_hash": "4f244c443af09da841cad80e304604e1",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-license.jpg": {
+    "mtime": 1787041241.3034265,
+    "ast_hash": "04e86ebd73d6fc2dad90124b68ea2acd",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-lightning.png": {
+    "mtime": 1787061381.4537764,
+    "ast_hash": "b0c6e3598bac8730b8a31cd2c049766e",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-pass.jpg": {
+    "mtime": 1787041050.986337,
+    "ast_hash": "e5a9681e3afa3e6b4b7ce2aa2e0ed3a3",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-rhythm.png": {
+    "mtime": 1787061368.819304,
+    "ast_hash": "ea846f1e36c3e9d42533a1c3b45eec37",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-sneaker.png": {
+    "mtime": 1787061400.1835403,
+    "ast_hash": "5255945067286eebfc73de82bb684575",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-stretch.png": {
+    "mtime": 1787061353.5098512,
+    "ast_hash": "b86e9edc3b8c8e92093f0027d6dd04f1",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-trophy.jpg": {
+    "mtime": 1787041067.7449942,
+    "ast_hash": "9d7c7877672a5bd063e155eef3752cc9",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-trophy.png": {
+    "mtime": 1787061412.2083302,
+    "ast_hash": "12210c956092b1dfbcf9f929c6aa8e0d",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-3d-zero.jpg": {
+    "mtime": 1787041224.5920284,
+    "ast_hash": "8f3133e800770e7b53a6c4bfd3b6eaa9",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-coin.png": {
+    "mtime": 1787130262.1903083,
+    "ast_hash": "c6e70d9ae370e3ad41ba1af3e7378330",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-gift-nobg.png": {
+    "mtime": 1787310463.9827583,
+    "ast_hash": "5e2f0e155b2f0bf7bcd39e59448974cc",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-gift.png": {
+    "mtime": 1787130262.1811807,
+    "ast_hash": "1579f1ead2e5a916abcb17592912ed4a",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-ice-nobg.png": {
+    "mtime": 1787310463.984503,
+    "ast_hash": "da9a75a4584bab366d40224044b9c68f",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-ice.png": {
+    "mtime": 1787130262.1849668,
+    "ast_hash": "c730a1ec371b177c0b097a0d858f22c3",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-license-nobg.png": {
+    "mtime": 1787310463.9860735,
+    "ast_hash": "db32a045bfef6c3464e05ac718aec9e1",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-nalogi-nobg.png": {
+    "mtime": 1787310463.9871454,
+    "ast_hash": "b8e2b08f26497112c0380a5c4cb851e0",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon-shield.png": {
+    "mtime": 1787130262.1876075,
+    "ast_hash": "fa0bc6418e57c41661900509e57c7515",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon_coin_3d.png": {
+    "mtime": 1787130713.1198485,
+    "ast_hash": "3bb9af261a1713a0e044c82988795f0a",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon_gift_3d.png": {
+    "mtime": 1787130713.0895228,
+    "ast_hash": "f7a71ab1421866d456f85cb5369eb1d3",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon_ice_3d.png": {
+    "mtime": 1787130713.0998187,
+    "ast_hash": "6b9884cbe8bae972e8b340da17b6347f",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/icon_shield_3d.png": {
+    "mtime": 1787130713.1100762,
+    "ast_hash": "3a03decd13cb80b3df9c331c4ac6cb98",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-ballet-crest-gold.png": {
+    "mtime": 1787082098.3069606,
+    "ast_hash": "6ad91c9f5c168f7d95be477e95f42c05",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-ballet-hero-art.jpg": {
+    "mtime": 1787063322.7231853,
+    "ast_hash": "76b3e6ce8721ec6e539d079e2a0eb220",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-ballet-master-banner.png": {
+    "mtime": 1787063656.8292885,
+    "ast_hash": "d2809a7a0c83a3dce68d9c13cf4f18e3",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-ballet-master-banner.svg": {
+    "mtime": 1787063649.30258,
+    "ast_hash": "1c374cd5d4a6eb4d0712d3b685638872",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-editorial-bg.jpg": {
+    "mtime": 1787063990.477881,
+    "ast_hash": "63f5fc75f6160b426f3464de57ad7ba4",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-editorial-swiss-banner.png": {
+    "mtime": 1787082209.0719912,
+    "ast_hash": "40acc807b85eaae26f3562909835ec36",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-editorial-swiss-banner.svg": {
+    "mtime": 1787082188.4433582,
+    "ast_hash": "94885f1fc117cd97c79677f1ea9bbe2b",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-flower-crest-gold.png": {
+    "mtime": 1787082098.308824,
+    "ast_hash": "a2aca733300e6dd2cf58a2a751dde48d",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-icon-only-gold.png": {
+    "mtime": 1787081991.5154798,
+    "ast_hash": "ec24271be25951db7b964361660d2330",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-petals-real-3d.png": {
+    "mtime": 1787073063.9568717,
+    "ast_hash": "df26896872614f83713733dd6f9ce284",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/lotus-petals-transparent.png": {
+    "mtime": 1787079596.1500785,
+    "ast_hash": "0c77166f71a1254bbcc9e2fdaea1ab24",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/poster-a4-result.png": {
+    "mtime": 1787034698.595609,
+    "ast_hash": "d06e97963acb62264da747e12a26cf42",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/ref_phone_crop.png": {
+    "mtime": 1787130751.4743855,
+    "ast_hash": "1aba104eb1388d51fa2ff1c005ec1a4f",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/ref_pin_crop.png": {
+    "mtime": 1787130751.478987,
+    "ast_hash": "0887886dbf978c0fcb16c1a2380fa441",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/rollup-result.png": {
+    "mtime": 1787034701.3691266,
+    "ast_hash": "fa822c10d3bdccb4d945f9ed84166e52",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/soccer-ball-splash.jpg": {
+    "mtime": 1787039136.40984,
+    "ast_hash": "9a609719c6a190814430a4a776055192",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-boy-soccer.jpg": {
+    "mtime": 1787034368.175776,
+    "ast_hash": "3dbf5b517234c6072e6bf4e4d403fbab",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-complete-banner.png": {
+    "mtime": 1787038189.0284874,
+    "ast_hash": "2524d1492787e28fee2f36d1372c6728",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-complete-banner.svg": {
+    "mtime": 1787038306.4158356,
+    "ast_hash": "bd6f4b4dbaa0534addc4fd3e92d91ffd",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-crest-gold.png": {
+    "mtime": 1787135699.1785111,
+    "ast_hash": "4aa089e070724ca8821e76c64781ee63",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-crest-grass.jpg": {
+    "mtime": 1787034389.0595274,
+    "ast_hash": "fb5132f124274f289085644ff2cc4108",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-duo-clean-bg.jpg": {
+    "mtime": 1787332844.1599455,
+    "ast_hash": "32ec69751d8b8f06aa309d5c97447683",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-duo-concept-master.jpg": {
+    "mtime": 1787331470.4859376,
+    "ast_hash": "f6e6f59bd3e62c149635b94ba9f8f067",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-duo-diagonal-poster.png": {
+    "mtime": 1787332077.1512184,
+    "ast_hash": "5079fe6ec792c0d54171d1574bf80635",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-duo-diagonal-vector.svg": {
+    "mtime": 1787332067.9570365,
+    "ast_hash": "ec2ea022d82a442a6b4b2c9da38874ec",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-duo-rollup-poster.png": {
+    "mtime": 1787324737.1070507,
+    "ast_hash": "fe64798b7db15c5e6d7de490bdac09c0",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-duo-rollup-vector-banner.svg": {
+    "mtime": 1787324728.476182,
+    "ast_hash": "a9fe59cf9003f95db70142c546b3cadf",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-duo-rollup-vector.svg": {
+    "mtime": 1787330373.999955,
+    "ast_hash": "761474e94f20495059628414bc1d4e76",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-duo-rollup.png": {
+    "mtime": 1787330382.344977,
+    "ast_hash": "201e5e8fb12a25af64d507feb3f55cba",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-football-a4-clean-bg.jpg": {
+    "mtime": 1787325936.3220115,
+    "ast_hash": "baf17b82bd959e2aa19be143a2b5dc0d",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-football-a4-poster.png": {
+    "mtime": 1787329099.7072716,
+    "ast_hash": "fa0814fe0cf730cd93d390e5420b449f",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-football-a4-vector.svg": {
+    "mtime": 1787328745.123466,
+    "ast_hash": "328a77e0bf7daa3fb610212a96292a1c",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-football-clean-bg.jpg": {
+    "mtime": 1787255873.0398278,
+    "ast_hash": "ac27874c935de51cb1c87894e80a1043",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-football-crest-crop.png": {
+    "mtime": 1787255936.5166862,
+    "ast_hash": "bb9825afdc0229b221689f99d0dabda3",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-football-poster.png": {
+    "mtime": 1787329113.257713,
+    "ast_hash": "3bfd7c2b4165edb53927826679b94213",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-football-vector-banner.svg": {
+    "mtime": 1787328745.325378,
+    "ast_hash": "3603cd27711e4cf801a2eac74912e9b7",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-grunge-banner.png": {
+    "mtime": 1787037060.2320218,
+    "ast_hash": "98b23f0b180d6fe4b81cffd5237a66be",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-icon-coin-trimmed.png": {
+    "mtime": 1787132644.076588,
+    "ast_hash": "084e5656491f83f8e16525cb6b063d55",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-icon-coin.png": {
+    "mtime": 1787132437.466715,
+    "ast_hash": "374f68841636568651ecb7c50a7cadd8",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-icon-gift-trimmed.png": {
+    "mtime": 1787132643.9963026,
+    "ast_hash": "2418d2f560e11de84a0f6494d1bc127c",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-icon-gift.png": {
+    "mtime": 1787132437.4657135,
+    "ast_hash": "090c5bbd85a6ee23cfb9df4faa15a12b",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-icon-ice-trimmed.png": {
+    "mtime": 1787132644.01806,
+    "ast_hash": "cd96129beebe41827ccd7aaac283f225",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-icon-ice.png": {
+    "mtime": 1787132437.4687152,
+    "ast_hash": "175ea7c74171d247a96c384481be20db",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-icon-shield-trimmed.png": {
+    "mtime": 1787132644.0466602,
+    "ast_hash": "6e5b3b6654bdf6dc586fdd8f0153c933",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-icon-shield.png": {
+    "mtime": 1787132437.4677145,
+    "ast_hash": "7cf3a99fee0bd2e1c4f9ee6a911c6f62",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-pinterest-banner.png": {
+    "mtime": 1787036739.9413557,
+    "ast_hash": "460473e3afd79522c3b506406cce3318",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-poster-a4.svg": {
+    "mtime": 1787035573.5993996,
+    "ast_hash": "8b335f960555d62e5346478baedc39b8",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-poster-grunge.svg": {
+    "mtime": 1787037514.145915,
+    "ast_hash": "d609d3f2fe03a2a7fbfb4495e84b4b7d",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-poster-pinterest.svg": {
+    "mtime": 1787036617.4898932,
+    "ast_hash": "3d3b6d61610233b8a2568afec73bc504",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-summer-camp-banner.png": {
+    "mtime": 1787058340.3446147,
+    "ast_hash": "caff63683ff0918193c998845b49cfac",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-summer-camp-banner.svg": {
+    "mtime": 1787058368.7242906,
+    "ast_hash": "b82b2f29c531b727b8029f15f3e402bf",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-a4-clean-bg.jpg": {
+    "mtime": 1787325936.2751825,
+    "ast_hash": "5756f3a82ec30e867dec17b28d4f3b2c",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-a4-poster.png": {
+    "mtime": 1787329105.3769941,
+    "ast_hash": "5fa1284b5baa65e1f45ae7d0759af804",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-a4-vector.svg": {
+    "mtime": 1787329093.3294857,
+    "ast_hash": "236d32c7582f6facfcc7081137f97210",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-bg.png": {
+    "mtime": 1787129196.2257593,
+    "ast_hash": "b0ac323d94f28a7040c1e350adeb54ae",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-clean-bg-full.png": {
+    "mtime": 1787131262.4921944,
+    "ast_hash": "1a9622f9f896259f91be79cbbe560369",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-clean-bg.jpg": {
+    "mtime": 1787130228.6023185,
+    "ast_hash": "dfb1ff27d7ca07e8281153096742dd7b",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-foreground-bokeh.png": {
+    "mtime": 1787237653.9831936,
+    "ast_hash": "52bc7e760af5ef5593fe45a48ce6b7af",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-girl-clean-bg.jpg": {
+    "mtime": 1787312327.2000923,
+    "ast_hash": "30113684959f3f5f610fd658ee3889ae",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-mint-poster.png": {
+    "mtime": 1787329120.4983377,
+    "ast_hash": "d29399bbf1820ba61cf571a77f965256",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-mint-vector-banner.svg": {
+    "mtime": 1787329093.4302492,
+    "ast_hash": "b48ad8921aaa2ffbda1763a4e6f98101",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-net-fill.jpg": {
+    "mtime": 1787237861.0959494,
+    "ast_hash": "b9539a765abdf2429b680ecbc9a5a594",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-poster .svg": {
+    "mtime": 1787133907.0366364,
+    "ast_hash": "126b54ba4fc05f1540e11895cc19d0bb",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-poster.png": {
+    "mtime": 1787238472.2301006,
+    "ast_hash": "318f5d7119dcd1d758b2a36d310fc401",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-poster.svg": {
+    "mtime": 1787238461.1198306,
+    "ast_hash": "c3d7beaa853d78d92021508726031812",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-ref-full.png": {
+    "mtime": 1787128596.4547436,
+    "ast_hash": "cb740e662b55f65834e3d9cf410cd046",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-sunny-bg.png": {
+    "mtime": 1787234225.2167106,
+    "ast_hash": "192b97248e48044f4d0d489002311725",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-sunny-clean-photo.png": {
+    "mtime": 1787234004.2979913,
+    "ast_hash": "5d7830b5d0be886002c7afe588144de3",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-vector-banner.svg": {
+    "mtime": 1787238461.0882459,
+    "ast_hash": "c3d7beaa853d78d92021508726031812",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/tennis-icon-gift.png": {
+    "mtime": 1787321465.9062219,
+    "ast_hash": "ca0b92c25c7a8bb4d78cd7802319550e",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/tennis-icon-ice.png": {
+    "mtime": 1787321465.931182,
+    "ast_hash": "e292153fcf60a1d23cd047a7c894829d",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/tennis-icon-license.png": {
+    "mtime": 1787321465.9544756,
+    "ast_hash": "37d69315c538dff4590ecd839aac1305",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/tennis-icon-tax.png": {
+    "mtime": 1787321465.9715936,
+    "ast_hash": "73eae81cd052deea1ae5d7364e69d181",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/test_clean_photo_thumb.png": {
+    "mtime": 1787234046.4696665,
+    "ast_hash": "c3418363de1c57e972486a68076dfc49",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/test_composite_thumb.png": {
+    "mtime": 1787130571.5029068,
+    "ast_hash": "df46540e3f7ceb6e07dfd03d87ac8dec",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/test_img1_thumb.png": {
+    "mtime": 1787130462.5458715,
+    "ast_hash": "02a27c4bdc260962fe09329f92d6b573",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/test_img2_thumb.png": {
+    "mtime": 1787130462.7330182,
+    "ast_hash": "8749e7d00bb467598101c55f02e7ebe9",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/vk-qr-real.png": {
+    "mtime": 1787081119.5577424,
+    "ast_hash": "e80cc9734bccb05f2b48a60384a5a51a",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/vk-qr-real.svg": {
+    "mtime": 1787040480.807144,
+    "ast_hash": "d9efc9dd35b3a2abf1d64ef16b87947c",
+    "semantic_hash": ""
+  },
+  "public/sparta-duo-diagonal-master.svg": {
+    "mtime": 1787332067.9700062,
+    "ast_hash": "ec2ea022d82a442a6b4b2c9da38874ec",
+    "semantic_hash": ""
+  },
+  "public/sparta-duo-diagonal-poster.png": {
+    "mtime": 1787332080.36718,
+    "ast_hash": "9e3eb81f0b6931a77ca1448be12f11f2",
+    "semantic_hash": ""
+  },
+  "public/sparta-duo-rollup-master.svg": {
+    "mtime": 1787330374.0173101,
+    "ast_hash": "761474e94f20495059628414bc1d4e76",
+    "semantic_hash": ""
+  },
+  "public/sparta-duo-rollup-poster.png": {
+    "mtime": 1787324740.1146882,
+    "ast_hash": "ed711955fe53a5d94a4e07eee0e4d89e",
+    "semantic_hash": ""
+  },
+  "public/sparta-duo-rollup.jpg": {
+    "mtime": 1787336376.0938678,
+    "ast_hash": "a8ef7db058c53c52b494806ecb599428",
+    "semantic_hash": ""
+  },
+  "public/sparta-duo-rollup.png": {
+    "mtime": 1787330385.2129266,
+    "ast_hash": "4bb18de8d01499ffc0bdcd590e41926f",
+    "semantic_hash": ""
+  },
+  "public/sparta-football-a4.jpg": {
+    "mtime": 1787336375.542485,
+    "ast_hash": "4331ec9640d44f30e7375c0b855e623c",
+    "semantic_hash": ""
+  },
+  "public/sparta-football-a4.svg": {
+    "mtime": 1787328745.1417077,
+    "ast_hash": "328a77e0bf7daa3fb610212a96292a1c",
+    "semantic_hash": ""
+  },
+  "public/sparta-football-poster.png": {
+    "mtime": 1787327711.6258936,
+    "ast_hash": "a98d8cffadb4e6871dd22f46300bad4e",
+    "semantic_hash": ""
+  },
+  "public/sparta-football-poster.svg": {
+    "mtime": 1787328745.3461177,
+    "ast_hash": "3603cd27711e4cf801a2eac74912e9b7",
+    "semantic_hash": ""
+  },
+  "public/sparta-football-rollup.jpg": {
+    "mtime": 1787336375.8939137,
+    "ast_hash": "11f3307f8aef85dacf415049b07e869e",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-a4.jpg": {
+    "mtime": 1787336375.7179885,
+    "ast_hash": "9af293e0daae62d8e39ae790f337b451",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-a4.svg": {
+    "mtime": 1787329093.3486443,
+    "ast_hash": "236d32c7582f6facfcc7081137f97210",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-mint-poster.png": {
+    "mtime": 1787328353.8338008,
+    "ast_hash": "83c141fdd3e09b74a00d303db4cac831",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-mint-poster.svg": {
+    "mtime": 1787329093.4467468,
+    "ast_hash": "b48ad8921aaa2ffbda1763a4e6f98101",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-poster.svg": {
+    "mtime": 1787238461.145302,
+    "ast_hash": "c3d7beaa853d78d92021508726031812",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-rollup.jpg": {
+    "mtime": 1787336376.0660534,
+    "ast_hash": "0248cac1b731206132957107b07dfb7d",
     "semantic_hash": ""
   }
 }

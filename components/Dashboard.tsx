@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth, isSuperDeveloper } from '../context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,7 +10,7 @@ import {
     Zap, PartyPopper, X, Loader2, CalendarRange, Gift, QrCode, Share2, Receipt, BadgeCheck,
     CheckCircle2, Copy, ExternalLink, Infinity, Package, Truck, MapPin, Trash2, RotateCcw,
     LayoutDashboard, Tag, Heart, Users, ArrowUpRight, Database, CheckCircle, Sparkles,
-    MessageCircle, Download, Flame, Smartphone, BellRing, Pencil, FileText, Lock, Info, Eye, Edit2
+    MessageCircle, Download, Flame, Smartphone, BellRing, Pencil, FileText, Lock, Info, Eye, Edit2, Terminal
 } from 'lucide-react';
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { Container, GlassCard, Button } from './UIComponents';
@@ -65,6 +65,8 @@ import { TopUpModal } from './TopUpModal';
 import UserRequests from './profile/UserRequests';
 import RequestDetailsModal from './RequestDetailsModal';
 import AchievementsList from './profile/AchievementsList';
+import AwardsPage from './profile/AwardsPage';
+import SidebarProfile from './profile/SidebarProfile';
 import SmartEnrollmentWizard from './SmartEnrollmentWizard';
 import MembershipReceipt from './profile/MembershipReceipt';
 import MembershipModal from './MembershipModal';
@@ -84,8 +86,10 @@ import FriendsSection from './profile/FriendsSection';
 import { ThemeToggle } from './ThemeToggle';
 import { LinkingRequestBanner } from './profile/LinkingRequestBanner';
 import ParentAccountSetupModal from './ParentAccountSetupModal';
+import { resolveChildSubscription, isSubscriptionValid } from '../utils/subscriptionResolver';
 const STAFF_ROLES = ['admin', 'director', 'dev', 'developer', 'coach', 'trainer'];
 const DirectorDashboard = lazyWithRetry(() => import('../pages/admin/DirectorDashboard'));
+const DeveloperConsole = lazyWithRetry(() => import('./dev/DeveloperConsole').then(m => ({ default: m.DeveloperConsole })));
 
 const Dashboard = () => {
     const capitalize = (str: string) => {
@@ -97,9 +101,11 @@ const Dashboard = () => {
     const navigate = useNavigate();
 
     const [userProfile, setUserProfile] = useState<any>(null);
+    const [impersonatedRole, setImpersonatedRole] = useState<string | null>(null);
 
     const isSuperDev = isSuperDeveloper(user?.email);
-    const effectiveRole = isSuperDev ? 'super' : (userProfile?.role || 'user');
+    const isRealDeveloper = isSuperDev || userProfile?.role === 'developer' || userProfile?.role === 'dev' || userProfile?.role === 'super';
+    const effectiveRole = impersonatedRole || (isSuperDev ? 'super' : (userProfile?.role || 'user'));
     const isStaffAccount = ['super', 'admin', 'director', 'dev', 'developer', 'coach', 'trainer'].includes(effectiveRole);
 
     const [requests, setRequests] = useState<any[]>([]);
@@ -126,6 +132,22 @@ const Dashboard = () => {
     const [allPrograms, setAllPrograms] = useState<any[]>([]);
     const [isUpgradeSelectionOpen, setIsUpgradeSelectionOpen] = useState(false);
     const [searchParams, setSearchParams] = useSearchParams();
+    const [sidebarActiveChild, setSidebarActiveChild] = useState<any>(null);
+
+    // Keep active child updated in real time for parents in sidebar
+    useEffect(() => {
+        if (userProfile?.role !== 'parent' || !user?.uid) return;
+        const childrenIds: string[] = userProfile.childrenIds || [];
+        if (childrenIds.length === 0) return;
+
+        const targetId = sidebarActiveChild?.id || childrenIds[0];
+        const unsub = onSnapshot(doc(db, 'users', targetId), (snap) => {
+            if (snap.exists()) {
+                setSidebarActiveChild({ id: snap.id, ...snap.data() });
+            }
+        });
+        return () => unsub();
+    }, [userProfile?.role, userProfile?.childrenIds, user?.uid, sidebarActiveChild?.id]);
 
     const [notifications, setNotifications] = useState<any[]>([]);
     const [userChatPrefs, setUserChatPrefs] = useState<Record<string, any>>({});
@@ -172,6 +194,11 @@ const Dashboard = () => {
     const [isMakeupModalOpen, setIsMakeupModalOpen] = useState(false);
     const [isMobileChatActive, setIsMobileChatActive] = useState(false);
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+    const [newPhoneInput, setNewPhoneInput] = useState('');
+    const [isSavingPhone, setIsSavingPhone] = useState(false);
+    const [phoneUpdateSuccess, setPhoneUpdateSuccess] = useState('');
+    const [phoneUpdateError, setPhoneUpdateError] = useState('');
     const [isParentSetupOpen, setIsParentSetupOpen] = useState(false);
     const [emailModalMode, setEmailModalMode] = useState<'password' | 'code' | 'admin_help'>('password');
     const [newEmailInput, setNewEmailInput] = useState('');
@@ -465,6 +492,47 @@ const Dashboard = () => {
             setEmailUpdateError(msg);
         } finally {
             setIsUpdatingEmail(false);
+        }
+    };
+
+    const handleSavePhone = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user?.uid || !newPhoneInput.trim()) return;
+        setIsSavingPhone(true);
+        setPhoneUpdateError('');
+        setPhoneUpdateSuccess('');
+        try {
+            const cleanPhone = newPhoneInput.trim();
+            await updateDoc(doc(db, 'users', user.uid), {
+                phone: cleanPhone,
+                parentPhone: cleanPhone
+            });
+
+            // Sync to all linked children so coaches immediately see the updated phone
+            if (userProfile?.childrenIds && userProfile.childrenIds.length > 0) {
+                for (const childId of userProfile.childrenIds) {
+                    await updateDoc(doc(db, 'users', childId), {
+                        parentPhone: cleanPhone
+                    }).catch(() => {});
+                }
+            }
+
+            setUserProfile((prev: any) => ({
+                ...prev,
+                phone: cleanPhone,
+                parentPhone: cleanPhone
+            }));
+
+            setPhoneUpdateSuccess('✓ Номер телефона успешно обновлён!');
+            setTimeout(() => {
+                setIsPhoneModalOpen(false);
+                setPhoneUpdateSuccess('');
+            }, 1200);
+        } catch (err: any) {
+            console.error('Error updating phone:', err);
+            setPhoneUpdateError('Не удалось обновить номер телефона');
+        } finally {
+            setIsSavingPhone(false);
         }
     };
 
@@ -814,7 +882,9 @@ const Dashboard = () => {
             delivered: { label: 'Доставлен', color: 'text-green-500', bg: 'bg-green-500/10', icon: BadgeCheck },
             cancelled: { label: 'Отменен', color: 'text-red-400', bg: 'bg-red-400/10', icon: X },
             pending_robokassa: { label: 'Ожидает оплаты', color: 'text-yellow-500', bg: 'bg-yellow-500/10', icon: Clock },
-
+            pending_transfer: { label: 'Проверка перевода', color: 'text-amber-400', bg: 'bg-amber-400/10', icon: Clock },
+            pending_cash: { label: 'Оплата на тренировке', color: 'text-emerald-400', bg: 'bg-emerald-400/10', icon: Wallet },
+            pending_invoice: { label: 'Счёт выставлен', color: 'text-blue-400', bg: 'bg-blue-400/10', icon: FileText },
         };
 
         const status = statusConfig[order.status as string] || { label: order.status, color: 'text-white/40', bg: 'bg-white/5', icon: Receipt };
@@ -1564,13 +1634,13 @@ const Dashboard = () => {
     const grantSubscriptionLogic = async (userRef: any, order: any) => {
         if (order.type === 'subscription' || order.planId) {
             // Calculate expiry
-            const duration = order.duration || 3;
+            const duration = order.duration || 1;
             let expiresAtDate = new Date();
 
             const userSnap = await getDoc(userRef);
             const currentProfile = userSnap.data() as any;
 
-            if (currentProfile?.subscription?.expiresAt && currentProfile.subscription.status === 'active') {
+            if (currentProfile?.subscription?.expiresAt && (currentProfile.subscription.status === 'active' || currentProfile.subscription.status === 'ACTIVE')) {
                 try {
                     const currentExpiry = (typeof currentProfile.subscription.expiresAt.toDate === 'function')
                         ? currentProfile.subscription.expiresAt.toDate()
@@ -1585,16 +1655,55 @@ const Dashboard = () => {
             }
             expiresAtDate.setMonth(expiresAtDate.getMonth() + duration);
 
+            const calculatedTotal = order.totalSessions || (duration * 4 * (order.sessionsPerWeek || 2));
+            const subPayload: any = {
+                planId: order.planId || 'novice',
+                title: order.planTitle || order.title || 'Абонемент',
+                childId: order.childId || (userRef.id !== user.uid ? userRef.id : (currentProfile?.childrenIds?.[0] || user.uid)),
+                childName: order.childName || currentProfile?.childName || 'Спортсмен',
+                parentId: user.uid,
+                branchId: order.branchId || order.selectedBranch || 'newton',
+                branchName: order.branchName || 'ОЦ «Ньютон»',
+                cityId: order.cityId || 'chelyabinsk',
+                cityName: order.cityName || 'Челябинск',
+                totalSessions: calculatedTotal,
+                remainingSessions: calculatedTotal,
+                expiresAt: Timestamp.fromDate(expiresAtDate),
+                status: 'ACTIVE',
+                startedAt: Timestamp.now(),
+                activatedAt: Timestamp.now(),
+                freezeDaysAvailable: 14,
+                freezeDaysTotal: 0,
+                purchasePrice: order.price || 5200
+            };
+
+            // 1. Update parent / target user
             await updateDoc(userRef, {
-                subscription: {
-                    planId: order.planId,
-                    title: order.planTitle || 'Подписка',
-                    expiresAt: Timestamp.fromDate(expiresAtDate),
-                    status: 'active',
-                    startedAt: Timestamp.now(),
-                    purchasePrice: order.price
-                }
+                subscription: subPayload,
+                hasActiveMembership: true,
+                lastPurchasedChildId: order.childId || null
             });
+
+            // 2. If order explicitly targets a child doc, also grant to child
+            if (order.childId && order.childId !== userRef.id) {
+                await updateDoc(doc(db, 'users', order.childId), {
+                    subscription: subPayload,
+                    hasActiveMembership: true,
+                    membershipExpires: Timestamp.fromDate(expiresAtDate),
+                    ...(order.scheduleId ? { groupId: order.scheduleId } : {}),
+                    ...(order.coachName ? { coachName: order.coachName } : {})
+                }).catch(err => console.warn('Child doc sub grant error:', err));
+            } else if (currentProfile?.childrenIds && currentProfile.childrenIds.length === 1) {
+                // If single child only, update child doc
+                const targetChild = currentProfile.childrenIds[0];
+                if (targetChild && targetChild !== userRef.id) {
+                    await updateDoc(doc(db, 'users', targetChild), {
+                        subscription: { ...subPayload, childId: targetChild },
+                        hasActiveMembership: true,
+                        membershipExpires: Timestamp.fromDate(expiresAtDate)
+                    }).catch(() => {});
+                }
+            }
 
             // Award 2 Guest Passes
             const uidShort = user.uid.substring(0, 4).toUpperCase();
@@ -1802,6 +1911,9 @@ const Dashboard = () => {
             return;
         }
         setActiveTab(tab);
+        if (typeof window !== 'undefined') {
+            window.scrollTo({ top: 0, behavior: 'instant' as any });
+        }
 
         if (tab === 'achievements' && userProfile?.achievements) {
             const newAchievements = userProfile.achievements.filter((a: any) => a.isNew);
@@ -1836,6 +1948,28 @@ const Dashboard = () => {
     useEffect(() => {
         if (!loading && !user) navigate('/');
     }, [user, loading, navigate]);
+
+    // Global Sparta tab navigation listener
+    useEffect(() => {
+        const handleNavigateTab = (e: any) => {
+            const { tab, targetUid, targetName, studentName, chatId } = e.detail || {};
+            if (tab) {
+                if (targetUid || chatId) {
+                    const newParams = new URLSearchParams(window.location.search);
+                    newParams.set('tab', tab);
+                    if (targetUid) newParams.set('targetUid', targetUid);
+                    if (targetName) newParams.set('targetName', targetName);
+                    if (studentName) newParams.set('studentName', studentName);
+                    if (chatId) newParams.set('chatId', chatId);
+                    setSearchParams(newParams);
+                }
+                handleTabChange(tab as any);
+            }
+        };
+
+        window.addEventListener('sparta_navigate_tab', handleNavigateTab);
+        return () => window.removeEventListener('sparta_navigate_tab', handleNavigateTab);
+    }, [handleTabChange, setSearchParams]);
 
     // Promo Activation
     const handleActivatePromo = async () => {
@@ -2006,16 +2140,50 @@ const Dashboard = () => {
 
                             expiresAtDate.setMonth(expiresAtDate.getMonth() + (order.duration || 1));
 
+                            const total = order.totalSessions || ((order.duration || 1) * 4 * (order.sessionsPerWeek || 2));
+                            const subPayload: any = {
+                                planId: order.planId || 'novice',
+                                title: order.planTitle || 'Абонемент',
+                                childId: order.childId || (userProfile?.childrenIds?.[0] || user.uid),
+                                childName: order.childName || userProfile?.childName || 'Спортсмен',
+                                parentId: user.uid,
+                                branchId: order.branchId || order.selectedBranch || 'newton',
+                                branchName: order.branchName || 'ОЦ «Ньютон»',
+                                cityId: order.cityId || 'chelyabinsk',
+                                cityName: order.cityName || 'Челябинск',
+                                totalSessions: total,
+                                remainingSessions: total,
+                                expiresAt: Timestamp.fromDate(expiresAtDate),
+                                status: 'ACTIVE',
+                                startedAt: Timestamp.now(),
+                                activatedAt: Timestamp.now(),
+                                freezeDaysAvailable: 14,
+                                freezeDaysTotal: 0,
+                                purchasePrice: order.price
+                            };
+
                             await updateDoc(userRef, {
-                                subscription: {
-                                    planId: order.planId,
-                                    title: order.planTitle,
-                                    expiresAt: Timestamp.fromDate(expiresAtDate),
-                                    status: 'active',
-                                    startedAt: Timestamp.now(),
-                                    purchasePrice: order.price
-                                }
+                                subscription: subPayload,
+                                hasActiveMembership: true,
+                                lastPurchasedChildId: order.childId || null
                             });
+
+                            if (order.childId && order.childId !== user.uid) {
+                                await updateDoc(doc(db, 'users', order.childId), {
+                                    subscription: subPayload,
+                                    hasActiveMembership: true,
+                                    membershipExpires: Timestamp.fromDate(expiresAtDate)
+                                }).catch(() => {});
+                            } else if (userProfile?.childrenIds && userProfile.childrenIds.length === 1) {
+                                const targetChild = userProfile.childrenIds[0];
+                                if (targetChild && targetChild !== user.uid) {
+                                    await updateDoc(doc(db, 'users', targetChild), {
+                                        subscription: { ...subPayload, childId: targetChild },
+                                        hasActiveMembership: true,
+                                        membershipExpires: Timestamp.fromDate(expiresAtDate)
+                                    }).catch(() => {});
+                                }
+                            }
 
                             /* 
                             // Award 2 Guest Passes
@@ -2225,6 +2393,52 @@ const Dashboard = () => {
 
     return (
         <div className="dashboard-theme min-h-screen bg-main pt-0 md:pt-20 pb-20 font-manrope">
+            {/* Role Impersonation Floating Top Navigation Bar */}
+            {impersonatedRole && (
+                <div className="sticky top-0 md:top-16 z-50 bg-[#121212]/95 border-b border-sparta-gold/40 text-white px-3 py-2 shadow-2xl backdrop-blur-2xl flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-sparta-gold animate-ping" />
+                        <span className="text-xs font-bold text-sparta-gold uppercase tracking-wider">
+                            Режим: {impersonatedRole === 'parent' ? 'Родитель' : impersonatedRole === 'user' ? 'Спортсмен' : impersonatedRole === 'coach' ? 'Тренер' : impersonatedRole === 'director' ? 'Директор' : 'Администратор'}
+                        </span>
+                    </div>
+
+                    {/* Fast Switchers */}
+                    <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+                        {[
+                            { r: 'parent', label: '👨‍👩‍👧 Родитель', tab: 'family' },
+                            { r: 'user', label: '⚽ Спортсмен', tab: 'requests' },
+                            { r: 'coach', label: '🥋 Тренер', tab: 'coaching' },
+                            { r: 'director', label: '🏢 Директор', tab: 'analytics' },
+                        ].map(item => (
+                            <button
+                                key={item.r}
+                                onClick={() => {
+                                    setImpersonatedRole(item.r);
+                                    setActiveTab(item.tab as any);
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
+                                    impersonatedRole === item.r
+                                        ? 'bg-sparta-gold text-black font-black shadow-md'
+                                        : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                                }`}
+                            >
+                                {item.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={() => {
+                            setImpersonatedRole(null);
+                            setActiveTab('analytics');
+                        }}
+                        className="px-3 py-1 bg-sparta-gold text-black hover:bg-amber-400 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-md ml-auto cursor-pointer"
+                    >
+                        ✕ Выйти в Центр управления
+                    </button>
+                </div>
+            )}
             {/* Audio for notifications */}
             <audio ref={audioRef} src="/notification.mp3" preload="auto" />
             {/* Payment Result Modals */}
@@ -2287,42 +2501,46 @@ const Dashboard = () => {
                 <div className="absolute top-0 right-0 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-sparta-gold/5 blur-[60px] md:blur-[100px] rounded-full pointer-events-none translate-x-1/2 -translate-y-1/2" />
             </div>
 
-            <Container fluid={true} className="!px-2 sm:!px-4 md:!px-12 lg:!px-16 2xl:!px-24 transition-all duration-500 min-h-screen pb-24 md:pb-0 pt-0 mt-0 w-full">
-                <LinkingRequestBanner userId={user.uid} />
+            <Container fluid={true} className={`!px-2 sm:!px-3 md:!px-5 lg:!px-6 transition-all duration-300 ${activeTab === 'messages_unified' ? 'h-[100dvh] md:h-screen overflow-hidden pb-0' : 'min-h-screen pb-20 md:pb-4'} pt-0 mt-0 w-full`}>
+                {activeTab !== 'messages_unified' && (
+                    <>
+                        <LinkingRequestBanner userId={user.uid} />
 
-                {userProfile?.isTemporaryCredentials && (
-                    <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg animate-in fade-in duration-300">
-                        <div className="flex items-start gap-3">
-                            <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl shrink-0 mt-0.5 sm:mt-0">
-                                <ShieldAlert size={20} />
+                        {userProfile?.isTemporaryCredentials && (
+                            <div className="mb-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg animate-in fade-in duration-300">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl shrink-0 mt-0.5 sm:mt-0">
+                                        <ShieldAlert size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-russo text-amber-400 uppercase tracking-wider">
+                                            Вы вошли по временным данным от администратора
+                                        </h4>
+                                        <p className="text-xs text-white/70 mt-0.5 leading-relaxed">
+                                            Все ваши абонементы, оплаты и данные на 100% сохранены. Пожалуйста, укажите вашу личную почту и новый пароль для безопасности.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setNewEmailInput(userProfile?.email || user?.email || '');
+                                        setNewPasswordInput('');
+                                        setIsEmailModalOpen(true);
+                                        handleTabChange('settings');
+                                    }}
+                                    className="w-full sm:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shrink-0 flex items-center justify-center gap-2 active:scale-95"
+                                >
+                                    <Shield size={14} />
+                                    Сменить данные
+                                </button>
                             </div>
-                            <div>
-                                <h4 className="text-sm font-russo text-amber-400 uppercase tracking-wider">
-                                    Вы вошли по временным данным от администратора
-                                </h4>
-                                <p className="text-xs text-white/70 mt-0.5 leading-relaxed">
-                                    Все ваши абонементы, оплаты и данные на 100% сохранены. Пожалуйста, укажите вашу личную почту и новый пароль для безопасности.
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => {
-                                setNewEmailInput(userProfile?.email || user?.email || '');
-                                setNewPasswordInput('');
-                                setIsEmailModalOpen(true);
-                                handleTabChange('settings');
-                            }}
-                            className="w-full sm:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shrink-0 flex items-center justify-center gap-2 active:scale-95"
-                        >
-                            <Shield size={14} />
-                            Сменить данные
-                        </button>
-                    </div>
+                        )}
+                    </>
                 )}
 
                 {/* Mobile Top Header */}
                 {!isMobileChatActive && (
-                    <div className="md:hidden sticky top-0 z-40 bg-[#0c0c0c]/95 backdrop-blur-md border-b border-white/10 h-14 flex items-center justify-between px-4 mb-0 w-full">
+                    <div className="md:hidden sticky top-0 z-40 bg-[#0c0c0c]/95 backdrop-blur-md border-b border-white/10 h-14 flex items-center justify-between px-3 mb-2 w-full">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => navigate('/')}
@@ -2352,13 +2570,11 @@ const Dashboard = () => {
                     </div>
                 )}
 
-
-
-                <div className="flex flex-col md:flex-row gap-4 md:gap-12 items-start relative z-10 pt-2 pb-24 md:py-16 w-full">
+                <div className={`flex flex-col md:flex-row gap-3 md:gap-5 ${activeTab === 'messages_unified' ? 'items-stretch h-[calc(100dvh-1rem)] md:h-[calc(100vh-1rem)] pb-0 min-h-0 overflow-hidden' : 'items-start pb-16 md:py-2 min-h-[calc(100vh-1.5rem)]'} relative z-10 pt-1 w-full`}>
                     {/* Sidebar - hidden on mobile */}
-                    <div className="hidden md:block w-full md:w-[320px] lg:w-[380px] xl:w-[420px] shrink-0">
-                        <div className="bg-white/5 border border-white/10 rounded-[40px] p-6 md:p-8 backdrop-blur-xl sticky top-24 shadow-2xl shadow-black/50">
-                            <div className="flex flex-col items-center text-center mb-6 md:mb-8 relative">
+                    <div className="hidden md:block w-full md:w-[250px] lg:w-[270px] xl:w-[290px] shrink-0">
+                        <div className="bg-[#111115]/95 border border-white/10 rounded-[28px] p-4 md:p-5 backdrop-blur-2xl sticky top-2 shadow-2xl shadow-black/60 max-h-[calc(100vh-1.5rem)] overflow-y-auto custom-scrollbar">
+                            <div className="flex flex-col items-center text-center mb-5 relative">
                                 {/* Hidden File Input */}
                                 <input
                                     type="file"
@@ -2432,6 +2648,13 @@ const Dashboard = () => {
                                     {userProfile?.verification?.isVerified && <span title={userProfile.verification.title}><BadgeCheck size={16} className="text-blue-500 shrink-0" /></span>}
                                 </h2>
                                 <p className="text-white/50 text-sm font-manrope">{userProfile?.email || user?.email}</p>
+
+                                {/* 🏆 ВИТРИНА НАГРАД (3 СЛОТА) В САЙДБАРЕ */}
+                                <SidebarProfile
+                                    user={user}
+                                    userProfile={userProfile}
+                                    onTabChange={handleTabChange}
+                                />
                             </div>
                             <div className="flex justify-center gap-4 mt-4">
                                 <button
@@ -2466,15 +2689,15 @@ const Dashboard = () => {
                                                     onClick={() => setActiveTab('analytics')}
                                                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'analytics' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                                 >
-                                                    <TrendingUp size={18} />
-                                                    <span>{['super', 'director', 'developer', 'dev'].includes(effectiveRole) ? 'Аналитика' : 'Управление'}</span>
+                                                    {isRealDeveloper && !impersonatedRole ? <Sparkles size={18} /> : <TrendingUp size={18} />}
+                                                    <span>{isRealDeveloper && !impersonatedRole ? 'Центр управления' : ['super', 'director', 'developer', 'dev'].includes(effectiveRole) ? 'Аналитика' : 'Управление'}</span>
                                                 </button>
                                                 <button
                                                     onClick={() => navigate('/admin')}
                                                     className="w-full flex items-center gap-3 px-4 py-3 text-white/50 hover:text-white hover:bg-white/5 rounded-xl transition-all mt-1"
                                                 >
                                                     <Shield size={18} className="text-sparta-gold" />
-                                                    <span>Админ-панель</span>
+                                                    <span>База данных & CRM</span>
                                                 </button>
                                             </>
                                         )}
@@ -2485,7 +2708,7 @@ const Dashboard = () => {
                                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'coaching' ? 'bg-green-500 text-black font-bold shadow-lg shadow-green-500/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                             >
                                                 <Dumbbell size={18} />
-                                                <span>Командный центр</span>
+                                                <span>Журнал & Тренировки</span>
                                             </button>
                                         )}
 
@@ -2556,8 +2779,8 @@ const Dashboard = () => {
                                             onClick={() => handleTabChange('requests')}
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'requests' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                         >
-                                            <LayoutDashboard size={18} className={activeTab === 'requests' ? 'text-black' : 'text-sparta-gold'} />
-                                            <span>Главная / Дневник</span>
+                                            <Flame size={18} className={activeTab === 'requests' ? 'text-black' : 'text-sparta-gold'} />
+                                            <span>Дневник Чемпиона</span>
                                         </button>
 
                                         <button
@@ -2565,7 +2788,7 @@ const Dashboard = () => {
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'achievements' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                         >
                                             <Trophy size={18} className={activeTab === 'achievements' ? 'text-black' : 'text-sparta-gold'} />
-                                            <span>Достижения</span>
+                                            <span>Награды & Кубки</span>
                                         </button>
 
                                         <button
@@ -2573,26 +2796,26 @@ const Dashboard = () => {
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages_unified' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                         >
                                             <MessageSquare size={18} className={activeTab === 'messages_unified' ? 'text-black' : 'text-sparta-gold'} />
-                                            <span>Чат с тренером</span>
+                                            <span>Чаты & Сообщения</span>
                                         </button>
 
-                                        {orders.length > 0 && (
-                                            <button
-                                                onClick={() => handleTabChange('orders')}
-                                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
-                                            >
-                                                <ShoppingBag size={18} className={activeTab === 'orders' ? 'text-black' : 'text-sparta-gold'} />
-                                                <span>Забрать из магазина</span>
+                                        <button
+                                            onClick={() => handleTabChange('orders')}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
+                                        >
+                                            <ShoppingBag size={18} className={activeTab === 'orders' ? 'text-black' : 'text-sparta-gold'} />
+                                            <span>Магазин призов</span>
+                                            {orders.length > 0 && (
                                                 <span className="ml-auto bg-sparta-gold text-black text-[10px] px-2 py-0.5 rounded-full font-black animate-pulse">{orders.length}</span>
-                                            </button>
-                                        )}
+                                            )}
+                                        </button>
 
                                         <button
                                             onClick={() => handleTabChange('friends')}
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'friends' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                         >
                                             <Users size={18} />
-                                            <span>Комьюнити</span>
+                                            <span>Команда & Друзья</span>
                                             {incomingRequests.length > 0 && (
                                                 <span className="relative ml-auto flex items-center justify-center">
                                                     <span className="absolute -inset-0.5 rounded-full bg-sparta-gold opacity-75 animate-ping" />
@@ -2605,13 +2828,13 @@ const Dashboard = () => {
                                     </>
                                 )}
 
-                                {Boolean(userProfile?.role && ['parent', 'coach', 'trainer', 'director', 'admin', 'developer', 'super', 'dev'].includes(userProfile.role)) && (
+                                {!isStaffAccount && Boolean(userProfile?.role === 'parent') && (
                                     <button
                                         onClick={() => handleTabChange('messages')}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages' ? 'bg-white/10 text-white font-bold' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
                                     >
-                                        {isStaffAccount ? <MessageCircle size={18} className="text-cyan-400" /> : <Shield size={18} />}
-                                        <span>{isStaffAccount ? 'Чат поддержки' : 'Поддержка'}</span>
+                                        <Shield size={18} />
+                                        <span>Поддержка</span>
                                         {unreadMessages > 0 && <span className="ml-auto bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{unreadMessages}</span>}
                                     </button>
                                 )}
@@ -2623,7 +2846,7 @@ const Dashboard = () => {
                                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'profile' ? 'bg-sparta-gold text-black font-bold' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                 >
                                     <User size={18} />
-                                    <span>Мой профиль</span>
+                                    <span>{effectiveRole === 'user' ? 'Моя карточка' : 'Мой профиль'}</span>
                                 </button>
 
                                 <button
@@ -2654,134 +2877,178 @@ const Dashboard = () => {
 
 
 
-                            {/* Active Plan Widget */}
-                            {!STAFF_ROLES.includes(userProfile?.role) && userProfile?.subscription?.status === 'active' && (
-                                <div className={`mt-8 p-5 border rounded-3xl transition-all duration-500 ${(() => {
-                                        const expiresAt = userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000);
-                                        const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-                                        return daysLeft < 5
-                                            ? 'bg-orange-500/10 border-orange-500/30'
-                                            : 'bg-sparta-gold/10 border-sparta-gold/20';
-                                    })()
-                                    }`}>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`p-1.5 rounded-lg ${(() => {
-                                                    const expiresAt = userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000);
-                                                    const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-                                                    return daysLeft < 5 ? 'bg-orange-500/20 text-orange-500' : 'bg-sparta-gold/20 text-sparta-gold';
-                                                })()
-                                                }`}>
-                                                <Shield size={14} />
+                            {/* Active Plan / Subscription Widget in Sidebar */}
+                            {!STAFF_ROLES.includes(userProfile?.role) && (() => {
+                                const isParent = userProfile?.role === 'parent';
+                                const targetChild = isParent ? (sidebarActiveChild || userProfile) : userProfile;
+                                const activeSub = resolveChildSubscription(targetChild, userProfile);
+                                const hasSub = isSubscriptionValid(activeSub);
+                                const isFrozen = Boolean(activeSub?.isFrozen || activeSub?.status === 'frozen' || activeSub?.status === 'FROZEN');
+
+                                const childDisplayName = targetChild?.childName || targetChild?.displayName || activeSub?.childName || userProfile?.childName || 'Спортсмен';
+
+                                if (isFrozen && activeSub) {
+                                    const frozenDateStr = activeSub.frozenUntil
+                                        ? (typeof activeSub.frozenUntil.toDate === 'function' ? activeSub.frozenUntil.toDate() : new Date(activeSub.frozenUntil.seconds * 1000)).toLocaleDateString('ru-RU')
+                                        : '-';
+                                    return (
+                                        <div className="mt-8 p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-3xl space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1.5 text-cyan-300 font-bold text-xs uppercase">
+                                                    <Clock size={14} className="text-cyan-400" />
+                                                    <span className="text-[10px] tracking-wider font-extrabold">Заморожен</span>
+                                                </div>
                                             </div>
-                                            <span className={`text-[10px] uppercase font-black tracking-[0.2em] ${(() => {
-                                                    const expiresAt = userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000);
-                                                    const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-                                                    return daysLeft < 5 ? 'text-orange-500' : 'text-sparta-gold';
-                                                })()
-                                                }`}>
-                                                {(() => {
-                                                    const expiresAt = userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000);
-                                                    const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-                                                    return daysLeft < 5 ? 'Срок истекает' : 'Активный план';
-                                                })()}
-                                            </span>
+                                            {isParent && (
+                                                <div className="text-[10px] font-bold text-white/50 uppercase truncate">
+                                                    👦 {childDisplayName}
+                                                </div>
+                                            )}
+                                            <h4 className="text-white font-russo text-sm tracking-tight">{activeSub.title || 'Абонемент'}</h4>
+                                            <p className="text-cyan-200/60 text-[10px]">
+                                                До: <strong className="text-white">{frozenDateStr}</strong>
+                                            </p>
+                                            <button
+                                                onClick={() => handleTabChange(isParent ? 'family' : 'requests')}
+                                                className="w-full py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500 text-cyan-200 hover:text-black font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer mt-1"
+                                            >
+                                                Управлять в кабинете
+                                            </button>
                                         </div>
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 rounded-full border border-white/10">
-                                            <Clock size={10} className="text-white/40" />
-                                            <span className="text-[10px] text-white font-bold">
-                                                {Math.max(0, Math.ceil(((userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000)).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} дн.
-                                            </span>
-                                        </div>
-                                    </div>
+                                    );
+                                }
 
-                                    <h4 className="text-white font-russo text-lg mb-4 tracking-tight leading-tight">{userProfile.subscription.title}</h4>
+                                if (hasSub && activeSub) {
+                                    const expiresAt = activeSub.expiresAt?.toDate
+                                        ? activeSub.expiresAt.toDate()
+                                        : new Date((activeSub.expiresAt?.seconds || (typeof activeSub.expiresAt === 'string' ? new Date(activeSub.expiresAt).getTime() / 1000 : Date.now() / 1000)) * 1000);
+                                    const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                                    const isExpiring = daysLeft < 5;
 
-                                    <div className="space-y-4 mb-6">
-                                        <div className="flex justify-between items-end text-[10px] uppercase font-bold tracking-widest">
-                                            <div className="space-y-1">
-                                                <p className="text-white/20">Начало</p>
-                                                <p className="text-white/60">
-                                                    {userProfile.subscription.startedAt
-                                                        ? (userProfile.subscription.startedAt.toDate ? userProfile.subscription.startedAt.toDate() : new Date(userProfile.subscription.startedAt.seconds * 1000)).toLocaleDateString('ru-RU')
-                                                        : '-'}
-                                                </p>
+                                    const startedAt = activeSub.startedAt || activeSub.activatedAt;
+                                    const startedDateStr = startedAt
+                                        ? (typeof startedAt.toDate === 'function' ? startedAt.toDate() : new Date((startedAt.seconds || Date.now() / 1000) * 1000)).toLocaleDateString('ru-RU')
+                                        : '-';
+                                    const expiresDateStr = expiresAt.toLocaleDateString('ru-RU');
+
+                                    const totalSess = activeSub.totalSessions || 8;
+                                    const remSess = activeSub.remainingSessions ?? totalSess;
+                                    const progressPct = Math.min(100, Math.max(0, ((remSess / totalSess) * 100)));
+
+                                    return (
+                                        <div className={`mt-8 p-5 border rounded-3xl transition-all duration-500 ${
+                                            isExpiring ? 'bg-orange-500/10 border-orange-500/30' : 'bg-sparta-gold/10 border-sparta-gold/20'
+                                        }`}>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`p-1.5 rounded-lg ${isExpiring ? 'bg-orange-500/20 text-orange-500' : 'bg-sparta-gold/20 text-sparta-gold'}`}>
+                                                        <Shield size={14} />
+                                                    </div>
+                                                    <span className={`text-[10px] uppercase font-black tracking-[0.2em] ${isExpiring ? 'text-orange-500' : 'text-sparta-gold'}`}>
+                                                        {isExpiring ? 'Срок истекает' : 'Активный план'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 rounded-full border border-white/10">
+                                                    <Clock size={10} className="text-white/40" />
+                                                    <span className="text-[10px] text-white font-bold font-mono">
+                                                        {daysLeft} дн.
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="text-right space-y-1">
-                                                <p className="text-white/20">Конец</p>
-                                                <p className="text-white/60">
-                                                    {(userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000)).toLocaleDateString('ru-RU')}
-                                                </p>
+
+                                            {isParent && (
+                                                <div className="text-[10px] font-bold text-white/50 uppercase mb-1 flex items-center gap-1">
+                                                    <span>👦</span>
+                                                    <span className="truncate">{childDisplayName}</span>
+                                                </div>
+                                            )}
+
+                                            <h4 className="text-white font-russo text-base mb-3 tracking-tight leading-tight">
+                                                {activeSub.title || 'Базовый абонемент'}
+                                            </h4>
+
+                                            <div className="flex justify-between items-center text-xs font-bold mb-3 pb-2 border-b border-white/5">
+                                                <span className="text-white/40 text-[10px] uppercase">Остаток занятий:</span>
+                                                <span className="text-sparta-gold font-mono font-extrabold text-sm">
+                                                    {remSess} из {totalSess}
+                                                </span>
                                             </div>
+
+                                            <div className="space-y-3 mb-5">
+                                                <div className="flex justify-between items-end text-[10px] uppercase font-bold tracking-widest">
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-white/20">Начало</p>
+                                                        <p className="text-white/60 font-mono">{startedDateStr}</p>
+                                                    </div>
+                                                    <div className="text-right space-y-0.5">
+                                                        <p className="text-white/20">Конец</p>
+                                                        <p className="text-white/60 font-mono">{expiresDateStr}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="relative h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${progressPct}%` }}
+                                                        className={`h-full ${isExpiring ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-sparta-gold to-yellow-500'}`}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={() => handleTabChange(isParent ? 'family' : 'requests')}
+                                                className={`w-full py-2.5 rounded-2xl font-russo text-[10px] uppercase tracking-[0.2em] transition-all cursor-pointer ${
+                                                    isExpiring
+                                                        ? 'bg-orange-500 text-black hover:bg-orange-400 shadow-md'
+                                                        : 'bg-sparta-gold/10 text-sparta-gold border border-sparta-gold/20 hover:bg-sparta-gold hover:text-black'
+                                                }`}
+                                            >
+                                                {isExpiring ? 'Продлить сейчас' : 'Управлять абонементом'}
+                                            </button>
                                         </div>
+                                    );
+                                }
 
-                                        <div className="relative h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                            <motion.div
-                                                initial={{ width: 0 }}
-                                                animate={{
-                                                    width: `${(() => {
-                                                        const start = userProfile.subscription.startedAt ? (userProfile.subscription.startedAt.toDate ? userProfile.subscription.startedAt.toDate().getTime() : new Date(userProfile.subscription.startedAt.seconds * 1000).getTime()) : Date.now() - (30 * 24 * 60 * 60 * 1000);
-                                                        const end = (userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000)).getTime();
-                                                        const total = end - start;
-                                                        const used = Date.now() - start;
-                                                        return Math.min(100, Math.max(0, (used / total) * 100));
-                                                    })()}%`
-                                                }}
-                                                className={`h-full ${(() => {
-                                                        const expiresAt = userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000);
-                                                        const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-                                                        return daysLeft < 5 ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-sparta-gold to-yellow-500';
-                                                    })()
-                                                    }`}
-                                            />
+                                // Fallback / No Active Subscription for Parent or Student
+                                return (
+                                    <div className="mt-8 p-4 bg-white/5 border border-white/10 rounded-3xl space-y-2.5">
+                                        <div className="flex items-center gap-2 text-white/50">
+                                            <CreditCard size={14} className="text-white/40" />
+                                            <span className="text-[10px] uppercase font-bold tracking-wider">Нет абонемента</span>
                                         </div>
+                                        {isParent && (
+                                            <div className="text-[10px] font-bold text-white/60 uppercase truncate">
+                                                👦 {childDisplayName}
+                                            </div>
+                                        )}
+                                        <p className="text-[11px] text-white/40 leading-relaxed">
+                                            Для посещения тренировок выберите тариф
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedProgram(null);
+                                                setMembershipMode('purchase');
+                                                setIsMembershipOpen(true);
+                                            }}
+                                            className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-sparta-gold to-yellow-500 text-black font-extrabold text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-md shadow-sparta-gold/10 hover:brightness-110 cursor-pointer"
+                                        >
+                                            <Zap size={12} />
+                                            <span>Оформить абонемент</span>
+                                        </button>
                                     </div>
-
-                                    <button
-                                        onClick={() => setActiveTab('subscriptions')}
-                                        className={`w-full py-3 rounded-2xl font-russo text-[10px] uppercase tracking-[0.2em] transition-all ${(() => {
-                                                const expiresAt = userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000);
-                                                const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-                                                return daysLeft < 5
-                                                    ? 'bg-orange-500 text-black hover:bg-orange-400'
-                                                    : 'bg-sparta-gold/10 text-sparta-gold border border-sparta-gold/20 hover:bg-sparta-gold hover:text-black';
-                                            })()
-                                            }`}
-                                    >
-                                        {(() => {
-                                            const expiresAt = userProfile.subscription.expiresAt?.toDate ? userProfile.subscription.expiresAt.toDate() : new Date(userProfile.subscription.expiresAt?.seconds * 1000);
-                                            const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-                                            return daysLeft < 5 ? 'Продлить сейчас' : 'Управлять планом';
-                                        })()}
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* Freeze Status */}
-                            {!STAFF_ROLES.includes(userProfile?.role) && userProfile?.subscription?.status === 'frozen' && (
-                                <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
-                                    <div className="flex items-center gap-2 mb-2 text-blue-400">
-                                        <Clock size={14} />
-                                        <span className="text-[10px] uppercase font-bold tracking-widest">Заморожен</span>
-                                    </div>
-                                    <h4 className="text-white font-russo text-sm mb-1">{userProfile.subscription.title}</h4>
-                                    <p className="text-white/40 text-[10px]">
-                                        До: <span className="text-white font-bold">{userProfile.subscription.frozenUntil ? (typeof userProfile.subscription.frozenUntil.toDate === 'function' ? userProfile.subscription.frozenUntil.toDate() : userProfile.subscription.frozenUntil).toLocaleDateString() : '-'}</span>
-                                    </p>
-                                </div>
-                            )}
+                                );
+                            })()}
                         </div>
                     </div>
 
                     {/* Main Content */}
-                    <div className="flex-1 min-w-0 w-full pt-0 mt-0">
+                    <div className={`flex-1 min-w-0 w-full pt-0 mt-0 ${activeTab === 'messages_unified' ? 'h-full flex flex-col min-h-0 overflow-hidden' : ''}`}>
                         {/* Dashboard Main Header */}
-                        {!((userProfile?.role === 'user' || userProfile?.role === 'student' || (!STAFF_ROLES.includes(userProfile?.role) && userProfile?.role !== 'parent' && !userProfile?.childrenIds?.length)) && activeTab === 'requests') && (
+                        {activeTab !== 'messages_unified' && !((userProfile?.role === 'user' || userProfile?.role === 'student' || (!STAFF_ROLES.includes(userProfile?.role) && userProfile?.role !== 'parent' && !userProfile?.childrenIds?.length)) && activeTab === 'requests') && (
                             <div className="mb-2 md:mb-8 hidden md:block">
                                 <h1 className="text-3xl font-russo text-white">
                                     {activeTab === 'requests' && 'Мои тренировки и подписка'}
                                     {activeTab === 'profile' && 'Мой профиль'}
-                                    {activeTab === 'messages_unified' && 'Сообщения'}
                                     {activeTab === 'achievements' && 'Мои достижения'}
                                     {activeTab === 'orders' && 'Мои покупки в магазине'}
                                     {activeTab === 'subscriptions' && 'Мои абонементы'}
@@ -2797,7 +3064,7 @@ const Dashboard = () => {
                         )}
 
                         {/* Dashboard Expiry Banner */}
-                        {effectiveRole === 'user' && userProfile?.subscription?.status === 'active' && userProfile.subscription.expiresAt && (() => {
+                        {activeTab !== 'messages_unified' && effectiveRole === 'user' && userProfile?.subscription?.status === 'active' && userProfile.subscription.expiresAt && (() => {
                             const expiresAt = userProfile.subscription.expiresAt;
                             const expiryDate = expiresAt.toDate ? expiresAt.toDate() : new Date(expiresAt.seconds * 1000);
                             const daysLeft = Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
@@ -2832,7 +3099,7 @@ const Dashboard = () => {
                         })()}
 
                         {/* Parent Account Security Reminder Badge */}
-                        {(userProfile?.role === 'parent' || userProfile?.role === 'user' || !userProfile?.role) && (!userProfile?.email || userProfile?.needsPasswordSetup) && (
+                        {activeTab !== 'messages_unified' && (userProfile?.role === 'parent' || userProfile?.role === 'user' || !userProfile?.role) && (!userProfile?.email || userProfile?.needsPasswordSetup) && (
                             <motion.div
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -2866,7 +3133,7 @@ const Dashboard = () => {
                             </motion.div>
                         )}
 
-                        {effectiveRole === 'user' && !userProfile?.parentId && (
+                        {activeTab !== 'messages_unified' && effectiveRole === 'user' && !userProfile?.parentId && (
                             <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
@@ -2883,7 +3150,7 @@ const Dashboard = () => {
                         )}
 
                         {/* Tab Content */}
-                        <div className="mt-1 md:mt-8 pb-24 md:pb-8">
+                        <div className={activeTab === 'messages_unified' ? 'h-full flex-1 min-h-0 flex flex-col' : 'mt-1 md:mt-8 pb-24 md:pb-8'}>
 
                             {activeTab === 'profile' && (() => {
                                 // Calculate Profile Completion Gamification Percentage
@@ -3226,16 +3493,39 @@ const Dashboard = () => {
                                                         setNewEmailInput(userProfile?.email || user?.email || '');
                                                         setIsEmailModalOpen(true);
                                                     }}
-                                                    className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group/btn"
+                                                    className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group/btn cursor-pointer"
                                                 >
                                                     <div className="flex items-center gap-4">
                                                         <div className="w-10 h-10 rounded-xl bg-white/5 text-white/40 flex items-center justify-center border border-white/10 group-hover/btn:text-sparta-gold transition-colors">
-                                                            <User size={20} />
+                                                            <Mail size={20} />
                                                         </div>
                                                         <div className="text-left">
                                                             <p className="text-white font-black text-[11px] uppercase tracking-tight">Сменить почту (Email)</p>
                                                             <p className="text-white/30 text-[9px] truncate max-w-[180px] sm:max-w-[240px]">
                                                                 {userProfile?.email || user?.email || 'Привязать актуальный e-mail'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <ArrowRight size={14} className="text-white/20" />
+                                                </button>
+
+                                                <button
+                                                    onClick={() => {
+                                                        setNewPhoneInput(userProfile?.phone || userProfile?.parentPhone || '');
+                                                        setPhoneUpdateSuccess('');
+                                                        setPhoneUpdateError('');
+                                                        setIsPhoneModalOpen(true);
+                                                    }}
+                                                    className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group/btn cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-white/5 text-white/40 flex items-center justify-center border border-white/10 group-hover/btn:text-sparta-gold transition-colors">
+                                                            <Phone size={20} />
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <p className="text-white font-black text-[11px] uppercase tracking-tight">Сменить номер телефона</p>
+                                                            <p className="text-white/30 text-[9px] truncate max-w-[180px] sm:max-w-[240px]">
+                                                                {userProfile?.phone || userProfile?.parentPhone || 'Привязать контактный телефон'}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -3364,9 +3654,35 @@ const Dashboard = () => {
                             )}
 
                             {activeTab === 'analytics' && (
-                                <React.Suspense fallback={<div className="flex items-center justify-center p-20"><Loader2 className="animate-spin text-sparta-gold" size={40} /></div>}>
-                                    <DirectorDashboard />
-                                </React.Suspense>
+                                isRealDeveloper && !impersonatedRole ? (
+                                    <React.Suspense fallback={<div className="flex items-center justify-center p-20"><Loader2 className="animate-spin text-sparta-gold" size={40} /></div>}>
+                                        <DeveloperConsole
+                                            currentUser={user}
+                                            currentUserProfile={userProfile}
+                                            onImpersonateRole={(role, targetTab) => {
+                                                setImpersonatedRole(role);
+                                                if (targetTab) {
+                                                    setActiveTab(targetTab as any);
+                                                } else if (role === 'parent') {
+                                                    setActiveTab('family');
+                                                } else if (role === 'coach') {
+                                                    setActiveTab('coaching');
+                                                } else if (role === 'user') {
+                                                    setActiveTab('requests');
+                                                } else {
+                                                    setActiveTab('analytics');
+                                                }
+                                            }}
+                                            currentImpersonatedRole={impersonatedRole}
+                                            onOpenMessages={() => handleTabChange('messages_unified')}
+                                            onOpenAdmin={() => navigate('/admin')}
+                                        />
+                                    </React.Suspense>
+                                ) : (
+                                    <React.Suspense fallback={<div className="flex items-center justify-center p-20"><Loader2 className="animate-spin text-sparta-gold" size={40} /></div>}>
+                                        <DirectorDashboard />
+                                    </React.Suspense>
+                                )
                             )}
 
                             {activeTab === 'support' && (
@@ -3782,6 +4098,7 @@ const Dashboard = () => {
                                     initialTargetName={searchParams.get('targetName')}
                                     initialStudentName={searchParams.get('studentName')}
                                     onMobileDetailChange={(isVisible) => setIsMobileChatActive(isVisible)}
+                                    onTabChange={handleTabChange}
                                 />
                             )}
 
@@ -4174,7 +4491,11 @@ const Dashboard = () => {
                             )}
 
                             {activeTab === 'achievements' && (
-                                <AchievementsList userAchievements={userProfile?.achievements} />
+                                <AwardsPage
+                                    studentId={user?.uid}
+                                    onOpenShop={() => handleTabChange('orders')}
+                                    onBackToDashboard={() => handleTabChange(userProfile?.role === 'student' ? 'activity' : 'requests')}
+                                />
                             )}
 
                             {activeTab === 'stats' && (
@@ -4190,6 +4511,7 @@ const Dashboard = () => {
                                     user={user}
                                     userProfile={userProfile}
                                     onTabChange={handleTabChange}
+                                    onActiveChildChange={setSidebarActiveChild}
                                 />
                             )}
 
@@ -4468,6 +4790,98 @@ const Dashboard = () => {
                 onClose={() => setIsTopUpModalOpen(false)}
                 user={user}
             />
+
+            {/* Phone Change Modal */}
+            {isPhoneModalOpen && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#18181b] rounded-3xl w-full max-w-md border border-sparta-gold/30 p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-left font-manrope space-y-5">
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center border border-sparta-gold/30">
+                                    <Phone size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-russo text-white uppercase tracking-wider">
+                                        Номер телефона
+                                    </h3>
+                                    <p className="text-[11px] text-white/50">Для SMS-уведомлений и связи с тренером</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setIsPhoneModalOpen(false)}
+                                className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors cursor-pointer"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {phoneUpdateSuccess && (
+                            <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs font-bold flex items-center gap-2">
+                                <CheckCircle2 size={16} />
+                                <span>{phoneUpdateSuccess}</span>
+                            </div>
+                        )}
+
+                        {phoneUpdateError && (
+                            <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-xl text-red-400 text-xs font-bold flex items-center gap-2">
+                                <ShieldAlert size={16} />
+                                <span>{phoneUpdateError}</span>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSavePhone} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-white/70 mb-1.5">
+                                    📱 Новый номер телефона:
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={newPhoneInput}
+                                    onChange={(e) => {
+                                        let raw = e.target.value;
+                                        let value = raw.replace(/\D/g, '');
+                                        if (value.startsWith('8')) value = '7' + value.slice(1);
+                                        if (!value.startsWith('7') && value.length > 0) value = '7' + value;
+                                        
+                                        let formatted = '+7';
+                                        if (value.length > 1) formatted += ' (' + value.substring(1, 4);
+                                        if (value.length >= 5) formatted += ') ' + value.substring(4, 7);
+                                        if (value.length >= 8) formatted += '-' + value.substring(7, 9);
+                                        if (value.length >= 10) formatted += '-' + value.substring(9, 11);
+                                        
+                                        setNewPhoneInput(value.length <= 1 ? '' : formatted);
+                                    }}
+                                    placeholder="+7 (999) 000-00-00"
+                                    required
+                                    className="w-full h-12 px-4 bg-black/60 border border-white/15 rounded-xl text-white text-sm focus:border-sparta-gold outline-none transition-all placeholder:text-white/30 font-mono tracking-wide"
+                                    autoFocus
+                                />
+                                <p className="text-[10px] text-white/40 mt-1.5">
+                                    ℹ️ Новый номер обновится в журнале тренера и во всех карточках ваших детей.
+                                </p>
+                            </div>
+
+                            <div className="flex gap-2.5 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPhoneModalOpen(false)}
+                                    className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                                >
+                                    Отмена
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSavingPhone || !newPhoneInput.trim()}
+                                    className="flex-1 py-3 rounded-xl bg-sparta-gold text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 hover:brightness-110 cursor-pointer disabled:opacity-50"
+                                >
+                                    {isSavingPhone ? <Loader2 size={16} className="animate-spin" /> : '✓ Сохранить'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Secure Email Change Modal */}
             {isEmailModalOpen && (
@@ -5171,8 +5585,8 @@ const Dashboard = () => {
             </AnimatePresence>
             {/* Role-tailored Fixed Mobile Bottom Navigation */}
             {!isMobileChatActive && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#09090b] backdrop-blur-xl border-t border-white/10 px-1 py-1.5 safe-area-padding shadow-[0_-10px_30px_rgba(0,0,0,0.95)]">
-                    <div className="flex items-center justify-between w-full max-w-md mx-auto">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0c0c10]/95 backdrop-blur-2xl border-t border-white/10 px-2 py-2 safe-area-padding shadow-[0_-8px_32px_rgba(0,0,0,0.9)]">
+                    <div className="flex items-center justify-between w-full max-w-lg mx-auto">
                         {userProfile?.role === 'parent' ? (
                             <>
                                 <button
@@ -5231,9 +5645,15 @@ const Dashboard = () => {
                                     className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'analytics' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
                                 >
                                     <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'analytics' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <TrendingUp size={18} className={activeTab === 'analytics' ? 'text-sparta-gold' : 'text-white/50'} />
+                                        {isRealDeveloper && !impersonatedRole ? (
+                                            <Terminal size={18} className={activeTab === 'analytics' ? 'text-sparta-gold' : 'text-white/50'} />
+                                        ) : (
+                                            <TrendingUp size={18} className={activeTab === 'analytics' ? 'text-sparta-gold' : 'text-white/50'} />
+                                        )}
                                     </div>
-                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'analytics' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Анализ</span>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'analytics' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>
+                                        {isRealDeveloper && !impersonatedRole ? 'Пульт' : 'Анализ'}
+                                    </span>
                                 </button>
                                 <button
                                     onClick={() => handleTabChange('coaching')}
@@ -5285,13 +5705,13 @@ const Dashboard = () => {
                                     <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'achievements' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Награды</span>
                                 </button>
                                 <button
-                                    onClick={() => handleTabChange('subscriptions')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'subscriptions' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                    onClick={() => handleTabChange('orders')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'orders' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
                                 >
-                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'subscriptions' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <CreditCard size={19} className={activeTab === 'subscriptions' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <ShoppingBag size={19} className={activeTab === 'orders' ? 'text-sparta-gold' : 'text-white/50'} />
                                     </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'subscriptions' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>План</span>
+                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'orders' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Призы</span>
                                 </button>
                                 <button
                                     onClick={() => handleTabChange('messages_unified')}

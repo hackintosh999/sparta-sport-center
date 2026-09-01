@@ -3,9 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, Calendar, Phone, Hash, Mail, Trophy, Edit2, Save, Upload, Shirt, Activity, Tag, Loader2, Shield, Dumbbell, Star, BadgeCheck, Code, Users, UserMinus, CheckCircle2, MessageSquare, Trash2, Zap, Award, Building } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { doc, updateDoc, collection, query, where, getDocs, runTransaction, writeBatch, serverTimestamp, addDoc, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, getDocs, runTransaction, writeBatch, serverTimestamp, addDoc, deleteDoc, onSnapshot, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
+import { SpartaStoriesViewer, SpartaStoryGroup } from './profile/SpartaStoriesViewer';
+import { SpartaHighlightsModal, SpartaHighlightAlbum } from './profile/SpartaHighlightsModal';
+import { Sparta3DReactionIcon } from './profile/SpartaReactions';
 
 interface ProfileViewModalProps {
     isOpen: boolean;
@@ -22,6 +25,11 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({ isOpen, onClose, us
     const [friendStatus, setFriendStatus] = useState<'none' | 'pending' | 'accepted' | 'outgoing'>('none');
     const [requestId, setRequestId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Highlights state
+    const [userHighlights, setUserHighlights] = useState<SpartaHighlightAlbum[]>([]);
+    const [activeHighlightGroup, setActiveHighlightGroup] = useState<SpartaStoryGroup | null>(null);
+    const [isManageHighlightsOpen, setIsManageHighlightsOpen] = useState(false);
 
     const [formData, setFormData] = useState({
         childFirstName: '',
@@ -91,6 +99,41 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({ isOpen, onClose, us
             }
         }
     }, [userData, user]);
+
+    // Subscribe to Highlights in real-time
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const q = query(collection(db, 'highlights'), orderBy('createdAt', 'desc'));
+        const unsub = onSnapshot(q, (snap) => {
+            const list: SpartaHighlightAlbum[] = [];
+            snap.docs.forEach(d => {
+                const data = d.data();
+                list.push({
+                    id: d.id,
+                    title: data.title,
+                    coverIcon: data.coverIcon || 'trophy',
+                    coverGradient: data.coverGradient || 'bg-gradient-to-br from-amber-600 via-[#1c140a] to-black',
+                    authorId: data.authorId,
+                    authorName: data.authorName,
+                    slides: data.slides || []
+                });
+            });
+            setUserHighlights(list);
+        }, (err) => {
+            console.warn("Error fetching highlights for profile:", err);
+        });
+        return () => unsub();
+    }, [isOpen]);
+
+    const handleDeleteHighlightAlbum = async (albumId: string, albumTitle: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!window.confirm(`Удалить закрепленный альбом «${albumTitle}»?`)) return;
+        try {
+            await deleteDoc(doc(db, 'highlights', albumId));
+        } catch (err) {
+            console.error("Error deleting highlight:", err);
+        }
+    };
 
     // Helper to resize image and convert to Base64
     const resizeImage = (file: File): Promise<string> => {
@@ -538,10 +581,98 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({ isOpen, onClose, us
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {/* 🏅 4 ЗАКРЕПЛЕННЫЕ НАГРАДЫ В ПРОФИЛЕ */}
+                                            {Array.isArray(userData?.pinnedAwards) && userData.pinnedAwards.length > 0 && (
+                                                <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                                                    {userData.pinnedAwards.slice(0, 4).map((awardId: string) => {
+                                                        const userAch = (userData.achievements || []).find((a: any) => a.id === awardId || a.awardId === awardId);
+                                                        const title = userAch?.title || 'Спартанская награда';
+                                                        return (
+                                                            <div
+                                                                key={awardId}
+                                                                className="px-3 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-bold flex items-center gap-1.5 shadow-sm"
+                                                                title={title}
+                                                            >
+                                                                <Star size={11} className="fill-amber-400 text-amber-400" />
+                                                                <span>{title}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* ROLE-ADAPTIVE BODY CONTENT */}
                                         <div className="p-6 space-y-4 font-manrope">
+
+                                            {/* PINNED STORIES (HIGHLIGHTS) ROW */}
+                                            <div className="p-4 bg-black/40 rounded-2xl border border-white/10 space-y-3">
+                                                <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                                                    <div className="flex items-center gap-2 text-sparta-gold">
+                                                        <Star size={15} className="fill-sparta-gold text-sparta-gold" />
+                                                        <h4 className="text-xs font-russo uppercase tracking-wider text-white">
+                                                            Закрепленные истории ({userHighlights.length})
+                                                        </h4>
+                                                    </div>
+                                                    {(user?.uid === userData?.id || (user as any)?.role === 'admin' || (user as any)?.role === 'developer' || ['coach', 'trainer'].includes((user as any)?.role || '')) && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsManageHighlightsOpen(true)}
+                                                            className="text-[10px] font-black uppercase text-sparta-gold hover:underline flex items-center gap-1 bg-sparta-gold/10 px-2.5 py-1 rounded-lg border border-sparta-gold/20"
+                                                        >
+                                                            <Trash2 size={11} />
+                                                            <span>Управление</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {userHighlights.length === 0 ? (
+                                                    <p className="text-xs text-white/40 italic text-center py-2">
+                                                        Нет закрепленных историй
+                                                    </p>
+                                                ) : (
+                                                    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
+                                                        {userHighlights.map(album => {
+                                                            const canDelete = user?.uid === userData?.id || (user as any)?.role === 'admin' || (user as any)?.role === 'developer' || album.authorId === user?.uid;
+                                                            return (
+                                                                <div
+                                                                    key={album.id}
+                                                                    onClick={() => {
+                                                                        setActiveHighlightGroup({
+                                                                            authorId: album.authorId,
+                                                                            authorName: album.title,
+                                                                            authorRole: 'club',
+                                                                            roleLabel: 'Актуальное',
+                                                                            slides: album.slides && album.slides.length > 0 ? album.slides : []
+                                                                        });
+                                                                    }}
+                                                                    className="flex flex-col items-center gap-1.5 shrink-0 group relative cursor-pointer"
+                                                                >
+                                                                    <div className={`w-14 h-14 rounded-2xl p-0.5 ${album.coverGradient} flex items-center justify-center border border-sparta-gold/40 shadow-lg group-hover:scale-105 transition-transform relative`}>
+                                                                        <Sparta3DReactionIcon emojiKey={album.coverIcon} size={26} />
+
+                                                                        {/* Direct delete button for owner / admin */}
+                                                                        {canDelete && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => handleDeleteHighlightAlbum(album.id, album.title, e)}
+                                                                                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-lg transition-all z-10"
+                                                                                title="Удалить закрепленный альбом"
+                                                                            >
+                                                                                <Trash2 size={10} />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-[10px] font-bold text-white/80 group-hover:text-sparta-gold transition-colors truncate max-w-[65px] text-center">
+                                                                        {album.title}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
 
                                             {/* ATHLETE BODY CONTENT */}
                                             {!['admin', 'trainer', 'coach', 'director', 'developer'].includes(userData?.role) && (
@@ -838,6 +969,28 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({ isOpen, onClose, us
                             </div>
                         )
                     }
+
+                    {/* Highlights Stories Viewer Modal */}
+                    {activeHighlightGroup && (
+                        <SpartaStoriesViewer
+                            isOpen={Boolean(activeHighlightGroup)}
+                            onClose={() => setActiveHighlightGroup(null)}
+                            initialGroupIndex={0}
+                            storyGroups={[activeHighlightGroup]}
+                            currentUserId={user?.uid}
+                            currentUserProfile={userData}
+                        />
+                    )}
+
+                    {/* Highlights Management Modal */}
+                    {isManageHighlightsOpen && (
+                        <SpartaHighlightsModal
+                            isOpen={isManageHighlightsOpen}
+                            onClose={() => setIsManageHighlightsOpen(false)}
+                            user={user}
+                            userProfile={userData}
+                        />
+                    )}
                 </>
             )}
         </AnimatePresence >

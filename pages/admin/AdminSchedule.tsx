@@ -10,7 +10,8 @@ import {
     Target,
     Save,
     X,
-    LayoutGrid
+    LayoutGrid,
+    ShieldAlert
 } from 'lucide-react';
 import { db } from '../../firebase';
 import {
@@ -27,12 +28,14 @@ import { ScheduleDay, ScheduleItem } from '../../types';
 import { Button } from '../../components/UIComponents';
 import { triggerScheduleSync, triggerReverseSync } from '../../services/scheduleSync';
 import { RefreshCcw } from 'lucide-react';
+import { ScheduleOverrideModal } from '../../components/schedule/ScheduleOverrideModal';
 
 const AdminSchedule = () => {
     const [days, setDays] = useState<ScheduleDay[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingItem, setEditingItem] = useState<{ dayId: string, item: ScheduleItem } | null>(null);
     const [isAdding, setIsAdding] = useState<string | null>(null); // dayId
+    const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
 
     // Real-time synchronization
     useEffect(() => {
@@ -119,6 +122,14 @@ const AdminSchedule = () => {
                             Создать шаблон
                         </Button>
                     )}
+                    <Button
+                        onClick={() => setIsOverrideModalOpen(true)}
+                        variant="outline"
+                        className="border-amber-500/40 text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 flex items-center gap-2 font-bold"
+                    >
+                        <ShieldAlert size={16} />
+                        ⚡ Форс-мажор / Отмена
+                    </Button>
                     <Button
                         onClick={async () => {
                             setLoading(true);
@@ -309,6 +320,13 @@ const AdminSchedule = () => {
                     </motion.div>
                 </div>
             )}
+
+            {/* Force Majeure & Schedule Overrides Modal */}
+            <ScheduleOverrideModal
+                isOpen={isOverrideModalOpen}
+                onClose={() => setIsOverrideModalOpen(false)}
+                creatorName="Администратор"
+            />
         </div>
     );
 };

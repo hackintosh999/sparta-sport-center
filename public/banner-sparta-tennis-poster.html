@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>СПАРТА БОЛЬШОЙ ТЕННИС - Векторный Плакат</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 1240px;
+      height: 1754px;
+      overflow: hidden;
+      background-color: #052019;
+    }
+    .poster-container {
+      width: 1240px;
+      height: 1754px;
+      position: relative;
+    }
+    .bg-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      object-fit: cover;
+      z-index: 1;
+    }
+    /* Корректирующий слой (затемнение текста, оставляя иконки) */
+    .mask-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      z-index: 2;
+    }
+    .mask-rect {
+      position: absolute;
+      background: #061914; /* Темный фон из оригинального макета */
+      filter: blur(35px); /* Мягкое размытие краев */
+      border-radius: 40px;
+    }
+    .mask-top { top: 20px; left: 20px; width: 750px; height: 740px; }
+    .mask-benefits { top: 780px; left: 230px; width: 600px; height: 500px; }
+    .mask-btn { top: 1300px; left: 50px; width: 800px; height: 180px; }
+    .mask-footer { top: 1530px; left: 20px; width: 1200px; height: 200px; }
+
+    /* Векторный текстовый слой */
+    .vector-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      z-index: 3;
+      font-family: 'Montserrat', sans-serif;
+      box-sizing: border-box;
+      color: #FFFFFF;
+    }
+    
+    .neon-green { color: #A4F621; }
+    .neon-stroke { stroke: #A4F621; }
+
+    .header-group {
+      position: absolute;
+      top: 155px;
+      left: 100px;
+    }
+    .sup-title {
+      font-size: 38px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      margin-bottom: 25px;
+    }
+    .sub-title {
+      font-size: 42px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      margin-bottom: 35px;
+    }
+    .main-title {
+      font-size: 215px;
+      font-weight: 900;
+      letter-spacing: -2.5px;
+      line-height: 0.85;
+      margin: 0;
+    }
+
+    .benefits-group {
+      position: absolute;
+      top: 805px;
+      left: 275px;
+      display: flex;
+      flex-direction: column;
+      gap: 90px; /* Отступы между строками преимуществ */
+    }
+    .benefit-item {
+      font-size: 44px;
+      font-weight: 500;
+    }
+
+    .cta-btn {
+      position: absolute;
+      top: 1350px;
+      left: 100px;
+      width: 680px;
+      height: 100px;
+      border: 3px solid #A4F621;
+      border-radius: 16px;
+      background: rgba(4, 24, 18, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+
+    .footer-group {
+      position: absolute;
+      top: 1560px;
+      left: 100px;
+      width: 1040px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .footer-col {
+      display: flex;
+      align-items: flex-start;
+      gap: 30px;
+    }
+    .footer-icon svg {
+      width: 45px;
+      height: 45px;
+    }
+    .footer-text {
+      font-size: 27px;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="poster-container">
+    <!-- 1. Фоновое изображение -->
+    <img src="/banner-assets/sparta-tennis-bg.png" alt="Фон" class="bg-image">
+
+    <!-- 2. Корректирующий слой (скрываем старый текст, оставляя иконки) -->
+    <div class="mask-layer">
+      <div class="mask-rect mask-top"></div>
+      <div class="mask-rect mask-benefits"></div>
+      <div class="mask-rect mask-btn"></div>
+      <div class="mask-rect mask-footer"></div>
+    </div>
+
+    <!-- 3. Векторный слой с новым текстом -->
+    <div class="vector-layer">
+      
+      <!-- Блок 1: Заголовочная группа -->
+      <div class="header-group">
+        <div class="sup-title">ЦСП «СПАРТА»</div>
+        <div class="sub-title neon-green">ОТКРЫВАЕТ НОВОЕ НАПРАВЛЕНИЕ</div>
+        <h1 class="main-title">БОЛЬШОЙ<br>ТЕННИС</h1>
+      </div>
+
+      <!-- Блок 2: Преимущества -->
+      <!-- Выровнены по левому краю напротив иконок -->
+      <div class="benefits-group">
+        <div class="benefit-item">- Пробная тренировка 0 ₽</div>
+        <div class="benefit-item">- Заморозка при болезни</div>
+        <div class="benefit-item">- Гос. лицензия</div>
+        <div class="benefit-item">- Налоговый вычет 13%</div>
+      </div>
+
+      <!-- Блок 3: Кнопка -->
+      <div class="cta-btn neon-green">
+        ЗАПИСАТЬСЯ НА ТРЕНИРОВКУ
+      </div>
+
+      <!-- Блок 4: Подвал / Контакты -->
+      <div class="footer-group">
+        <!-- Левая колонка -->
+        <div class="footer-col">
+          <div class="footer-icon">
+            <svg viewBox="0 0 24 24" fill="none" class="neon-stroke" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            +7 919 339 33 99 - Директор<br>
+            +7 (351) 230-12-69 - Администратор
+          </div>
+        </div>
+        
+        <!-- Правая колонка -->
+        <div class="footer-col" style="margin-right: 60px;">
+          <div class="footer-icon">
+            <svg viewBox="0 0 24 24" fill="none" class="neon-stroke" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            ул. Большевистская, 125<br>
+            ул. Планетная, 53<br>
+            ул. Мясниковой, 25/2
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

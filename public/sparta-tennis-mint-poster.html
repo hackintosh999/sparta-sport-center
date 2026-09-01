@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ЦСП СПАРТА — Большой теннис (Финальный релиз)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    body {
+      width: 1012px;
+      height: 2048px;
+      overflow: hidden;
+      background-color: #0A3D38;
+      font-family: 'Montserrat', sans-serif;
+      position: relative;
+    }
+
+    .poster {
+      width: 1012px;
+      height: 2048px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Фоновый слой */
+    .bg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1012px;
+      height: 2048px;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Контентный слой */
+    .content-layer {
+      position: relative;
+      z-index: 2;
+      width: 1012px;
+      height: 2048px;
+      padding: 24px 45px 36px 45px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* ==================== БЛОК 1: ВЕРХНЯЯ ШАПКА С ГЕРБОМ ==================== */
+    .top-header-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .gold-crest-img {
+      width: 140px;
+      height: auto;
+      filter: drop-shadow(0 6px 18px rgba(255, 215, 0, 0.55));
+      margin-bottom: 8px;
+    }
+
+    .top-nadpis {
+      font-size: 26px;
+      font-weight: 900;
+      color: #0B4E49;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      text-shadow: 0 1px 3px rgba(255, 255, 255, 0.85);
+    }
+
+    /* ==================== БЛОК 2: ГИГАНТСКИЙ 3D ЗАГОЛОВОК ==================== */
+    .main-title-container {
+      text-align: center;
+      margin-top: 4px;
+      margin-bottom: auto;
+    }
+
+    .title-wrapper-3d {
+      position: relative;
+      display: inline-block;
+    }
+
+    .title-shadow-back {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 154px;
+      font-weight: 900;
+      line-height: 0.90;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #0F4D52;
+      z-index: 1;
+      text-shadow: 
+        0px 2px 0px #0F4D52,
+        0px 3px 0px #0D454A,
+        0px 4px 0px #0B3E42,
+        0px 5px 0px #09373B,
+        0px 6px 0px #083033,
+        0px 7px 0px #06282B,
+        0px 8px 0px #052123,
+        0 14px 28px rgba(0, 0, 0, 0.65);
+    }
+
+    .volumetric-tennis-title {
+      position: relative;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 154px;
+      font-weight: 900;
+      line-height: 0.90;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      z-index: 2;
+      background: linear-gradient(180deg, #FFFFFF 0%, #E0FFF8 25%, #76E8DC 65%, #2ED1C6 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-stroke: 1.6px #FFFFFF;
+    }
+
+    .title-wrapper-3d span {
+      display: block;
+    }
+
+    /* ==================== БЛОК 3: МАССИВНЫЕ КАРТОЧКИ С 3D-ТЕКСТОМ ==================== */
+    .benefits-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 28px;
+      margin-top: auto;
+    }
+
+    .pill-card-wrapper {
+      position: relative;
+      width: 650px;
+      height: 136px;
+    }
+
+    .pill-extrusion-bottom {
+      position: absolute;
+      top: 11px;
+      left: 0;
+      width: 650px;
+      height: 136px;
+      background: #053A34;
+      border-radius: 22px;
+      transform: skewX(-15deg);
+      box-shadow: 0 14px 24px rgba(0, 0, 0, 0.45);
+      z-index: 1;
+    }
+
+    .pill-surface {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 650px;
+      height: 136px;
+      background: linear-gradient(90deg, #7EFBD0 0%, #64DCD7 38%, #B589D6 100%);
+      opacity: 0.88;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 22px;
+      transform: skewX(-15deg);
+      border: 1.8px solid #FFFFFF;
+      box-shadow: 
+        inset 0 2.5px 3px rgba(255, 255, 255, 0.95),
+        inset 0 -2.5px 3px rgba(5, 58, 52, 0.35);
+      z-index: 2;
+    }
+
+    .pill-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 106px;
+      width: auto;
+      max-width: 115px;
+      object-fit: contain;
+      z-index: 4;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
+    }
+
+    .pill-text-content {
+      position: relative;
+      z-index: 3;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-left: 152px;
+      padding-right: 25px;
+      text-align: left;
+    }
+
+    .pill-text-content div {
+      color: #FFFFFF;
+      font-size: 31px;
+      font-weight: 900;
+      line-height: 1.20;
+      letter-spacing: 0.2px;
+      text-shadow: 
+        2px 3px 0px #2A0845,
+        0 4px 10px rgba(0, 0, 0, 0.50);
+      -webkit-text-stroke: 0.4px rgba(255, 255, 255, 0.95);
+      text-align: left;
+    }
+
+    /* ==================== БЛОК 4: ПОДВАЛ (3 АДРЕСА) ==================== */
+    .footer-panel {
+      width: 100%;
+      background: rgba(6, 32, 28, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1.8px solid #26C6DA;
+      border-radius: 26px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 20px rgba(38, 198, 218, 0.22);
+      padding: 22px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .footer-col {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .footer-icon-box {
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+    }
+
+    .footer-icon-box svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 2px 8px rgba(38, 198, 218, 0.45));
+    }
+
+    .footer-text {
+      font-size: 21px;
+      font-weight: 700;
+      color: #FFFFFF;
+      line-height: 1.36;
+      letter-spacing: 0.2px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="poster">
+    <!-- Фоновое изображение -->
+    <img src="/banner-assets/sparta-tennis-girl-clean-bg.jpg" alt="Большой теннис Спарта" class="bg-layer">
+
+    <!-- Контентный слой -->
+    <div class="content-layer">
+      
+      <!-- БЛОК 1: Шапка с Золотым гербом и строкой направления -->
+      <div class="top-header-bar">
+        <img src="/banner-assets/sparta-crest-gold.png" alt="Герб Спарта" class="gold-crest-img">
+        <div class="top-nadpis">ЦСП «СПАРТА» ОТКРЫВАЕТ НОВОЕ НАПРАВЛЕНИЕ:</div>
+      </div>
+
+      <!-- БЛОК 2: Главный 3D заголовок -->
+      <div class="main-title-container">
+        <div class="title-wrapper-3d">
+          <div class="title-shadow-back">
+            <span>БОЛЬШОЙ</span>
+            <span>ТЕННИС</span>
+          </div>
+          <h1 class="volumetric-tennis-title">
+            <span>БОЛЬШОЙ</span>
+            <span>ТЕННИС</span>
+          </h1>
+        </div>
+      </div>
+
+      <!-- БЛОК 3: Увеличенные массивные 3D-плиты с объемным 3D-текстом -->
+      <div class="benefits-stack">
+        
+        <!-- 1. Пробная тренировка 0 ₽ (3D Gift Box) -->
+        <div class="pill-card-wrapper">
+          <div class="pill-extrusion-bottom"></div>
+          <div class="pill-surface"></div>
+          <img src="/banner-assets/tennis-icon-gift.png" alt="Подарочная коробка" class="pill-icon">
+          <div class="pill-text-content">
+            <div>Пробная</div>
+            <div>тренировка 0 ₽</div>
+          </div>
+        </div>
+
+        <!-- 2. Заморозка при болезни (3D Ice Cube) -->
+        <div class="pill-card-wrapper">
+          <div class="pill-extrusion-bottom"></div>
+          <div class="pill-surface"></div>
+          <img src="/banner-assets/tennis-icon-ice.png" alt="Кубик льда" class="pill-icon">
+          <div class="pill-text-content">
+            <div>Заморозка</div>
+            <div>при болезни</div>
+          </div>
+        </div>
+
+        <!-- 3. Гос. лицензия (3D Golden Shield) -->
+        <div class="pill-card-wrapper">
+          <div class="pill-extrusion-bottom"></div>
+          <div class="pill-surface"></div>
+          <img src="/banner-assets/tennis-icon-license.png" alt="Золотой щит" class="pill-icon">
+          <div class="pill-text-content">
+            <div>Гос. лицензия</div>
+          </div>
+        </div>
+
+        <!-- 4. Налоговый вычет 13% (3D Coins & Chart) -->
+        <div class="pill-card-wrapper">
+          <div class="pill-extrusion-bottom"></div>
+          <div class="pill-surface"></div>
+          <img src="/banner-assets/tennis-icon-tax.png" alt="Налоговый вычет" class="pill-icon">
+          <div class="pill-text-content">
+            <div>Налоговый</div>
+            <div>вычет 13%</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- БЛОК 4: Подвал (Строго 3 адреса) -->
+      <div class="footer-panel">
+        <div class="footer-col">
+          <div class="footer-icon-box">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="22" fill="rgba(38, 198, 218, 0.18)" stroke="#26C6DA" stroke-width="2"/>
+              <path d="M32 27.5V30.5C32 31.5 31 32.5 30 32.5C21 32 16 27 15.5 18C15.5 17 16.5 16 17.5 16H20.5C21.5 16 22.3 16.8 22.5 17.8C22.7 19 23.2 20.2 23.9 21.2C24.4 21.9 24.2 22.8 23.5 23.3L22.2 24.3C23.4 26.5 25.5 28.6 27.7 29.8L28.7 28.5C29.2 27.8 30.1 27.6 30.8 28.1C31.8 28.8 33 29.3 34.2 29.5C35.2 29.7 36 30.5 36 31.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            <div>+7 919 339 33 99 (Директор)</div>
+            <div>+7 (351) 230-12-69 (Администратор)</div>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-icon-box">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="22" fill="rgba(38, 198, 218, 0.18)" stroke="#26C6DA" stroke-width="2"/>
+              <path d="M24 13C19.5 13 16 16.5 16 21C16 26.5 24 35 24 35C24 35 32 26.5 32 21C32 16.5 28.5 13 24 13Z" stroke="#FFFFFF" stroke-width="2.2" stroke-linejoin="round"/>
+              <circle cx="24" cy="21" r="3.5" fill="#26C6DA"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            <div>ул. Большевистская 125,</div>
+            <div>ул. Планетная 53,</div>
+            <div>ул. Мясниковой 25/2</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

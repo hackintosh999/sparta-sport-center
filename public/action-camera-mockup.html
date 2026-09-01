@@ -1,0 +1,365 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Экшн камера — Дизайн макета карточки товара</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #0d1117;
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: #FFFFFF;
+    }
+    .controls {
+      margin-bottom: 24px;
+      display: flex;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn {
+      background: #007AFF;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: #005bb5;
+      transform: translateY(-1px);
+    }
+    .btn.secondary {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Карточка товара (формат 3:4, как на Ozon / Wildberries) */
+    .card-container {
+      width: 750px;
+      height: 1000px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      background-color: #1a1e24;
+    }
+
+    /* Фоновый слой */
+    .bg-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Световые акценты поверх фона */
+    .ambient-glow {
+      position: absolute;
+      top: -50px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(ellipse at center, rgba(160, 195, 230, 0.18) 0%, rgba(26, 32, 40, 0) 70%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Верхнее меню табов */
+    .top-nav {
+      position: absolute;
+      top: 36px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      z-index: 10;
+    }
+    .nav-item {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.55);
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .nav-item:hover, .nav-item.active {
+      color: #FFFFFF;
+    }
+
+    /* Главная типографика (Заголовок) */
+    .hero-title-group {
+      position: absolute;
+      top: 86px;
+      left: 54px;
+      z-index: 10;
+      line-height: 0.95;
+    }
+    .title-line-1 {
+      font-size: 88px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      background: linear-gradient(180deg, #FFFFFF 20%, #A6B4C4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+      display: block;
+    }
+    .title-line-2 {
+      font-size: 88px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      color: #FFFFFF;
+      filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.4));
+      display: block;
+      margin-top: 4px;
+    }
+
+    /* Бейдж 4K 30fps (Справа вверху) */
+    .badge-4k {
+      position: absolute;
+      top: 96px;
+      right: 56px;
+      width: 142px;
+      height: 142px;
+      background: linear-gradient(145deg, #1C92FF 0%, #006CE6 100%);
+      border-radius: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 16px 36px rgba(0, 118, 240, 0.45), 0 0 0 1.5px rgba(255, 255, 255, 0.35) inset;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+    .badge-4k-title {
+      font-size: 58px;
+      font-weight: 900;
+      color: #FFFFFF;
+      line-height: 1;
+      letter-spacing: -1px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+    .badge-4k-sub {
+      font-size: 21px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.85);
+      margin-top: 2px;
+    }
+
+    /* Бейдж «2 дисплея» (Под заголовком слева) */
+    .badge-displays {
+      position: absolute;
+      top: 290px;
+      left: 54px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(90deg, #0084FF 0%, #0066D6 100%);
+      padding: 10px 22px 10px 14px;
+      border-radius: 40px;
+      box-shadow: 0 10px 24px rgba(0, 110, 230, 0.4), 0 0 0 1.2px rgba(255, 255, 255, 0.3) inset;
+      z-index: 10;
+    }
+    .display-icon-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+    .display-icon-circle svg {
+      width: 18px;
+      height: 18px;
+      fill: #0070E0;
+    }
+    .badge-displays-text {
+      font-size: 21px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 0.2px;
+    }
+
+    /* Слой с объектом (Камера) */
+    .object-layer {
+      position: absolute;
+      bottom: 110px;
+      left: 50%;
+      transform: translateX(-48%);
+      width: 670px;
+      height: 670px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: filter 0.3s;
+    }
+    .object-layer img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.75));
+    }
+
+    /* Блок модели (Справа внизу) */
+    .model-info-block {
+      position: absolute;
+      bottom: 74px;
+      right: 56px;
+      text-align: right;
+      z-index: 10;
+    }
+    .cyan-dots {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .cyan-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #00B2FF;
+      box-shadow: 0 0 10px rgba(0, 178, 255, 0.8);
+    }
+    .model-brand {
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #FFFFFF;
+      line-height: 1.1;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    }
+    .model-code {
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #FFFFFF;
+      line-height: 1.1;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Сетка и декоративные блики */
+    .glint {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      box-shadow: 0 0 15px 4px rgba(255, 255, 255, 0.9), 0 0 30px 8px rgba(0, 150, 255, 0.6);
+      pointer-events: none;
+      z-index: 8;
+    }
+    .glint-1 {
+      top: 400px;
+      left: 360px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="controls">
+    <button class="btn" onclick="toggleBlendMode()">Переключить режим наложения объекта (Multiply/Normal)</button>
+    <button class="btn secondary" onclick="window.open('C:/Users/User/Downloads/', '_blank')">Открыть папку с файлами</button>
+  </div>
+
+  <div class="card-container" id="card">
+    <!-- Фоновое изображение -->
+    <img src="file:///C:/Users/User/Downloads/action_camera_background.jpg" alt="Фон" class="bg-layer" id="bgImg">
+    <div class="ambient-glow"></div>
+
+    <!-- Верхняя навигация -->
+    <nav class="top-nav">
+      <span class="nav-item active">Товар</span>
+      <span class="nav-item">Функции</span>
+      <span class="nav-item">Характеристики</span>
+      <span class="nav-item">Комплектация</span>
+      <span class="nav-item">Размеры</span>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="hero-title-group">
+      <span class="title-line-1">Экшн</span>
+      <span class="title-line-2">камера</span>
+    </div>
+
+    <!-- Бейдж 4K 30fps -->
+    <div class="badge-4k">
+      <div class="badge-4k-title">4K</div>
+      <div class="badge-4k-sub">30fps</div>
+    </div>
+
+    <!-- Бейдж «2 дисплея» -->
+    <div class="badge-displays">
+      <div class="display-icon-circle">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="14" height="14" rx="2" stroke="#0070E0" stroke-width="2" fill="none"/>
+          <rect x="7" y="7" width="14" height="14" rx="2" fill="#0070E0"/>
+        </svg>
+      </div>
+      <span class="badge-displays-text">2 дисплея</span>
+    </div>
+
+    <!-- Объект (Камера) -->
+    <div class="object-layer" id="objectContainer">
+      <img src="file:///C:/Users/User/Downloads/action_camera_object.jpg" alt="Экшн камера" id="objectImg">
+    </div>
+
+    <!-- Декоративный блик линзы -->
+    <div class="glint glint-1"></div>
+
+    <!-- Модель справа внизу -->
+    <div class="model-info-block">
+      <div class="cyan-dots">
+        <div class="cyan-dot"></div>
+        <div class="cyan-dot"></div>
+        <div class="cyan-dot"></div>
+      </div>
+      <div class="model-brand">HOCO</div>
+      <div class="model-code">DV101</div>
+    </div>
+  </div>
+
+  <script>
+    let isMultiply = false;
+    function toggleBlendMode() {
+      const img = document.getElementById('objectImg');
+      isMultiply = !isMultiply;
+      if (isMultiply) {
+        img.style.mixBlendMode = 'multiply';
+      } else {
+        img.style.mixBlendMode = 'normal';
+      }
+    }
+  </script>
+</body>
+</html>

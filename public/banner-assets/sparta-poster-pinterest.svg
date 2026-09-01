@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1754" viewBox="0 0 1240 1754" fill="none">
+  <!-- Black Base Background -->
+  <rect width="1240" height="1754" fill="#060907"/>
+
+  <defs>
+    <linearGradient id="goldPill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD000"/>
+      <stop offset="100%" stop-color="#FFA800"/>
+    </linearGradient>
+
+    <radialGradient id="stadiumGlow" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#554403"/>
+      <stop offset="40%" stop-color="#18220A"/>
+      <stop offset="85%" stop-color="#060907"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Lower Stadium Lighted Area -->
+  <rect y="480" width="1240" height="1274" fill="url(#stadiumGlow)"/>
+
+  <!-- Stadium Light Spotlights -->
+  <circle cx="620" cy="550" r="450" fill="#FFC72C" fill-opacity="0.25"/>
+  <circle cx="150" cy="650" r="300" fill="#FFC72C" fill-opacity="0.15"/>
+  <circle cx="1090" cy="650" r="300" fill="#FFC72C" fill-opacity="0.15"/>
+
+  <!-- ================= TOP SECTION ================= -->
+  <!-- Top Dark Container with Arch Cutout -->
+  <path d="M0,0 L1240,0 L1240,480 Q620,580 0,480 Z" fill="#080C0A"/>
+
+  <!-- Location Row -->
+  <g transform="translate(510, 60)">
+    <circle cx="12" cy="12" r="10" fill="#FFC72C"/>
+    <text x="32" y="18" fill="#FFFFFF" font-family="'Inter', sans-serif" font-size="20" font-weight="700" letter-spacing="2">Г. НОВОСИБИРСК</text>
+  </g>
+
+  <!-- Main Titles (Exact reference style) -->
+  <text x="620" y="165" text-anchor="middle" fill="#FFC72C" font-family="'Inter', 'Unbounded', sans-serif" font-size="64" font-weight="900" letter-spacing="2">
+    ЦСП «СПАРТА»
+  </text>
+  <text x="620" y="235" text-anchor="middle" fill="#FFFFFF" font-family="'Inter', 'Unbounded', sans-serif" font-size="58" font-weight="900" letter-spacing="1">
+    ФУТБОЛЬНЫЙ ЦЕНТР
+  </text>
+
+  <!-- Offer Left: Age & Free Pill Badge -->
+  <g transform="translate(80, 290)">
+    <text x="0" y="30" fill="#FFC72C" font-family="'Inter', sans-serif" font-size="24" font-style="italic" font-weight="600">Для детей от 4 до 14 лет</text>
+    
+    <!-- Yellow Pill Badge -->
+    <rect y="50" width="410" height="60" rx="30" fill="url(#goldPill)"/>
+    <text x="30" y="88" fill="#060907" font-family="'Inter', sans-serif" font-size="22" font-weight="700">Первое занятие — <tspan font-weight="900">БЕСПЛАТНО</tspan></text>
+  </g>
+
+  <!-- Bullets Right: // Slashes style -->
+  <g transform="translate(730, 295)">
+    <text x="0" y="25" fill="#FFFFFF" font-family="'Inter', sans-serif" font-size="22" font-weight="700">
+      <tspan fill="#FFC72C" font-weight="900">// </tspan>Тренеры с лицензией UEFA
+    </text>
+    <text x="0" y="65" fill="#FFFFFF" font-family="'Inter', sans-serif" font-size="22" font-weight="700">
+      <tspan fill="#FFC72C" font-weight="900">// </tspan>Индивидуальный подход
+    </text>
+    <text x="0" y="105" fill="#FFFFFF" font-family="'Inter', sans-serif" font-size="22" font-weight="700">
+      <tspan fill="#FFC72C" font-weight="900">// </tspan>Мини-группы 8–10 детей
+    </text>
+  </g>
+
+  <!-- Center Boy Photo Placeholder Area -->
+  <rect x="150" y="580" width="940" height="850" rx="20" fill="#111613" fill-opacity="0.1" stroke="#FFC72C" stroke-opacity="0.3" stroke-dasharray="8 8"/>
+  <text x="620" y="980" text-anchor="middle" fill="#8E9B93" font-family="'Inter', sans-serif" font-size="18" font-weight="500">
+    [ Перетащите сюда фото: sparta-boy-soccer.jpg ]
+  </text>
+
+  <!-- ================= BOTTOM FOOTER ================= -->
+  <g transform="translate(75, 1480)">
+    <!-- Big CTA Button -->
+    <rect width="1090" height="82" rx="24" fill="url(#goldPill)"/>
+    <text x="545" y="52" text-anchor="middle" fill="#060907" font-family="'Inter', 'Unbounded', sans-serif" font-size="24" font-weight="900" letter-spacing="1">
+      ЗАПИСАТЬСЯ НА БЕСПЛАТНУЮ ТРЕНИРОВКУ →
+    </text>
+
+    <!-- Info Bar -->
+    <g transform="translate(0, 102)">
+      <rect width="1090" height="85" rx="20" fill="#0D1310" fill-opacity="0.9" stroke="#FFC72C" stroke-opacity="0.35" stroke-width="1"/>
+      <text x="35" y="42" fill="#FFFFFF" font-family="'Inter', 'Unbounded', sans-serif" font-size="21" font-weight="800">📞 +7 (383) 383-00-15</text>
+      <text x="35" y="65" fill="#FFC72C" font-family="'Inter', sans-serif" font-size="13" font-weight="600">Ежедневно 09:00 — 21:00</text>
+
+      <text x="440" y="52" fill="#FFFFFF" font-family="'Inter', sans-serif" font-size="16" font-weight="700">🎁 Фирменный мяч в подарок новичкам</text>
+
+      <text x="860" y="42" fill="#FFC72C" font-family="'Inter', 'Unbounded', sans-serif" font-size="17" font-weight="700">sparta-sports.ru</text>
+      <text x="860" y="65" fill="#E6E8E6" font-family="'Inter', sans-serif" font-size="13" font-weight="400">Онлайн-запись 24/7</text>
+    </g>
+  </g>
+</svg>

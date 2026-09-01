@@ -467,6 +467,152 @@ export function useChatMessages({
         }
     };
 
+    // Edit message text
+    const editMessage = async (msgId: string, newText: string) => {
+        if (!msgId || !newText.trim()) return;
+        const msg = messages.find(m => m.id === msgId);
+
+        // Optimistic update
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, text: newText.trim(), isEdited: true, editedAt: new Date() } : m));
+
+        try {
+            const targetDoc =
+                (msg && msg.__source === 'unified') || (isUnifiedChat && chatId)
+                    ? doc(db, 'chats', msg?.__chatId || chatId!, 'messages', msgId)
+                    : doc(db, 'group_messages', msgId);
+
+            await updateDoc(targetDoc, {
+                text: newText.trim(),
+                isEdited: true,
+                editedAt: serverTimestamp()
+            });
+        } catch (err) {
+            console.error('Error editing message:', err);
+        }
+    };
+
+    // Toggle Pin Message
+    const togglePinMessage = async (msgId: string, isPinned: boolean) => {
+        if (!msgId) return;
+        const msg = messages.find(m => m.id === msgId);
+
+        // Optimistic update
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, isPinned } : m));
+
+        try {
+            const targetDoc =
+                (msg && msg.__source === 'unified') || (isUnifiedChat && chatId)
+                    ? doc(db, 'chats', msg?.__chatId || chatId!, 'messages', msgId)
+                    : doc(db, 'group_messages', msgId);
+
+            await updateDoc(targetDoc, {
+                isPinned,
+                pinnedAt: isPinned ? serverTimestamp() : null,
+                pinnedBy: isPinned ? user.uid : null
+            });
+
+            if (isUnifiedChat && chatId && isPinned) {
+                await updateDoc(doc(db, 'chats', chatId), {
+                    pinnedMessageId: msgId,
+                    pinnedMessageText: msg?.text || 'Медиа',
+                    pinnedMessageSender: msg?.senderName || 'Пользователь'
+                }).catch(() => {});
+            }
+        } catch (err) {
+            console.error('Error toggling pin:', err);
+        }
+    };
+
+    // Toggle Reaction
+    const toggleReaction = async (msgId: string, reactionKey: string) => {
+        if (!msgId || !reactionKey) return;
+        const msg = messages.find(m => m.id === msgId);
+        if (!msg) return;
+
+        const reactions = { ...(msg.reactions || {}) };
+        const currentVoters = reactions[reactionKey] || [];
+        const hasVoted = currentVoters.includes(user.uid);
+
+        const newVoters = hasVoted
+            ? currentVoters.filter((id: string) => id !== user.uid)
+            : [...currentVoters, user.uid];
+
+        if (newVoters.length > 0) {
+            reactions[reactionKey] = newVoters;
+        } else {
+            delete reactions[reactionKey];
+        }
+
+        // Optimistic update
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, reactions } : m));
+
+        try {
+            const targetDoc =
+                (msg && msg.__source === 'unified') || (isUnifiedChat && chatId)
+                    ? doc(db, 'chats', msg?.__chatId || chatId!, 'messages', msgId)
+                    : doc(db, 'group_messages', msgId);
+
+            await updateDoc(targetDoc, {
+                [`reactions.${reactionKey}`]: newVoters
+            });
+        } catch (err) {
+            console.error('Error toggling reaction:', err);
+        }
+    };
+
+    // Send Special Coach / Admin Announcement
+    const sendAnnouncement = async (text: string, title: string = 'Важное объявление', priority: 'normal' | 'urgent' = 'normal') => {
+        if (!text.trim()) return;
+
+        setIsSending(true);
+        const senderName =
+            userProfile?.full_name || userProfile?.childName || user.email || 'Тренер Спарта';
+
+        const announcementPayload: any = {
+            text: text.trim(),
+            title,
+            isAnnouncement: true,
+            priority,
+            senderId: user.uid,
+            senderName,
+            senderRole: userProfile?.role || 'trainer',
+            senderVerification: userProfile?.verification || { isVerified: true, title: 'Тренерский состав' },
+            senderAvatar: userProfile?.photoURL || null,
+            timestamp: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            readBy: [user.uid],
+            groupId: groupId || null,
+            isPinned: true,
+            reactions: {}
+        };
+
+        try {
+            const targetCol =
+                isUnifiedChat && chatId
+                    ? collection(db, 'chats', chatId, 'messages')
+                    : collection(db, 'group_messages');
+
+            const newDoc = await addDoc(targetCol, announcementPayload);
+
+            if (isUnifiedChat && chatId) {
+                await updateDoc(doc(db, 'chats', chatId), {
+                    lastMessage: `📢 ${title}: ${text.trim().slice(0, 40)}`,
+                    lastMessageAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                    lastMessageBy: user.uid,
+                    pinnedMessageId: newDoc.id,
+                    pinnedMessageText: text.trim(),
+                    pinnedMessageSender: senderName,
+                    [`readBy.${user.uid}`]: serverTimestamp()
+                }).catch(() => {});
+            }
+        } catch (err) {
+            console.error('Error sending announcement:', err);
+        } finally {
+            setIsSending(false);
+        }
+    };
+
     return {
         messages,
         setMessages,
@@ -478,6 +624,10 @@ export function useChatMessages({
         sendMediaMessages,
         sendVoiceMessage,
         deleteMessage,
-        batchDeleteMessages
+        batchDeleteMessages,
+        editMessage,
+        togglePinMessage,
+        toggleReaction,
+        sendAnnouncement
     };
 }

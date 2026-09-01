@@ -162,43 +162,23 @@ const CartSidebar = () => {
                 clearCart();
                 setIsCartOpen(false);
             } else {
-                // ROBOKASSA Flow
+                // Direct Order Flow (Cash on pickup / SBP transfer)
                 try {
-                    const response = await fetch('/api/robokassa-create', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            amount: finalTotal,
-                            description: `Заказ #${orderRef.id.slice(-6).toUpperCase()}`,
-                            userId: user.uid,
-                            subscriptionId: orderRef.id,
-                            type: 'shop_order',
-                            cart: cartItems.map(item => ({
-                                title: item.product.title,
-                                price: item.product.price,
-                                quantity: item.quantity
-                            }))
-                        })
+                    await updateDoc(orderRef, { status: 'pending_transfer' });
+                    await addDoc(collection(db, 'notifications'), {
+                        email: user.email,
+                        title: 'Заказ принят в обработку! 🛍️',
+                        message: `Заказ #${orderRef.id.slice(-6).toUpperCase()} на сумму ${finalTotal} ₽ успешно оформлен. Оплата при получении или по СБП.`,
+                        type: 'order',
+                        isRead: false,
+                        createdAt: serverTimestamp()
                     });
-
-                    if (!response.ok) throw new Error('Ошибка при создании платежа');
-                    const data = await response.json();
-
-                    if (data.url) {
-                        try {
-                            await updateDoc(orderRef, { paymentId: data.invId.toString(), status: 'pending_robokassa' });
-                        } catch (e) {
-                            console.error('Failed to update order with paymentId', e);
-                        }
-                        window.location.href = data.url;
-                    } else {
-                        throw new Error('Не получен URL для оплаты');
-                    }
-                } catch (err) {
-                    console.error("Robokassa error:", err);
-                    showToast("Ошибка при создании платежа. Заказ сохранен.", "error");
+                    showToast('Заказ успешно оформлен! 🎉', 'success');
                     clearCart();
                     setIsCartOpen(false);
+                } catch (err) {
+                    console.error("Order error:", err);
+                    showToast("Ошибка при сохранении заказа.", "error");
                 }
             }
 

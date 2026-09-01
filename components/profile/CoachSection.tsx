@@ -68,6 +68,7 @@ import {
     Link as LinkIcon,
     Maximize2,
     Check,
+    CheckSquare
 } from 'lucide-react';
 import { db } from '../../firebase';
 import { supabase } from '../../supabase';
@@ -100,10 +101,16 @@ import {
 import CoachChat from './CoachChat';
 import CoachCalendar from './CoachCalendar';
 import DailyHub from './coach/DailyHub';
+import RosterJournalTab from './coach/RosterJournalTab';
+import CoachReviewDashboard from './coach/CoachReviewDashboard';
 import TrialsTab from './coach/TrialsTab';
 import MessagesTab from './coach/MessagesTab';
 import StatsLab from './coach/StatsLab';
+import StudentProfileModal from './coach/StudentProfileModal';
+import { AssignmentModal } from './coach/AssignmentModal';
+import confetti from 'canvas-confetti';
 import { useCoachAnalytics } from '../../hooks/useCoachAnalytics';
+import { getSmartSubscriptionStatus, checkProfileCompleteness } from '../../utils/subscriptionStatusEngine';
 
 const MUSCLE_GROUPS = [
     { id: 'chest', label: 'Грудь', icon: '👕' },
@@ -192,14 +199,16 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
     };
 
     const isCompleteProfile = (student: any) => {
-        return !!(student.phone && student.birthDate && student.parentName);
+        return checkProfileCompleteness(student).isComplete;
     };
 
     const { user } = useAuth();
     const { theme } = useTheme();
+    const coachDisplayName = userProfile?.displayName || userProfile?.name || userProfile?.firstName || 'Тренер';
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
-    const [mainTab, setMainTab] = useState<'dashboard' | 'groups' | 'messages' | 'stats' | 'calendar' | 'exercises' | 'programs' | 'trials'>(initialSubTab as any || 'dashboard');
+    const [mainTab, setMainTab] = useState<'dashboard' | 'journal' | 'review' | 'trials' | 'materials' | 'groups' | 'messages' | 'stats' | 'calendar' | 'exercises' | 'programs'>((initialSubTab as any) || 'dashboard');
+    const [materialsSubTab, setMaterialsSubTab] = useState<'exercises' | 'programs' | 'calendar'>('exercises');
 
     const [myGroups, setMyGroups] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -251,6 +260,7 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
     const [eventsFeed, setEventsFeed] = useState<any[]>([]);
     const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [homeworkTasks, setHomeworkTasks] = useState<any[]>([]);
+    const [pendingSubmissionsCount, setPendingSubmissionsCount] = useState(0);
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [newTask, setNewTask] = useState({ title: '', description: '', rewardXp: 50 });
     const [isBroadcasting, setIsBroadcasting] = useState(false);
@@ -320,9 +330,20 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
     const [isDraggingToTemplate, setIsDraggingToTemplate] = useState(false);
 
     const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+    const [editingAssignmentTask, setEditingAssignmentTask] = useState<any | null>(null);
     const [assigningItem, setAssigningItem] = useState<any>(null);
     const [assignmentTargetType, setAssignmentTargetType] = useState<'group' | 'student'>('group');
     const [selectedAssignmentTarget, setSelectedAssignmentTarget] = useState<string | null>(null);
+    const [assignmentTargetStudentId, setAssignmentTargetStudentId] = useState<string | null>(null);
+    const [assignmentTitle, setAssignmentTitle] = useState('');
+    const [assignmentDescription, setAssignmentDescription] = useState('');
+    const [assignmentRewardXp, setAssignmentRewardXp] = useState<number>(30);
+    const [assignmentDeadline, setAssignmentDeadline] = useState<string>(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 3);
+        return format(d, 'yyyy-MM-dd');
+    });
+    const [selectedExerciseId, setSelectedExerciseId] = useState<string>('');
     const [isSavingAssignment, setIsSavingAssignment] = useState(false);
     const [selectedProgramForPreview, setSelectedProgramForPreview] = useState<any>(null);
     const [programExerciseSearch, setProgramExerciseSearch] = useState('');
@@ -378,13 +399,209 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         [userProfile?.role]);
 
     const isCoach = !!userProfile?.coachId;
-    const myStudents = React.useMemo(() => allStudentsData, [allStudentsData]);
+
+    // Strict student filter: exclude coaches, admins, trainers, and current coach
+    const isStudentUser = React.useCallback((u: any) => {
+        if (!u) return false;
+        const role = (u.role || '').toLowerCase().trim();
+        // Exclude coach and admin roles
+        if (['coach', 'trainer', 'admin', 'director', 'developer', 'staff', 'manager'].includes(role)) {
+            return false;
+        }
+        if (u.isCoach === true || u.isTrainer === true || u.isAdmin === true) {
+            return false;
+        }
+        // Exclude current logged in coach by ID/uid
+        if (userProfile?.coachId && (u.id === userProfile.coachId || u.uid === userProfile.coachId || u.coachId === u.id)) {
+            return false;
+        }
+        if (userProfile?.id && (u.id === userProfile.id || u.uid === userProfile.id)) {
+            return false;
+        }
+        // Exclude known coaches by full/partial name
+        const name = (u.displayName || u.childName || u.name || '').trim().toLowerCase();
+        if (!name) return false;
+        if (
+            name.includes('кубарь сергей') ||
+            name.includes('пономарев сергей') ||
+            name.includes('пономарёв сергей') ||
+            name.includes('якупов павел') ||
+            name.includes('меньшиков антон') ||
+            name.includes('лебедев александр')
+        ) {
+            return false;
+        }
+        return true;
+    }, [userProfile]);
+
+    // Unified & Deduplicated Students Array across Firestore sources
+    const myStudents = React.useMemo(() => {
+        const studentMap = new Map<string, any>();
+        const nameGroupKey = (name: string, groupId: string) => `${name.trim().toLowerCase()}___${String(groupId || '').trim().toLowerCase()}`;
+        const nameKeys = new Set<string>();
+
+        // 1. Process 'students' collection records
+        (allStudentsData || []).forEach(s => {
+            if (!s) return;
+            if (!isStudentUser(s)) return;
+
+            const id = s.id || s.uid || s.studentId;
+            if (!id) return;
+
+            const stdName = s.name || s.childName || s.displayName || 'Спортсмен';
+            const gId = s.groupId || s.group || '';
+
+            const item = {
+                ...s,
+                id,
+                uid: s.uid || id,
+                studentId: s.studentId || id,
+                name: stdName,
+                childName: s.childName || stdName,
+                groupId: gId,
+                coachId: s.coachId,
+                sport: s.sport || 'football',
+                phone: s.phone || s.parentPhone || '',
+                type: s.type || (s.isRegistered ? 'real' : 'offline'),
+                isRegistered: !!s.isRegistered,
+                status: s.status || 'active',
+                paymentStatus: s.paymentStatus || 'due',
+                paymentDate: s.paymentDate || null,
+                skills: s.skills || { technique: 75, strength: 75, speed: 75, endurance: 75, discipline: 75 },
+                originalUser: s
+            };
+
+            studentMap.set(id, item);
+            if (stdName && gId) {
+                nameKeys.add(nameGroupKey(stdName, gId));
+            }
+        });
+
+        // 2. Process 'users' collection (registered app users)
+        (allUsersData || []).forEach(u => {
+            if (!u) return;
+            if (!isStudentUser(u)) return;
+
+            const id = u.id || u.uid;
+            if (!id) return;
+
+            const stdName = u.childName || u.displayName || u.name || 'Спортсмен';
+            const gId = u.groupId || (Array.isArray(u.groups) ? u.groups[0] : '') || '';
+            const key = nameGroupKey(stdName, gId);
+
+            if (studentMap.has(id)) {
+                // Merge registered data into existing record
+                const existing = studentMap.get(id);
+                studentMap.set(id, {
+                    ...existing,
+                    ...u,
+                    id,
+                    name: stdName,
+                    isRegistered: true,
+                    type: existing.type === 'trial' ? 'trial' : 'registered',
+                    paymentStatus: u.paymentStatus || existing.paymentStatus || 'due',
+                    originalUser: { ...(existing.originalUser || {}), ...u }
+                });
+                return;
+            }
+
+            if (gId && nameKeys.has(key)) {
+                // Find and update existing student with registered info
+                for (const [existingId, existing] of studentMap.entries()) {
+                    if (nameGroupKey(existing.name, existing.groupId) === key) {
+                        studentMap.set(existingId, {
+                            ...existing,
+                            ...u,
+                            id: existingId,
+                            uid: id,
+                            isRegistered: true,
+                            type: existing.type === 'trial' ? 'trial' : 'registered',
+                            originalUser: { ...(existing.originalUser || {}), ...u }
+                        });
+                        break;
+                    }
+                }
+                return;
+            }
+
+            const item = {
+                ...u,
+                id,
+                uid: id,
+                studentId: u.studentId || id,
+                name: stdName,
+                childName: stdName,
+                groupId: gId,
+                coachId: u.coachId,
+                sport: u.sport || 'football',
+                phone: u.phone || u.parentPhone || '',
+                type: 'registered',
+                isRegistered: true,
+                status: u.status || 'active',
+                paymentStatus: u.paymentStatus || 'due',
+                paymentDate: u.paymentDate || null,
+                skills: u.skills || { technique: 75, strength: 75, speed: 75, endurance: 75, discipline: 75 },
+                originalUser: u
+            };
+
+            studentMap.set(id, item);
+            if (stdName && gId) {
+                nameKeys.add(key);
+            }
+        });
+
+        // 3. Process 'student_registry' records
+        (allRegistryData || []).forEach(r => {
+            if (!r) return;
+            if (!isStudentUser(r)) return;
+
+            const id = r.id || r.uid || r.studentId;
+            if (!id) return;
+
+            const stdName = r.name || r.childName || 'Спортсмен';
+            const gId = r.groupId || '';
+            const key = nameGroupKey(stdName, gId);
+
+            if (studentMap.has(id) || (gId && nameKeys.has(key))) {
+                return; // Already accounted for
+            }
+
+            const item = {
+                ...r,
+                id,
+                uid: id,
+                studentId: id,
+                name: stdName,
+                childName: stdName,
+                groupId: gId,
+                coachId: r.coachId,
+                sport: r.sport || 'football',
+                phone: r.phone || r.parentPhone || '',
+                type: 'registry',
+                isRegistered: false,
+                status: r.status || 'active',
+                paymentStatus: r.paymentStatus || 'due',
+                paymentDate: r.paymentDate || null,
+                skills: r.skills || { technique: 75, strength: 75, speed: 75, endurance: 75, discipline: 75 },
+                originalUser: r
+            };
+
+            studentMap.set(id, item);
+            if (stdName && gId) {
+                nameKeys.add(key);
+            }
+        });
+
+        return Array.from(studentMap.values());
+    }, [allStudentsData, allUsersData, allRegistryData, isStudentUser]);
+
     const myTrialRequests = trialRequests || [];
 
     const groupStudents = React.useMemo(() => {
-        if (!selectedGroupId) return [];
-        return myStudents.filter(s => String(s.groupId) === String(selectedGroupId));
-    }, [myStudents, selectedGroupId]);
+        const targetGId = selectedGroupId || (myGroups.length > 0 ? myGroups[0]?.id : null);
+        if (!targetGId) return myStudents;
+        return myStudents.filter(s => String(s.groupId) === String(targetGId));
+    }, [myStudents, selectedGroupId, myGroups]);
 
     const {
         coachHistoryStats,
@@ -520,7 +737,6 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         const unsubscribeTrials = onSnapshot(
             query(
                 collection(db, "requests"),
-                where("programType", "==", "Пробная тренировка"),
                 where("status", "in", ["new", "pending"])
             ),
             (snap) => {
@@ -542,43 +758,79 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         };
     }, [isCoach, isAdmin, userProfile?.coachId]);
 
+    // Auto-select first group if not set or invalid
+    useEffect(() => {
+        if (myGroups.length > 0) {
+            if (!selectedGroupId || !myGroups.some(g => g.id === selectedGroupId)) {
+                setSelectedGroupId(myGroups[0].id);
+            }
+        }
+    }, [myGroups, selectedGroupId]);
+
     // Group-based data sync
     useEffect(() => {
         if (!myGroups.length && !isAdmin) return;
         const groupIds = myGroups.map(g => g.id);
         const unsubscribes: (() => void)[] = [];
 
-        const registerListeners = (ids: string[]) => {
-            const sQuery = isAdmin ? query(collection(db, "students")) :
-                ids.length > 0 ? query(collection(db, "students"), where("groupId", "in", ids.slice(0, 10))) : null;
-            if (sQuery) unsubscribes.push(onSnapshot(sQuery, (snap) => {
-                const data = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
-                setAllStudentsData(prev => {
-                    const dataIds = data.map(d => d.id);
-                    return [...prev.filter(p => !dataIds.includes(p.id)), ...data];
-                });
-            }));
+        // 1. Single listener for student registry
+        unsubscribes.push(onSnapshot(query(collection(db, "student_registry"), limit(1000)), (snap) => {
+            setAllRegistryData(snap.docs.map(d => ({ id: d.id, ...d.data() as any })));
+        }));
 
-            const uQuery = isAdmin ? query(collection(db, "users")) :
-                ids.length > 0 ? query(collection(db, "users"), where("groupId", "in", ids.slice(0, 10))) : null;
-            if (uQuery) unsubscribes.push(onSnapshot(uQuery, (snap) => {
-                const data = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
-                setAllUsersData(prev => {
-                    const dataIds = data.map(d => d.id);
-                    return [...prev.filter(p => !dataIds.includes(p.id)), ...data];
-                });
+        if (isAdmin) {
+            // Admin: load all students and users
+            unsubscribes.push(onSnapshot(query(collection(db, "students")), (snap) => {
+                setAllStudentsData(snap.docs.map(d => ({ id: d.id, ...d.data() as any })));
             }));
-
-            unsubscribes.push(onSnapshot(query(collection(db, "student_registry"), limit(1000)), (snap) => {
-                setAllRegistryData(snap.docs.map(d => ({ id: d.id, ...d.data() as any })));
+            unsubscribes.push(onSnapshot(query(collection(db, "users")), (snap) => {
+                setAllUsersData(snap.docs.map(d => ({ id: d.id, ...d.data() as any })));
             }));
-        };
+        } else {
+            // Coach: query by group IDs in batches of 10
+            for (let i = 0; i < groupIds.length; i += 10) {
+                const batch = groupIds.slice(i, i + 10);
+                if (batch.length > 0) {
+                    unsubscribes.push(onSnapshot(query(collection(db, "students"), where("groupId", "in", batch)), (snap) => {
+                        const data = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+                        setAllStudentsData(prev => {
+                            const dataIds = new Set(data.map(d => d.id));
+                            return [...prev.filter(p => !dataIds.has(p.id)), ...data];
+                        });
+                    }));
 
-        if (isAdmin) registerListeners([]);
-        else for (let i = 0; i < groupIds.length; i += 5) registerListeners(groupIds.slice(i, i + 5));
+                    unsubscribes.push(onSnapshot(query(collection(db, "users"), where("groupId", "in", batch)), (snap) => {
+                        const data = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+                        setAllUsersData(prev => {
+                            const dataIds = new Set(data.map(d => d.id));
+                            return [...prev.filter(p => !dataIds.has(p.id)), ...data];
+                        });
+                    }));
+                }
+            }
+
+            // Also query students/users assigned directly to this coachId
+            if (userProfile?.coachId) {
+                unsubscribes.push(onSnapshot(query(collection(db, "students"), where("coachId", "==", userProfile.coachId)), (snap) => {
+                    const data = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+                    setAllStudentsData(prev => {
+                        const dataIds = new Set(data.map(d => d.id));
+                        return [...prev.filter(p => !dataIds.has(p.id)), ...data];
+                    });
+                }));
+
+                unsubscribes.push(onSnapshot(query(collection(db, "users"), where("coachId", "==", userProfile.coachId)), (snap) => {
+                    const data = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+                    setAllUsersData(prev => {
+                        const dataIds = new Set(data.map(d => d.id));
+                        return [...prev.filter(p => !dataIds.has(p.id)), ...data];
+                    });
+                }));
+            }
+        }
 
         return () => unsubscribes.forEach(unsub => unsub());
-    }, [myGroups, isAdmin]);
+    }, [myGroups, isAdmin, userProfile?.coachId]);
 
     // Recalculate stats on selection change
     useEffect(() => {
@@ -600,7 +852,70 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
             setExerciseCollections(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
-        return () => { unsubExercises(); unsubTemplates(); unsubCollections(); };
+        // Listen for pending submissions requiring review
+        const qPendingSub = query(collection(db, "homework_submissions"), where("status", "==", "pending_review"));
+        const unsubPendingSub = onSnapshot(qPendingSub, (snap) => {
+            setPendingSubmissionsCount(snap.size);
+        }, (err) => {
+            console.warn('Error counting pending submissions:', err);
+        });
+
+        const targetGId = selectedGroupId || myGroups[0]?.id;
+        let unsubTrainingPlan = () => {};
+        let unsubHomework = () => {};
+
+        let latestPlanTasks: any[] = [];
+        let latestHwTasks: any[] = [];
+
+        const updateMergedTasks = () => {
+            const map = new Map<string, any>();
+            latestHwTasks.forEach(t => {
+                map.set(t.id, t);
+                if (t.planId) map.set(t.planId, t);
+            });
+            latestPlanTasks.forEach(t => {
+                if (!map.has(t.id) && (!t.planId || !map.has(t.planId))) {
+                    map.set(t.id, t);
+                }
+            });
+            const merged = Array.from(map.values());
+            if (merged.length > 0) {
+                setHomeworkTasks(merged);
+            } else {
+                const targetGroup = myGroups.find(g => g.id === targetGId);
+                if (targetGroup?.weeklyChallengeTitle) {
+                    setHomeworkTasks([{
+                        id: 'group_weekly_' + targetGId,
+                        title: targetGroup.weeklyChallengeTitle,
+                        rewardXp: targetGroup.weeklyChallengeReward || 30,
+                        rewardCoins: 30,
+                        description: 'Групповой челлендж'
+                    }]);
+                } else {
+                    setHomeworkTasks([]);
+                }
+            }
+        };
+
+        if (targetGId) {
+            const qPlan = query(collection(db, "trainingPlan"), where("groupId", "==", targetGId));
+            unsubTrainingPlan = onSnapshot(qPlan, (snap) => {
+                latestPlanTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                updateMergedTasks();
+            }, (err) => {
+                console.warn('Error loading trainingPlan tasks:', err);
+            });
+
+            const qHw = query(collection(db, "homework"), where("groupId", "==", targetGId));
+            unsubHomework = onSnapshot(qHw, (snap) => {
+                latestHwTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                updateMergedTasks();
+            }, (err) => {
+                console.warn('Error loading homework tasks:', err);
+            });
+        }
+
+        return () => { unsubExercises(); unsubTemplates(); unsubCollections(); unsubPendingSub(); unsubTrainingPlan(); unsubHomework(); };
     }, [selectedGroupId, myGroups]);
 
     // AI Match Utilities (Hoisted using function declaration)
@@ -711,11 +1026,70 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         return Math.min(Math.round(score), 100);
     };
 
+    const handleSelectExerciseForAssignment = (exId: string) => {
+        setSelectedExerciseId(exId);
+        if (!exId) return;
+        const found = exercises.find(e => e.id === exId);
+        if (found) {
+            setAssignmentTitle(found.title || '');
+            if (found.description) setAssignmentDescription(found.description);
+            if (found.rewardXp) setAssignmentRewardXp(found.rewardXp);
+        }
+    };
+
     const handleOpenAssignmentModal = (item: any, type: 'exercise' | 'program') => {
         setAssigningItem({ ...item, itemType: type });
-        setIsAssignmentModalOpen(true);
+        setAssignmentTitle(item?.title || '');
+        setAssignmentDescription(item?.description || '');
+        setAssignmentRewardXp(item?.rewardXp || 30);
+        setSelectedExerciseId(type === 'exercise' ? item?.id : '');
+        setAssignmentTargetType('group');
         setSelectedAssignmentTarget(selectedGroupId || (myGroups[0]?.id) || null);
+        setIsAssignmentModalOpen(true);
     };
+
+    const handleOpenGroupAssignment = () => {
+        setEditingAssignmentTask(null);
+        setAssigningItem({
+            title: '',
+            description: '',
+            itemType: 'group_challenge'
+        });
+        setAssignmentTitle('');
+        setAssignmentDescription('');
+        setAssignmentRewardXp(30);
+        setAssignmentTargetType('group');
+        setSelectedAssignmentTarget(selectedGroupId || (myGroups[0]?.id) || null);
+        setSelectedExerciseId('');
+        setIsAssignmentModalOpen(true);
+    };
+
+    const handleAssignPersonalTask = (student: any) => {
+        setEditingAssignmentTask(null);
+        setAssigningItem({
+            title: '',
+            description: '',
+            itemType: 'personal',
+            targetStudent: student
+        });
+        setAssignmentTitle(`Задание: ${student.name}`);
+        setAssignmentDescription('');
+        setAssignmentRewardXp(30);
+        setAssignmentTargetType('student');
+        setSelectedAssignmentTarget(student.groupId || selectedGroupId || (myGroups[0]?.id) || null);
+        setAssignmentTargetStudentId(student.id);
+        setSelectedExerciseId('');
+        setIsAssignmentModalOpen(true);
+    };
+
+    const handleOpenEditAssignment = React.useCallback((task: any) => {
+        setEditingAssignmentTask(task);
+        setIsAssignmentModalOpen(true);
+    }, []);
+
+    const handleDeleteAssignment = React.useCallback(async (task: any) => {
+        setHomeworkTasks(prev => prev.filter(t => t.id !== task.id));
+    }, []);
 
     const handleAIGenerateExercise = async () => {
         if (!newExerciseData.title || newExerciseData.title.trim() === '') return;
@@ -966,6 +1340,22 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const handleTogglePayment = async (studentId: string, currentStatus: string) => {
+        try {
+            const nextStatus = currentStatus === 'paid' ? 'due' : 'paid';
+            const student = myStudents.find(s => s.id === studentId);
+            const targetCollection = student?.isRegistered ? 'users' : 'students';
+            const studentRef = doc(db, targetCollection, studentId);
+            await updateDoc(studentRef, {
+                paymentStatus: nextStatus,
+                paymentDate: nextStatus === 'paid' ? new Date().toISOString() : null
+            });
+            setAllStudentsData(prev => prev.map(s => s.id === studentId ? { ...s, paymentStatus: nextStatus } : s));
+        } catch (e) {
+            console.error("Error toggling payment status:", e);
+        }
+    };
+
     const handleDeleteTrialRequest = async (id: string) => {
         try {
             await deleteDoc(doc(db, "requests", id));
@@ -1095,17 +1485,48 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
     };
 
     const handleContactParent = (person: any) => {
-        const uid = person.uid || person.assignedUid || person.userId || person.assignedUserId || person.id;
-        const name = person.name || person.childName || person.childFirstName || 'Спортсмен';
+        if (!person) return;
 
-        if (uid && uid.length > 5) { // Ensure it looks like a valid UID
-            const studentName = person.childName || person.childFirstName || person.name || 'Спортсмен';
-            // Redirect to the unified messenger using navigate with student context
-            navigate(`?tab=messages_unified&targetUid=${uid}&targetName=${encodeURIComponent(name)}&studentName=${encodeURIComponent(studentName)}`);
+        // 1. Identify parent account UID
+        const parentUid = person.parentId ||
+            person.parentUid ||
+            person.originalUser?.parentId ||
+            person.originalUser?.parentUid ||
+            (person.role === 'parent' ? (person.uid || person.id) : null);
+
+        // 2. Identify parent display name
+        const parentName = person.parentName ||
+            person.parentDisplayName ||
+            person.originalUser?.parentName ||
+            person.originalUser?.displayName ||
+            'Родитель';
+
+        // 3. Identify student name
+        const studentName = person.childName ||
+            person.childFirstName ||
+            person.name ||
+            'Спортсмен';
+
+        // 4. Identify parent phone for WhatsApp fallback
+        const phone = person.parentPhone ||
+            person.phone ||
+            person.originalUser?.parentPhone ||
+            person.originalUser?.phone ||
+            '';
+        const cleanPhone = String(phone).replace(/\D/g, '');
+
+        if (parentUid && parentUid.length > 5) {
+            // Valid parent account in system: redirect to unified messenger with parent
+            navigate(`?tab=messages_unified&targetUid=${parentUid}&targetName=${encodeURIComponent(parentName)}&studentName=${encodeURIComponent(studentName)}`);
+        } else if (cleanPhone && cleanPhone.length >= 10) {
+            // No parent account in system: open WhatsApp
+            const formattedPhone = cleanPhone.startsWith('8') && cleanPhone.length === 11
+                ? '7' + cleanPhone.slice(1)
+                : cleanPhone;
+            window.open(`https://wa.me/${formattedPhone}`, '_blank');
         } else {
-            // Fallback: For students without a system account, we no longer use 'messages' tab.
-            // Redirect to the main unified messenger or stay on dashboard
-            navigate('?tab=messages');
+            // Fallback to unified messenger
+            navigate('?tab=messages_unified');
         }
     };
 
@@ -1640,31 +2061,63 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
     };
 
     const handleSaveAssignment = async () => {
-        if (!assigningItem || !selectedAssignmentTarget) return;
+        const finalTitle = (assignmentTitle.trim() || assigningItem?.title || '').trim();
+        if (!finalTitle) {
+            alert('Пожалуйста, укажите название задания или выберите упражнение');
+            return;
+        }
+
+        const targetGId = selectedAssignmentTarget || selectedGroupId || (myGroups[0]?.id);
+        if (!targetGId) {
+            alert('Пожалуйста, выберите целевую группу');
+            return;
+        }
+
         setIsSavingAssignment(true);
         try {
             const batch = writeBatch(db);
-            const targetGroup = allGroups.find(g => g.id === selectedAssignmentTarget);
+            const targetGroup = myGroups.find(g => g.id === targetGId) || allGroups.find(g => g.id === targetGId);
+            const groupSport = targetGroup?.sport || 'football';
+            const targetStudent = assignmentTargetType === 'student'
+                ? (groupStudents.find(s => s.id === assignmentTargetStudentId) || myStudents.find(s => s.id === assignmentTargetStudentId) || assigningItem?.targetStudent)
+                : null;
+
+            const isGroupWide = assignmentTargetType === 'group';
+            const studentId = isGroupWide ? null : (targetStudent?.id || targetStudent?.uid || targetStudent?.studentId || null);
+            const studentUid = isGroupWide ? null : (targetStudent?.uid || targetStudent?.assignedUid || targetStudent?.id || null);
+            const calculatedCoins = 30;
+            const calculatedXp = Number(assignmentRewardXp) || 50;
 
             // 1. Prepare training data
             let trainingData: any = {
-                title: assigningItem.title,
-                description: assigningItem.description || '',
+                title: finalTitle,
+                description: assignmentDescription || assigningItem?.description || '',
+                coins: calculatedCoins,
+                rewardCoins: calculatedCoins,
+                rewardXp: calculatedXp,
+                deadline: assignmentDeadline || null,
+                dueDate: assignmentDeadline || null,
                 date: format(new Date(), 'yyyy-MM-dd'),
-                groupId: selectedAssignmentTarget,
-                coachId: userProfile.coachId,
-                status: 'pending',
+                groupId: targetGId,
+                groupName: targetGroup?.name || targetGroup?.title || 'Группа',
+                coachId: userProfile?.coachId || user?.uid || '',
+                coachName: coachDisplayName || 'Тренер',
+                isGroupWide: isGroupWide,
+                targetType: assignmentTargetType,
+                studentId: studentId,
+                studentUid: studentUid,
+                studentName: isGroupWide ? null : (targetStudent?.name || null),
+                status: 'active',
                 createdAt: serverTimestamp(),
-                intensityCurve: assigningItem.intensityCurve || null,
-                coverImage: assigningItem.coverImage || null
+                intensityCurve: assigningItem?.intensityCurve || null,
+                coverImage: assigningItem?.coverImage || null
             };
 
             // 2. Structural Logic: Legacy vs Modern
-            if (assigningItem.itemType === 'program') {
+            if (assigningItem?.itemType === 'program') {
                 trainingData.type = 'program_assignment';
                 trainingData.templateId = assigningItem.id;
 
-                // If it has stages, use them. If not, map exercises to Main stage (compatibility)
                 if (assigningItem.stages) {
                     trainingData.stages = assigningItem.stages;
                 } else if (assigningItem.exercises) {
@@ -1675,20 +2128,149 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                         cooldown: []
                     };
                 }
-            } else {
-                // Single exercise assignment
+            } else if (assigningItem?.itemType === 'exercise' || selectedExerciseId) {
+                const ex = exercises.find(e => e.id === (selectedExerciseId || assigningItem?.id));
                 trainingData.type = 'library_assignment';
-                trainingData.exerciseId = assigningItem.id;
-                trainingData.videoUrl = assigningItem.videoUrl || '';
+                trainingData.exerciseId = ex?.id || selectedExerciseId || assigningItem?.id;
+                trainingData.videoUrl = ex?.videoUrl || assigningItem?.videoUrl || '';
+            } else {
+                trainingData.type = isGroupWide ? 'challenge' : 'personal_challenge';
             }
 
+            // Generate one shared ID for all assignment collections to prevent duplicates
+            const sharedDocId = doc(collection(db, "homework")).id;
+
             // 3. Create the Training Plan document
-            const newPlanRef = doc(collection(db, "trainingPlan"));
-            batch.set(newPlanRef, trainingData);
+            const newPlanRef = doc(db, "trainingPlan", sharedDocId);
+            batch.set(newPlanRef, { id: sharedDocId, ...trainingData });
+
+            // 4. Create homework document
+            const homeworkRef = doc(db, "homework", sharedDocId);
+            const homeworkPayload = {
+                id: sharedDocId,
+                planId: sharedDocId,
+                title: finalTitle,
+                description: assignmentDescription || assigningItem?.description || '',
+                rewardCoins: calculatedCoins,
+                rewardXp: calculatedXp,
+                dueDate: assignmentDeadline || null,
+                groupId: targetGId,
+                groupName: targetGroup?.name || targetGroup?.title || 'Группа',
+                coachId: userProfile?.coachId || user?.uid || '',
+                coachName: coachDisplayName || 'Тренер',
+                isGroupWide: isGroupWide,
+                targetType: assignmentTargetType,
+                studentId: studentId,
+                studentUid: studentUid,
+                studentName: isGroupWide ? null : (targetStudent?.name || null),
+                status: 'active',
+                createdAt: serverTimestamp()
+            };
+            batch.set(homeworkRef, homeworkPayload);
+
+            // 5. Create assigned_tasks document
+            const assignedRef = doc(db, "assigned_tasks", sharedDocId);
+            batch.set(assignedRef, {
+                ...homeworkPayload,
+                taskId: sharedDocId,
+                taskTitle: finalTitle,
+                taskDescription: assignmentDescription || assigningItem?.description || ''
+            });
+
+            // 6. If personal, arrayUnion to user doc
+            if (!isGroupWide && (studentUid || studentId)) {
+                const targetUId = studentUid || studentId;
+                if (targetUId) {
+                    const userDocRef = doc(db, 'users', targetUId);
+                    batch.set(userDocRef, {
+                        personalAssignments: arrayUnion({
+                            id: sharedDocId,
+                            title: finalTitle,
+                            description: assignmentDescription || assigningItem?.description || '',
+                            rewardCoins: calculatedCoins,
+                            rewardXp: calculatedXp,
+                            dueDate: assignmentDeadline || null,
+                            coachName: coachDisplayName || 'Тренер',
+                            assignedAt: new Date().toISOString(),
+                            status: 'active'
+                        })
+                    }, { merge: true });
+                }
+            }
+
+            // 7. Update group & club_challenges for syncing with KidDashboard
+            if (targetGId && assignmentTargetType === 'group') {
+                const groupRef = doc(db, 'groups', targetGId);
+                batch.set(groupRef, {
+                    weeklyChallengeTitle: finalTitle,
+                    weeklyChallengeReward: calculatedXp,
+                    weeklyChallengeDeadline: assignmentDeadline || null,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            }
+
+            if (groupSport && assignmentTargetType === 'group') {
+                const challengeRef = doc(db, 'club_challenges', groupSport);
+                batch.set(challengeRef, {
+                    weeklyChallengeTitle: finalTitle,
+                    weeklyChallengeReward: calculatedXp,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            }
+
+            // 8. Send Notifications
+            if (!isGroupWide && (studentId || studentUid)) {
+                const notifRef = doc(collection(db, "notifications"));
+                batch.set(notifRef, {
+                    userId: studentUid || studentId,
+                    type: 'new_assignment',
+                    title: '⚡ Новое задание от тренера!',
+                    message: `Тренер ${coachDisplayName || 'Тренер'} назначил упражнение: «${finalTitle}» (+${calculatedCoins} монет)`,
+                    createdAt: serverTimestamp(),
+                    isRead: false,
+                    read: false
+                });
+            } else if (isGroupWide && groupStudents && groupStudents.length > 0) {
+                groupStudents.forEach(st => {
+                    const stId = st.id || st.uid || st.studentId || st.assignedUid;
+                    if (stId) {
+                        const notifRef = doc(collection(db, "notifications"));
+                        batch.set(notifRef, {
+                            userId: stId,
+                            type: 'new_assignment',
+                            title: '⚡ Новое задание для группы!',
+                            message: `Тренер ${coachDisplayName || 'Тренер'} назначил упражнение: «${finalTitle}» (+${calculatedCoins} монет)`,
+                            createdAt: serverTimestamp(),
+                            isRead: false,
+                            read: false
+                        });
+                    }
+                });
+            }
 
             await batch.commit();
+
+            // 5. Update local state
+            setHomeworkTasks(prev => [
+                {
+                    id: newPlanRef.id,
+                    title: finalTitle,
+                    description: assignmentDescription || assigningItem?.description || '',
+                    rewardXp: Number(assignmentRewardXp) || 30,
+                    deadline: assignmentDeadline,
+                    targetType: assignmentTargetType,
+                    studentName: targetStudent?.name,
+                    createdAt: new Date()
+                },
+                ...prev.filter(t => t.id !== newPlanRef.id)
+            ]);
+
             setIsAssignmentModalOpen(false);
             setAssigningItem(null);
+            setAssignmentTitle('');
+            setAssignmentDescription('');
+            setSelectedExerciseId('');
+            confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
 
         } catch (err) {
             console.error("Error saving assignment:", err);
@@ -1714,189 +2296,164 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                 </button>
             </div>
 
-            {/* Top Stats Overview */}
+            {/* Top Stats Overview (Clean numbers) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Total Students Card */}
+                {/* 1. Total Students Card */}
                 <motion.div
-                    whileHover={{ y: -5, scale: 1.01 }}
-                    className="bg-card glass-panel border border-main rounded-3xl p-6 relative overflow-hidden group hover:border-sparta-gold/30 transition-all shadow-xl shadow-black/20"
+                    whileHover={{ y: -4 }}
+                    className="bg-card glass-panel border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-sparta-gold/30 transition-all shadow-xl"
                 >
-                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-sparta-gold/5 rounded-full blur-3xl group-hover:bg-sparta-gold/10 transition-all" />
-                    <div className="relative z-10 h-full flex flex-col">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-sparta-gold/10 rounded-xl text-sparta-gold">
-                                    <Users size={20} />
-                                </div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Клиенты</span>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-sparta-gold/10 rounded-2xl text-sparta-gold">
+                                <Users size={20} />
                             </div>
-                            <div className="px-2 py-0.5 bg-green-500/10 text-green-400 rounded-lg text-[8px] font-black uppercase">Real-time</div>
-                        </div>
-                        <div className="flex items-baseline gap-2 mb-4">
-                            <div className="text-4xl font-russo text-white">
-                                {selectedGroupId ? groupStudents.length : myStudents.length}
+                            <div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white/40 block">
+                                    {selectedGroupId ? 'В группе' : 'Всего учеников'}
+                                </span>
+                                <span className="text-[11px] font-bold text-white/60">
+                                    {selectedGroupId ? 'Спортсменов в составе' : 'По всем группам'}
+                                </span>
                             </div>
-                            <div className="text-[10px] font-bold text-white/20">Чел.</div>
                         </div>
+                        <div className="px-2.5 py-1 bg-green-500/10 text-green-400 rounded-lg text-[9px] font-black uppercase tracking-wider">
+                            В строю
+                        </div>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <div className="text-4xl sm:text-5xl font-russo text-white tracking-tight">
+                            {selectedGroupId ? groupStudents.length : myStudents.length}
+                        </div>
+                        <div className="text-xs font-bold text-white/30 uppercase">чел.</div>
+                    </div>
+                </motion.div>
 
-                        {/* Breakdown Bar */}
-                        <div className="mt-auto pt-4 border-t border-white/5">
-                            <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5">
-                                <span className="text-white/40">Распределение</span>
-                                <span className="text-sparta-gold">{Math.round((groupStudents.filter(s => s.type === 'trial').length / (groupStudents.length || 1)) * 100)}% Пробные</span>
+                {/* 2. Today's Classes Card */}
+                <motion.div
+                    whileHover={{ y: -4 }}
+                    className="bg-card glass-panel border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-amber-500/30 transition-all shadow-xl"
+                >
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-400">
+                                <Clock size={20} />
                             </div>
-                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden flex">
-                                <div
-                                    className="h-full bg-sparta-gold"
-                                    style={{ width: `${(groupStudents.filter(s => s.status === 'active' || !s.status).length / (groupStudents.length || 1)) * 100}%` }}
-                                />
-                                <div
-                                    className="h-full bg-sparta-gold/20"
-                                    style={{ width: `${(groupStudents.filter(s => s.type === 'trial').length / (groupStudents.length || 1)) * 100}%` }}
-                                />
+                            <div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white/40 block">
+                                    Сегодня тренировок
+                                </span>
+                                <span className="text-[11px] font-bold text-white/60">
+                                    {upcomingTraining ? `Ближайшая в ${upcomingTraining.time}` : 'На сегодня всё'}
+                                </span>
                             </div>
+                        </div>
+                        <div className="px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-lg text-[9px] font-black uppercase tracking-wider">
+                            Расписание
+                        </div>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <div className="text-4xl sm:text-5xl font-russo text-white tracking-tight">
+                            {todayWorkouts.length}
+                        </div>
+                        <div className="text-xs font-bold text-white/30 uppercase">
+                            {todayWorkouts.length === 1 ? 'сессия' : 'сессий'}
                         </div>
                     </div>
                 </motion.div>
 
-                {/* Attendance Sparkline Card */}
+                {/* 3. New Trial Requests Card */}
                 <motion.div
-                    whileHover={{ y: -5, scale: 1.01 }}
-                    className="bg-card glass-panel border border-main rounded-3xl p-6 relative overflow-hidden group hover:border-blue-500/30 transition-all shadow-xl shadow-black/20"
+                    whileHover={{ y: -4 }}
+                    onClick={() => setMainTab('trials')}
+                    className="bg-card glass-panel border border-white/10 rounded-3xl p-6 relative overflow-hidden group hover:border-emerald-500/30 transition-all shadow-xl cursor-pointer"
                 >
-                    <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
-                    <div className="relative z-10 h-full flex flex-col">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400">
-                                    <ActivityIcon size={20} />
-                                </div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Посещаемость</span>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400">
+                                <UserPlus size={20} />
                             </div>
-                            <div className="flex items-center gap-1 text-green-400 text-[9px] font-black">
-                                <TrendingUp size={10} /> +4.2%
+                            <div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white/40 block">
+                                    Новых заявок
+                                </span>
+                                <span className="text-[11px] font-bold text-white/60">
+                                    {pendingTrialsCount > 0 ? 'Требуют внимания' : 'Все обработаны'}
+                                </span>
                             </div>
                         </div>
-
-                        <div className="text-4xl font-russo text-white mb-2">{attendanceStats.rate}%</div>
-
-                        {/* Sparkline Container */}
-                        <div className="mt-auto h-16 w-full -mx-2 mb-[-10px] min-h-[64px] min-w-[100px]">
-                            {coachHistoryStats.attendanceTrend?.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={64}>
-                                    <AreaChart data={coachHistoryStats.attendanceTrend.slice(-7)}>
-                                        <defs>
-                                            <linearGradient id="sparklineColor" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <Area
-                                            type="monotone"
-                                            dataKey="present"
-                                            stroke="#3b82f6"
-                                            strokeWidth={2}
-                                            fillOpacity={1}
-                                            fill="url(#sparklineColor)"
-                                            isAnimationActive={true}
-                                            animationDuration={1500}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-white/10 text-[8px] font-bold uppercase tracking-widest">Нет данных</div>
-                            )}
-                        </div>
+                        {pendingTrialsCount > 0 ? (
+                            <div className="px-2.5 py-1 bg-emerald-500 text-black rounded-lg text-[9px] font-black uppercase tracking-wider animate-pulse">
+                                Новые
+                            </div>
+                        ) : (
+                            <div className="px-2.5 py-1 bg-white/5 text-white/40 rounded-lg text-[9px] font-black uppercase tracking-wider">
+                                Порядок
+                            </div>
+                        )}
                     </div>
-                </motion.div>
-
-
-                {/* Today's Classes Card */}
-                <motion.div
-                    whileHover={{ y: -5, scale: 1.01 }}
-                    className="bg-card glass-panel border border-main rounded-3xl p-6 relative overflow-hidden group hover:border-orange-500/30 transition-all shadow-xl shadow-black/20"
-                >
-                    <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
-                        <Clock size={80} />
-                    </div>
-                    <div className="relative z-10 h-full flex flex-col">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2.5 bg-orange-500/10 rounded-xl text-orange-400">
-                                <Calendar size={20} />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-white/40">График на сегодня</span>
+                    <div className="flex items-baseline gap-2">
+                        <div className="text-4xl sm:text-5xl font-russo text-white tracking-tight">
+                            {pendingTrialsCount}
                         </div>
-
-                        <div className="text-4xl font-russo text-white mb-2">{todayWorkouts.length}</div>
-
-                        <div className="mt-auto flex flex-col gap-2">
-                            {upcomingTraining ? (
-                                <div className="p-3 bg-orange-500/5 border border-orange-500/10 rounded-2xl flex items-center justify-between group-hover:bg-orange-500/10 transition-all">
-                                    <div className="flex flex-col">
-                                        <span className="text-[8px] font-black text-orange-400 uppercase tracking-widest">Ближайшее</span>
-                                        <span className="text-[10px] font-russo text-white uppercase truncate max-w-[80px]">{upcomingTraining.groupName}</span>
-                                    </div>
-                                    <div className="text-lg font-russo text-orange-400 tracking-tight">{upcomingTraining.time}</div>
-                                </div>
-                            ) : (
-                                <div className="py-4 text-center border border-dashed border-white/10 rounded-2xl">
-                                    <span className="text-[9px] font-black text-white/20 uppercase">Все встречи завершены</span>
-                                </div>
-                            )}
-                        </div>
+                        <div className="text-xs font-bold text-white/30 uppercase">заявок</div>
                     </div>
                 </motion.div>
             </div>
 
-
-            {/* Navigation Command Dock v4.0 */}
-            <div className={`sticky top-8 z-[100] flex flex-wrap items-center gap-1.5 p-2 backdrop-blur-3xl border rounded-[2.5rem] w-fit mx-auto lg:mx-0 shadow-3xl transition-all duration-500 ${theme === 'light'
+            {/* Navigation Command Dock v4.0 (4 Primary Tabs) */}
+            <div className={`sticky top-8 z-[100] flex flex-wrap items-center gap-2 p-2 backdrop-blur-3xl border rounded-[2.5rem] w-fit mx-auto lg:mx-0 shadow-3xl transition-all duration-500 ${theme === 'light'
                     ? 'bg-white/80 border-black/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.05)]'
                     : 'bg-[#111]/80 border-white/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
                 {[
-                    { id: 'dashboard', label: 'Рабочий стол', icon: LayoutDashboard },
-                    { id: 'trials', label: 'Пробные', icon: Users, badge: trialRequests.length },
-                    { id: 'stats', label: 'Аналитика', icon: TrendingUp },
-                    { id: 'calendar', label: 'Календарь', icon: Calendar },
-                    { id: 'exercises', label: 'База упражнений', icon: Dumbbell },
-                    { id: 'programs', label: 'Программы', icon: FileText }
-                ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setMainTab(tab.id as any)}
-                        className={`group relative flex items-center gap-3 px-6 py-3.5 rounded-[1.8rem] transition-all duration-500 overflow-hidden ${mainTab === tab.id
-                                ? theme === 'light' ? 'text-black' : 'text-white'
-                                : 'text-white/30 hover:text-sparta-gold'
+                    { id: 'dashboard', label: '⚽ Главная / Тренировка', icon: LayoutDashboard },
+                    { id: 'journal', label: '👥 Мои группы и дети', icon: Users },
+                    { id: 'review', label: '📝 Проверка заданий', icon: CheckSquare, badge: pendingSubmissionsCount },
+                    { id: 'trials', label: '📥 Новички и заявки', icon: UserPlus, badge: trialRequests.length },
+                    { id: 'materials', label: '📋 Упражнения и планы', icon: BookOpen }
+                ].map((tab) => {
+                    const isActive = mainTab === tab.id || (tab.id === 'materials' && (mainTab === 'exercises' || mainTab === 'programs' || mainTab === 'calendar'));
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setMainTab(tab.id as any)}
+                            className={`group relative flex items-center gap-3 px-6 py-3.5 rounded-[1.8rem] transition-all duration-500 overflow-hidden cursor-pointer ${
+                                isActive
+                                    ? theme === 'light' ? 'text-black font-black' : 'text-white font-black'
+                                    : 'text-white/40 hover:text-sparta-gold'
                             }`}
-                    >
-                        {/* Hover Highlight Overlay */}
-                        <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-500 -z-10 ${theme === 'light' ? 'bg-black/[0.03]' : 'bg-white/[0.03]'
-                            }`} />
+                        >
+                            {/* Hover Highlight Overlay */}
+                            <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-500 -z-10 ${theme === 'light' ? 'bg-black/[0.03]' : 'bg-white/[0.03]'}`} />
 
-                        <tab.icon
-                            size={18}
-                            className={`relative z-10 transition-all duration-500 ${mainTab === tab.id
-                                    ? 'scale-110 text-sparta-gold ring-4 ring-sparta-gold/10 rounded-full'
-                                    : 'group-hover:scale-110 group-hover:rotate-3'
+                            <tab.icon
+                                size={18}
+                                className={`relative z-10 transition-all duration-500 ${
+                                    isActive
+                                        ? 'scale-110 text-sparta-gold ring-4 ring-sparta-gold/10 rounded-full'
+                                        : 'group-hover:scale-110 group-hover:rotate-3'
                                 }`}
-                        />
-                        <span className={`relative z-10 text-[10px] uppercase tracking-[0.2em] hidden xl:block transition-all ${mainTab === tab.id ? 'font-black opacity-100' : 'font-bold opacity-60'
+                            />
+                            <span className={`relative z-10 text-xs font-russo uppercase tracking-wider hidden sm:block transition-all ${
+                                isActive ? 'opacity-100' : 'opacity-70'
                             }`}>
-                            {tab.label}
-                        </span>
+                                {tab.label}
+                            </span>
 
-                        {tab.badge ? (
-                            <div className="absolute top-2 right-2 z-10">
-                                <span className={`flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[9px] font-black shadow-lg transition-all ${mainTab === tab.id
-                                        ? 'bg-sparta-gold text-black animate-pulse'
-                                        : 'bg-white/10 text-white group-hover:bg-sparta-gold group-hover:text-black hover:scale-110'
+                            {tab.badge ? (
+                                <div className="absolute top-2 right-2 z-10">
+                                    <span className={`flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[9px] font-black shadow-lg transition-all ${
+                                        isActive
+                                            ? 'bg-sparta-gold text-black animate-pulse'
+                                            : 'bg-white/10 text-white group-hover:bg-sparta-gold group-hover:text-black hover:scale-110'
                                     }`}>
-                                    {tab.badge}
-                                </span>
-                            </div>
-                        ) : null}
-                    </button>
-                ))}
+                                        {tab.badge}
+                                    </span>
+                                </div>
+                            ) : null}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* MAIN CONTENT AREA */}
@@ -1915,23 +2472,36 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                                 user={user}
                                 userProfile={userProfile}
                                 pendingTrialsCount={pendingTrialsCount}
-                                unreadMessagesCount={unreadMessagesCount}
-                                orphanStudentsCount={orphanStudentsCount}
-                                atRiskStudents={atRiskStudents}
-                                isSmartSorted={isSmartSorted}
-                                handleSmartSorting={handleSmartAutoSort}
-                                sortingStatus={sortingStatus}
                                 upcomingTraining={upcomingTraining}
-                                activeSubTab={activeSubTab}
-                                setActiveSubTab={setActiveSubTab}
+                                todayWorkouts={todayWorkouts}
                                 selectedGroupId={selectedGroupId}
                                 setSelectedGroupId={setSelectedGroupId}
                                 myGroups={myGroups}
-                                setIsAssignmentModalOpen={setIsAssignmentModalOpen}
-                                rosterFilter={rosterFilter}
-                                setRosterFilter={setRosterFilter}
                                 groupStudents={groupStudents}
                                 myStudents={myStudents}
+                                setMainTab={setMainTab}
+                                handleViewStudentProfile={handleViewStudentProfile}
+                            />
+                        </motion.div>
+                    )}
+
+                    {mainTab === 'journal' && (
+                        <motion.div
+                            key="journal"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <RosterJournalTab
+                                theme={theme}
+                                myGroups={myGroups}
+                                selectedGroupId={selectedGroupId}
+                                setSelectedGroupId={setSelectedGroupId}
+                                groupStudents={groupStudents}
+                                myStudents={myStudents}
+                                rosterFilter={rosterFilter}
+                                setRosterFilter={setRosterFilter}
                                 studentAttendanceStats={studentAttendanceStats}
                                 onlineStatuses={onlineStatuses}
                                 attendanceDate={attendanceDate}
@@ -1941,8 +2511,31 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                                 setStudentToTransfer={setStudentToTransfer}
                                 setIsTransferModalOpen={setIsTransferModalOpen}
                                 handleContactParent={handleContactParent}
-                                setMainTab={setMainTab}
                                 isCompleteProfile={isCompleteProfile}
+                                handleTogglePayment={handleTogglePayment}
+                                setIsAssignmentModalOpen={handleOpenGroupAssignment}
+                                handleAssignPersonalTask={handleAssignPersonalTask}
+                                handleEditAssignment={handleOpenEditAssignment}
+                                handleDeleteAssignment={handleDeleteAssignment}
+                            />
+                        </motion.div>
+                    )}
+
+                    {mainTab === 'review' && (
+                        <motion.div
+                            key="review"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <CoachReviewDashboard
+                                theme={theme}
+                                coachId={userProfile?.coachId || user?.uid}
+                                coachName={coachDisplayName}
+                                myGroups={myGroups}
+                                selectedGroupId={selectedGroupId}
+                                onViewStudentProfile={handleViewStudentProfile}
                             />
                         </motion.div>
                     )}
@@ -2003,47 +2596,67 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                         </motion.div>
                     )}
 
-
-                    {mainTab === 'calendar' && (
+                    {(mainTab === 'materials' || mainTab === 'exercises' || mainTab === 'programs' || mainTab === 'calendar') && (
                         <motion.div
-                            key="calendar"
+                            key="materials"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.5 }}
+                            className="space-y-6"
                         >
-                            <div className="bg-card glass-panel border border-main rounded-[2.5rem] p-8 min-h-[600px] relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-full bg-sparta-gold/5 opacity-50 pointer-events-none" />
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-8">
-                                        <div>
-                                            <h3 className="text-2xl font-russo text-white uppercase tracking-tight mb-2">Календарь Расписания</h3>
-                                            <p className="text-white/20 text-[10px] font-bold uppercase tracking-widest">Планирование тренировок и событий</p>
-                                        </div>
-                                        <Button className="bg-sparta-gold text-black font-black uppercase tracking-widest text-[10px] px-6 py-2 rounded-2xl hover:bg-white transition-all shadow-lg shadow-sparta-gold/20 flex items-center gap-2">
-                                            <PlusCircle size={16} /> Добавить тренировку
-                                        </Button>
-                                    </div>
+                            {/* Materials SubTab Switcher */}
+                            <div className="flex flex-wrap items-center gap-2 p-1.5 bg-card glass-panel border border-white/10 rounded-2xl w-fit shadow-xl">
+                                {[
+                                    { id: 'exercises', label: 'База упражнений', icon: Dumbbell },
+                                    { id: 'programs', label: 'Программы', icon: Layers },
+                                    { id: 'calendar', label: 'Календарь', icon: Calendar }
+                                ].map(sub => {
+                                    const active = (mainTab === sub.id) || (mainTab === 'materials' && materialsSubTab === sub.id);
+                                    return (
+                                        <button
+                                            key={sub.id}
+                                            onClick={() => {
+                                                setMainTab('materials');
+                                                setMaterialsSubTab(sub.id as any);
+                                            }}
+                                            className={`px-5 py-2.5 rounded-xl text-xs font-russo uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                                active
+                                                    ? 'bg-sparta-gold text-black shadow-md shadow-sparta-gold/20'
+                                                    : 'text-white/40 hover:text-white hover:bg-white/5'
+                                            }`}
+                                        >
+                                            <sub.icon size={15} />
+                                            <span>{sub.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
-                                    <div className="bg-field glass-panel border border-main rounded-3xl p-6 min-h-[500px]">
-                                        <CoachCalendar userProfile={userProfile} myGroups={myGroups} exercises={exercises} />
+                            {/* View 1: Calendar */}
+                            {((mainTab === 'materials' && materialsSubTab === 'calendar') || mainTab === 'calendar') && (
+                                <div className="bg-card glass-panel border border-main rounded-[2.5rem] p-6 sm:p-8 min-h-[600px] relative overflow-hidden shadow-2xl">
+                                    <div className="absolute top-0 left-0 w-full h-full bg-sparta-gold/5 opacity-50 pointer-events-none" />
+                                    <div className="relative z-10">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                                            <div>
+                                                <h3 className="text-2xl font-russo text-white uppercase tracking-tight mb-1">Календарь Расписания</h3>
+                                                <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Планирование тренировок и событий</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-field glass-panel border border-main rounded-3xl p-4 sm:p-6 min-h-[500px]">
+                                            <CoachCalendar userProfile={userProfile} myGroups={myGroups} exercises={exercises} />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    )}
+                            )}
 
-                    {mainTab === 'exercises' && (
-                        <motion.div
-                            key="exercises"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.5 }}
-                        >
-                            <div className="dashboard-theme min-h-[800px] p-4 lg:p-10 rounded-[3.5rem] relative overflow-hidden">
-                                {/* Header Section v3.0 */}
-                                <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-12">
+                            {/* View 2: Exercises */}
+                            {((mainTab === 'materials' && materialsSubTab === 'exercises') || mainTab === 'exercises') && (
+                                <div className="dashboard-theme min-h-[800px] p-4 lg:p-10 rounded-[3.5rem] relative overflow-hidden">
+                                    {/* Header Section v3.0 */}
+                                    <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-12">
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
                                             <div className="p-2.5 bg-sparta-gold/10 rounded-xl text-sparta-gold">
@@ -2615,97 +3228,90 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                                     )}
                                 </div>
                             </div>
-                        </motion.div>
-                    )}
-
-                    {/* Floating Selection Tray v1.0 */}
-                    <AnimatePresence>
-                        {selectedExerciseIds.length > 0 && (
-                            <motion.div
-                                initial={{ y: 100, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                exit={{ y: 100, opacity: 0 }}
-                                className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 bg-[#0a0a0a]/90 backdrop-blur-3xl border border-purple-500/30 rounded-[2.5rem] p-3 pl-8 shadow-[0_30px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(168,85,247,0.1)] ring-1 ring-white/10"
-                            >
-                                <div className="flex flex-col">
-                                    <span className="text-[14px] font-russo text-white uppercase tracking-widest leading-none">
-                                        {selectedExerciseIds.length} ВЫБРАНО
-                                    </span>
-                                    <span className="text-[8px] font-black text-purple-400 uppercase tracking-tight mt-1">
-                                        МТ-Управление Библиотекой
-                                    </span>
-                                </div>
-
-                                <div className="h-10 w-px bg-white/10 mx-4" />
-
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => {
-                                            setClipboardIds(selectedExerciseIds);
-                                            // Optional: visual pulse
-                                        }}
-                                        className="h-12 px-6 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 border border-white/5"
-                                    >
-                                        <Copy size={14} className="text-sparta-gold" />
-                                        Копировать
-                                    </button>
-
-                                    <button
-                                        onClick={() => {
-                                            if (selectedCollectionId !== 'all') {
-                                                handleBulkMove(selectedExerciseIds, selectedCollectionId);
-                                            } else {
-                                                alert("Выберите папку для перемещения в меню слева");
-                                            }
-                                        }}
-                                        className="h-12 px-6 rounded-2xl bg-purple-500 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 shadow-lg shadow-purple-500/20"
-                                    >
-                                        <FolderOpen size={14} />
-                                        В эту папку
-                                    </button>
-
-                                    <button
-                                        onClick={() => handleBulkDelete(selectedExerciseIds)}
-                                        className="w-12 h-12 rounded-2xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all flex items-center justify-center border border-red-500/20"
-                                        title="Удалить выбранные"
-                                    >
-                                        <TrashIcon size={18} />
-                                    </button>
-
-                                    <div className="w-px h-6 bg-white/10 mx-2" />
-
-                                    <button
-                                        onClick={() => setSelectedExerciseIds([])}
-                                        className="h-12 w-12 rounded-2xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all flex items-center justify-center"
-                                        title="Сбросить выделение"
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                </div>
-
-                                {/* Shortcut Hints */}
-                                <div className="hidden lg:flex items-center gap-4 ml-8 pr-4">
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-[7px] font-black text-white/20 uppercase mb-1">Copy</span>
-                                        <kbd className="px-2 py-1 bg-white/5 rounded-md text-[8px] font-black text-white/40 border border-white/10">CTRL+C</kbd>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-[7px] font-black text-white/20 uppercase mb-1">Paste</span>
-                                        <kbd className="px-2 py-1 bg-white/5 rounded-md text-[8px] font-black text-white/40 border border-white/10">CTRL+V</kbd>
-                                    </div>
-                                </div>
-                            </motion.div>
                         )}
-                    </AnimatePresence>
 
-                    {mainTab === 'programs' && (
-                        <motion.div
-                            key="programs"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.5 }}
-                        >
+                        {/* Floating Selection Tray v1.0 */}
+                        <AnimatePresence>
+                            {selectedExerciseIds.length > 0 && (
+                                <motion.div
+                                    initial={{ y: 100, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    exit={{ y: 100, opacity: 0 }}
+                                    className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 bg-[#0a0a0a]/90 backdrop-blur-3xl border border-purple-500/30 rounded-[2.5rem] p-3 pl-8 shadow-[0_30px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(168,85,247,0.1)] ring-1 ring-white/10"
+                                >
+                                    <div className="flex flex-col">
+                                        <span className="text-[14px] font-russo text-white uppercase tracking-widest leading-none">
+                                            {selectedExerciseIds.length} ВЫБРАНО
+                                        </span>
+                                        <span className="text-[8px] font-black text-purple-400 uppercase tracking-tight mt-1">
+                                            МТ-Управление Библиотекой
+                                        </span>
+                                    </div>
+
+                                    <div className="h-10 w-px bg-white/10 mx-4" />
+
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setClipboardIds(selectedExerciseIds);
+                                                // Optional: visual pulse
+                                            }}
+                                            className="h-12 px-6 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 border border-white/5"
+                                        >
+                                            <Copy size={14} className="text-sparta-gold" />
+                                            Копировать
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                if (selectedCollectionId !== 'all') {
+                                                    handleBulkMove(selectedExerciseIds, selectedCollectionId);
+                                                } else {
+                                                    alert("Выберите папку для перемещения в меню слева");
+                                                }
+                                            }}
+                                            className="h-12 px-6 rounded-2xl bg-purple-500 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 shadow-lg shadow-purple-500/20"
+                                        >
+                                            <FolderOpen size={14} />
+                                            В эту папку
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleBulkDelete(selectedExerciseIds)}
+                                            className="w-12 h-12 rounded-2xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all flex items-center justify-center border border-red-500/20"
+                                            title="Удалить выбранные"
+                                        >
+                                            <TrashIcon size={18} />
+                                        </button>
+
+                                        <div className="w-px h-6 bg-white/10 mx-2" />
+
+                                        <button
+                                            onClick={() => setSelectedExerciseIds([])}
+                                            className="h-12 w-12 rounded-2xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all flex items-center justify-center"
+                                            title="Сбросить выделение"
+                                        >
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+
+                                    {/* Shortcut Hints */}
+                                    <div className="hidden lg:flex items-center gap-4 ml-8 pr-4">
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[7px] font-black text-white/20 uppercase mb-1">Copy</span>
+                                            <kbd className="px-2 py-1 bg-white/5 rounded-md text-[8px] font-black text-white/40 border border-white/10">CTRL+C</kbd>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[7px] font-black text-white/20 uppercase mb-1">Paste</span>
+                                            <kbd className="px-2 py-1 bg-white/5 rounded-md text-[8px] font-black text-white/40 border border-white/10">CTRL+V</kbd>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* View 3: Programs */}
+                        {((mainTab === 'materials' && materialsSubTab === 'programs') || mainTab === 'programs') && (
                             <div className="space-y-8">
                                 {/* Pro Header & Onboarding */}
                                 <div className="bg-card glass-panel border border-purple-500/20 rounded-[2.5rem] p-10 relative overflow-hidden group">
@@ -2836,10 +3442,11 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                                     ))}
                                 </div>
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
 
             {/* MODALS */}
             <AnimatePresence>
@@ -3294,99 +3901,15 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                 )}
             </AnimatePresence>
 
-            {isProfileModalOpen && selectedStudentForProfile && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-end bg-black/60 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ x: '100%' }}
-                        animate={{ x: 0 }}
-                        exit={{ x: '100%' }}
-                        className="w-full max-w-xl h-full bg-[#0d0d0d] border-l border-white/5 p-12 shadow-2xl relative flex flex-col"
-                    >
-                        <button onClick={() => setIsProfileModalOpen(false)} className="absolute top-12 left-12 p-3 bg-white/5 rounded-2xl hover:text-sparta-gold transition-all"><X size={24} /></button>
-                        <div className="flex-1 mt-20 space-y-12 overflow-y-auto pr-4 custom-scrollbar">
-                            <div className="flex items-center gap-8">
-                                <div className="w-24 h-24 rounded-[2rem] bg-sparta-gold/10 border border-sparta-gold/20 flex items-center justify-center text-3xl font-russo text-sparta-gold">{selectedStudentForProfile.name.charAt(0)}</div>
-                                <div>
-                                    <h3 className="text-3xl font-russo text-white mb-2">{selectedStudentForProfile.name}</h3>
-                                    <span className="px-3 py-1 bg-green-500/10 text-green-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-500/10">Активен</span>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-6 bg-white/5 rounded-3xl border border-white/5 text-center">
-                                    <p className="text-2xl font-russo text-white">{studentProfileStats.rate}%</p>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mt-1">Посещаемость</p>
-                                </div>
-                                <div className="p-6 bg-white/5 rounded-3xl border border-white/5 text-center">
-                                    <p className="text-2xl font-russo text-white">{selectedStudentForProfile.xp || 0}</p>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mt-1">Всего XP</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="p-6 bg-[#1a1a1a] rounded-3xl border border-white/5">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-4">Медицинская карта / Р—аметки</h4>
-                                    <textarea className="w-full h-24 bg-black/40 border border-white/5 rounded-2xl p-4 text-xs text-white resize-none focus:border-sparta-gold/30 transition-all focus:outline-none" placeholder="Аллергии, травмы, особенности характера ребенка..." defaultValue={selectedStudentForProfile.notes || ''} />
-                                    <button className="mt-3 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/60 transition-all">Сохранить</button>
-                                </div>
-
-                                <div className="p-6 bg-[#1a1a1a] rounded-3xl border border-white/5">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">График успеваемости</h4>
-                                        <span className="text-[8px] font-black text-white/20 uppercase bg-white/5 px-2 py-1 rounded-md">Р—а месяц</span>
-                                    </div>
-                                    <div className="h-24 flex items-end justify-between gap-3">
-                                        {[60, 80, 50, 90, 100, 75, 85].map((val, i) => (
-                                            <div key={i} className="flex-1 bg-white/5 rounded-t-lg relative group hover:bg-sparta-gold/30 transition-all" style={{ height: `${val}%` }}>
-                                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-black opacity-0 group-hover:opacity-100 text-sparta-gold transition-opacity">{val}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Contact Info */}
-                                <div className="mt-8 pt-8 border-t border-white/5">
-                                    <h5 className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-4">Контактная информация</h5>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5 group hover:border-sparta-gold/30 transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-sparta-gold/10 flex items-center justify-center text-sparta-gold">
-                                                    <Phone size={18} />
-                                                </div>
-                                                <div>
-                                                    <div className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-0.5">Телефон родителя</div>
-                                                    <div className="text-sm font-bold text-white group-hover:text-sparta-gold transition-colors">
-                                                        {selectedStudentForProfile.phone || 'Не указан'}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {selectedStudentForProfile.email && (
-                                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 group hover:border-blue-500/30 transition-all">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                                                        <Mail size={18} />
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-0.5">Электронная почта</div>
-                                                        <div className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">
-                                                            {selectedStudentForProfile.email}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <button onClick={() => { setIsProfileModalOpen(false); handleContactParent(selectedStudentForProfile); }} className="w-full py-4 bg-sparta-gold text-black rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-sparta-gold/20 flex items-center justify-center gap-2 hover:bg-white transition-all">
-                                    <MessageSquare size={16} /> Написать родителю
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
+            {/* Dynamic Student Profile Modal */}
+            <StudentProfileModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+                student={selectedStudentForProfile}
+                attendanceStats={selectedStudentForProfile ? (studentAttendanceStats[selectedStudentForProfile.id] || studentProfileStats) : undefined}
+                onContactParent={handleContactParent}
+                onTogglePayment={handleTogglePayment}
+            />
             <AnimatePresence>
                 {isGuideOpen && (
                     <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl">
@@ -4255,89 +4778,24 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                     </div>
                 )}
             </AnimatePresence>
-            <AnimatePresence>
-                {isAssignmentModalOpen && assigningItem && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/95 backdrop-blur-3xl overflow-y-auto custom-scrollbar">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-[#0a0a0a] border border-white/10 rounded-[4rem] p-12 max-w-xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
-                        >
-                            <div className="absolute -top-20 -right-20 w-64 h-64 bg-sparta-gold/10 rounded-full blur-3xl" />
-                            <h3 className="text-3xl font-russo text-white uppercase mb-8 flex items-center gap-4">
-                                <div className="p-3 bg-sparta-gold/20 rounded-2xl text-sparta-gold"><ArrowRightLeft size={24} /></div>
-                                <span>Назначить задание</span>
-                            </h3>
-                            <div className="space-y-6 relative z-10">
-                                <div className="p-6 bg-white/5 border border-white/10 rounded-3xl mb-4">
-                                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">Выбранный материал</p>
-                                    <p className="text-lg font-bold text-white uppercase tracking-tight">{assigningItem.title}</p>
-                                    <span className="text-[9px] font-black text-sparta-gold uppercase tracking-widest">{assigningItem.itemType === 'program' ? 'Программа' : 'Упражнение'}</span>
-                                </div>
-
-                                <div className="space-y-4 pt-4 border-t border-white/5">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Выберите целевую группу</label>
-                                        <div className="flex items-center gap-2 text-[8px] font-bold text-sparta-gold/60 uppercase bg-sparta-gold/5 px-3 py-1 rounded-lg border border-sparta-gold/10">
-                                            <Calendar size={10} />
-                                            <span>Программа появится в плане на сегодня</span>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {myGroups.map(group => (
-                                            <button
-                                                key={group.id}
-                                                onClick={() => setSelectedAssignmentTarget(group.id)}
-                                                className={`p-5 rounded-3xl border text-left flex items-center justify-between transition-all group/group
-                                                    ${selectedAssignmentTarget === group.id
-                                                        ? 'bg-sparta-gold/20 border-sparta-gold text-white font-bold ring-1 ring-sparta-gold/30'
-                                                        : 'bg-white/5 border-white/5 text-white/40 hover:border-white/20'}`}
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors
-                                                        ${selectedAssignmentTarget === group.id ? 'bg-sparta-gold text-black' : 'bg-white/5 text-white/20 group-hover/group:text-white'}`}>
-                                                        <Users size={18} />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm uppercase tracking-tight">{group.name}</span>
-                                                        <span className="text-[8px] font-black text-white/20 uppercase mt-1">{group.memberCount || 0} учеников</span>
-                                                    </div>
-                                                </div>
-                                                {selectedAssignmentTarget === group.id && <CheckCircle size={18} className="text-sparta-gold" />}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {/* Action Summary Helper */}
-                                    {selectedAssignmentTarget && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="p-4 bg-sparta-gold/5 border border-sparta-gold/10 rounded-2xl"
-                                        >
-                                            <p className="text-[9px] text-sparta-gold font-black uppercase tracking-widest leading-relaxed">
-                                                Внимание: Все упражнения из программы будут добавлены в план на текущую дату({format(new Date(), 'dd.MM')}) для выбранной группы.
-                                            </p>
-                                        </motion.div>
-                                    )}
-                                </div>
-
-                                <div className="flex gap-4 pt-6">
-                                    <Button onClick={() => setIsAssignmentModalOpen(false)} className="flex-1 py-5 bg-white/5 text-white hover:bg-white/10 font-black uppercase text-xs">ОТМЕНА</Button>
-                                    <Button
-                                        onClick={handleSaveAssignment}
-                                        disabled={isSavingAssignment || !selectedAssignmentTarget}
-                                        className="flex-1 py-5 bg-sparta-gold text-black font-black uppercase text-xs shadow-xl shadow-sparta-gold/20"
-                                    >
-                                        {isSavingAssignment ? 'ПЕРЕДАЧА...' : 'НАЗНАЧИТЬ ГРУППЕ'}
-                                    </Button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {/* CLEAN DEDICATED ASSIGNMENT MODAL */}
+            <AssignmentModal
+                isOpen={isAssignmentModalOpen}
+                onClose={() => {
+                    setIsAssignmentModalOpen(false);
+                    setAssigningItem(null);
+                    setEditingAssignmentTask(null);
+                }}
+                initialData={editingAssignmentTask}
+                student={editingAssignmentTask ? null : (assigningItem?.targetStudent || (assignmentTargetType === 'student' ? (groupStudents.find(s => s.id === assignmentTargetStudentId) || myStudents.find(s => s.id === assignmentTargetStudentId)) : null))}
+                currentGroup={myGroups.find(g => g.id === (editingAssignmentTask?.groupId || selectedAssignmentTarget || selectedGroupId)) || myGroups[0] || null}
+                groupStudents={groupStudents}
+                coachId={userProfile?.coachId || user?.uid || ''}
+                coachName={coachDisplayName || 'Тренер'}
+                onSuccess={(newTask) => {
+                    setHomeworkTasks(prev => [newTask, ...prev.filter(t => t.id !== newTask.id)]);
+                }}
+            />
             <AnimatePresence>
                 {isExerciseGuideOpen && (
                     <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/90 backdrop-blur-2xl">

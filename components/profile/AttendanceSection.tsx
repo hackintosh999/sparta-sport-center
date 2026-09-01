@@ -72,13 +72,15 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({ userProfile }) =>
         return () => unsubscribe();
     }, [userProfile?.groupId]);
 
+    const activeChildUid = userProfile?.id || userProfile?.uid;
+
     // Helper to get my status for a specific date
     const getMyStatusForDate = (date: Date) => {
         const dateStr = format(date, 'yyyy-MM-dd');
         const dayData = attendanceData.find(a => a.date === dateStr);
-        if (!dayData) return null;
+        if (!dayData || !activeChildUid) return null;
 
-        const record = dayData.records?.[userProfile.uid];
+        const record = dayData.records?.[activeChildUid];
         if (typeof record === 'string') {
             return { status: record, note: '' };
         }
@@ -87,19 +89,20 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({ userProfile }) =>
 
     // Calculate Stats
     const stats = (() => {
+        if (!activeChildUid) return { streak: 0, attendanceRate: 0, totalSessions: 0, presentCount: 0 };
         const myAttendances = attendanceData.filter(a => {
-            const r = a.records?.[userProfile.uid];
+            const r = a.records?.[activeChildUid];
             const status = typeof r === 'string' ? r : r?.status;
-            return status === 'present';
+            return status === 'present' || status === 'PRESENT';
         });
 
         // Current Streak
         let streak = 0;
         const sortedData = [...attendanceData].sort((a, b) => b.date.localeCompare(a.date));
         for (const day of sortedData) {
-            const r = day.records?.[userProfile.uid];
+            const r = day.records?.[activeChildUid];
             const status = typeof r === 'string' ? r : r?.status;
-            if (status === 'present') streak++;
+            if (status === 'present' || status === 'PRESENT') streak++;
             else if (status) break;
         }
 
@@ -311,9 +314,9 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({ userProfile }) =>
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => res && setSelectedDay({ date: day, ...res })}
                                     className={`relative aspect-square rounded-2xl border transition-all cursor-pointer flex items-center justify-center ${isToday(day) ? 'ring-2 ring-sparta-gold ring-offset-2 ring-offset-[#050505]' : ''
-                                        } ${res?.status === 'present' ? 'bg-green-500/10 border-green-500/30 text-green-500' :
-                                            res?.status === 'absent' ? 'bg-red-500/10 border-red-500/30 text-red-500' :
-                                                res?.status === 'sick' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                                        } ${(res?.status === 'present' || res?.status === 'PRESENT') ? 'bg-green-500/10 border-green-500/30 text-green-500' :
+                                            (res?.status === 'absent' || res?.status === 'MISSED_BURNT') ? 'bg-red-500/10 border-red-500/30 text-red-500' :
+                                                (res?.status === 'sick' || res?.status === 'EXCUSED') ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
                                                     'bg-white/5 border-white/5 text-white/20'
                                         } ${isSelected ? 'border-sparta-gold shadow-[0_0_15px_rgba(255,190,0,0.2)]' : ''}`}
                                 >

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     MessageSquare,
@@ -9,6 +9,8 @@ import {
     Check,
     CheckCheck,
     Search,
+    Calendar,
+    CalendarDays,
     Paperclip,
     Info,
     Smile,
@@ -16,6 +18,7 @@ import {
     BarChart2,
     PlusCircle,
     Pin,
+    Bookmark,
     Trash2,
     Forward,
     ChevronDown,
@@ -58,14 +61,24 @@ import {
     Mail,
     Phone,
     History,
-    Calendar,
     Zap, Globe, Layout, MapPin, CheckCircle2, Trophy,
-    Sun, Cloud, CloudRain, CloudLightning, Snowflake, Thermometer, Droplets
+    Sun, Cloud, CloudRain, CloudLightning, Snowflake, Thermometer, Droplets,
+    Megaphone, Pencil, UploadCloud
 } from 'lucide-react';
 import Lottie from 'lottie-react';
 import { db } from '../../firebase';
 import { supabase } from '../../supabase';
 import { safeLocalStorage } from '../../utils/storage';
+import { AnnouncementModal } from './AnnouncementModal';
+import { ChatAttachmentMenu } from './ChatAttachmentMenu';
+import { ChatProfileDrawer } from './ChatProfileDrawer';
+import { MediaUploadTrayModal, MediaUploadItem } from './MediaUploadTrayModal';
+import { SpartaMediaGalleryModal, GalleryMediaItem } from './SpartaMediaGalleryModal';
+import { SpartaForwardModal } from './SpartaForwardModal';
+import { SpartaScheduleChatCard } from './SpartaScheduleChatCard';
+import { SpartaAvatar } from './SpartaAvatar';
+import { SpartaDatePickerPopover } from './SpartaDatePickerPopover';
+import { SpartaProgressiveImage } from './SpartaProgressiveImage';
 import {
     collection,
     query,
@@ -133,6 +146,7 @@ import MessageContextMenu from './MessageContextMenu';
 import PollMessage from './PollMessage';
 import CreatePollModal from './CreatePollModal';
 import AudioRecorder from './AudioRecorder';
+import { SpartaMessageReactionBadges, SPARTA_3D_REACTIONS } from './SpartaReactions';
 
 interface GroupChatProps {
     user: any;
@@ -525,17 +539,44 @@ const CircularProgress = ({ size = 24, strokeWidth = 2, progress = 0, className 
 
 const copyImageToClipboard = async (url: string) => {
     try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Fetch failed");
-        const blob = await response.blob();
+        const response = await fetch(url, { mode: 'cors' });
+        if (response.ok) {
+            const blob = await response.blob();
+            if (blob.type === 'image/png') {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+                return true;
+            }
+            if (typeof createImageBitmap === 'function') {
+                const imgBitmap = await createImageBitmap(blob);
+                const canvas = document.createElement('canvas');
+                canvas.width = imgBitmap.width;
+                canvas.height = imgBitmap.height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(imgBitmap, 0, 0);
+                    const pngBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+                    if (pngBlob) {
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': pngBlob })
+                        ]);
+                        return true;
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.warn("Direct fetch blob copy failed, trying Image element fallback:", err);
+    }
 
+    try {
         const img = new Image();
         img.crossOrigin = "anonymous";
-
         await new Promise((resolve, reject) => {
             img.onload = resolve;
             img.onerror = reject;
-            img.src = URL.createObjectURL(blob);
+            img.src = url;
         });
 
         const canvas = document.createElement('canvas');
@@ -551,11 +592,9 @@ const copyImageToClipboard = async (url: string) => {
         await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': pngBlob })
         ]);
-
-        URL.revokeObjectURL(img.src);
         return true;
-    } catch (err) {
-        console.error("Copy failed:", err);
+    } catch (err2) {
+        console.error("All binary image copy attempts failed:", err2);
         return false;
     }
 };
@@ -676,10 +715,40 @@ const GroupChat: React.FC<GroupChatProps> = ({
     const [isSending, setIsSending] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [chatSearchQuery, setChatSearchQuery] = useState('');
-    const [searchFilter, setSearchFilter] = useState<'all' | 'media' | 'links'>('all');
+    const [searchFilter, setSearchFilter] = useState<'all' | 'schedule' | 'important' | 'coach' | 'polls' | 'media' | 'links'>('all');
+    const [searchDate, setSearchDate] = useState<string>('');
+    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+    const [showResultsDrawer, setShowResultsDrawer] = useState<boolean>(false);
     const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(0);
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+    const messageDates = useMemo(() => {
+        const set = new Set<string>();
+        for (const m of messages) {
+            try {
+                if (m.timestamp?.toDate) {
+                    set.add(format(m.timestamp.toDate(), 'yyyy-MM-dd'));
+                } else if (m.timestamp?.seconds) {
+                    set.add(format(new Date(m.timestamp.seconds * 1000), 'yyyy-MM-dd'));
+                }
+            } catch (e) { }
+        }
+        return set;
+    }, [messages]);
+
+    const messageCountByDate = useMemo(() => {
+        const counts: Record<string, number> = {};
+        for (const m of messages) {
+            try {
+                const d = m.timestamp?.toDate
+                    ? format(m.timestamp.toDate(), 'yyyy-MM-dd')
+                    : (m.timestamp?.seconds ? format(new Date(m.timestamp.seconds * 1000), 'yyyy-MM-dd') : null);
+                if (d) counts[d] = (counts[d] || 0) + 1;
+            } catch (e) { }
+        }
+        return counts;
+    }, [messages]);
 
     const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
     const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -687,12 +756,48 @@ const GroupChat: React.FC<GroupChatProps> = ({
     const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const matchedMessages = useMemo(() => {
-        if (!chatSearchQuery.trim() && searchFilter === 'all') return [];
+        if (!chatSearchQuery.trim() && searchFilter === 'all' && !searchDate) return [];
 
         return messages.filter(msg => {
             if (msg.isDeleted) return false;
 
-            if (searchFilter === 'media') {
+            // Date Filter
+            if (searchDate) {
+                try {
+                    const msgDateStr = msg.timestamp?.toDate
+                        ? format(msg.timestamp.toDate(), 'yyyy-MM-dd')
+                        : (msg.timestamp?.seconds ? format(new Date(msg.timestamp.seconds * 1000), 'yyyy-MM-dd') : null);
+                    if (msgDateStr !== searchDate) return false;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            // Category Smart Filter
+            if (searchFilter === 'schedule') {
+                const isSchedule = msg.type === 'schedule_announcement' ||
+                    (typeof msg.text === 'string' && (msg.text.includes('SPARTA • РАСПИСАНИЕ') || msg.text.includes('РАСПИСАНИЕ') || msg.text.includes('Группа:')));
+                if (!isSchedule) return false;
+            } else if (searchFilter === 'important') {
+                const isImportant = Boolean(
+                    msg.isPinned ||
+                    msg.type === 'schedule_announcement' ||
+                    msg.senderRole === 'admin' ||
+                    msg.senderRole === 'director' ||
+                    msg.senderName?.toLowerCase().includes('администрация') ||
+                    (typeof msg.text === 'string' && (msg.text.includes('⚠️') || msg.text.includes('‼️') || msg.text.includes('Внимание') || msg.text.includes('ВАЖНО')))
+                );
+                if (!isImportant) return false;
+            } else if (searchFilter === 'coach') {
+                const isCoach = Boolean(
+                    msg.senderRole === 'coach' ||
+                    msg.senderRole === 'trainer' ||
+                    msg.senderName?.toLowerCase().includes('тренер')
+                );
+                if (!isCoach) return false;
+            } else if (searchFilter === 'polls') {
+                if (msg.type !== 'poll') return false;
+            } else if (searchFilter === 'media') {
                 const isMedia = Boolean(msg.mediaUrl || msg.mediaType || msg.type === 'voice' || msg.type === 'media_group');
                 if (!isMedia) return false;
             } else if (searchFilter === 'links') {
@@ -700,6 +805,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
                 if (!hasLink) return false;
             }
 
+            // Text search
             if (chatSearchQuery.trim()) {
                 const q = chatSearchQuery.trim().toLowerCase();
                 const textMatch = Boolean(msg.text?.toLowerCase().includes(q));
@@ -710,14 +816,50 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
             return true;
         });
-    }, [messages, chatSearchQuery, searchFilter]);
+    }, [messages, chatSearchQuery, searchFilter, searchDate]);
+
+    const groupedMediaByMonth = useMemo(() => {
+        if (searchFilter !== 'media') return [];
+        const groups: { monthKey: string; monthLabel: string; items: any[] }[] = [];
+        const map = new Map<string, any[]>();
+
+        matchedMessages.forEach(msg => {
+            if (!msg.mediaUrl) return;
+            let dateObj: Date | null = null;
+            try {
+                if (msg.timestamp?.toDate) dateObj = msg.timestamp.toDate();
+                else if (msg.timestamp?.seconds) dateObj = new Date(msg.timestamp.seconds * 1000);
+            } catch (e) { }
+            if (!dateObj) dateObj = new Date();
+
+            const key = format(dateObj, 'yyyy-MM');
+            if (!map.has(key)) {
+                map.set(key, []);
+            }
+            map.get(key)!.push(msg);
+        });
+
+        map.forEach((items, monthKey) => {
+            try {
+                const parts = monthKey.split('-');
+                const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
+                groups.push({
+                    monthKey,
+                    monthLabel: format(d, 'LLLL yyyy', { locale: ru }),
+                    items
+                });
+            } catch (e) { }
+        });
+
+        return groups;
+    }, [matchedMessages, searchFilter]);
 
     useEffect(() => {
         setCurrentMatchIndex(0);
         if (matchedMessages.length > 0 && isSearchExpanded) {
             scrollToMessage(matchedMessages[0].id);
         }
-    }, [chatSearchQuery, searchFilter]);
+    }, [chatSearchQuery, searchFilter, searchDate]);
 
     const handlePrevMatch = () => {
         if (matchedMessages.length === 0) return;
@@ -733,6 +875,28 @@ const GroupChat: React.FC<GroupChatProps> = ({
         scrollToMessage(matchedMessages[nextIdx].id);
     };
     const [showProfile, setShowProfile] = useState(false);
+    const [isChatMuted, setIsChatMuted] = useState(() => {
+        return safeLocalStorage.getItem(`chat_mute_${chatId || groupId}`) === 'true';
+    });
+
+    const toggleChatMute = () => {
+        setIsChatMuted(prev => {
+            const next = !prev;
+            safeLocalStorage.setItem(`chat_mute_${chatId || groupId}`, String(next));
+            return next;
+        });
+    };
+
+    const handleLeaveGroup = async () => {
+        if (!window.confirm('Вы действительно хотите покинуть эту группу?')) return;
+        try {
+            await handleKickParticipant(user.uid, userProfile?.full_name || 'Участник');
+            setShowProfile(false);
+            if (onBack) onBack();
+        } catch (e) {
+            console.error('Leave group error:', e);
+        }
+    };
     const [groupMembers, setGroupMembers] = useState<any[]>([]);
     const [isPollModalOpen, setIsPollModalOpen] = useState(false);
     const [pinnedMessage, setPinnedMessage] = useState<any>(null);
@@ -741,13 +905,21 @@ const GroupChat: React.FC<GroupChatProps> = ({
     const [selectedForwardGroups, setSelectedForwardGroups] = useState<string[]>([]);
     const [myGroups, setMyGroups] = useState<any[]>([]);
     const [groupData, setGroupData] = useState<any>(null);
+
+    const groupTrainingDays = useMemo(() => {
+        if (Array.isArray(groupData?.schedule) && groupData.schedule.length > 0) {
+            return groupData.schedule.map((s: any) => s.day).filter(Boolean);
+        }
+        return ['Суббота', 'Воскресенье'];
+    }, [groupData?.schedule]);
     const [isRecording, setIsRecording] = useState(false);
     const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
     const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
     const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
     const deletedMsgIdsRef = useRef<Set<string>>(new Set());
     const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-    const [mediaPreviews, setMediaPreviews] = useState<{ file: File, url: string, type: 'image' | 'video' | 'file' }[]>([]);
+    const [mediaPreviews, setMediaPreviews] = useState<MediaUploadItem[]>([]);
+    const [isMediaTrayOpen, setIsMediaTrayOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [replyTo, setReplyTo] = useState<any>(null);
@@ -778,6 +950,9 @@ const GroupChat: React.FC<GroupChatProps> = ({
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
     const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
     const [isExtraActionsOpen, setIsExtraActionsOpen] = useState(false);
+    const [editingMessage, setEditingMessage] = useState<{ id: string, text: string } | null>(null);
+    const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+    const [isDraggingFile, setIsDraggingFile] = useState(false);
 
     const [userPrefs, setUserPrefs] = useState<any>(null);
     const [typingUsers, setTypingUsers] = useState<any[]>([]);
@@ -792,7 +967,9 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
     const typingTimeoutRef = useRef<any>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const threadEndRef = useRef<HTMLDivElement>(null); // Added for thread scrolling
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const threadEndRef = useRef<HTMLDivElement>(null);
+    const threadContainerRef = useRef<HTMLDivElement>(null);
     const longPressTimer = useRef<any>(null);
 
     // Emojis for Reactions
@@ -1105,7 +1282,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
             setMessages((prev: any[]) => {
                 const pendingLocal = prev.filter((m: any) =>
-                    typeof m.id === 'string' && (m.id.startsWith('local-') || m.id.startsWith('voice-'))
+                    typeof m.id === 'string' && (m.id.startsWith('local-') || m.id.startsWith('voice-') || m.id.startsWith('upload-'))
                 );
                 const unconfirmedPending = pendingLocal.filter((p: any) =>
                     !loadedMessages.some((l: any) =>
@@ -1268,15 +1445,34 @@ const GroupChat: React.FC<GroupChatProps> = ({
         }, 3000);
     };
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+    const scrollToBottom = useCallback((smooth = false) => {
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTo({
+                top: messagesContainerRef.current.scrollHeight,
+                behavior: smooth ? 'smooth' : 'auto'
+            });
+        }
+    }, []);
 
     useEffect(() => {
-        if (filterThreadId) {
-            threadEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const timeout = setTimeout(() => {
+            scrollToBottom(false);
+        }, 50);
+        return () => clearTimeout(timeout);
+    }, [chatId, groupId, scrollToBottom]);
+
+    useEffect(() => {
+        scrollToBottom(true);
+    }, [messages.length, scrollToBottom]);
+
+    useEffect(() => {
+        if (filterThreadId && threadContainerRef.current) {
+            threadContainerRef.current.scrollTo({
+                top: threadContainerRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
         }
-    }, [filterThreadId, messages]);
+    }, [filterThreadId, messages.length]);
 
     const groupedMessages = useMemo(() => {
         const result: any[] = [];
@@ -1330,6 +1526,29 @@ const GroupChat: React.FC<GroupChatProps> = ({
         return counts;
     }, [messages]);
 
+    const allGalleryMediaItems = useMemo<GalleryMediaItem[]>(() => {
+        const items: GalleryMediaItem[] = [];
+        messages.forEach(msg => {
+            if (msg.mediaUrl && (msg.mediaType === 'image' || msg.mediaType === 'video' || msg.mediaType === 'file')) {
+                items.push({
+                    id: msg.id,
+                    mediaUrl: msg.mediaUrl,
+                    mediaType: msg.mediaType || 'image',
+                    senderId: msg.senderId,
+                    senderName: msg.senderName,
+                    senderRole: msg.senderRole,
+                    senderVerification: msg.senderVerification,
+                    senderAvatar: msg.senderAvatar || msg.senderPhoto,
+                    timestamp: msg.timestamp,
+                    text: msg.text,
+                    category: msg.category || 'general',
+                    fileName: msg.fileName
+                });
+            }
+        });
+        return items;
+    }, [messages]);
+
     useEffect(() => {
         // Fetch groups for forwarding based on role
         const fetchForwardGroups = async () => {
@@ -1369,8 +1588,16 @@ const GroupChat: React.FC<GroupChatProps> = ({
             const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
             setGroupMembers(members);
 
-            // Auto-sync participantNames for private chats
-            if ((groupData?.isPrivate || groupData?.type === 'private') && members.length >= 2) {
+            // Auto-sync participantNames for private/direct chats
+            const isDirectType = Boolean(
+                groupData?.isPrivate ||
+                groupData?.type === 'private' ||
+                groupData?.type === 'direct' ||
+                groupData?.type === 'parent' ||
+                groupData?.type === 'child' ||
+                (Array.isArray(groupData?.participants) && groupData.participants.length === 2 && !groupData?.groupId)
+            );
+            if (isDirectType && members.length >= 2) {
                 const myName = userProfile?.full_name || userProfile?.childName || user.email || "Пользователь";
                 const other = members.find(m => m.id !== user.uid);
                 const otherName = other ? (other.childName || other.full_name || other.email || 'Участник') : 'Участник';
@@ -1435,11 +1662,22 @@ const GroupChat: React.FC<GroupChatProps> = ({
     const handlePinMessage = async (msgId: string) => {
         try {
             const targetRef = isUnifiedChat && chatId ? doc(db, 'chats', chatId) : doc(db, 'groups', groupId!);
+            const isCurrentlyPinned = (pinnedMessage?.id === msgId) || (groupData?.pinnedMessageId === msgId);
+            const nextPinnedId = isCurrentlyPinned ? null : msgId;
             await updateDoc(targetRef, {
-                pinnedMessageId: msgId
+                pinnedMessageId: nextPinnedId
             });
+            if (isCurrentlyPinned) {
+                setPinnedMessage(null);
+            } else {
+                const msg = messages.find(m => m.id === msgId);
+                if (msg) setPinnedMessage(msg);
+            }
+            if (groupData) {
+                setGroupData(prev => prev ? ({ ...prev, pinnedMessageId: nextPinnedId }) : null);
+            }
         } catch (error) {
-            console.error("Error pinning message:", error);
+            console.error("Error toggling pin on message:", error);
         }
     };
 
@@ -1449,6 +1687,10 @@ const GroupChat: React.FC<GroupChatProps> = ({
             await updateDoc(targetRef, {
                 pinnedMessageId: null
             });
+            setPinnedMessage(null);
+            if (groupData) {
+                setGroupData(prev => prev ? ({ ...prev, pinnedMessageId: null }) : null);
+            }
         } catch (error) {
             console.error("Error unpinning message:", error);
         }
@@ -1552,13 +1794,31 @@ const GroupChat: React.FC<GroupChatProps> = ({
     };
 
 
-    const handleContextMenu = (e: React.MouseEvent | React.TouchEvent, msgId: string) => {
-        e.preventDefault();
-        const targetElem = e.currentTarget as HTMLElement;
-        const b = targetElem?.getBoundingClientRect ? targetElem.getBoundingClientRect() : null;
-        const targetBounds = b ? { top: b.top, bottom: b.bottom, left: b.left, right: b.right, width: b.width, height: b.height } : undefined;
-        const x = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientX : (e as React.MouseEvent).clientX || (b?.left || 0);
-        const y = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientY : (e as React.MouseEvent).clientY || (b?.top || 0);
+    const touchStartCoords = useRef<{ x: number, y: number } | null>(null);
+
+    const handleContextMenu = (
+        e: React.MouseEvent | React.TouchEvent | null,
+        msgId: string,
+        coordsOverride?: { x: number, y: number, bounds?: any }
+    ) => {
+        if (e) {
+            try {
+                e.preventDefault();
+                e.stopPropagation();
+            } catch (err) { }
+        }
+        let targetBounds = coordsOverride?.bounds;
+        let x = coordsOverride?.x ?? 0;
+        let y = coordsOverride?.y ?? 0;
+
+        if (!coordsOverride && e) {
+            const targetElem = (e.currentTarget || e.target) as HTMLElement;
+            const b = targetElem?.getBoundingClientRect ? targetElem.getBoundingClientRect() : null;
+            targetBounds = b ? { top: b.top, bottom: b.bottom, left: b.left, right: b.right, width: b.width, height: b.height } : undefined;
+            x = 'touches' in e && e.touches && e.touches.length > 0 ? e.touches[0].clientX : (e as React.MouseEvent).clientX || (b?.left || 0);
+            y = 'touches' in e && e.touches && e.touches.length > 0 ? e.touches[0].clientY : (e as React.MouseEvent).clientY || (b?.top || 0);
+        }
+
         const msg = messages.find(m => m.id === msgId);
         const isOwn = msg ? msg.senderId === user?.uid : false;
 
@@ -1566,17 +1826,39 @@ const GroupChat: React.FC<GroupChatProps> = ({
     };
 
     const handleTouchStart = (e: React.TouchEvent, msgId: string) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+        const x = touch.clientX;
+        const y = touch.clientY;
+        touchStartCoords.current = { x, y };
+
+        const targetElem = (e.currentTarget || e.target) as HTMLElement;
+        const b = targetElem?.getBoundingClientRect ? targetElem.getBoundingClientRect() : null;
+        const targetBounds = b ? { top: b.top, bottom: b.bottom, left: b.left, right: b.right, width: b.width, height: b.height } : undefined;
+
         if (longPressTimer.current) clearTimeout(longPressTimer.current);
         longPressTimer.current = setTimeout(() => {
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
                 try {
-                    navigator.vibrate(40);
-                } catch (err) {
-                    // Ignore vibration errors
+                    navigator.vibrate(35);
+                } catch (err) { }
+            }
+            handleContextMenu(null, msgId, { x, y, bounds: targetBounds });
+        }, 350); // 350ms responsive long press
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (touchStartCoords.current && e.touches.length > 0) {
+            const dx = Math.abs(e.touches[0].clientX - touchStartCoords.current.x);
+            const dy = Math.abs(e.touches[0].clientY - touchStartCoords.current.y);
+            // Cancel long press if user is scrolling or moved finger > 10px
+            if (dx > 10 || dy > 10) {
+                if (longPressTimer.current) {
+                    clearTimeout(longPressTimer.current);
+                    longPressTimer.current = null;
                 }
             }
-            handleContextMenu(e, msgId);
-        }, 300); // 300ms for long press with haptic feedback
+        }
     };
 
     const handleTouchEnd = () => {
@@ -1584,12 +1866,20 @@ const GroupChat: React.FC<GroupChatProps> = ({
             clearTimeout(longPressTimer.current);
             longPressTimer.current = null;
         }
+        touchStartCoords.current = null;
     };
 
     const scrollToMessage = (id: string) => {
         const element = document.getElementById(`msg-${id}`);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (element && messagesContainerRef.current) {
+            const container = messagesContainerRef.current;
+            const containerRect = container.getBoundingClientRect();
+            const elementRect = element.getBoundingClientRect();
+            const targetScrollTop = container.scrollTop + (elementRect.top - containerRect.top) - (container.clientHeight / 2) + (elementRect.height / 2);
+            container.scrollTo({
+                top: Math.max(0, targetScrollTop),
+                behavior: 'smooth'
+            });
             element.classList.add('ring-2', 'ring-sparta-gold', 'ring-offset-4', 'ring-offset-black');
             setTimeout(() => {
                 element.classList.remove('ring-2', 'ring-sparta-gold', 'ring-offset-4', 'ring-offset-black');
@@ -1597,34 +1887,109 @@ const GroupChat: React.FC<GroupChatProps> = ({
         }
     };
 
-    const handleReaction = async (msgId: string, emojiKey: string) => {
-        const msg = messages.find(m => m.id === msgId);
-        if (!msg) return;
+    const handleReaction = async (msgId: string, rawEmojiKey: string) => {
+        const emojiKey = rawEmojiKey === 'heart' ? 'love' :
+            rawEmojiKey === 'thumbs_up' ? 'like' :
+            rawEmojiKey === 'joy' ? 'laugh' : rawEmojiKey;
 
-        const reactions = msg.reactions || {};
-        const userIds = reactions[emojiKey] || [];
+        const targetMsgs = messages.filter(m => m.id === msgId || (m.items && m.items.some((it: any) => it.id === msgId)));
+        if (targetMsgs.length === 0) return;
 
-        let newIds;
-        if (userIds.includes(user.uid)) {
-            newIds = userIds.filter((id: string) => id !== user.uid);
-        } else {
-            newIds = [...userIds, user.uid];
-        }
+        for (const targetMsg of targetMsgs) {
+            const actualId = targetMsg.id;
+            const currentReactions: Record<string, string[]> = {};
 
-        const newReactions = { ...reactions, [emojiKey]: newIds };
-
-        try {
-            const msgRef = isUnifiedChat && chatId
-                ? doc(db, 'chats', chatId, 'messages', msgId)
-                : doc(db, 'group_messages', msgId);
-
-            await updateDoc(msgRef, {
-                reactions: newReactions
+            Object.entries(targetMsg.reactions || {}).forEach(([k, ids]) => {
+                if (Array.isArray(ids) && ids.length > 0) {
+                    currentReactions[k] = [...ids];
+                }
             });
-        } catch (error) {
-            console.error("Error reacting:", error);
+
+            // Check if user already reacted with this emoji (including legacy key aliases)
+            const activeKey = Object.keys(currentReactions).find(k => {
+                const norm = k === 'heart' ? 'love' : k === 'thumbs_up' ? 'like' : k === 'joy' ? 'laugh' : k;
+                return norm === emojiKey && currentReactions[k]?.includes(user.uid);
+            });
+
+            if (activeKey) {
+                // ❌ TOGGLE OFF: User clicked the same emoji -> remove reaction
+                currentReactions[activeKey] = currentReactions[activeKey].filter(id => id !== user.uid);
+                if (currentReactions[activeKey].length === 0) {
+                    delete currentReactions[activeKey];
+                }
+            } else {
+                // 🔄 SWITCH: Remove user from any other reactions on this message first
+                Object.keys(currentReactions).forEach(k => {
+                    currentReactions[k] = currentReactions[k].filter(id => id !== user.uid);
+                    if (currentReactions[k].length === 0) {
+                        delete currentReactions[k];
+                    }
+                });
+                // Add new reaction
+                currentReactions[emojiKey] = [...(currentReactions[emojiKey] || []), user.uid];
+            }
+
+            // Optimistic local state update
+            setMessages(prev => prev.map(m => m.id === actualId ? { ...m, reactions: currentReactions } : m));
+
+            try {
+                const msgRef = isUnifiedChat && chatId
+                    ? doc(db, 'chats', chatId, 'messages', actualId)
+                    : doc(db, 'group_messages', actualId);
+
+                await updateDoc(msgRef, {
+                    reactions: currentReactions
+                });
+            } catch (error) {
+                console.error("Error updating reaction:", error);
+            }
         }
     };
+
+    const handleQuickSaveToFavorites = async (msg: any) => {
+        if (!user?.uid || !msg) return;
+        try {
+            const savedChatId = `saved_${user.uid}`;
+            const forwardData = {
+                text: msg.text || '',
+                senderId: user.uid,
+                senderName: userProfile?.full_name || userProfile?.childName || 'Вы',
+                senderRole: userProfile?.role || 'student',
+                senderAvatar: userProfile?.photoURL || userProfile?.avatarUrl || null,
+                mediaUrl: msg.mediaUrl || null,
+                mediaType: msg.mediaType || null,
+                timestamp: serverTimestamp(),
+                createdAt: new Date().toISOString(),
+                isForwarded: true,
+                forwardedFrom: {
+                    senderId: msg.senderId || 'unknown',
+                    senderName: msg.senderName || 'Участник',
+                    senderRole: msg.senderRole || 'member',
+                    chatTitle: groupData?.chatTitle || groupName || 'Чат'
+                }
+            };
+            await addDoc(collection(db, 'chats', savedChatId, 'messages'), forwardData);
+            alert('Сохранено в Избранное ⭐️');
+        } catch (err) {
+            console.error('Error saving to favorites:', err);
+        }
+    };
+
+    const currentContextMessage = useMemo(() => {
+        if (!contextMenu?.msgId) return null;
+        const direct = messages.find(m => m.id === contextMenu.msgId);
+        if (direct) return direct;
+        for (const m of messages) {
+            if (m.type === 'media_group' && m.items) {
+                const item = m.items.find((it: any) => it.id === contextMenu.msgId);
+                if (item) {
+                    return { ...m, ...item, id: contextMenu.msgId, parentMessageId: m.id };
+                }
+            }
+        }
+        return null;
+    }, [contextMenu?.msgId, messages]);
+
     const handleForwardMessage = async () => {
         if (forwardMessages.length === 0 || selectedForwardGroups.length === 0) return;
         setIsSending(true);
@@ -1759,8 +2124,80 @@ const GroupChat: React.FC<GroupChatProps> = ({
         }
     };
 
+    const handleSendAnnouncement = async (title: string, text: string, priority: 'normal' | 'urgent', pin: boolean) => {
+        if (!text.trim()) return;
+
+        setIsSending(true);
+        try {
+            const senderName = userProfile?.full_name || userProfile?.childName || user.email || 'Тренер Спарта';
+            const announcementData = {
+                title,
+                text: text.trim(),
+                isAnnouncement: true,
+                priority,
+                isPinned: pin,
+                senderId: user.uid,
+                senderName,
+                senderRole: userProfile?.role || 'trainer',
+                senderVerification: userProfile?.verification || { isVerified: true, title: 'Тренерский состав' },
+                senderAvatar: userProfile?.photoURL || null,
+                timestamp: serverTimestamp(),
+                createdAt: serverTimestamp(),
+                groupId: groupId || null,
+                reactions: {}
+            };
+
+            const targetCol = isUnifiedChat && chatId ? collection(db, 'chats', chatId, 'messages') : collection(db, 'group_messages');
+            const docRef = await addDoc(targetCol, announcementData);
+
+            if (isUnifiedChat && chatId) {
+                await updateDoc(doc(db, 'chats', chatId), {
+                    lastMessage: `📢 ${title}: ${text.trim().slice(0, 40)}`,
+                    lastMessageAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                    lastMessageBy: user.uid,
+                    ...(pin ? {
+                        pinnedMessageId: docRef.id,
+                        pinnedMessageText: text.trim(),
+                        pinnedMessageSender: senderName
+                    } : {})
+                }).catch(() => {});
+            }
+        } catch (err) {
+            console.error("Error sending announcement:", err);
+            alert("Ошибка при отправке объявления");
+        } finally {
+            setIsSending(false);
+        }
+    };
+
     const handleSendMessage = async () => {
         if (!newMessage.trim() && mediaFiles.length === 0) return;
+
+        // Check if we are currently editing an existing message
+        if (editingMessage) {
+            setIsSending(true);
+            try {
+                const targetDoc = isUnifiedChat && chatId
+                    ? doc(db, 'chats', chatId, 'messages', editingMessage.id)
+                    : doc(db, 'group_messages', editingMessage.id);
+
+                await updateDoc(targetDoc, {
+                    text: newMessage.trim(),
+                    isEdited: true,
+                    editedAt: serverTimestamp()
+                });
+
+                setMessages((prev: any[]) => prev.map(m => m.id === editingMessage.id ? { ...m, text: newMessage.trim(), isEdited: true } : m));
+                setEditingMessage(null);
+                setNewMessage('');
+            } catch (err) {
+                console.error("Error updating edited message:", err);
+            } finally {
+                setIsSending(false);
+            }
+            return;
+        }
 
         setIsSending(true);
         try {
@@ -2046,31 +2483,238 @@ const GroupChat: React.FC<GroupChatProps> = ({
         }
     };
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        if (files.length === 0) return;
+    const processIncomingFiles = useCallback((files: File[]) => {
+        if (!files || files.length === 0) return;
 
-        const newPreviews = files.map((file: any) => ({
-            file,
-            url: file.type.startsWith('image/') ? URL.createObjectURL(file) : 'file',
-            type: file.type.startsWith('image/') ? 'image' as const :
-                file.type.startsWith('video/') ? 'video' as const : 'file' as const
-        }));
+        const newPreviews: MediaUploadItem[] = files.map((file: File) => {
+            const sizeInMb = file.size / (1024 * 1024);
+            const sizeFormatted = sizeInMb >= 1 ? `${sizeInMb.toFixed(1)} МБ` : `${Math.round(file.size / 1024)} КБ`;
+            return {
+                file,
+                url: file.type.startsWith('image/') ? URL.createObjectURL(file) : file.type.startsWith('video/') ? URL.createObjectURL(file) : 'file',
+                type: file.type.startsWith('image/') ? 'image' as const :
+                    file.type.startsWith('video/') ? 'video' as const : 'file' as const,
+                sizeFormatted
+            };
+        });
 
         setMediaFiles(prev => [...prev, ...files]);
         setMediaPreviews(prev => [...prev, ...newPreviews]);
+        setIsMediaTrayOpen(true);
+    }, []);
 
-        // Clear input value to allow selecting same file again
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        processIncomingFiles(files);
         e.target.value = '';
     };
+
+    const handlePaste = useCallback((e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        const pastedFiles: File[] = [];
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.type.indexOf('image') !== -1 || item.type.indexOf('video') !== -1) {
+                const file = item.getAsFile();
+                if (file) {
+                    const ext = file.type.split('/')[1] || 'png';
+                    const namedFile = new File([file], `sparta_media_${Date.now()}.${ext}`, { type: file.type });
+                    pastedFiles.push(namedFile);
+                }
+            }
+        }
+
+        if (pastedFiles.length > 0) {
+            e.preventDefault();
+            processIncomingFiles(pastedFiles);
+        }
+    }, [processIncomingFiles]);
 
     const removeMediaFile = (index: number) => {
         setMediaFiles(prev => prev.filter((_, i) => i !== index));
         setMediaPreviews(prev => {
             const item = prev[index];
             if (item && item.url !== 'file') URL.revokeObjectURL(item.url);
-            return prev.filter((_, i) => i !== index);
+            const updated = prev.filter((_, i) => i !== index);
+            if (updated.length === 0) setIsMediaTrayOpen(false);
+            return updated;
         });
+    };
+
+    const replaceMediaFile = (index: number, newFile: File) => {
+        setMediaFiles(prev => {
+            const next = [...prev];
+            next[index] = newFile;
+            return next;
+        });
+        setMediaPreviews(prev => {
+            const oldItem = prev[index];
+            if (oldItem && oldItem.url !== 'file') URL.revokeObjectURL(oldItem.url);
+            const previewUrl = URL.createObjectURL(newFile);
+            const mType = newFile.type.startsWith('image') ? 'image' : newFile.type.startsWith('video') ? 'video' : 'file';
+            const next = [...prev];
+            next[index] = {
+                file: newFile,
+                url: previewUrl,
+                type: mType,
+                sizeFormatted: (newFile.size / (1024 * 1024)).toFixed(1) + ' МБ'
+            };
+            return next;
+        });
+    };
+
+    const handleBatchSendMedia = async (caption: string, category: string) => {
+        if (mediaFiles.length === 0) return;
+        const filesToSend = [...mediaFiles];
+        const captionToSend = caption.trim();
+        const categoryToSend = category || 'general';
+
+        // 1. Immediately close modal so user is back in the active chat
+        setIsMediaTrayOpen(false);
+        setMediaFiles([]);
+        setMediaPreviews([]);
+        setIsUploading(false);
+        setUploadProgress(0);
+
+        try {
+            // 2. If there is a caption, send it to Firestore
+            if (captionToSend) {
+                const textMsgData: any = {
+                    text: captionToSend,
+                    senderId: user.uid,
+                    senderName: userProfile?.full_name || userProfile?.childName || user.email,
+                    senderRole: userProfile?.role || 'user',
+                    senderVerification: userProfile?.verification || null,
+                    senderAvatar: userProfile?.photoURL || null,
+                    timestamp: serverTimestamp(),
+                    groupId: groupId || null,
+                    mediaUrl: null,
+                    mediaType: null,
+                    category: categoryToSend,
+                    replyToId: replyTo?.id || null,
+                    replyToText: replyTo?.text || null,
+                    replyToSender: replyTo?.senderName || null,
+                    reactions: {}
+                };
+
+                addDoc(isUnifiedChat && chatId ? collection(db, 'chats', chatId, 'messages') : collection(db, 'group_messages'), textMsgData).catch(console.warn);
+            }
+
+            // 3. For each file, create an optimistic local message with instant preview and spinner directly in the chat bubble
+            const optimisticEntries: { localId: string; file: File; mType: string; previewUrl: string }[] = [];
+
+            for (const file of filesToSend) {
+                const localId = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+                const previewUrl = URL.createObjectURL(file);
+                const mType = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'file';
+
+                const localMsg: any = {
+                    id: localId,
+                    text: "",
+                    senderId: user.uid,
+                    senderName: userProfile?.full_name || userProfile?.childName || user.email,
+                    senderRole: userProfile?.role || 'user',
+                    senderVerification: userProfile?.verification || null,
+                    senderAvatar: userProfile?.photoURL || null,
+                    timestamp: { seconds: Math.floor(Date.now() / 1000) },
+                    localTimestamp: Date.now(),
+                    groupId: groupId || null,
+                    mediaUrl: previewUrl,
+                    mediaType: mType,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    category: categoryToSend,
+                    reactions: {},
+                    isUploading: true,
+                    uploadProgress: 20
+                };
+
+                optimisticEntries.push({ localId, file, mType, previewUrl });
+                setMessages((prev: any[]) => [...prev, localMsg]);
+            }
+
+            // Scroll to bottom immediately so user sees the uploading photo in chat
+            setTimeout(() => {
+                scrollToBottom();
+            }, 60);
+
+            // 4. Background upload process
+            for (const entry of optimisticEntries) {
+                const { localId, file, mType, previewUrl } = entry;
+                const path = isUnifiedChat ? `chats/${chatId}` : `messages/${groupId}`;
+                const fileName = `${path}/${Date.now()}_${file.name}`;
+                let publicUrl: string | null = null;
+
+                try {
+                    // Update upload progress in chat bubble
+                    setMessages((prev: any[]) => prev.map(m => m.id === localId ? { ...m, uploadProgress: 45 } : m));
+
+                    const { data, error } = await supabase.storage
+                        .from('chat-media')
+                        .upload(fileName, file);
+
+                    if (!error && data) {
+                        const { data: publicData } = supabase.storage.from('chat-media').getPublicUrl(fileName);
+                        publicUrl = publicData?.publicUrl || null;
+                    }
+                } catch (storageErr) {
+                    console.warn("Supabase storage upload failed, utilizing Base64 fallback:", storageErr);
+                }
+
+                setMessages((prev: any[]) => prev.map(m => m.id === localId ? { ...m, uploadProgress: 85 } : m));
+
+                if (!publicUrl) {
+                    try {
+                        publicUrl = await new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result as string);
+                            reader.readAsDataURL(file);
+                        });
+                    } catch (e) {
+                        publicUrl = previewUrl;
+                    }
+                }
+
+                const mediaMsgData: any = {
+                    text: "",
+                    senderId: user.uid,
+                    senderName: userProfile?.full_name || userProfile?.childName || user.email,
+                    senderRole: userProfile?.role || 'user',
+                    senderVerification: userProfile?.verification || null,
+                    senderAvatar: userProfile?.photoURL || null,
+                    timestamp: serverTimestamp(),
+                    groupId: groupId || null,
+                    mediaUrl: publicUrl,
+                    mediaType: mType,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    category: categoryToSend,
+                    reactions: {}
+                };
+
+                try {
+                    const docRef = await addDoc(isUnifiedChat && chatId ? collection(db, 'chats', chatId, 'messages') : collection(db, 'group_messages'), mediaMsgData);
+                    setMessages((prev: any[]) => prev.map(m => m.id === localId ? { ...m, id: docRef.id, mediaUrl: publicUrl, isUploading: false, uploadProgress: 100 } : m));
+                } catch (firestoreErr) {
+                    console.warn("Firestore write failed for media message, keeping local:", firestoreErr);
+                    setMessages((prev: any[]) => prev.map(m => m.id === localId ? { ...m, isUploading: false, uploadProgress: 100 } : m));
+                }
+
+                if (isUnifiedChat && chatId) {
+                    updateDoc(doc(db, 'chats', chatId), {
+                        lastMessage: mType === 'image' ? "🖼 Фото" : mType === 'video' ? "🎥 Видео" : "📄 Файл",
+                        lastMessageAt: serverTimestamp(),
+                        lastMessageBy: user.uid,
+                        [`readBy.${user.uid}`]: serverTimestamp()
+                    }).catch(() => { });
+                }
+            }
+        } catch (err) {
+            console.error("Batch media upload failed:", err);
+        }
     };
 
     // Legacy recording system removed — AudioRecorder.tsx handles all recording with echo cancellation
@@ -2426,24 +3070,69 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
     return (
         <div
-            style={viewportHeight ? { height: `${viewportHeight}px` } : undefined}
-            className="fixed inset-0 z-[999] md:relative md:z-auto flex flex-col h-[100dvh] md:h-full w-screen md:w-full bg-[#0c0c0c] border-0 md:border md:border-white/5 md:rounded-3xl overflow-hidden shadow-2xl messenger-theme"
+            style={viewportHeight && typeof window !== 'undefined' && window.innerWidth < 768 ? { height: `${viewportHeight}px` } : undefined}
+            onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isDraggingFile) setIsDraggingFile(true);
+            }}
+            onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDraggingFile(false);
+            }}
+            onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDraggingFile(false);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleFileSelect({ target: { files: e.dataTransfer.files } } as any);
+                }
+            }}
+            className="fixed inset-0 z-[999] md:relative md:z-auto flex flex-col h-[100dvh] md:h-full w-full bg-[#0c0c0c] border-0 md:border md:border-white/5 md:rounded-3xl overflow-hidden shadow-2xl messenger-theme"
         >
+            {/* Drag & Drop File Overlay */}
+            <AnimatePresence>
+                {isDraggingFile && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        className="absolute inset-0 z-[300] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 border-4 border-dashed border-sparta-gold rounded-3xl m-2 pointer-events-none"
+                    >
+                        <div className="w-20 h-20 rounded-3xl bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/40 flex items-center justify-center mb-4 shadow-[0_0_40px_rgba(212,175,55,0.4)] animate-bounce">
+                            <UploadCloud size={42} />
+                        </div>
+                        <h3 className="text-xl font-black font-russo text-white uppercase tracking-wider mb-2 text-center">
+                            Перетащите файлы сюда
+                        </h3>
+                        <p className="text-xs text-white/60 text-center max-w-sm">
+                            Отпустите фото, видео или документы для быстрой отправки в чат
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Pinned Message Banner */}
             {pinnedMessage && (
-                <div className="sticky top-0 z-20 bg-sparta-gold/10 border-b border-sparta-gold/20 backdrop-blur-md p-3 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
+                <div className="sticky top-0 z-20 bg-sparta-gold/15 border-b border-sparta-gold/30 backdrop-blur-md px-4 py-2.5 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300 shadow-md">
                     <div
-                        className="flex items-center gap-3 overflow-hidden cursor-pointer group/pin hover:opacity-80 transition-all flex-1"
+                        className="flex items-center gap-3 overflow-hidden cursor-pointer group/pin hover:opacity-85 transition-all flex-1"
                         onClick={() => scrollToMessage(pinnedMessage.id)}
                     >
-                        <Pin className="text-sparta-gold shrink-0 rotate-45 group-hover/pin:scale-110 transition-transform" size={14} />
-                        <div className="overflow-hidden">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-sparta-gold">Закрепленное сообщение</p>
-                            <p className="text-[11px] text-white/70 truncate">{pinnedMessage.text || (pinnedMessage.mediaUrl ? "Медиа-файл" : "Сообщение")}</p>
+                        <div className="w-7 h-7 rounded-lg bg-sparta-gold/20 flex items-center justify-center text-sparta-gold shrink-0 border border-sparta-gold/30 group-hover/pin:scale-105 transition-transform">
+                            <Pin size={13} className="rotate-45" />
+                        </div>
+                        <div className="overflow-hidden min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-sparta-gold flex items-center gap-1.5">
+                                <span>{chatId?.startsWith('saved_') || groupData?.type === 'saved' ? '📌 Закрепленная заметка' : '📌 Закрепленное сообщение'}</span>
+                                <span className="text-[8px] font-bold text-white/40 lowercase">(нажмите для перехода)</span>
+                            </p>
+                            <p className="text-[11px] text-white/90 truncate font-medium">{pinnedMessage.text || (pinnedMessage.mediaUrl ? "Медиа-файл" : "Сообщение")}</p>
                         </div>
                     </div>
-                    {(isAdmin || isTrainer) && (
-                        <button onClick={handleUnpinMessage} className="p-1 hover:bg-white/10 rounded-lg text-white/20 hover:text-white" title="Открепить">
+                    {(chatId?.startsWith('saved_') || groupData?.type === 'saved' || isAdmin || isTrainer || isOwner) && (
+                        <button onClick={handleUnpinMessage} className="p-1.5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white transition-colors" title="Открепить">
                             <XIcon size={14} />
                         </button>
                     )}
@@ -2454,9 +3143,44 @@ const GroupChat: React.FC<GroupChatProps> = ({
                 <div
                     className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 cursor-pointer group/header hover:opacity-80 transition-all"
                     onClick={() => {
-                        if (groupData?.type === 'private') {
+                        const isSaved = groupData?.type === 'saved' || chatId?.startsWith('saved_');
+                        if (isSaved) {
+                            setSelectedUserProfile(null);
+                            setShowProfile(true);
+                            return;
+                        }
+
+                        const isGroupChat = groupData?.type === 'team' || groupData?.type === 'group' || groupData?.type === 'channel' || !!groupData?.groupId || (groupName || '').toLowerCase().startsWith('гр.') || (groupName || '').toLowerCase().includes('команда');
+                        const isDirect = !isGroupChat && Boolean(
+                            groupData?.isPrivate === true ||
+                            groupData?.type === 'private' ||
+                            groupData?.type === 'direct' ||
+                            groupData?.type === 'parent' ||
+                            groupData?.type === 'child' ||
+                            groupData?.coachId ||
+                            (groupName || '').toLowerCase().includes('тренер') ||
+                            (Array.isArray(groupData?.participants) && groupData.participants.length === 2)
+                        );
+                        
+                        if (isDirect) {
                             const other = groupMembers.find(m => m.id !== user.uid);
-                            if (other) setSelectedUserProfile(other);
+                            if (other) {
+                                setSelectedUserProfile(other);
+                            } else {
+                                const isCoachName = (groupName || '').toLowerCase().includes('тренер') || !!groupData?.coachId;
+                                const isParentRole = userProfile?.role === 'parent';
+                                const otherRole = isParentRole ? 'student' : (userProfile?.role === 'student' ? 'parent' : (isCoachName ? 'trainer' : 'student'));
+                                setSelectedUserProfile({
+                                    id: groupData?.coachId || groupData?.participants?.find((id: string) => id !== user.uid),
+                                    full_name: groupName || 'Собеседник',
+                                    role: otherRole,
+                                    photoURL: groupData?.chatAvatarUrl,
+                                    license: isCoachName ? 'Лицензия РФС / UEFA B' : undefined,
+                                    experienceYears: isCoachName ? '8 лет' : undefined,
+                                    position: !isCoachName ? 'Нападающий ⚡' : undefined,
+                                    playerNumber: !isCoachName ? 10 : undefined
+                                });
+                            }
                         } else {
                             setSelectedUserProfile(null);
                         }
@@ -2469,43 +3193,99 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                 e.stopPropagation();
                                 onBack();
                             }}
-                            className="md:hidden p-2.5 bg-white/5 border border-white/10 rounded-2xl text-muted hover:text-sparta-gold transition-all mr-1"
+                            className="md:hidden flex items-center gap-1 px-2.5 py-2 bg-sparta-gold/10 border border-sparta-gold/30 rounded-xl text-sparta-gold hover:bg-sparta-gold hover:text-black transition-all mr-1.5 shrink-0"
+                            title="Вернуться ко всем чатам"
                         >
-                            <ChevronLeft size={20} />
+                            <ChevronLeft size={18} />
+                            <span className="text-[10px] font-black uppercase tracking-wider font-russo">Чаты</span>
                         </button>
                     )}
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-2xl bg-gradient-to-br from-sparta-gold/20 to-transparent p-0.5 border border-white/10 flex items-center justify-center overflow-hidden group-hover/header:border-sparta-gold/50 transition-all">
+                    <div className="shrink-0">
                         {(() => {
-                            const isPrivate = groupData?.type === 'private' || groupData?.isPrivate;
-                            const other = isPrivate ? groupMembers.find(m => m.id !== user.uid) : null;
-                            const displayAvatar = isPrivate && other ? (other.photoURL || other.avatarUrl || groupData?.chatAvatarUrl) : groupData?.chatAvatarUrl;
+                            const isSaved = groupData?.type === 'saved' || chatId?.startsWith('saved_');
+                            if (isSaved) {
+                                return (
+                                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-sparta-gold to-yellow-600 flex items-center justify-center text-black shadow-lg shadow-sparta-gold/20 shrink-0">
+                                        <Bookmark size={20} className="fill-black" />
+                                    </div>
+                                );
+                            }
+                            const isGroupChat = groupData?.type === 'team' || groupData?.type === 'group' || groupData?.type === 'channel' || !!groupData?.groupId || (groupName || '').toLowerCase().startsWith('гр.') || (groupName || '').toLowerCase().includes('команда');
+                            const isDirect = !isGroupChat && Boolean(
+                                groupData?.isPrivate === true ||
+                                groupData?.type === 'private' ||
+                                groupData?.type === 'direct' ||
+                                groupData?.type === 'parent' ||
+                                groupData?.type === 'child' ||
+                                (Array.isArray(groupData?.participants) && groupData.participants.length === 2)
+                            );
+                            const other = isDirect ? (groupMembers.find(m => m.id !== user.uid) || null) : null;
+                            const displayAvatar = isDirect && other ? (other.photoURL || other.avatarUrl || groupData?.chatAvatarUrl) : groupData?.chatAvatarUrl;
+                            const otherName = other ? (other.childName || other.full_name || other.name || other.email) : null;
+                            const title = isDirect && otherName ? otherName : (groupData?.chatTitle || groupName || 'Чат Спарта');
 
-                            return displayAvatar ? (
-                                <img src={displayAvatar} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                                isPrivate ? <User className="text-sparta-gold" size={24} /> : <MessageSquare className="text-sparta-gold" size={24} />
+                            return (
+                                <SpartaAvatar
+                                    src={displayAvatar}
+                                    name={title}
+                                    isGroup={!isDirect}
+                                    isCoach={other?.role === 'coach' || other?.role === 'trainer' || (title.toLowerCase().includes('тренер'))}
+                                    isAdmin={groupData?.type === 'channel' || title.toLowerCase().includes('администрация')}
+                                    size="md"
+                                    className="rounded-2xl"
+                                />
                             );
                         })()}
                     </div>
                     <div className="min-w-0 flex-1 max-w-[100px] xs:max-w-[150px] sm:max-w-none">
-                        <h3 className="text-base sm:text-xl font-russo text-white uppercase tracking-tight group-hover/header:text-sparta-gold transition-colors truncate">
-                            {groupData?.chatTitle || groupName || 'Групповой чат'}
-                        </h3>
-                        <div className="flex items-center gap-1.5 sm:gap-2 truncate">
-                            {groupData?.topic && (
+                        {(() => {
+                            const isSaved = groupData?.type === 'saved' || chatId?.startsWith('saved_');
+                            const isGroupChat = groupData?.type === 'team' || groupData?.type === 'group' || groupData?.type === 'channel' || !!groupData?.groupId || (groupName || '').toLowerCase().startsWith('гр.') || (groupName || '').toLowerCase().includes('команда');
+                            const isDirect = !isGroupChat && Boolean(
+                                groupData?.isPrivate === true ||
+                                groupData?.type === 'private' ||
+                                groupData?.type === 'direct' ||
+                                groupData?.type === 'parent' ||
+                                groupData?.type === 'child' ||
+                                (Array.isArray(groupData?.participants) && groupData.participants.length === 2)
+                            );
+                            const other = isDirect ? (groupMembers.find(m => m.id !== user.uid) || null) : null;
+                            const otherName = other ? (other.childName || other.full_name || other.name || other.email) : null;
+                            const title = isSaved ? '⭐️ Избранное' : (isDirect && otherName ? otherName : (groupData?.chatTitle || groupName || 'Групповой чат'));
+
+                            return (
                                 <>
-                                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-sparta-gold truncate max-w-[80px] sm:max-w-none">
-                                        {groupData.topic}
-                                    </p>
-                                    <span className="text-white/10 text-[10px]">•</span>
+                                    <h3 className="text-base sm:text-xl font-russo text-white uppercase tracking-tight group-hover/header:text-sparta-gold transition-colors truncate">
+                                        {title}
+                                    </h3>
+                                    <div className="flex items-center gap-1.5 sm:gap-2 truncate">
+                                        {isSaved ? (
+                                            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-sparta-gold truncate">
+                                                Личное хранилище заметок и файлов
+                                            </p>
+                                        ) : (
+                                            <>
+                                                {groupData?.topic && (
+                                                    <>
+                                                        <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-sparta-gold truncate max-w-[80px] sm:max-w-none">
+                                                            {groupData.topic}
+                                                        </p>
+                                                        <span className="text-white/10 text-[10px]">•</span>
+                                                    </>
+                                                )}
+                                                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-white/30 truncate">
+                                                    {messages.length} сообщ.
+                                                </p>
+                                                <span className="text-white/10 text-[10px] hidden sm:inline">•</span>
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-white/20 hidden sm:inline">
+                                                    {isDirect ? 'Профиль собеседника' : 'Участники и медиа'}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
                                 </>
-                            )}
-                            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-white/30 truncate">
-                                {messages.length} сообщ.
-                            </p>
-                            <span className="text-white/10 text-[10px] hidden sm:inline">•</span>
-                            <span className="text-[9px] font-black uppercase tracking-widest text-white/20 hidden sm:inline">Нажми для медиа</span>
-                        </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
@@ -2520,13 +3300,16 @@ const GroupChat: React.FC<GroupChatProps> = ({
                     >
                         <Search size={16} className="sm:w-5 sm:h-5" />
                     </button>
-                    <button
-                        onClick={handleStartVideoCall}
-                        className="p-2.5 sm:p-3 bg-white/5 border border-white/10 rounded-2xl text-muted hover:text-sparta-gold hover:border-sparta-gold/50 transition-all hidden sm:block"
-                        title="Sparta Live - Видеовстреча"
-                    >
-                        <VideoIcon size={20} />
-                    </button>
+                    {/* Video Meeting Button: strictly for Coach, Trainer, Admin, Director, Developer */}
+                    {(isAdmin || isTrainer || ['coach', 'trainer', 'admin', 'director', 'developer', 'staff'].includes((userProfile?.role || '').toLowerCase())) && (
+                        <button
+                            onClick={handleStartVideoCall}
+                            className="p-2.5 sm:p-3 bg-white/5 border border-white/10 rounded-2xl text-muted hover:text-sparta-gold hover:border-sparta-gold/50 transition-all hidden sm:block"
+                            title="Sparta Live - Видеовстреча"
+                        >
+                            <VideoIcon size={20} />
+                        </button>
+                    )}
 
                     {/* Header Context Menu (⋮) strictly for Coach / Trainer / Admin / Director / Developer (hidden for Student & Parent) */}
                     {!['student', 'parent', 'kid', 'child'].includes((userProfile?.role || '').toLowerCase()) &&
@@ -2554,6 +3337,19 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                             transition={{ type: 'spring', damping: 25, stiffness: 350 }}
                                             className="absolute right-0 top-full mt-2 z-50 bg-[#121214]/95 backdrop-blur-md border border-white/10 rounded-2xl p-1.5 shadow-2xl min-w-[210px] space-y-1"
                                         >
+                                            {(isTrainer || isAdmin) && (
+                                                <button
+                                                    onClick={() => {
+                                                        setIsAnnouncementModalOpen(true);
+                                                        setIsHeaderMenuOpen(false);
+                                                    }}
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-neutral-300/80 hover:text-amber-400 hover:bg-neutral-800/40 rounded-xl transition-all text-left text-xs font-medium group"
+                                                >
+                                                    <Megaphone size={16} className="text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                                    <span>📢 Объявление тренера</span>
+                                                </button>
+                                            )}
+
                                             <button
                                                 onClick={() => {
                                                     setIsPollModalOpen(true);
@@ -2597,46 +3393,93 @@ const GroupChat: React.FC<GroupChatProps> = ({
                 </div>
             </div>
 
-            {/* Liquid Glass Search Bar */}
+            {/* Ultra-Compact Liquid Glass Smart Search Bar */}
             <AnimatePresence>
                 {isSearchExpanded && (
                     <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="bg-[#0a0a0a]/95 backdrop-blur-3xl border-b border-white/10 overflow-hidden shrink-0 flex flex-col p-4 sm:px-6 gap-3 z-20"
+                        className="bg-[#0e0e12]/95 backdrop-blur-2xl border-b border-white/10 shrink-0 flex flex-col px-3.5 py-2.5 sm:px-6 gap-2 z-30 shadow-2xl relative"
                     >
-                        <div className="flex items-center gap-3 w-full">
-                            <div className="relative flex-1 group">
-                                <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${chatSearchQuery ? 'text-sparta-gold' : 'text-white/20'}`} size={18} />
+                        {/* 1. Main Search Row */}
+                        <div className="flex items-center gap-2 w-full">
+                            <div className="relative flex-1 group flex items-center">
+                                <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors ${chatSearchQuery || searchDate ? 'text-sparta-gold' : 'text-white/30'}`} size={16} />
                                 <input
                                     ref={searchInputRef}
                                     type="text"
-                                    placeholder="Поиск по истории сообщений..."
+                                    placeholder="Поиск по чату, автору, расписанию..."
                                     value={chatSearchQuery}
-                                    onChange={(e) => setChatSearchQuery(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 sm:py-3 pl-12 pr-12 text-sm text-white placeholder:text-white/10 outline-none focus:border-sparta-gold/50 focus:bg-white/10 transition-all font-medium"
+                                    onChange={(e) => {
+                                        setChatSearchQuery(e.target.value);
+                                        setShowResultsDrawer(true);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Escape') {
+                                            setIsSearchExpanded(false);
+                                            setChatSearchQuery('');
+                                            setSearchFilter('all');
+                                            setSearchDate('');
+                                            setShowResultsDrawer(false);
+                                        } else if (e.key === 'Enter') {
+                                            handleNextMatch();
+                                        }
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl py-2 pl-10 pr-10 text-xs sm:text-sm text-white placeholder:text-white/30 outline-none focus:border-sparta-gold/60 focus:bg-white/10 transition-all font-medium"
                                 />
                                 {chatSearchQuery && (
                                     <button
                                         onClick={() => setChatSearchQuery('')}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
                                     >
-                                        <XIcon size={16} />
+                                        <XIcon size={14} />
                                     </button>
                                 )}
                             </div>
 
+                            {/* 📅 Фирменный календарь Спарта */}
+                            <div className="relative shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+                                    className={`px-2.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-95 ${
+                                        searchDate
+                                            ? 'bg-sparta-gold text-black border-sparta-gold shadow-[0_0_10px_rgba(212,175,55,0.4)]'
+                                            : 'bg-white/5 text-white/80 border-white/10 hover:border-sparta-gold/40 hover:text-sparta-gold'
+                                    }`}
+                                    title="Фирменный календарь Спарта"
+                                >
+                                    <Calendar size={14} className={searchDate ? 'text-black' : 'text-sparta-gold'} />
+                                    <span className="hidden sm:inline text-[11px]">
+                                        {searchDate ? format(new Date(searchDate), 'd MMM', { locale: ru }) : 'Дата'}
+                                    </span>
+                                </button>
+
+                                <SpartaDatePickerPopover
+                                    isOpen={isDatePickerOpen}
+                                    selectedDate={searchDate}
+                                    onSelectDate={(d) => {
+                                        setSearchDate(d);
+                                        setShowResultsDrawer(true);
+                                    }}
+                                    onClose={() => setIsDatePickerOpen(false)}
+                                    messageDates={messageDates}
+                                    trainingDays={groupTrainingDays}
+                                    messageCountByDate={messageCountByDate}
+                                />
+                            </div>
+
                             {/* Match Counter & Navigation */}
-                            {(chatSearchQuery.trim() || searchFilter !== 'all') && (
-                                <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-2 rounded-2xl shrink-0">
+                            {(chatSearchQuery.trim() || searchFilter !== 'all' || searchDate) && (
+                                <div className="flex items-center gap-1 bg-white/5 border border-white/10 px-2.5 py-1.5 rounded-xl shrink-0">
                                     <span className="text-[11px] font-mono font-bold text-sparta-gold">
-                                        {matchedMessages.length > 0 ? `${currentMatchIndex + 1} из ${matchedMessages.length}` : '0 из 0'}
+                                        {matchedMessages.length > 0 ? `${currentMatchIndex + 1}/${matchedMessages.length}` : '0'}
                                     </span>
                                     <button
                                         onClick={handlePrevMatch}
                                         disabled={matchedMessages.length === 0}
-                                        className="p-1 hover:bg-white/10 text-white/60 hover:text-sparta-gold disabled:opacity-30 rounded-lg transition-all"
+                                        className="p-0.5 hover:bg-white/10 text-white/60 hover:text-sparta-gold disabled:opacity-20 rounded transition-all"
                                         title="Предыдущее совпадение"
                                     >
                                         <ChevronUp size={14} />
@@ -2644,7 +3487,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                     <button
                                         onClick={handleNextMatch}
                                         disabled={matchedMessages.length === 0}
-                                        className="p-1 hover:bg-white/10 text-white/60 hover:text-sparta-gold disabled:opacity-30 rounded-lg transition-all"
+                                        className="p-0.5 hover:bg-white/10 text-white/60 hover:text-sparta-gold disabled:opacity-20 rounded transition-all"
                                         title="Следующее совпадение"
                                     >
                                         <ChevronDown size={14} />
@@ -2652,51 +3495,176 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                 </div>
                             )}
 
+                            {/* Close Button */}
                             <button
                                 onClick={() => {
                                     setIsSearchExpanded(false);
                                     setChatSearchQuery('');
                                     setSearchFilter('all');
+                                    setSearchDate('');
+                                    setShowResultsDrawer(false);
                                 }}
-                                className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors px-2 shrink-0"
+                                className="p-2 text-white/40 hover:text-white rounded-xl hover:bg-white/5 transition-all text-xs font-bold shrink-0 active:scale-95"
+                                title="Закрыть поиск (Esc)"
                             >
-                                Закрыть
+                                <XIcon size={16} />
                             </button>
                         </div>
 
-                        {/* Filter Shortcuts: [Все], [Файлы/Фото], [Ссылки] */}
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setSearchFilter('all')}
-                                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
-                                    searchFilter === 'all'
-                                        ? 'bg-sparta-gold text-black border-sparta-gold shadow-[0_0_10px_rgba(212,175,55,0.3)]'
-                                        : 'bg-white/5 text-white/60 border-white/10 hover:border-white/20 hover:text-white'
-                                }`}
-                            >
-                                Все
-                            </button>
-                            <button
-                                onClick={() => setSearchFilter('media')}
-                                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
-                                    searchFilter === 'media'
-                                        ? 'bg-sparta-gold text-black border-sparta-gold shadow-[0_0_10px_rgba(212,175,55,0.3)]'
-                                        : 'bg-white/5 text-white/60 border-white/10 hover:border-white/20 hover:text-white'
-                                }`}
-                            >
-                                Файлы/Фото
-                            </button>
-                            <button
-                                onClick={() => setSearchFilter('links')}
-                                className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
-                                    searchFilter === 'links'
-                                        ? 'bg-sparta-gold text-black border-sparta-gold shadow-[0_0_10px_rgba(212,175,55,0.3)]'
-                                        : 'bg-white/5 text-white/60 border-white/10 hover:border-white/20 hover:text-white'
-                                }`}
-                            >
-                                Ссылки
-                            </button>
+                        {/* 2. Smart Quick Chips (Horizontal Scrollable with Fade Indicator) */}
+                        <div className="relative w-full">
+                            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 pr-8 scroll-smooth">
+                                {searchDate && (
+                                    <button
+                                        onClick={() => setSearchDate('')}
+                                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sparta-gold text-black border border-sparta-gold shadow-md flex items-center gap-1 shrink-0 animate-fadeIn active:scale-95"
+                                        title="Сбросить фильтр по дате"
+                                    >
+                                        <span>📅 {format(new Date(searchDate), 'd MMM', { locale: ru })}</span>
+                                        <XIcon size={12} className="hover:opacity-70" />
+                                    </button>
+                                )}
+
+                                {[
+                                    { id: 'all', label: 'Все', icon: '⭐️' },
+                                    { id: 'schedule', label: 'Расписание', icon: '📅' },
+                                    { id: 'important', label: 'Важное', icon: '📌' },
+                                    { id: 'coach', label: 'Тренер', icon: '👑' },
+                                    { id: 'polls', label: 'Опросы', icon: '📊' },
+                                    { id: 'media', label: 'Фото/Медиа', icon: '📸' },
+                                    { id: 'links', label: 'Ссылки', icon: '🔗' },
+                                ].map(chip => {
+                                    const isActive = searchFilter === chip.id;
+                                    return (
+                                        <button
+                                            key={chip.id}
+                                            onClick={(e) => {
+                                                setSearchFilter(chip.id as any);
+                                                setShowResultsDrawer(true);
+                                                e.currentTarget.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+                                            }}
+                                            className={`px-3 py-1 rounded-lg text-[11px] font-semibold tracking-wide transition-all shrink-0 flex items-center gap-1.5 border active:scale-95 ${
+                                                isActive
+                                                    ? 'bg-sparta-gold text-black font-bold border-sparta-gold shadow-[0_0_10px_rgba(212,175,55,0.35)] scale-100'
+                                                    : 'bg-white/5 text-white/70 border-white/5 hover:border-white/20 hover:text-white'
+                                            }`}
+                                        >
+                                            <span className="text-xs">{chip.icon}</span>
+                                            <span>{chip.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Right edge scroll fade hint on mobile */}
+                            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0e0e12] to-transparent pointer-events-none" />
                         </div>
+
+                        {/* 3. Dropdown Matches Preview Drawer */}
+                        {showResultsDrawer && (chatSearchQuery.trim() || searchFilter !== 'all' || searchDate) && matchedMessages.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-1 bg-black/85 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden divide-y divide-white/5 max-h-56 sm:max-h-64 overflow-y-auto custom-scrollbar shadow-2xl"
+                            >
+                                <div className="px-3 py-1.5 bg-white/[0.03] flex items-center justify-between text-[9px] font-mono text-white/40 uppercase">
+                                    <span>Найдено совпадений: {matchedMessages.length}</span>
+                                    <button
+                                        onClick={() => setShowResultsDrawer(false)}
+                                        className="hover:text-white transition-colors"
+                                    >
+                                        Скрыть список ✕
+                                    </button>
+                                </div>
+                                {searchFilter === 'media' ? (
+                                    <div className="p-3 space-y-4 max-h-64 sm:max-h-80 overflow-y-auto custom-scrollbar">
+                                        {groupedMediaByMonth.length === 0 ? (
+                                            <div className="text-center py-6 text-xs text-white/40 font-mono">
+                                                В этом чате пока нет медиафайлов
+                                            </div>
+                                        ) : (
+                                            groupedMediaByMonth.map(group => (
+                                                <div key={group.monthKey} className="space-y-2">
+                                                    <div className="flex items-center justify-between text-[11px] font-russo uppercase text-sparta-gold/90 px-1 border-b border-white/5 pb-1">
+                                                        <span>{group.monthLabel}</span>
+                                                        <span className="text-[10px] font-mono text-white/40">{group.items.length} фото</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                                                        {group.items.map(m => (
+                                                            <div
+                                                                key={m.id}
+                                                                onClick={() => {
+                                                                    setSelectedMediaForLightbox({
+                                                                        id: m.id,
+                                                                        mediaUrl: m.mediaUrl,
+                                                                        mediaType: m.mediaType || 'image',
+                                                                        senderName: m.senderName,
+                                                                        senderRole: m.senderRole,
+                                                                        senderAvatar: m.senderAvatar || m.senderPhoto,
+                                                                        timestamp: m.timestamp,
+                                                                        text: m.text,
+                                                                        category: m.category
+                                                                    });
+                                                                }}
+                                                                className="group relative aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-sparta-gold/60 cursor-pointer transition-all active:scale-95 shadow-md"
+                                                                title={`Отправил: ${m.senderName || 'Участник'}`}
+                                                            >
+                                                                <SpartaProgressiveImage
+                                                                    src={m.mediaUrl}
+                                                                    alt={m.text || 'Медиа'}
+                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                                />
+                                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-1.5">
+                                                                    <span className="text-[9px] text-white font-bold truncate leading-tight">
+                                                                        {m.senderName || 'Участник'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                ) : (
+                                    matchedMessages.slice(0, 10).map((m, idx) => {
+                                        const isCurrent = idx === currentMatchIndex;
+                                        const mTime = m.timestamp?.seconds
+                                            ? format(new Date(m.timestamp.seconds * 1000), 'd MMM HH:mm', { locale: ru })
+                                            : '';
+                                        return (
+                                            <button
+                                                key={m.id}
+                                                onClick={() => {
+                                                    setCurrentMatchIndex(idx);
+                                                    scrollToMessage(m.id);
+                                                }}
+                                                className={`w-full p-2.5 text-left flex items-start justify-between gap-3 hover:bg-white/10 transition-colors ${
+                                                    isCurrent ? 'bg-sparta-gold/15 border-l-2 border-sparta-gold' : ''
+                                                }`}
+                                            >
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                                        <span className="text-[11px] font-bold text-sparta-gold truncate">
+                                                            {m.senderName || 'Участник'}
+                                                        </span>
+                                                        {m.type === 'schedule_announcement' && (
+                                                            <span className="text-[8px] bg-sparta-gold/20 text-sparta-gold px-1 rounded font-bold">РАСПИСАНИЕ</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[11px] text-white/80 line-clamp-1 truncate font-medium">
+                                                        {m.text || (m.mediaUrl ? '📸 Фото/Медиа' : 'Сообщение')}
+                                                    </p>
+                                                </div>
+                                                <span className="text-[9px] font-mono text-white/40 shrink-0 mt-0.5">
+                                                    {mTime}
+                                                </span>
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </motion.div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -2886,21 +3854,36 @@ const GroupChat: React.FC<GroupChatProps> = ({
             </AnimatePresence>
 
             {/* Messages List */}
-            <div className="flex flex-1 overflow-hidden relative h-full">
+            <div className="flex flex-1 overflow-hidden relative h-full min-h-0">
                 {/* Main Message List */}
-                <div className={`flex-1 flex flex-col transition-all duration-500 min-w-0 ${filterThreadId ? 'opacity-40 scale-95 pointer-events-none' : ''}`}>
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide relative" style={{ backgroundImage: 'var(--messenger-chat-bg)', backgroundRepeat: 'repeat' }}>
+                <div className={`flex-1 flex flex-col transition-all duration-500 min-w-0 min-h-0 ${filterThreadId ? 'opacity-40 scale-95 pointer-events-none' : ''}`}>
+                    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 space-y-4 scrollbar-hide relative" style={{ backgroundImage: 'var(--messenger-chat-bg)', backgroundRepeat: 'repeat' }}>
                         {isLoading ? (
                             <div className="flex flex-col items-center justify-center h-full gap-4">
                                 <RotateCcw size={40} className="text-sparta-gold animate-spin opacity-20" />
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Загрузка сообщений...</p>
                             </div>
                         ) : messages.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-center opacity-20 py-20">
-                                <MessageSquare size={64} className="mb-4 text-sparta-gold" />
-                                <p className="text-sm font-russo uppercase tracking-widest text-white">Здесь пока пусто</p>
-                                <p className="text-[10px] mt-2 max-w-[200px] uppercase font-bold tracking-tighter">Будьте первым, кто напишет в чат группы!</p>
-                            </div>
+                            (groupData?.type === 'saved' || chatId?.startsWith('saved_')) ? (
+                                <div className="h-full flex flex-col items-center justify-center text-center py-12 px-4 max-w-sm mx-auto">
+                                    <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400 via-sparta-gold to-yellow-600 flex items-center justify-center text-black shadow-xl shadow-sparta-gold/25 mb-4">
+                                        <Bookmark size={32} className="fill-black" />
+                                    </div>
+                                    <h4 className="text-lg font-black font-russo uppercase text-white tracking-wide mb-2">Ваше Избранное</h4>
+                                    <p className="text-xs text-white/60 leading-relaxed mb-4">
+                                        Сюда можно пересылать фото, видео, важные сообщения и файлы из других чатов или писать личные заметки.
+                                    </p>
+                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-sparta-gold">
+                                        <Shield size={12} /> Доступно только вам
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center opacity-20 py-20">
+                                    <MessageSquare size={64} className="mb-4 text-sparta-gold" />
+                                    <p className="text-sm font-russo uppercase tracking-widest text-white">Здесь пока пусто</p>
+                                    <p className="text-[10px] mt-2 max-w-[200px] uppercase font-bold tracking-tighter">Будьте первым, кто напишет в чат группы!</p>
+                                </div>
+                            )
                         ) : (
                             <>
                                 {/* The old filterThreadId header is removed from here */}
@@ -2952,10 +3935,10 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
                                                             <div className={`flex flex-col gap-1 max-w-[85%] ${isMe ? 'items-end' : 'items-start'}`}>
                                                                 {!isMe && (
-                                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted ml-1 mb-1">
-                                                                        {msg.senderName}
+                                                                    <div className="text-[10px] font-black uppercase tracking-widest text-muted ml-1 mb-1 flex items-center gap-1">
+                                                                        <span>{msg.senderName}</span>
                                                                         <VerificationBadge role={msg.senderRole} />
-                                                                    </p>
+                                                                    </div>
                                                                 )}
 
                                                                 <div className={`p-2 rounded-2xl shadow-lg relative ${isMe ? 'bg-sparta-gold/20 border border-sparta-gold/20' : 'bg-white/5 border border-white/5'}`}>
@@ -2963,14 +3946,18 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                                         {msg.items.map((item: any) => (
                                                                             <div
                                                                                 key={item.id}
-                                                                                className="relative rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-all aspect-square bg-black/20"
+                                                                                className="relative rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-all aspect-square bg-black/20 group/mediaitem"
                                                                                 onClick={() => setSelectedMediaForLightbox(item)}
+                                                                                onContextMenu={(e) => handleContextMenu(e, item.id || msg.id)}
+                                                                                onTouchStart={(e) => handleTouchStart(e, item.id || msg.id)}
+                                                                                onTouchMove={handleTouchMove}
+                                                                                onTouchEnd={handleTouchEnd}
                                                                             >
                                                                                 {item.mediaType === 'image' ? (
-                                                                                    <img src={item.mediaUrl} alt="" className="w-full h-full object-cover" />
+                                                                                    <img src={item.mediaUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
                                                                                 ) : (
                                                                                     <div className="w-full h-full relative flex items-center justify-center">
-                                                                                        <video src={item.mediaUrl} className="w-full h-full object-cover" />
+                                                                                        <video src={item.mediaUrl} className="w-full h-full object-cover pointer-events-none" />
                                                                                         <Play size={24} className="text-sparta-gold absolute" />
                                                                                     </div>
                                                                                 )}
@@ -2993,6 +3980,31 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                                         )}
                                                                     </div>
                                                                 </div>
+
+                                                                {/* Reactions on Media Group */}
+                                                                {(() => {
+                                                                    const groupReactions: Record<string, string[]> = {};
+                                                                    msg.items.forEach((it: any) => {
+                                                                        if (it.reactions) {
+                                                                            Object.entries(it.reactions).forEach(([k, uids]: [string, any]) => {
+                                                                                if (Array.isArray(uids)) {
+                                                                                    if (!groupReactions[k]) groupReactions[k] = [];
+                                                                                    uids.forEach(uid => {
+                                                                                        if (!groupReactions[k].includes(uid)) groupReactions[k].push(uid);
+                                                                                    });
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    });
+                                                                    return (
+                                                                        <SpartaMessageReactionBadges
+                                                                            reactions={groupReactions}
+                                                                            currentUserId={user?.uid}
+                                                                            onToggleReaction={(k) => handleReaction(msg.items[0]?.id || msg.id, k)}
+                                                                            alignRight={isMe}
+                                                                        />
+                                                                    );
+                                                                })()}
                                                             </div>
                                                         </motion.div>
                                                     );
@@ -3020,6 +4032,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                             }
                                                         }}
                                                         onTouchStart={(e) => handleTouchStart(e, msg.id)}
+                                                        onTouchMove={handleTouchMove}
                                                         onTouchEnd={handleTouchEnd}
                                                     >
                                                         {/* Selection Checkbox */}
@@ -3042,16 +4055,20 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                         </AnimatePresence>
 
                                                         {!isMe && (
-                                                            <div
-                                                                className="w-8 h-8 rounded-full overflow-hidden self-end border border-white/10 bg-white/5 flex-shrink-0 cursor-pointer hover:border-sparta-gold transition-all active:scale-95 mb-0.5"
-                                                                onClick={() => !isSelectMode && handleStartPrivateChat(msg.senderId, msg.senderName)}
-                                                            >
-                                                                {showAvatar && (
-                                                                    (msg.senderAvatar || groupMembers.find(m => m.id === msg.senderId)?.photoURL || groupMembers.find(m => m.id === msg.senderId)?.avatarUrl) ? (
-                                                                        <img src={msg.senderAvatar || groupMembers.find(m => m.id === msg.senderId)?.photoURL || groupMembers.find(m => m.id === msg.senderId)?.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        <User className="w-full h-full p-1.5 text-white/20" />
-                                                                    )
+                                                            <div className="self-end mb-0.5 flex-shrink-0">
+                                                                {showAvatar ? (
+                                                                    <SpartaAvatar
+                                                                        src={msg.senderAvatar || groupMembers.find(m => m.id === msg.senderId)?.photoURL || groupMembers.find(m => m.id === msg.senderId)?.avatarUrl}
+                                                                        name={msg.senderName}
+                                                                        role={msg.senderRole}
+                                                                        isAdmin={msg.senderId === 'admin_sparta' || msg.senderRole === 'admin' || msg.senderRole === 'director' || msg.senderName?.includes('Администрация')}
+                                                                        isCoach={msg.senderRole === 'coach' || msg.senderRole === 'trainer'}
+                                                                        size="sm"
+                                                                        onClick={() => !isSelectMode && handleStartPrivateChat(msg.senderId, msg.senderName)}
+                                                                        className="cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-8 h-8" />
                                                                 )}
                                                             </div>
                                                         )}
@@ -3272,15 +4289,82 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                                          </div>
                                                                          </div>
                                                                           </div>
+                                                                        ) : (msg.type === 'schedule_announcement' || (typeof msg.text === 'string' && (msg.text.includes('SPARTA • РАСПИСАНИЕ') || msg.text.includes('РАСПИСАНИЕ ТРЕНИРОВОК') || msg.text.includes('ОФИЦИАЛЬНОЕ РАСПИСАНИЕ')))) ? (
+                                                                            <div className="relative">
+                                                                                <SpartaScheduleChatCard
+                                                                                    text={msg.text}
+                                                                                    scheduleMeta={msg.scheduleMeta}
+                                                                                    isMe={isMe}
+                                                                                />
+
+                                                                                {/* Time, Edited & Read Status */}
+                                                                                <div className={`flex items-center gap-1.5 mt-1 px-1 ${isMe ? 'justify-end text-white/50' : 'text-white/30'}`}>
+                                                                                    {msg.isEdited && (
+                                                                                        <span className="text-[8px] italic flex items-center gap-0.5 text-white/40">
+                                                                                            <Pencil size={8} /> изм.
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span className="text-[8px] font-black uppercase tracking-widest">
+                                                                                        {msg.timestamp?.seconds ? format(new Date(msg.timestamp.seconds * 1000), 'HH:mm') : '...'}
+                                                                                    </span>
+                                                                                    {isMe && <CheckCheck size={10} />}
+                                                                                </div>
+
+                                                                                {/* Reactions */}
+                                                                                <SpartaMessageReactionBadges
+                                                                                    reactions={msg.reactions}
+                                                                                    currentUserId={user?.uid}
+                                                                                    onToggleReaction={(k) => handleReaction(msg.id, k)}
+                                                                                    alignRight={isMe}
+                                                                                />
+                                                                            </div>
                                                                         ) : (
-                                                                    <div className={`p-4 rounded-2xl shadow-lg relative ${isMe ? 'bg-sparta-gold text-black font-bold' : 'bg-white/5 border border-white/5 text-white/90'}`}>
+                                                                    <div className={`p-4 rounded-2xl shadow-lg relative ${
+                                                                        msg.isAnnouncement
+                                                                            ? msg.priority === 'urgent'
+                                                                                ? 'bg-red-950/50 border-2 border-red-500/70 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)]'
+                                                                                : 'bg-gradient-to-br from-amber-950/40 via-black/80 to-sparta-gold/20 border-2 border-sparta-gold/60 text-white shadow-[0_0_20px_rgba(212,175,55,0.25)]'
+                                                                            : isMe
+                                                                            ? 'bg-sparta-gold text-black font-bold'
+                                                                            : 'bg-white/5 border border-white/5 text-white/90'
+                                                                    }`}>
+                                                                        {/* Announcement Banner */}
+                                                                        {msg.isAnnouncement && (
+                                                                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <div className={`p-1.5 rounded-lg ${msg.priority === 'urgent' ? 'bg-red-500/20 text-red-400' : 'bg-sparta-gold/20 text-sparta-gold'}`}>
+                                                                                        <Shield size={14} />
+                                                                                    </div>
+                                                                                    <span className="text-[11px] font-black uppercase tracking-wider text-sparta-gold">
+                                                                                        {msg.title || 'Официальное объявление тренера'}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30">
+                                                                                    Важно
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+
                                                                         {msg.mediaUrl && (msg.mediaType === 'image' || msg.mediaType === 'video') && (
-                                                                            <div className="mb-2 rounded-2xl overflow-hidden cursor-pointer shadow-lg">
+                                                                            <div
+                                                                                className="mb-2 rounded-2xl overflow-hidden cursor-pointer shadow-lg relative group/singlemedia"
+                                                                                onClick={() => setSelectedMediaForLightbox(msg)}
+                                                                                onContextMenu={(e) => handleContextMenu(e, msg.id)}
+                                                                                onTouchStart={(e) => handleTouchStart(e, msg.id)}
+                                                                                onTouchMove={handleTouchMove}
+                                                                                onTouchEnd={handleTouchEnd}
+                                                                            >
                                                                                 {msg.mediaType === 'image' ? (
-                                                                                    <img src={msg.mediaUrl} alt="" className="w-full max-h-80 object-cover hover:scale-105 transition-transform" onClick={() => setSelectedMediaForLightbox(msg)} />
+                                                                                    <SpartaProgressiveImage
+                                                                                        src={msg.mediaUrl}
+                                                                                        alt=""
+                                                                                        isUploading={msg.isUploading}
+                                                                                        uploadProgress={msg.uploadProgress}
+                                                                                        className="w-full max-h-80 object-cover hover:scale-105 transition-transform pointer-events-none"
+                                                                                    />
                                                                                 ) : msg.mediaType === 'video' ? (
-                                                                                    <div className="relative aspect-video bg-black/40 flex items-center justify-center" onClick={() => setSelectedMediaForLightbox(msg)}>
-                                                                                        <video src={msg.mediaUrl} className="w-full h-full object-cover" />
+                                                                                    <div className="relative aspect-video bg-black/40 flex items-center justify-center">
+                                                                                        <video src={msg.mediaUrl} className="w-full h-full object-cover pointer-events-none" />
                                                                                         <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                                                                                             <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 text-white">
                                                                                                 <Play size={24} fill="currentColor" />
@@ -3314,36 +4398,32 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                                             </div>
                                                                         )}
 
-                                                                        {/* Time & Read Status */}
-                                                                        <div className={`flex items-center gap-2 mt-2 ${isMe ? 'justify-end text-black/40' : 'text-white/30'}`}>
+                                                                        {/* Time, Edited & Read Status */}
+                                                                        <div className={`flex items-center gap-1.5 mt-2 ${isMe ? 'justify-end text-black/50' : 'text-white/30'}`}>
+                                                                            {msg.isEdited && (
+                                                                                <span className={`text-[8px] italic flex items-center gap-0.5 ${isMe ? 'text-black/60' : 'text-white/40'}`}>
+                                                                                    <Pencil size={8} /> изм.
+                                                                                </span>
+                                                                            )}
                                                                             <span className="text-[8px] font-black uppercase tracking-widest">
                                                                                 {msg.timestamp?.seconds ? format(new Date(msg.timestamp.seconds * 1000), 'HH:mm') : '...'}
                                                                             </span>
-                                                                            {isMe && <CheckCheck size={10} />}
+                                                                            {msg.isUploading ? (
+                                                                                <span className="text-sparta-gold animate-spin inline-flex items-center" title="Отправка...">
+                                                                                    <Loader2 size={10} />
+                                                                                </span>
+                                                                            ) : (
+                                                                                isMe && <CheckCheck size={10} />
+                                                                            )}
                                                                         </div>
 
                                                                         {/* Reactions */}
-                                                                        {msg.reactions && Object.keys(msg.reactions).some(k => msg.reactions[k]?.length > 0) && (
-                                                                            <div className={`absolute -bottom-3 ${isMe ? 'right-0' : 'left-0'} flex flex-wrap gap-1 z-10`}>
-                                                                                {Object.entries(msg.reactions).map(([emojiKey, voters]: [string, any]) => {
-                                                                                    const emoji = REACTION_EMOJIS.find(e => e.key === emojiKey);
-                                                                                    if (!emoji || !voters || voters.length === 0) return null;
-                                                                                    return (
-                                                                                        <button
-                                                                                            key={emoji.key}
-                                                                                            onClick={(e) => { e.stopPropagation(); handleReaction(msg.id, emoji.key); }}
-                                                                                            className={`flex items-center gap-1 px-2 py-1 rounded-full border backdrop-blur-md transition-all ${voters.includes(user.uid)
-                                                                                                    ? 'bg-sparta-gold border-sparta-gold/30 shadow-lg shadow-sparta-gold/20 text-black scale-110'
-                                                                                                    : 'bg-black/60 border-white/10 text-muted hover:bg-white/10'
-                                                                                                }`}
-                                                                                        >
-                                                                                            <AnimatedEmoji url={emoji.lottie} className="w-4 h-4" />
-                                                                                            <span className="text-[10px] font-bold">{voters.length}</span>
-                                                                                        </button>
-                                                                                    );
-                                                                                })}
-                                                                            </div>
-                                                                        )}
+                                                                        <SpartaMessageReactionBadges
+                                                                            reactions={msg.reactions}
+                                                                            currentUserId={user?.uid}
+                                                                            onToggleReaction={(k) => handleReaction(msg.id, k)}
+                                                                            alignRight={isMe}
+                                                                        />
                                                                         </div>
                                                                  )}
                                                             </div>
@@ -3405,7 +4485,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
                             </div>
 
                             {/* Sidebar Messages */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide relative" style={{ backgroundImage: 'var(--messenger-chat-bg)', backgroundRepeat: 'repeat' }}>
+                            <div ref={threadContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide relative" style={{ backgroundImage: 'var(--messenger-chat-bg)', backgroundRepeat: 'repeat' }}>
                                 {messages
                                     .filter(msg => msg.id === filterThreadId || msg.replyToId === filterThreadId)
                                     .sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0))
@@ -3423,13 +4503,18 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                 className={`flex items-start gap-4 ${isMe ? 'flex-row-reverse' : 'flex-row'} ${isOriginal ? 'bg-sparta-gold/5 p-4 rounded-3xl border border-sparta-gold/10' : ''}`}
                                             >
                                                 {!isMe && (
-                                                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 bg-white/5">
-                                                        {showAvatar && (
-                                                            <img
-                                                                src={msg.senderPhoto || msg.senderAvatar || groupMembers.find(m => m.id === msg.senderId)?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.senderId}`}
-                                                                alt=""
-                                                                className="w-full h-full object-cover"
+                                                    <div className="shrink-0">
+                                                        {showAvatar ? (
+                                                            <SpartaAvatar
+                                                                src={msg.senderPhoto || msg.senderAvatar || groupMembers.find(m => m.id === msg.senderId)?.photoURL}
+                                                                name={msg.senderName}
+                                                                role={msg.senderRole}
+                                                                isAdmin={msg.senderId === 'admin_sparta' || msg.senderRole === 'admin' || msg.senderRole === 'director' || msg.senderName?.includes('Администрация')}
+                                                                isCoach={msg.senderRole === 'coach' || msg.senderRole === 'trainer'}
+                                                                size="sm"
                                                             />
+                                                        ) : (
+                                                            <div className="w-8 h-8" />
                                                         )}
                                                     </div>
                                                 )}
@@ -3439,17 +4524,29 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-sparta-gold mb-1 ml-1">Первоначальное сообщение</span>
                                                     )}
                                                     {!isMe && showAvatar && (
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted ml-1">
-                                                            {msg.senderName}
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-muted ml-1 mb-1 flex items-center gap-1">
+                                                            <span>{msg.senderName}</span>
                                                             <VerificationBadge role={msg.senderRole} />
-                                                        </p>
+                                                        </div>
                                                     )}
 
+                                                    {(msg.type === 'schedule_announcement' || (typeof msg.text === 'string' && (msg.text.includes('SPARTA • РАСПИСАНИЕ') || msg.text.includes('РАСПИСАНИЕ ТРЕНИРОВОК') || msg.text.includes('ОФИЦИАЛЬНОЕ РАСПИСАНИЕ')))) ? (
+                                                        <div className="relative">
+                                                            <SpartaScheduleChatCard
+                                                                text={msg.text}
+                                                                scheduleMeta={msg.scheduleMeta}
+                                                                isMe={isMe}
+                                                            />
+                                                            <div className={`text-[8px] mt-1 px-1 ${isMe ? 'text-white/40 text-right' : 'text-white/30'}`}>
+                                                                {msg.timestamp?.seconds ? format(new Date(msg.timestamp.seconds * 1000), 'HH:mm') : '...'}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
                                                     <div className={`p-4 rounded-2xl shadow-lg relative ${isMe ? 'bg-sparta-gold text-black font-bold' : 'bg-white/5 border border-white/5 text-white/90'}`}>
                                                         {msg.mediaUrl && (
                                                             <div className="mb-2 rounded-xl overflow-hidden cursor-pointer" onClick={() => setSelectedMediaForLightbox(msg)}>
                                                                 {msg.mediaType === 'image' ? (
-                                                                    <img src={msg.mediaUrl} alt="" className="w-full max-h-60 object-cover" />
+                                                                    <SpartaProgressiveImage src={msg.mediaUrl} alt="" className="w-full max-h-60 object-cover" />
                                                                 ) : (
                                                                     <div className="relative aspect-video bg-black flex items-center justify-center">
                                                                         <video src={msg.mediaUrl} className="w-full h-full object-cover" />
@@ -3484,6 +4581,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                             </div>
                                                         )}
                                                     </div>
+                                                )}
                                                 </div>
                                             </motion.div>
                                         );
@@ -3544,17 +4642,38 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
             {/* Media/Voice Selection Status Bar */}
             {isSelectMode && selectedMessages.length > 0 && (
-                <div className="mx-6 mb-4 p-4 bg-sparta-gold text-black rounded-2xl flex items-center justify-between shadow-lg shadow-sparta-gold/20">
-                    <div className="flex items-center gap-3">
-                        <CheckCheck size={20} />
-                        <span className="text-xs font-black uppercase tracking-widest">Выбрано: {selectedMessages.length}</span>
+                <div className="mx-4 sm:mx-6 mb-3 p-3 bg-[#181820] text-white rounded-2xl flex items-center justify-between shadow-2xl border border-sparta-gold/40 animate-in slide-in-from-bottom duration-200">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-sparta-gold/20 border border-sparta-gold/30 flex items-center justify-center text-sparta-gold">
+                            <CheckCheck size={18} />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-wider text-sparta-gold">
+                                Выбрано сообщений: {selectedMessages.length}
+                            </span>
+                            <span className="text-[10px] text-white/50">
+                                Нажмите «Удалить» или «Отмена»
+                            </span>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={handleBatchDelete} className="p-2 hover:bg-black/10 rounded-xl transition-all">
-                            <Trash2 size={20} />
+                        <button
+                            type="button"
+                            onClick={handleBatchDelete}
+                            className="px-3.5 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-md"
+                            title="Удалить выбранные"
+                        >
+                            <Trash2 size={15} className="text-red-400" />
+                            <span>Удалить</span>
                         </button>
-                        <button onClick={() => { setIsSelectMode(false); setSelectedMessages([]); }} className="p-2 hover:bg-black/10 rounded-xl transition-all">
-                            <X size={20} />
+                        <button
+                            type="button"
+                            onClick={() => { setIsSelectMode(false); setSelectedMessages([]); }}
+                            className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
+                            title="Отмена"
+                        >
+                            <X size={15} className="text-white/70" />
+                            <span>Отмена</span>
                         </button>
                     </div>
                 </div>
@@ -3674,7 +4793,33 @@ const GroupChat: React.FC<GroupChatProps> = ({
             </AnimatePresence>
 
             {/* Input Area */}
-            <div className="p-2 sm:p-6 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-[#0c0c0c] border-t border-white/5 shrink-0 sticky bottom-0 z-20">
+            <div className="p-2 sm:p-3.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] bg-[#0c0c0c] border-t border-white/5 shrink-0 sticky bottom-0 z-20">
+                {/* Editing Message Banner */}
+                {editingMessage && (
+                    <div className="flex items-center justify-between px-4 py-2 mb-2 bg-sparta-gold/15 border border-sparta-gold/30 rounded-2xl text-xs max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom duration-200">
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                            <div className="p-1.5 rounded-lg bg-sparta-gold text-black shrink-0">
+                                <Pencil size={12} />
+                            </div>
+                            <div className="overflow-hidden">
+                                <p className="text-[10px] font-black text-sparta-gold uppercase tracking-wider">Редактирование сообщения</p>
+                                <p className="text-white/70 truncate text-xs">{editingMessage.text}</p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setEditingMessage(null);
+                                setNewMessage('');
+                            }}
+                            className="p-1.5 text-white/40 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
+                            title="Отменить редактирование"
+                        >
+                            <XIcon size={14} />
+                        </button>
+                    </div>
+                )}
+
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
@@ -3708,6 +4853,19 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                     )}
                                 </AnimatePresence>
 
+                                {/* Redesigned Dual-Platform Attachment Menu (PC Popover & Mobile Bottom Sheet) */}
+                                <ChatAttachmentMenu
+                                    isOpen={showAttachmentSheet}
+                                    onClose={() => setShowAttachmentSheet(false)}
+                                    onSelectGallery={() => galleryInputRef.current?.click()}
+                                    onSelectDoc={() => docInputRef.current?.click()}
+                                    onSelectCamera={() => cameraInputRef.current?.click()}
+                                    onSelectPoll={(!(groupData?.type === 'private' || groupData?.isPrivate || isChatPrivate) && (isTrainer || isAdmin)) ? () => setIsPollModalOpen(true) : undefined}
+                                    onSelectAnnouncement={(isTrainer || isAdmin) ? () => setIsAnnouncementModalOpen(true) : undefined}
+                                    onSelectSchedule={(!(groupData?.type === 'private' || groupData?.isPrivate || isChatPrivate) && (isTrainer || isAdmin)) ? () => setIsScheduleModalOpen(true) : undefined}
+                                    isTrainerOrAdmin={isTrainer || isAdmin}
+                                />
+
                                 <div className="flex items-center gap-1 self-center pl-1">
                                     <button
                                         type="button"
@@ -3737,11 +4895,12 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                 <textarea
                                     value={newMessage}
                                     onChange={(e) => handleNewMessageChange(e.target.value)}
+                                    onPaste={handlePaste}
                                     placeholder="Сообщение..."
                                     className="flex-1 bg-transparent border-none outline-none text-white text-xs py-2.5 resize-none max-h-32 scrollbar-hide uppercase font-bold tracking-wider placeholder:text-white/10"
                                     rows={1}
                                     onFocus={() => {
-                                        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 150);
+                                        setTimeout(() => scrollToBottom(true), 150);
                                     }}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -3777,61 +4936,6 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
             {/* Modals & Popovers */}
 
-            {/* Attachment Action Sheet (Mobile Bottom Sheet / Desktop Modal) */}
-            <AnimatePresence>
-                {showAttachmentSheet && (
-                    <div className="fixed inset-0 z-[250] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4">
-                        <motion.div
-                            initial={{ opacity: 0, y: 100 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 100 }}
-                            className="w-full max-w-md bg-[#111] border border-white/10 rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl space-y-4"
-                        >
-                            <div className="flex items-center justify-between pb-3 border-b border-white/5">
-                                <h4 className="text-xs font-russo text-white uppercase tracking-wider">Прикрепить файл</h4>
-                                <button onClick={() => setShowAttachmentSheet(false)} className="p-1 text-white/40 hover:text-white transition-colors">
-                                    <X size={18} />
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-3 gap-3 pt-1">
-                                <button
-                                    type="button"
-                                    onClick={() => { galleryInputRef.current?.click(); setShowAttachmentSheet(false); }}
-                                    className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-sparta-gold/50 hover:bg-sparta-gold/10 transition-all group"
-                                >
-                                    <div className="w-12 h-12 rounded-2xl bg-sparta-gold/10 text-sparta-gold flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                                        <ImageIcon size={24} />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase text-white/80 tracking-tight">Галерея</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => { docInputRef.current?.click(); setShowAttachmentSheet(false); }}
-                                    className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-sparta-gold/50 hover:bg-sparta-gold/10 transition-all group"
-                                >
-                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                                        <FileText size={24} />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase text-white/80 tracking-tight">Документ</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => { cameraInputRef.current?.click(); setShowAttachmentSheet(false); }}
-                                    className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-sparta-gold/50 hover:bg-sparta-gold/10 transition-all group"
-                                >
-                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                                        <Camera size={24} />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase text-white/80 tracking-tight">Камера</span>
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
             <CreatePollModal
                 isOpen={isPollModalOpen}
                 onClose={() => setIsPollModalOpen(false)}
@@ -3840,6 +4944,24 @@ const GroupChat: React.FC<GroupChatProps> = ({
                 isUnifiedChat={isUnifiedChat}
                 user={user}
                 userProfile={userProfile}
+            />
+
+            {/* Multi-Media Upload Tray Modal */}
+            <MediaUploadTrayModal
+                isOpen={isMediaTrayOpen}
+                onClose={() => {
+                    setIsMediaTrayOpen(false);
+                    setMediaFiles([]);
+                    setMediaPreviews([]);
+                }}
+                items={mediaPreviews}
+                onAddMore={() => galleryInputRef.current?.click()}
+                onRemoveItem={removeMediaFile}
+                onReplaceItem={replaceMediaFile}
+                onSend={handleBatchSendMedia}
+                isUploading={isUploading}
+                uploadProgress={uploadProgress}
+                isTrainerOrAdmin={isTrainer || isAdmin}
             />
 
             {/* Sparta Live Video Modal */}
@@ -3881,99 +5003,44 @@ const GroupChat: React.FC<GroupChatProps> = ({
                 )}
             </AnimatePresence>
 
-            {/* Forward Modal */}
-            <AnimatePresence>
-                {isForwardModalOpen && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#111] border border-white/10 p-6 rounded-[32px] w-full max-w-md shadow-2xl"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xl font-russo text-white uppercase tracking-tight">Переслать сообщение</h3>
-                                <button onClick={() => { setIsForwardModalOpen(false); setSelectedForwardGroups([]); }} className="text-white/20 hover:text-white">
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            {isAdmin && (
-                                <div className="flex gap-2 mb-4">
-                                    <button
-                                        onClick={() => setSelectedForwardGroups(myGroups.map(g => g.id))}
-                                        className="flex-1 py-2 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted hover:text-white hover:bg-white/10 transition-all"
-                                    >
-                                        Выбрать все
-                                    </button>
-                                    <button
-                                        onClick={() => setSelectedForwardGroups([])}
-                                        className="flex-1 py-2 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted hover:text-white hover:bg-white/10 transition-all"
-                                    >
-                                        Сбросить
-                                    </button>
-                                </div>
-                            )}
-
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar mb-6">
-                                {myGroups.map(g => {
-                                    const isSelected = selectedForwardGroups.includes(g.id);
-                                    return (
-                                        <button
-                                            key={g.id}
-                                            onClick={() => {
-                                                setSelectedForwardGroups(prev =>
-                                                    isSelected ? prev.filter(id => id !== g.id) : [...prev, g.id]
-                                                );
-                                            }}
-                                            className={`w-full flex items-center justify-between p-4 border transition-all rounded-2xl ${isSelected ? 'bg-sparta-gold border-sparta-gold text-black shadow-[0_0_15px_rgba(255,184,0,0.3)]' : 'bg-white/5 border-white/5 text-secondary hover:border-white/20'}`}
-                                        >
-                                            <span className="font-bold text-sm">{g.name}</span>
-                                            <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'border-black bg-black text-sparta-gold' : 'border-white/10 bg-white/5'}`}>
-                                                {isSelected && <Check size={14} strokeWidth={4} />}
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                                {myGroups.length === 0 && (
-                                    <p className="text-center text-white/20 text-xs italic py-10">Нет доступных групп</p>
-                                )}
-                            </div>
-
-                            <button
-                                disabled={selectedForwardGroups.length === 0 || isSending}
-                                onClick={handleForwardMessage}
-                                className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-3 ${selectedForwardGroups.length > 0 ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'}`}
-                            >
-                                {isSending ? (
-                                    <>
-                                        <Loader2 size={16} className="animate-spin" />
-                                        Отправка...
-                                    </>
-                                ) : (
-                                    <>
-                                        <ArrowRight size={16} />
-                                        Переслать ({selectedForwardGroups.length})
-                                    </>
-                                )}
-                            </button>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {/* Smart Forward Modal (Family, Teammates, Saved, Groups) */}
+            <SpartaForwardModal
+                isOpen={isForwardModalOpen}
+                onClose={() => {
+                    setIsForwardModalOpen(false);
+                    setForwardMessages([]);
+                    setSelectedForwardGroups([]);
+                }}
+                messagesToForward={forwardMessages}
+                currentUser={user}
+                currentUserProfile={userProfile}
+                currentGroupName={groupData?.chatTitle || groupName}
+                groupMembers={groupMembers}
+                myGroups={myGroups}
+            />
 
             {/* Context Menu */}
             <MessageContextMenu
                 contextMenu={contextMenu}
                 onClose={() => setContextMenu(null)}
                 userProfile={userProfile}
-                message={messages.find(m => m.id === contextMenu?.msgId)}
+                message={currentContextMessage}
                 currentUserId={user?.uid}
+                isSavedChat={groupData?.type === 'saved' || chatId?.startsWith('saved_')}
+                isPrivateChat={groupData?.type === 'private' || groupData?.isPrivate}
+                isChannel={groupData?.type === 'channel'}
+                isPinned={Boolean((groupData?.pinnedMessageId && groupData.pinnedMessageId === currentContextMessage?.id) || (pinnedMessage?.id && pinnedMessage.id === currentContextMessage?.id))}
                 onReaction={(msgId, key) => handleReaction(msgId, key)}
                 onReply={(msg) => setReplyTo({ id: msg.id, text: msg.text || (msg.mediaUrl ? "Медиа" : "Сообщение"), senderName: msg.senderName })}
+                onEdit={(msg) => {
+                    setEditingMessage({ id: msg.id, text: msg.text || '' });
+                    setNewMessage(msg.text || '');
+                    setReplyTo(null);
+                }}
                 onDiscuss={(msgId) => setFilterThreadId(msgId)}
                 onPin={(msgId) => handlePinMessage(msgId)}
                 onForward={(msg) => { setForwardMessages([msg]); setIsForwardModalOpen(true); }}
+                onSaveToFavorites={handleQuickSaveToFavorites}
                 onCopy={async (msg) => {
                     if (msg.mediaUrl && msg.mediaType === 'image') {
                         const success = await copyImageToClipboard(msg.mediaUrl);
@@ -3998,520 +5065,47 @@ const GroupChat: React.FC<GroupChatProps> = ({
                     const fileName = mediaUrl.split('/').pop()?.split('?')[0] || 'file';
                     await downloadFile(mediaUrl, fileName);
                 }}
+                onOpenMedia={(msg) => setSelectedMediaForLightbox(msg)}
             />
 
-            {/* Group Profile / Media Hub Overlay */}
+            {/* Group Profile / Media Hub Sidebar Drawer */}
             <AnimatePresence>
                 {showProfile && (
-                    <div className="absolute inset-0 z-50 flex justify-end">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowProfile(false)}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ x: '100%' }}
-                            animate={{ x: 0 }}
-                            exit={{ x: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="relative w-full max-w-[380px] bg-[#0f0f0f] border-l border-white/10 h-full overflow-y-auto shadow-2xl flex flex-col pt-20"
-                        >
-                            <div className="p-8 space-y-8">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-2xl font-russo text-white uppercase tracking-tight">
-                                        {selectedUserProfile ? 'Профиль участника' : 'О группе'}
-                                    </h3>
-                                    <button
-                                        onClick={() => {
-                                            if (selectedUserProfile && groupData?.type !== 'private') {
-                                                setSelectedUserProfile(null);
-                                            } else {
-                                                setShowProfile(false);
-                                            }
-                                        }}
-                                        className="p-2 hover:bg-white/5 rounded-full text-white/20 hover:text-white transition-all"
-                                    >
-                                        <X size={24} />
-                                    </button>
-                                </div>
-
-                                {selectedUserProfile ? (
-                                    <div className="flex flex-col space-y-8">
-                                        <div className="flex flex-col items-center text-center space-y-4">
-                                            <div className="w-32 h-32 rounded-[40px] bg-white/5 border-2 border-white/10 p-1">
-                                                <div className="w-full h-full rounded-[38px] overflow-hidden flex items-center justify-center bg-[#1a1a1a]">
-                                                    {(selectedUserProfile.photoURL || selectedUserProfile.avatarUrl) ? (
-                                                        <img src={selectedUserProfile.photoURL || selectedUserProfile.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <User className="text-white/20 w-16 h-16" />
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <h4 className="text-xl font-russo text-white uppercase tracking-tight mb-2">
-                                                    {selectedUserProfile.full_name || selectedUserProfile.childName || selectedUserProfile.email}
-                                                </h4>
-                                                <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
-                                                    <VerificationBadge role={selectedUserProfile.role} verification={selectedUserProfile.verification} />
-                                                    {selectedUserProfile.role && (
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-sparta-gold bg-sparta-gold/10 px-3 py-1 rounded-full border border-sparta-gold/20">
-                                                            {selectedUserProfile.role === 'admin' ? 'Администратор' : selectedUserProfile.role === 'developer' ? 'Разработчик' : selectedUserProfile.role === 'trainer' ? 'Тренер' : 'Студент'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-col gap-2 mt-4 text-left p-4 bg-white/5 rounded-2xl border border-white/10">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sparta-gold shrink-0"><Mail size={14} /></div>
-                                                        <div className="overflow-hidden">
-                                                            <div className="text-[10px] font-black uppercase tracking-widest text-muted mb-0.5">Email</div>
-                                                            <div className="text-xs text-white/90 truncate">{selectedUserProfile.email || 'Не указан'}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sparta-gold shrink-0"><Phone size={14} /></div>
-                                                        <div>
-                                                            <div className="text-[10px] font-black uppercase tracking-widest text-muted mb-0.5">Телефон</div>
-                                                            <div className="text-xs text-white/90">{selectedUserProfile.phone || 'Не указан'}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sparta-gold shrink-0"><History size={14} /></div>
-                                                        <div>
-                                                            <div className="text-[10px] font-black uppercase tracking-widest text-muted mb-0.5">Последний визит</div>
-                                                            <div className="text-xs text-white/90">{getUserStatus(selectedUserProfile.lastSeen)}</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {groupData?.type !== 'private' && selectedUserProfile.id !== user.uid && (
-                                            <button
-                                                onClick={() => {
-                                                    setShowProfile(false);
-                                                    handleStartPrivateChat(selectedUserProfile.id, selectedUserProfile.full_name || selectedUserProfile.childName || 'Участник');
-                                                }}
-                                                className="w-full py-3 bg-sparta-gold text-black rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:scale-[1.02] hover:shadow-lg hover:shadow-sparta-gold/20 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <MessageSquare size={16} /> Написать сообщение
-                                            </button>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <>
-                                        {/* Group Main Info */}
-                                        <div className="flex flex-col items-center text-center space-y-4">
-                                            <div className="relative group">
-                                                <div className="w-32 h-32 rounded-[40px] bg-white/5 border-2 border-white/10 p-1">
-                                                    <div className="w-full h-full rounded-[38px] overflow-hidden flex items-center justify-center bg-[#1a1a1a]">
-                                                        {groupData?.chatAvatarUrl ? (
-                                                            <img src={groupData.chatAvatarUrl} alt="" className="w-full h-full object-cover group-hover:opacity-50 transition-opacity" />
-                                                        ) : (
-                                                            <MessageSquare className={`text-sparta-gold ${canEditAvatar ? 'group-hover:opacity-50 transition-opacity' : ''}`} size={48} />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                {canEditAvatar && (
-                                                    <label className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity bg-black/40 rounded-[40px] border-2 border-sparta-gold">
-                                                        <div className="p-3 bg-sparta-gold rounded-full text-black mb-1 shadow-[0_0_15px_var(--tw-shadow-color)] shadow-sparta-gold/50">
-                                                            <Plus size={20} />
-                                                        </div>
-                                                        <span className="text-[10px] font-black text-white uppercase tracking-widest drop-shadow-md">Изменить</span>
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            onChange={async (e) => {
-                                                                const file = e.target.files?.[0];
-                                                                if (file && chatId) {
-                                                                    try {
-                                                                        const fileExt = file.name.split('.').pop();
-                                                                        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                                                                        const filePath = `avatars/${fileName}`;
-
-                                                                        const { error: uploadError } = await supabase.storage
-                                                                            .from('chat-media')
-                                                                            .upload(filePath, file);
-
-                                                                        if (uploadError) throw uploadError;
-
-                                                                        const { data: { publicUrl } } = supabase.storage
-                                                                            .from('chat-media')
-                                                                            .getPublicUrl(filePath);
-
-                                                                        await updateDoc(doc(db, 'chats', chatId), { chatAvatarUrl: publicUrl });
-                                                                    } catch (err) {
-                                                                        console.error("Avatar upload failed:", err);
-                                                                        alert("Ошибка при загрузке аватарки");
-                                                                    }
-                                                                }
-                                                            }}
-                                                        />
-                                                    </label>
-                                                )}
-                                            </div>
-                                            <div>
-                                                <h4 className="text-xl font-russo text-white uppercase tracking-tight mb-2">
-                                                    {groupData?.chatTitle || groupName}
-                                                </h4>
-                                                <div className="flex items-center justify-center gap-2 mb-4">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-sparta-gold bg-sparta-gold/10 px-3 py-1 rounded-full border border-sparta-gold/20">
-                                                        ID: {groupId?.slice(-6).toUpperCase()}
-                                                    </span>
-                                                    {groupData?.chatEnabled && (
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-green-500 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
-                                                            Активен
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-muted font-manrope leading-relaxed">
-                                                    {groupData?.chatDescription || 'Описание отсутствует. Тренер может добавить его в настройках группы.'}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Stats Grid */}
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div className="bg-white/5 border border-white/10 rounded-3xl p-3 text-center">
-                                                <div className="text-xl font-russo text-sparta-gold mb-0.5">{groupMembers.length}</div>
-                                                <div className="text-[8px] font-black uppercase tracking-widest text-white/20">Участников</div>
-                                            </div>
-                                            <div className="bg-white/5 border border-white/10 rounded-3xl p-3 text-center">
-                                                <div className="text-xl font-russo text-sparta-gold mb-0.5">{mediaItems.length}</div>
-                                                <div className="text-[8px] font-black uppercase tracking-widest text-white/20">Медиа</div>
-                                            </div>
-                                            <div className="bg-white/5 border border-white/10 rounded-3xl p-3 text-center">
-                                                <div className="text-xl font-russo text-sparta-gold mb-0.5">{fileItems.length + audioItems.length}</div>
-                                                <div className="text-[8px] font-black uppercase tracking-widest text-white/20">Файлы & Аудио</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Media Explorer Section */}
-                                        <div className="space-y-4">
-                                            <div className="flex flex-col gap-4">
-                                                <div className="flex items-center justify-between">
-                                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-muted flex items-center gap-2">
-                                                        <Grid size={12} /> Проводник медиа
-                                                    </h5>
-                                                    {filteredGalleryItems.length > 0 && (
-                                                        <button
-                                                            onClick={() => setIsGallerySelectMode(!isGallerySelectMode)}
-                                                            className={`text-[9px] font-black uppercase tracking-widest transition-colors ${isGallerySelectMode ? 'text-sparta-gold' : 'text-white/20 hover:text-white'}`}
-                                                        >
-                                                            {isGallerySelectMode ? 'Отмена' : 'Выбрать'}
-                                                        </button>
-                                                    )}
-                                                </div>
-
-                                                {/* Search Bar */}
-                                                <div className="relative">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Поиск в галерее..."
-                                                        value={gallerySearchQuery}
-                                                        onChange={(e) => setGallerySearchQuery(e.target.value)}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-10 pr-4 text-[11px] text-white focus:outline-none focus:border-sparta-gold/50 transition-all font-medium"
-                                                    />
-                                                </div>
-
-                                                {/* Tabs */}
-                                                <div className="flex items-center p-1 bg-white/5 rounded-2xl border border-white/10">
-                                                    {[
-                                                        { id: 'media', icon: ImageIcon, label: 'Медиа' },
-                                                        { id: 'files', icon: FileIcon, label: 'Файлы' },
-                                                        { id: 'audio', icon: Mic, label: 'Аудио' }
-                                                    ].map(tab => (
-                                                        <button
-                                                            key={tab.id}
-                                                            onClick={() => setActiveGalleryTab(tab.id as any)}
-                                                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeGalleryTab === tab.id ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-muted hover:text-white hover:bg-white/5'}`}
-                                                        >
-                                                            <tab.icon size={12} />
-                                                            <span className="hidden xs:block">{tab.label}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            <div className="min-h-[200px]">
-                                                {filteredGalleryItems.length === 0 ? (
-                                                    <div className="bg-white/5 border border-white/5 border-dashed rounded-3xl p-12 text-center text-white/10 space-y-3">
-                                                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto">
-                                                            <Search size={24} className="opacity-20" />
-                                                        </div>
-                                                        <p className="text-[10px] font-black uppercase tracking-widest">Ничего не найдено</p>
-                                                    </div>
-                                                ) : (
-                                                    <AnimatePresence mode="wait">
-                                                        <motion.div
-                                                            key={activeGalleryTab}
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            className="space-y-2"
-                                                        >
-                                                            {activeGalleryTab === 'media' ? (
-                                                                <div className="grid grid-cols-3 gap-2">
-                                                                    {filteredGalleryItems.map((m, idx) => {
-                                                                        const isSelected = selectedGalleryItems.includes(m.id);
-                                                                        return (
-                                                                            <div
-                                                                                key={idx}
-                                                                                onClick={() => {
-                                                                                    if (isGallerySelectMode) {
-                                                                                        setSelectedGalleryItems(prev =>
-                                                                                            prev.includes(m.id) ? prev.filter(id => id !== m.id) : [...prev, m.id]
-                                                                                        );
-                                                                                    } else {
-                                                                                        setSelectedMediaForLightbox(m);
-                                                                                    }
-                                                                                }}
-                                                                                className={`aspect-square rounded-xl bg-white/5 border overflow-hidden cursor-pointer group relative transform active:scale-95 transition-all ${isSelected ? 'border-sparta-gold ring-2 ring-sparta-gold/20' : 'border-white/10 hover:border-sparta-gold'}`}
-                                                                            >
-                                                                                {m.mediaType === 'image' ? (
-                                                                                    <img src={m.mediaUrl} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                                                ) : (
-                                                                                    <div className="w-full h-full flex items-center justify-center bg-black/40">
-                                                                                        <VideoIcon size={20} className="text-muted" />
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {isGallerySelectMode && (
-                                                                                    <div className="absolute top-2 right-2 z-10">
-                                                                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-sparta-gold border-sparta-gold shadow-lg shadow-sparta-gold/30' : 'bg-black/50 border-white/40'}`}>
-                                                                                            {isSelected && <Check size={12} className="text-black" />}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                )}
-
-                                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                                                    {!isGallerySelectMode && <PlusCircle size={14} className="text-sparta-gold" />}
-                                                                                </div>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            ) : (
-                                                                <div className="space-y-1">
-                                                                    {filteredGalleryItems.map((item, idx) => {
-                                                                        const isSelected = selectedGalleryItems.includes(item.id);
-                                                                        return (
-                                                                            <div
-                                                                                key={idx}
-                                                                                className={`group flex items-center gap-3 p-3 border rounded-2xl transition-all cursor-pointer ${isSelected ? 'bg-sparta-gold/20 border-sparta-gold' : 'bg-white/5 hover:bg-white/10 border-white/5'}`}
-                                                                                onClick={() => {
-                                                                                    if (isGallerySelectMode) {
-                                                                                        setSelectedGalleryItems(prev =>
-                                                                                            prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]
-                                                                                        );
-                                                                                    } else {
-                                                                                        window.open(item.mediaUrl, '_blank');
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                {isGallerySelectMode ? (
-                                                                                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-sparta-gold border-sparta-gold' : 'bg-white/10 border-white/20'}`}>
-                                                                                        {isSelected && <Check size={12} className="text-black" />}
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <div className="w-10 h-10 rounded-xl bg-sparta-gold/10 flex items-center justify-center text-sparta-gold group-hover:bg-sparta-gold group-hover:text-black transition-all">
-                                                                                        {activeGalleryTab === 'files' ? <FileIcon size={18} /> : <div className="animate-pulse-slow"><Mic size={18} /></div>}
-                                                                                    </div>
-                                                                                )}
-                                                                                <div className="flex-1 overflow-hidden">
-                                                                                    <p className="text-[11px] font-bold text-white/80 truncate uppercase tracking-tight">
-                                                                                        {item.text || (activeGalleryTab === 'files' ? 'Документ' : 'Голосовое сообщение')}
-                                                                                    </p>
-                                                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                                                        <span className="text-[8px] font-black uppercase tracking-widest text-white/20">{item.senderName}</span>
-                                                                                        <span className="text-[8px] text-white/10">•</span>
-                                                                                        <span className="text-[8px] font-black uppercase tracking-widest text-white/20">
-                                                                                            {item.timestamp?.seconds ? format(new Date(item.timestamp.seconds * 1000), 'dd.MM.yy') : ''}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                </div>
-                                                                                {!isGallerySelectMode && <Download size={14} className="text-white/20 group-hover:text-sparta-gold transition-colors" />}
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            )}
-                                                        </motion.div>
-                                                    </AnimatePresence>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Multi-select Actions Bar */}
-                                        <AnimatePresence>
-                                            {selectedGalleryItems.length > 0 && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 20 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: 20 }}
-                                                    className="sticky bottom-4 left-0 right-0 p-3 bg-sparta-gold rounded-3xl flex items-center justify-between shadow-2xl shadow-sparta-gold/40 z-20 mx-2"
-                                                >
-                                                    <div className="flex items-center gap-3 px-2">
-                                                        <span className="w-6 h-6 rounded-full bg-black text-sparta-gold flex items-center justify-center text-[10px] font-bold">
-                                                            {selectedGalleryItems.length}
-                                                        </span>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-black">Выбрано</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <button
-                                                            onClick={() => {
-                                                                const itemsToForward = allMediaMessages.filter(m => selectedGalleryItems.includes(m.id));
-                                                                setForwardMessages(itemsToForward);
-                                                                setIsForwardModalOpen(true);
-                                                            }}
-                                                            className="p-2.5 rounded-2xl hover:bg-black/10 text-black transition-colors"
-                                                            title="Переслать"
-                                                        >
-                                                            <Forward size={18} />
-                                                        </button>
-                                                        {(isAdmin || isTrainer) && (
-                                                            <button
-                                                                onClick={async () => {
-                                                                    if (window.confirm(`Удалить ${selectedGalleryItems.length} выбранных файлов?`)) {
-                                                                        const idsToDelete = [...selectedGalleryItems];
-                                                                        // Use the existing setSelectedMessages to trigger batch delete
-                                                                        const oldSelected = [...selectedMessages];
-                                                                        setSelectedMessages(idsToDelete);
-                                                                        await handleBatchDelete();
-                                                                        setSelectedMessages(oldSelected);
-                                                                        setSelectedGalleryItems([]);
-                                                                        setIsGallerySelectMode(false);
-                                                                    }
-                                                                }}
-                                                                className="p-2.5 rounded-2xl hover:bg-red-500 hover:text-white text-black transition-colors"
-                                                                title="Удалить"
-                                                            >
-                                                                <Trash2 size={18} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                        <div className="space-y-4 pb-10">
-                                            <div className="flex items-center justify-between">
-                                                <h5 className="text-[10px] font-black uppercase tracking-widest text-muted">Участники</h5>
-                                                {isUnifiedChat && (
-                                                    <button
-                                                        onClick={() => setIsAddParticipantOpen(true)}
-                                                        className="p-1 px-2 bg-sparta-gold/10 text-sparta-gold rounded-lg border border-sparta-gold/20 flex items-center gap-1.5 hover:bg-sparta-gold hover:text-black transition-all group"
-                                                    >
-                                                        <Plus size={12} className="group-hover:scale-125 transition-transform" />
-                                                        <span className="text-[9px] font-black uppercase tracking-tighter">Добавить</span>
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="space-y-3">
-                                                {groupMembers.slice(0, 20).map((member, idx) => {
-                                                    const status = getUserStatus(member.lastSeen);
-                                                    const isOnline = status === 'в сети' || member.id === user.uid;
-                                                    const roleBadge = getRoleBadge(member);
-
-                                                    return (
-                                                        <div
-                                                            key={idx}
-                                                            className="flex items-center gap-3 bg-white/[0.02] p-3 rounded-2xl border border-white/[0.05] group/member relative cursor-pointer hover:bg-white/5 transition-all"
-                                                            onClick={(e) => {
-                                                                if (member.id !== user.uid) {
-                                                                    setSelectedUserProfile(member);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <div className="relative">
-                                                                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
-                                                                    {(member.photoURL || member.avatarUrl) ? (
-                                                                        <img src={member.photoURL || member.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        <User className="w-full h-full p-2 text-white/10" />
-                                                                    )}
-                                                                </div>
-                                                                {(member.lastSeen || member.id === user.uid) && (
-                                                                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0f0f0f] ${isOnline ? 'bg-green-500' : 'bg-white/10'}`} />
-                                                                )}
-                                                            </div>
-                                                            <div className="flex-1 overflow-hidden">
-                                                                <div className="flex items-center gap-1">
-                                                                    <p className="text-xs font-bold text-white/80 truncate">
-                                                                        {member.id === user.uid ? 'Вы' : (member.full_name || member.childName || 'Участник')}
-                                                                    </p>
-                                                                    <VerificationBadge role={member.role} verification={member.verification} />
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                                    <p className={`text-[9px] font-black uppercase tracking-widest truncate ${isOnline ? 'text-green-500/80 shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'text-white/20'}`}>
-                                                                        {isOnline ? 'в сети' : status}
-                                                                    </p>
-                                                                    {roleBadge && (
-                                                                        <>
-                                                                            <span className="text-white/10 text-[8px]">•</span>
-                                                                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${roleBadge.bg} ${roleBadge.color} border border-white/5`}>
-                                                                                <roleBadge.icon size={8} />
-                                                                                <span className="text-[7px] font-black uppercase tracking-tighter whitespace-nowrap">{roleBadge.label}</span>
-                                                                            </div>
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="flex items-center gap-1 opacity-0 group-hover/member:opacity-100 transition-all transform translate-x-2 group-hover/member:translate-x-0">
-                                                                {isOwner && member.id !== user.uid && (
-                                                                    <>
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleTransferOwnership(member.id, member.full_name || member.childName || 'Участник');
-                                                                            }}
-                                                                            className="p-2 bg-amber-400/10 text-amber-400 rounded-xl hover:bg-amber-400 hover:text-black transition-all"
-                                                                            title="Сделать владельцем"
-                                                                        >
-                                                                            <Crown size={12} />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleKickParticipant(member.id, member.full_name || member.childName || 'Участник');
-                                                                            }}
-                                                                            className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
-                                                                            title="Исключить"
-                                                                        >
-                                                                            <UserMinus size={12} />
-                                                                        </button>
-                                                                    </>
-                                                                )}
-
-                                                                {member.id !== user.uid && (
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleStartPrivateChat(member.id, member.full_name || member.childName || 'Участник');
-                                                                        }}
-                                                                        className="p-2 bg-sparta-gold/10 text-sparta-gold rounded-xl hover:bg-sparta-gold hover:text-black transition-all"
-                                                                        title="Написать"
-                                                                    >
-                                                                        <MessageSquare size={12} />
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                                {groupMembers.length > 20 && (
-                                                    <p className="text-[10px] text-center text-white/20 font-bold uppercase tracking-widest pt-2">
-                                                        и еще {groupMembers.length - 20} участников
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
+                    <ChatProfileDrawer
+                        isOpen={showProfile}
+                        onClose={() => {
+                            setShowProfile(false);
+                            setSelectedUserProfile(null);
+                        }}
+                        groupData={groupData}
+                        groupId={groupId}
+                        chatId={chatId}
+                        groupName={groupName}
+                        currentUser={user}
+                        currentUserProfile={userProfile}
+                        selectedUserProfile={selectedUserProfile}
+                        setSelectedUserProfile={setSelectedUserProfile}
+                        groupMembers={groupMembers}
+                        allMediaMessages={allMediaMessages}
+                        isMuted={isChatMuted}
+                        onToggleMute={toggleChatMute}
+                        onStartPrivateChat={(targetId, targetName) => {
+                            setShowProfile(false);
+                            handleStartPrivateChat(targetId, targetName);
+                        }}
+                        onOpenMediaLightbox={(media) => setSelectedMediaForLightbox(media)}
+                        onScrollToMessage={(targetMsgId) => {
+                            setShowProfile(false);
+                            setTimeout(() => scrollToMessage(targetMsgId), 150);
+                        }}
+                        onAddParticipant={isUnifiedChat ? () => setIsAddParticipantOpen(true) : undefined}
+                        onKickParticipant={(targetId, targetName) => handleKickParticipant(targetId, targetName)}
+                        onTransferOwnership={(targetId, targetName) => handleTransferOwnership(targetId, targetName)}
+                        onLeaveGroup={handleLeaveGroup}
+                        getUserStatus={getUserStatus}
+                        getRoleBadge={getRoleBadge}
+                        VerificationBadge={VerificationBadge}
+                    />
                 )}
             </AnimatePresence>
 
@@ -4583,55 +5177,33 @@ const GroupChat: React.FC<GroupChatProps> = ({
                 )}
             </AnimatePresence>
 
-            {/* Media Lightbox */}
-            <AnimatePresence>
-                {selectedMediaForLightbox && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="relative w-full max-w-5xl aspect-video flex items-center justify-center"
-                        >
-                            <button
-                                onClick={() => setSelectedMediaForLightbox(null)}
-                                className="absolute -top-12 right-0 p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-white transition-all shadow-xl"
-                            >
-                                <X size={24} />
-                            </button>
-
-                            <div className="w-full h-full flex items-center justify-center bg-[#050505] rounded-[40px] overflow-hidden border border-white/10 shadow-2xl relative">
-                                {selectedMediaForLightbox.mediaType === 'image' ? (
-                                    <img
-                                        src={selectedMediaForLightbox.mediaUrl}
-                                        className="max-w-full max-h-full object-contain"
-                                        alt=""
-                                    />
-                                ) : (
-                                    <video
-                                        src={selectedMediaForLightbox.mediaUrl}
-                                        controls
-                                        autoPlay
-                                        className="max-w-full max-h-full"
-                                    />
-                                )}
-
-                                <div className="absolute bottom-8 left-8 p-6 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <p className="text-sm font-russo uppercase tracking-widest text-sparta-gold">
-                                            {selectedMediaForLightbox.senderName}
-                                        </p>
-                                        <VerificationBadge role={selectedMediaForLightbox.senderRole} verification={selectedMediaForLightbox.senderVerification} />
-                                    </div>
-                                    <p className="text-[10px] text-secondary font-manrope font-bold uppercase tracking-widest">
-                                        {format(selectedMediaForLightbox.timestamp?.toDate() || new Date(), 'd MMMM yyyy, HH:mm', { locale: ru })}
-                                    </p>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {/* Sparta Media Gallery Modal */}
+            <SpartaMediaGalleryModal
+                isOpen={!!selectedMediaForLightbox}
+                onClose={() => setSelectedMediaForLightbox(null)}
+                initialItem={selectedMediaForLightbox}
+                allMediaItems={allGalleryMediaItems}
+                onReply={(item) => {
+                    setReplyTo({
+                        id: item.id,
+                        text: item.text || (item.mediaType === 'video' ? "📹 Видео" : "📷 Фото"),
+                        senderName: item.senderName || "Спарта"
+                    });
+                    setSelectedMediaForLightbox(null);
+                    setTimeout(() => {
+                        const input = document.querySelector('textarea') as HTMLTextAreaElement;
+                        input?.focus();
+                    }, 150);
+                }}
+                onForward={(item) => {
+                    const originalMsg = messages.find(m => m.id === item.id) || item;
+                    setForwardMessages([originalMsg]);
+                    setSelectedMediaForLightbox(null);
+                    setIsForwardModalOpen(true);
+                }}
+                onDelete={(itemId) => handleDeleteMessage(itemId)}
+                canDelete={['admin', 'director', 'developer', 'coach', 'trainer'].includes((userProfile?.role || '').toLowerCase()) || selectedMediaForLightbox?.senderId === user?.uid}
+            />
 
 
             {/* Schedule Modal */}
@@ -4859,6 +5431,14 @@ const GroupChat: React.FC<GroupChatProps> = ({
                 isUnifiedChat={isUnifiedChat}
                 user={user}
                 userProfile={userProfile}
+            />
+
+            {/* Coach & Admin Announcement Modal */}
+            <AnnouncementModal
+                isOpen={isAnnouncementModalOpen}
+                onClose={() => setIsAnnouncementModalOpen(false)}
+                onSendAnnouncement={handleSendAnnouncement}
+                isSending={isSending}
             />
         </div>
     );

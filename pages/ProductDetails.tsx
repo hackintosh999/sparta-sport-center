@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Star, ShoppingBag, Share2, Heart, ChevronLeft, ChevronRight, Check, AlertCircle, Trash2, Edit2, MessageCircle, MessageSquarePlus, ThumbsUp, X, Camera, Video as VideoIcon, Play, Tag, Loader2, ShoppingCart, Clock, MapPin, ShieldCheck, Ruler, ChevronDown, ChevronUp, Sparkles, Flame, Zap, HelpCircle, Award, CheckCircle2, CreditCard, Layers, Eye, Pin, Reply, Mic, Square, RotateCcw, RotateCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Star, ShoppingBag, Share2, Heart, ChevronLeft, ChevronRight, Check, AlertCircle, Trash2, Edit2, MessageCircle, MessageSquarePlus, ThumbsUp, X, Camera, Video as VideoIcon, Play, Tag, Loader2, ShoppingCart, Clock, MapPin, ShieldCheck, Ruler, ChevronDown, ChevronUp, Sparkles, Flame, Zap, HelpCircle, Award, CheckCircle2, CreditCard, Layers, Eye, Pin, Reply, Mic, Square, RotateCcw, RotateCw, Sliders, Info } from 'lucide-react';
 import { db, storage } from '../firebase';
 import { supabase } from '../supabase';
 import { doc, getDoc, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy, updateDoc, deleteDoc, arrayUnion, arrayRemove, getDocs, deleteField } from 'firebase/firestore';
@@ -118,19 +118,35 @@ const ProductDetails = () => {
     });
     const [fitStyle, setFitStyle] = useState('Стандарт');
     const [isCustomMeasurementsOpen, setIsCustomMeasurementsOpen] = useState(false);
-    const [activeDetailsTab, setActiveDetailsTab] = useState<'info' | 'specs' | 'reviews'>('info');
-    const [openAccordion, setOpenAccordion] = useState<'info' | 'specs' | 'reviews' | null>(null);
+    const [activeDetailsTab, setActiveDetailsTab] = useState<'specs' | 'reviews' | 'delivery'>('specs');
+    const [openAccordion, setOpenAccordion] = useState<'specs' | 'reviews' | 'delivery' | null>(null);
     const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
+    const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false);
+    const [isReviewsDrawerOpen, setIsReviewsDrawerOpen] = useState(false);
+    const [isQuickSizeOpen, setIsQuickSizeOpen] = useState(false);
+    const [isAddedSuccess, setIsAddedSuccess] = useState(false);
     const [reviews, setReviews] = useState<Review[]>([]);
     const { toggleFavorite, isFavorite } = useFavorites();
     const { addToCart, setIsCartOpen, cartCount, showToast } = useCart();
     const [sizeCharts, setSizeCharts] = useState<SizeChart[]>([]);
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
+    const relatedScrollRef = useRef<HTMLDivElement>(null);
 
     const scrollToSection = (sectionId: string) => {
         const el = document.getElementById(sectionId);
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+    };
+
+    const calculateTotalStock = (p: Product | null) => {
+        if (!p) return 0;
+        if (p.isMadeToOrder) return 999;
+        if (typeof p.stock === 'number') return p.stock;
+        if (typeof p.stock === 'object' && p.stock !== null) {
+            return Object.values(p.stock as Record<string, number>).reduce((a: number, b: number) => a + (Number(b) || 0), 0);
+        }
+        return 0;
     };
 
     // Real-time Average Rating calculation
@@ -416,6 +432,61 @@ const ProductDetails = () => {
         return () => unsubscribe();
     }, [user]);
 
+    // Real-time Child Profile Sync for 1-Click Fill
+    const [linkedChildren, setLinkedChildren] = useState<Array<{ id: string; name: string; lastName: string; number?: string }>>([]);
+
+    useEffect(() => {
+        if (!user || !userProfile) {
+            setLinkedChildren([]);
+            return;
+        }
+
+        const directChildren: Array<{ id: string; name: string; lastName: string; number?: string }> = [];
+
+        // 1. Direct fields in userProfile (if student profile or single child parent)
+        const profileLastName = (userProfile.childLastName || userProfile.lastName || userProfile.displayName?.split(' ')?.[0] || userProfile.childName?.split(' ')?.[0] || '').trim().toUpperCase();
+        const profileFirstName = (userProfile.childFirstName || userProfile.firstName || userProfile.displayName?.split(' ')?.[1] || userProfile.childName?.split(' ')?.[1] || '').trim();
+        if (profileLastName && !['ADMIN', 'DIRECTOR', 'TRAINER', 'COACH'].includes(profileLastName)) {
+            directChildren.push({
+                id: user.uid,
+                name: profileFirstName ? `${profileLastName} ${profileFirstName}` : profileLastName,
+                lastName: profileLastName,
+                number: userProfile.customNumber || userProfile.jerseyNumber || userProfile.gameNumber || ''
+            });
+        }
+
+        // 2. Parent's linked children via childrenIds
+        const childIds: string[] = Array.from(new Set(userProfile.childrenIds || []));
+        if (childIds.length > 0) {
+            const unsubscribes = childIds.map((cId: string) => {
+                return onSnapshot(doc(db, 'users', cId), (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        const lName = (data.childLastName || data.lastName || data.displayName?.split(' ')?.[0] || data.childName?.split(' ')?.[0] || '').trim().toUpperCase();
+                        const fName = (data.childFirstName || data.firstName || data.displayName?.split(' ')?.[1] || data.childName?.split(' ')?.[1] || '').trim();
+                        if (lName) {
+                            const newChild = {
+                                id: cId,
+                                name: fName ? `${lName} ${fName}` : lName,
+                                lastName: lName,
+                                number: data.customNumber || data.jerseyNumber || data.gameNumber || ''
+                            };
+                            setLinkedChildren(prev => {
+                                const withoutCurrent = prev.filter(c => c.id !== cId);
+                                return [...withoutCurrent, newChild];
+                            });
+                        }
+                    }
+                });
+            });
+            return () => {
+                unsubscribes.forEach(unsub => unsub());
+            };
+        } else if (directChildren.length > 0) {
+            setLinkedChildren(directChildren);
+        }
+    }, [user, userProfile]);
+
     // Auto-apply saved promo code
     useEffect(() => {
         if (!appliedPromo && !promoCode && userProfile && id && user) {
@@ -456,6 +527,24 @@ const ProductDetails = () => {
     useEffect(() => {
         if (!id) return;
 
+        // Reset all product-specific states when switching between products
+        setProduct(null);
+        setSelectedImage(null);
+        setSelectedSize(null);
+        setSelectedColor(null);
+        setCustomName('');
+        setCustomNumber('');
+        setMeasurements({
+            height: '', chest: '', shoulders: '', sleeve: '', waist: '', hips: '', length: ''
+        });
+        setAppliedPromo(null);
+        setPromoCode('');
+        setPromoError('');
+        setIsDescriptionModalOpen(false);
+        setIsReviewsDrawerOpen(false);
+        setIsSizeChartOpen(false);
+        window.scrollTo({ top: 0, behavior: 'instant' });
+
         const fetchProduct = () => {
             const docRef = doc(db, 'products', id);
             const unsubscribeProduct = onSnapshot(docRef, (docSnap) => {
@@ -466,7 +555,7 @@ const ProductDetails = () => {
                         return;
                     }
                     setProduct({ id: docSnap.id, ...data });
-                    if (!selectedImage) setSelectedImage(data.imageUrl);
+                    setSelectedImage(data.imageUrl || null);
                 } else {
                     console.error("No such product!");
                 }
@@ -481,11 +570,9 @@ const ProductDetails = () => {
         const unsubscribeProduct = fetchProduct();
 
         // Real-time reviews listener
-        // Removed orderBy to avoid index creation requirement for now. Sorting client-side.
         const q = query(collection(db, 'reviews'), where('productId', '==', id));
         const unsubscribeReviews = onSnapshot(q, (snapshot) => {
             const loadedReviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
-            // Sort client-side
             loadedReviews.sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
             setReviews(loadedReviews);
         });
@@ -494,7 +581,7 @@ const ProductDetails = () => {
             unsubscribeProduct();
             unsubscribeReviews();
         };
-    }, [id]);
+    }, [id, navigate]);
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'size_charts'), (snapshot) => {
@@ -503,6 +590,54 @@ const ProductDetails = () => {
         });
         return () => unsubscribe();
     }, []);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, 'products'), (snapshot) => {
+            const list = snapshot.docs
+                .map(d => ({ id: d.id, ...d.data() } as Product))
+                .filter(p => !p.isHidden);
+            setAllProducts(list);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    // 1. Related Products (Same category, alternating kits, hits)
+    const relatedProducts = useMemo(() => {
+        if (!product || allProducts.length === 0) return [];
+        const sameCategory = allProducts.filter(p => p.id !== product.id && p.category === product.category);
+        const otherHits = allProducts.filter(p => p.id !== product.id && p.category !== product.category && (p.badges?.includes('hit') || p.badges?.includes('new')));
+        const combined = [...sameCategory, ...otherHits];
+        if (combined.length < 4) {
+            const remaining = allProducts.filter(p => p.id !== product.id && !combined.some(c => c.id === p.id));
+            combined.push(...remaining);
+        }
+        return combined.slice(0, 8);
+    }, [product, allProducts]);
+
+    // 2. Companion Bundle Items (Accessories: Gaiters, Bag, Beanie, Shinguards, Bottle)
+    const bundleItems = useMemo(() => {
+        if (!product || allProducts.length === 0) return [];
+        const keywords = ['гетр', 'рюкзак', 'шапк', 'снуд', 'щитк', 'бутылк', 'мешок', 'перчатк'];
+        return allProducts.filter(p => {
+            if (p.id === product.id) return false;
+            const titleLow = p.title.toLowerCase();
+            const isAccessory = p.category === 'Аксессуары' || p.category === 'Сувениры';
+            const matchesKeyword = keywords.some(kw => titleLow.includes(kw));
+            return isAccessory || matchesKeyword;
+        }).slice(0, 4);
+    }, [product, allProducts]);
+
+    const displayedReviews = useMemo(() => {
+        let list = optimisticReview ? [optimisticReview, ...reviews.filter(r => r.id !== optimisticReview.id)] : [...reviews];
+        if (reviewFilter === 'media') {
+            list = list.filter(r => (r.photos && r.photos.length > 0) || r.video || r.audio);
+        } else if (reviewFilter === 'pinned') {
+            list = list.filter(r => r.isPinned);
+        } else if (reviewFilter === 'staff') {
+            list = list.filter(r => (r.staffLikes && r.staffLikes.length > 0) || r.userRole === 'admin' || r.userRole === 'trainer' || r.userRole === 'director');
+        }
+        return [...list].sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+    }, [reviews, optimisticReview, reviewFilter]);
 
     const matchingChart = useMemo(() => {
         if (!product) return null;
@@ -1213,41 +1348,6 @@ const ProductDetails = () => {
                                 ))}
                             </div>
                         )}
-
-                        {/* Dynamic Characteristics (Configured by Admin in Admin Panel) */}
-                        {((product.specifications && Object.keys(product.specifications).length > 0) || product.description) && (
-                            <div id="specs-section" className="bg-white/[0.02] border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3">
-                                <h4 className="font-russo uppercase text-xs text-yellow-400 tracking-wider flex items-center gap-2 pb-2 border-b border-white/5">
-                                    <ShieldCheck size={15} className="text-yellow-500" />
-                                    Характеристики {product.category?.toLowerCase() === 'форма' ? 'формы' : 'товара'}
-                                </h4>
-                                {product.specifications && Object.keys(product.specifications).length > 0 ? (
-                                    <ul className="space-y-2 text-xs">
-                                        {Object.entries(product.specifications).map(([key, value], idx) => {
-                                            const colors = [
-                                                'bg-yellow-500',
-                                                'bg-emerald-400',
-                                                'bg-blue-400',
-                                                'bg-purple-400',
-                                                'bg-orange-400',
-                                                'bg-amber-400'
-                                            ];
-                                            const dotColor = colors[idx % colors.length];
-                                            return (
-                                                <li key={key} className="flex items-start gap-2 text-gray-300 leading-relaxed">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${dotColor} mt-1.5 flex-shrink-0`} />
-                                                    <span><strong className="text-white">{key}:</strong> {value}</span>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                ) : (
-                                    <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-line">
-                                        {product.description}
-                                    </p>
-                                )}
-                            </div>
-                        )}
                     </div>
 
                     {/* Right: Info & Modern Focused E-Commerce Flow (7 cols) */}
@@ -1276,104 +1376,233 @@ const ProductDetails = () => {
                             )}
                         </AnimatePresence>
 
-                        {/* 1. Header: Quick Trust Badges */}
+                        {/* 1. Header: Interactive Quick Info Pills */}
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-[10px] sm:text-[11px] font-bold border border-emerald-500/20 uppercase flex items-center gap-1.5">
-                                <CheckCircle2 size={12} /> В наличии в клубе
-                            </span>
-
-                            {/* Reviews Quick Link */}
-                            {reviews.length > 0 ? (
-                                <button
-                                    type="button"
-                                    onClick={() => scrollToSection('reviews-section')}
-                                    className="px-2.5 py-1 bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-300 rounded-lg text-[10px] sm:text-[11px] font-bold border border-yellow-500/30 uppercase flex items-center gap-1.5 transition-all cursor-pointer group"
-                                >
-                                    <Star size={12} className="fill-yellow-400 text-yellow-400 group-hover:scale-110 transition-transform" />
-                                    <span>{averageRating.toFixed(1)} ★ ({getPluralReviews(reviews.length)})</span>
-                                </button>
-                            ) : (
+                            {/* Dynamic Stock / Availability Badge */}
+                            {product.isMadeToOrder ? (
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        scrollToSection('reviews-section');
-                                        setIsReviewFormOpen(true);
+                                        setOpenAccordion(prev => prev === 'delivery' ? null : 'delivery');
+                                        scrollToSection('details-accordion-section');
                                     }}
-                                    className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-yellow-400 rounded-lg text-[10px] sm:text-[11px] font-bold border border-white/10 hover:border-yellow-500/30 uppercase flex items-center gap-1.5 transition-all cursor-pointer group"
+                                    className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl text-xs font-bold border border-amber-500/30 uppercase flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                                 >
-                                    <MessageSquarePlus size={12} className="text-yellow-500/70 group-hover:text-yellow-400" />
-                                    <span>Пока нет отзывов · Написать</span>
+                                    <Sparkles size={13} className="text-amber-400" />
+                                    <span>Пошив под заказ: {product.productionTime || '3–5 дней'}</span>
                                 </button>
+                            ) : selectedSize && product.stock?.[selectedSize] !== undefined ? (
+                                product.stock[selectedSize] === 0 ? (
+                                    <span className="px-3 py-1.5 bg-red-500/10 text-red-400 rounded-xl text-xs font-bold border border-red-500/20 uppercase flex items-center gap-1.5 shadow-sm">
+                                        <AlertCircle size={13} /> Размер {selectedSize} раскуплен
+                                    </span>
+                                ) : product.stock[selectedSize] <= (product.lowStockThreshold || 3) ? (
+                                    <span className="px-3 py-1.5 bg-amber-500/15 text-amber-400 rounded-xl text-xs font-bold border border-amber-500/30 uppercase flex items-center gap-1.5 shadow-sm animate-pulse">
+                                        <Flame size={13} className="fill-amber-400" />
+                                        <span>Размер {selectedSize}: осталось {product.stock[selectedSize]} шт.</span>
+                                    </span>
+                                ) : (
+                                    <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-xl text-xs font-bold border border-emerald-500/20 uppercase flex items-center gap-1.5 shadow-sm">
+                                        <CheckCircle2 size={13} /> Размер {selectedSize}: в наличии {product.stock[selectedSize]} шт.
+                                    </span>
+                                )
+                            ) : (
+                                (() => {
+                                    const total = calculateTotalStock(product);
+                                    if (total === 0) {
+                                        return (
+                                            <span className="px-3 py-1.5 bg-red-500/10 text-red-400 rounded-xl text-xs font-bold border border-red-500/20 uppercase flex items-center gap-1.5 shadow-sm">
+                                                <AlertCircle size={13} /> Нет в наличии
+                                            </span>
+                                        );
+                                    }
+                                    if (total <= 5) {
+                                        return (
+                                            <span className="px-3 py-1.5 bg-amber-500/15 text-amber-400 rounded-xl text-xs font-bold border border-amber-500/30 uppercase flex items-center gap-1.5 shadow-sm animate-pulse">
+                                                <Flame size={13} className="fill-amber-400" />
+                                                <span>Осталось всего: {total} шт.</span>
+                                            </span>
+                                        );
+                                    }
+                                    return (
+                                        <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-xl text-xs font-bold border border-emerald-500/20 uppercase flex items-center gap-1.5 shadow-sm">
+                                            <CheckCircle2 size={13} /> В наличии: {total} шт.
+                                        </span>
+                                    );
+                                })()
                             )}
 
-                            {/* Specs Quick Link */}
+                            {/* ℹ️ О ткани и комплекте (Opens rich sheet modal) */}
                             <button
                                 type="button"
-                                onClick={() => scrollToSection('specs-section')}
-                                className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-lg text-[10px] sm:text-[11px] font-bold border border-white/10 uppercase flex items-center gap-1.5 transition-all cursor-pointer"
+                                onClick={() => setIsDescriptionModalOpen(true)}
+                                className="px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded-xl text-xs font-bold border border-yellow-500/30 uppercase flex items-center gap-1.5 transition-all cursor-pointer group shadow-sm"
                             >
-                                <ShieldCheck size={12} className="text-yellow-500" />
-                                <span>Характеристики</span>
+                                <Info size={13} className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                                <span>О ткани и комплекте</span>
                             </button>
 
-                            <span className="px-2.5 py-1 bg-yellow-500/10 text-yellow-400 rounded-lg text-[10px] sm:text-[11px] font-russo tracking-wider border border-yellow-500/30 uppercase flex items-center gap-1.5">
-                                <Award size={12} /> {product.category}
-                            </span>
+                            {/* Reviews Quick Link (Opens sleek drawer) */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (reviews.length === 0) {
+                                        setIsReviewFormOpen(true);
+                                    }
+                                    setIsReviewsDrawerOpen(true);
+                                }}
+                                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-yellow-400 rounded-xl text-xs font-bold border border-white/10 hover:border-yellow-500/30 uppercase flex items-center gap-1.5 transition-all cursor-pointer group shadow-sm"
+                            >
+                                <Star size={13} className="fill-yellow-400 text-yellow-400 group-hover:scale-110 transition-transform" />
+                                <span>{reviews.length > 0 ? `${averageRating.toFixed(1)} ★ (${getPluralReviews(reviews.length)})` : 'Отзывы (0)'}</span>
+                            </button>
                         </div>
 
-                        {/* Title & Price (Clean & Airy, No Bulky Boxes) */}
+                        {/* Title & Price & Promo */}
                         <div>
-                            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-russo uppercase text-white mb-2 sm:mb-3 tracking-tight leading-tight">
+                            {/* Category Overtitle */}
+                            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-yellow-500/80 uppercase tracking-widest mb-1.5">
+                                <Award size={13} className="text-yellow-500" />
+                                <span>Экипировка Sparta • {product.category}</span>
+                            </div>
+
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-russo uppercase tracking-wider text-white mb-2 leading-tight">
                                 {product.title}
                             </h1>
 
-                            <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
-                                <span className="text-3xl sm:text-5xl font-russo font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-500 drop-shadow-[0_0_20px_rgba(234,179,8,0.25)]">
-                                    {(appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price).toLocaleString()} ₽
-                                </span>
-                                {product.oldPrice && product.oldPrice > product.price && (
-                                    <span className="line-through text-gray-500 font-mono text-base sm:text-xl">
-                                        {product.oldPrice.toLocaleString()} ₽
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <div className="flex items-baseline gap-3 flex-wrap">
+                                    <span className="text-2xl sm:text-3xl font-russo text-yellow-400 font-bold">
+                                        {(appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price).toLocaleString()} ₽
                                     </span>
+                                    {Boolean(product.oldPrice && product.oldPrice > product.price) && (
+                                        <span className="text-base sm:text-lg text-gray-500 line-through font-russo">
+                                            {product.oldPrice.toLocaleString()} ₽
+                                        </span>
+                                    )}
+                                    {appliedPromo && (
+                                        <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-black rounded-md flex items-center gap-1">
+                                            <Check size={12} /> -{appliedPromo.value}%
+                                        </span>
+                                    )}
+                                </div>
+
+                                {!appliedPromo && !showPromoInput && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPromoInput(true)}
+                                        className="text-xs text-gray-400 hover:text-yellow-400 font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10"
+                                    >
+                                        <Tag size={12} className="text-yellow-500" />
+                                        <span>Промокод</span>
+                                    </button>
                                 )}
-                                {appliedPromo && (
-                                    <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-black rounded-md">
-                                        -{appliedPromo.value}%
-                                    </span>
-                                )}
-                                {product.oldPrice && product.oldPrice > product.price && (
-                                    <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs font-black rounded-md">
-                                        -{Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}%
-                                    </span>
-                                )}
-                                <span className="text-xs text-gray-400 flex items-center gap-1.5">
-                                    • или по <strong className="text-white font-bold">{Math.round((appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price) / 4).toLocaleString()} ₽</strong> × 4 платежа в <span className="text-yellow-400 font-bold">Долями</span> (0% переплат)
-                                </span>
                             </div>
+
+                            {/* Promo Code Inline Drawer */}
+                            <AnimatePresence>
+                                {appliedPromo ? (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="p-2.5 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between mt-2.5"
+                                    >
+                                        <div className="flex items-center gap-2 text-green-400">
+                                            <Check size={14} />
+                                            <div className="text-xs font-bold">
+                                                Промокод <span className="font-mono text-green-300">{appliedPromo.code}</span> (-{appliedPromo.value}%) применен!
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAppliedPromo(null)}
+                                            className="text-green-500/60 hover:text-green-400 p-1 cursor-pointer"
+                                            title="Отменить промокод"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </motion.div>
+                                ) : showPromoInput ? (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="flex items-start gap-2 mt-2.5"
+                                    >
+                                        <div className="flex-1">
+                                            <div className="relative">
+                                                <Tag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                                                <input
+                                                    type="text"
+                                                    value={promoCode}
+                                                    onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                                                    placeholder="ВВЕДИТЕ ПРОМОКОД"
+                                                    className={`w-full bg-[#181818] border ${promoError ? 'border-red-500/50' : 'border-white/10'} rounded-xl py-2 pl-8 pr-3 text-white uppercase font-mono tracking-widest text-xs focus:border-yellow-500 outline-none`}
+                                                />
+                                            </div>
+                                            {promoError && <p className="text-red-400 text-[10px] mt-1 ml-1 font-bold">{promoError}</p>}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={applyPromoCode}
+                                            disabled={isApplyingPromo || !promoCode.trim()}
+                                            className="px-3.5 h-[34px] bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-bold rounded-xl transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                                        >
+                                            {isApplyingPromo ? <Loader2 className="animate-spin" size={14} /> : 'Применить'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowPromoInput(false); setPromoError(''); }}
+                                            className="px-2.5 h-[34px] bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs rounded-xl transition-all cursor-pointer"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </motion.div>
+                                ) : null}
+                            </AnimatePresence>
                         </div>
 
-                        {/* 2. Step 1: Size Selector (Responsive 3-6 cols Grid) */}
+                        {/* 2. Step 1: Size Selector (Compact Chips) */}
                         {product.sizes && product.sizes.length > 0 && (
-                            <div id="size-section" className="space-y-2.5 pt-2">
-                                <div className="flex items-center justify-between">
+                            <div id="size-section" className="space-y-2 pt-1">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
                                     <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                                        1. Размер: {selectedSize ? <span className="text-yellow-400 font-russo text-sm">{selectedSize}</span> : <span className="text-yellow-500/80 font-normal">выберите подходящий</span>}
+                                        1. Размер: {selectedSize ? (
+                                            <span className="text-yellow-400 font-russo text-sm inline-flex items-center gap-1.5">
+                                                <span>{selectedSize}</span>
+                                                {(() => {
+                                                    const stock = product.stock?.[selectedSize];
+                                                    const hint = getSizeHint(selectedSize);
+                                                    const isLow = !product.isMadeToOrder && stock !== undefined && stock > 0 && stock <= (product.lowStockThreshold || 3);
+                                                    return (
+                                                        <span className="text-[11px] font-normal text-gray-400">
+                                                            ({hint ? `${hint} • ` : ''}{product.isMadeToOrder ? 'пошив 3–5 дней' : stock !== undefined ? (isLow ? `🔥 осталось ${stock} шт.` : `в наличии ${stock} шт.`) : 'в наличии'})
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </span>
+                                        ) : (
+                                            <span className="text-yellow-500/80 font-normal text-xs">выберите подходящий</span>
+                                        )}
                                     </label>
+
                                     <button
                                         type="button"
                                         onClick={() => setIsSizeChartOpen(true)}
-                                        className="text-xs font-bold text-yellow-500 hover:text-yellow-400 uppercase tracking-wider flex items-center gap-1.5 transition-colors group bg-yellow-500/10 px-2.5 sm:px-3 py-1 rounded-lg border border-yellow-500/20 cursor-pointer"
+                                        className="text-[11px] font-bold text-yellow-400/90 hover:text-yellow-300 flex items-center gap-1 transition-colors cursor-pointer ml-auto"
                                     >
-                                        <Ruler size={13} className="group-hover:rotate-12 transition-transform" />
-                                        Таблица размеров
+                                        <Ruler size={12} />
+                                        <span>Таблица и подбор</span>
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-3 min-[420px]:grid-cols-4 sm:grid-cols-6 gap-1.5 sm:gap-2">
+
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                     {product.sizes.map(size => {
                                         const stock = product.stock?.[size];
-                                        const isOutOfStock = stock === 0;
+                                        const isOutOfStock = !product.isMadeToOrder && stock === 0;
+                                        const isLowStock = !product.isMadeToOrder && stock !== undefined && stock > 0 && stock <= (product.lowStockThreshold || 3);
                                         const isSelected = selectedSize === size;
-                                        const hint = getSizeHint(size);
 
                                         return (
                                             <button
@@ -1381,22 +1610,20 @@ const ProductDetails = () => {
                                                 type="button"
                                                 onClick={() => !isOutOfStock && setSelectedSize(size)}
                                                 disabled={isOutOfStock}
-                                                className={`py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl sm:rounded-2xl font-bold flex flex-col items-center justify-center transition-all border cursor-pointer ${
+                                                className={`min-w-[46px] sm:min-w-[52px] h-10 px-2.5 rounded-xl font-russo text-xs sm:text-sm flex items-center justify-center transition-all border cursor-pointer relative ${
                                                     isOutOfStock
-                                                        ? 'bg-[#111] text-gray-600 border-white/5 opacity-50 cursor-not-allowed line-through'
+                                                        ? 'bg-[#101012] text-gray-600 border-white/5 opacity-40 cursor-not-allowed line-through'
                                                         : isSelected
-                                                            ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_25px_rgba(234,179,8,0.4)] scale-[1.03]'
-                                                            : 'bg-[#161616] text-gray-200 border-white/10 hover:border-white/30 hover:bg-[#202020]'
+                                                            ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4)] scale-105 font-black z-10'
+                                                            : 'bg-[#161618] text-gray-200 border-white/10 hover:border-white/30 hover:bg-[#202022]'
                                                 }`}
                                             >
-                                                <span className="font-russo text-xs sm:text-sm">{size}</span>
-                                                {hint && !isOutOfStock && (
-                                                    <span className={`text-[8px] sm:text-[9px] tracking-tight truncate ${isSelected ? 'text-black/80 font-bold' : 'text-gray-500'}`}>
-                                                        {hint}
-                                                    </span>
+                                                <span>{size}</span>
+                                                {isLowStock && !isSelected && (
+                                                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-ping" />
                                                 )}
-                                                {isOutOfStock && (
-                                                    <span className="text-[8px] uppercase font-black text-gray-500 leading-none mt-0.5">Нет</span>
+                                                {isLowStock && !isSelected && (
+                                                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 shadow-sm" />
                                                 )}
                                             </button>
                                         );
@@ -1407,9 +1634,9 @@ const ProductDetails = () => {
 
                         {/* Colors if any */}
                         {product.colors && product.colors.length > 1 && (
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest">Цветовая гамма</label>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                     {product.colors.map(color => (
                                         <button
                                             key={color}
@@ -1420,9 +1647,9 @@ const ProductDetails = () => {
                                                     setSelectedImage(product.colorImages[color]);
                                                 }
                                             }}
-                                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                                                 selectedColor === color
-                                                    ? 'bg-white text-black border-white shadow-lg'
+                                                    ? 'bg-white text-black border-white shadow-lg font-black'
                                                     : 'bg-[#181818] text-gray-300 border-white/10 hover:border-white/30'
                                             }`}
                                         >
@@ -1435,192 +1662,179 @@ const ProductDetails = () => {
 
                         {/* 3. Step 2: "Sparta Atelier" Customization Module (Compact & Sleek) */}
                         {product.isCustomizable && (
-                            <div className="p-4 sm:p-5 bg-gradient-to-b from-[#181818]/90 to-[#121212]/90 backdrop-blur-xl rounded-2xl border border-yellow-500/25 space-y-3.5 shadow-lg relative overflow-hidden">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Sparkles size={16} className="text-yellow-500" />
-                                        <h3 className="text-xs font-russo uppercase tracking-widest text-white">2. Клубное нанесение</h3>
+                            <div className="p-3.5 sm:p-4 bg-[#141416] rounded-2xl border border-yellow-500/25 space-y-3 shadow-lg relative overflow-hidden">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <Sparkles size={14} className="text-yellow-400" />
+                                        <h3 className="text-xs font-russo uppercase tracking-widest text-white">
+                                            2. Клубное нанесение
+                                        </h3>
                                     </div>
-                                    <span className="text-[9px] font-black uppercase tracking-wider bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded border border-yellow-500/30">
+                                    <span className="text-[9px] font-black uppercase tracking-wider bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded-md border border-yellow-500/30">
                                         Включено в стоимость
                                     </span>
                                 </div>
 
-                                {/* Live Back Visualizer Badge */}
-                                <div className="bg-black/50 rounded-xl p-3 border border-white/5 flex items-center justify-between shadow-inner">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 text-black flex items-center justify-center font-russo font-black text-base shadow flex-shrink-0">
+                                {/* Quick 1-Click Child Prefill Pills (Inline) */}
+                                {linkedChildren.length > 0 && (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+                                            Подставить:
+                                        </span>
+                                        {linkedChildren.map(child => {
+                                            const isSelected = customName === child.lastName;
+                                            return (
+                                                <button
+                                                    key={child.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setCustomName(child.lastName);
+                                                        if (child.number) setCustomNumber(child.number);
+                                                        showToast(`Подставлены данные: ${child.name}`, 'info');
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded-lg text-[10px] font-russo uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95 ${
+                                                        isSelected
+                                                            ? 'bg-yellow-500 text-black border-yellow-500 font-black'
+                                                            : 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                                    }`}
+                                                >
+                                                    <span>👦 {child.name}</span>
+                                                    {isSelected && <Check size={10} className="stroke-[3]" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Main Personalization Row: Mini Jersey Badge + 2 Compact Inputs in 1 Line */}
+                                <div className="flex items-center gap-2.5">
+                                    {/* Mini Jersey Back Preview Badge */}
+                                    <div className="flex items-center gap-2 px-2.5 py-1.5 bg-black/60 rounded-xl border border-white/5 shrink-0 shadow-inner">
+                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 text-black flex items-center justify-center font-russo font-black text-sm shadow">
                                             {customNumber || '22'}
                                         </div>
-                                        <div className="min-w-0">
-                                            <p className="text-[9px] uppercase font-bold text-gray-400">На спине формы:</p>
-                                            <p className="font-russo text-xs text-white uppercase tracking-[0.2em] truncate">
+                                        <div className="min-w-0 max-w-[85px] sm:max-w-[110px]">
+                                            <p className="text-[8px] uppercase font-bold text-gray-500 truncate leading-none">На спине</p>
+                                            <p className="font-russo text-xs text-white uppercase tracking-wider truncate mt-0.5">
                                                 {customName || 'ЛЕБЕДЕВ'}
                                             </p>
                                         </div>
                                     </div>
-                                    <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex-shrink-0">
-                                        ● Нанесение активно
-                                    </span>
-                                </div>
 
-                                {/* 2 Inputs */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                    <div>
-                                        <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                                            Фамилия игрока
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={customName}
-                                            onChange={(e) => setCustomName(e.target.value.toUpperCase())}
-                                            placeholder="НАПРИМЕР: ИВАНОВ"
-                                            maxLength={15}
-                                            className="w-full bg-black/80 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs font-russo uppercase tracking-widest focus:border-yellow-500 outline-none transition-all placeholder:text-gray-600 focus:ring-1 focus:ring-yellow-500/30"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                                            Игровой номер
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={customNumber}
-                                            onChange={(e) => setCustomNumber(e.target.value.replace(/[^0-9]/g, ''))}
-                                            placeholder="ОТ 1 ДО 99"
-                                            maxLength={2}
-                                            className="w-full bg-black/80 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs font-russo uppercase tracking-widest focus:border-yellow-500 outline-none transition-all placeholder:text-gray-600 focus:ring-1 focus:ring-yellow-500/30"
-                                        />
+                                    {/* Inputs in 1 Line */}
+                                    <div className="flex-1 grid grid-cols-2 gap-2 min-w-0">
+                                        <div>
+                                            <input
+                                                type="text"
+                                                value={customName}
+                                                onChange={(e) => setCustomName(e.target.value.toUpperCase())}
+                                                placeholder="ФАМИЛИЯ"
+                                                maxLength={15}
+                                                className="w-full h-10 bg-black/80 border border-white/10 rounded-xl px-3 text-white text-xs font-russo uppercase tracking-widest focus:border-yellow-500 outline-none transition-all placeholder:text-gray-600 focus:ring-1 focus:ring-yellow-500/30"
+                                            />
+                                        </div>
+                                        <div>
+                                            <input
+                                                type="text"
+                                                value={customNumber}
+                                                onChange={(e) => setCustomNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                                                placeholder="НОМЕР (1-99)"
+                                                maxLength={2}
+                                                className="w-full h-10 bg-black/80 border border-white/10 rounded-xl px-3 text-white text-xs font-russo uppercase tracking-widest focus:border-yellow-500 outline-none transition-all placeholder:text-gray-600 focus:ring-1 focus:ring-yellow-500/30"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Silhouette Selection */}
-                                <div>
-                                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                                        Крой формы
-                                    </label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['Приталенный', 'Стандарт', 'Свободный'].map(style => (
-                                            <button
-                                                key={style}
-                                                type="button"
-                                                onClick={() => setFitStyle(style)}
-                                                className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
-                                                    fitStyle === style
-                                                        ? 'bg-yellow-500 text-black border-yellow-500 shadow-md'
-                                                        : 'bg-black/50 text-gray-400 border-white/10 hover:border-white/20'
-                                                }`}
-                                            >
-                                                {style}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Expandable Body Measurements Accordion */}
-                                <div className="pt-1 border-t border-white/5">
+                                {/* Expandable Options: Fit Style & Body Measurements */}
+                                <div className="pt-0.5 border-t border-white/5">
                                     <button
                                         type="button"
                                         onClick={() => setIsCustomMeasurementsOpen(!isCustomMeasurementsOpen)}
-                                        className="w-full py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-gray-400 hover:text-white flex items-center justify-between transition-colors border border-white/5 cursor-pointer"
+                                        className="w-full py-1.5 px-2.5 bg-white/[0.02] hover:bg-white/5 rounded-xl text-xs font-bold text-gray-400 hover:text-white flex items-center justify-between transition-colors border border-white/5 cursor-pointer"
                                     >
-                                        <span className="flex items-center gap-1.5 text-[11px]">
-                                            <Ruler size={13} className="text-yellow-500" />
-                                            {isCustomMeasurementsOpen ? 'Скрыть индивидуальные замеры' : 'Указать точные замеры (опционально)'}
+                                        <span className="flex items-center gap-1.5 text-[11px] truncate">
+                                            <Sliders size={12} className="text-yellow-400" />
+                                            <span>Посадка по фигуре: <strong>{fitStyle} крой</strong>{isCustomMeasurementsOpen ? '' : ' • Свои мерки ребенка'}</span>
                                         </span>
-                                        <ChevronDown size={14} className={`transition-transform duration-300 ${isCustomMeasurementsOpen ? 'rotate-180' : ''}`} />
+                                        <ChevronDown size={13} className={`transition-transform duration-200 ${isCustomMeasurementsOpen ? 'rotate-180 text-yellow-400' : ''}`} />
                                     </button>
 
-                                    {isCustomMeasurementsOpen && (
-                                        <motion.div
-                                            initial={{ opacity: 0, height: 0 }}
-                                            animate={{ opacity: 1, height: 'auto' }}
-                                            exit={{ opacity: 0, height: 0 }}
-                                            className="pt-2 space-y-2"
-                                        >
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                                {[
-                                                    { label: 'Рост (см)', key: 'height' },
-                                                    { label: 'Обхват груди', key: 'chest' },
-                                                    { label: 'Ширина плеч', key: 'shoulders' },
-                                                    { label: 'Длина рукава', key: 'sleeve' },
-                                                    { label: 'Обхват талии', key: 'waist' },
-                                                    { label: 'Обхват бедер', key: 'hips' },
-                                                    { label: 'Длина изделия', key: 'length' },
-                                                ].map(item => (
-                                                    <div key={item.key} className="space-y-1">
-                                                        <label className="text-[8px] font-bold text-gray-500 uppercase tracking-tighter block">{item.label}</label>
-                                                        <input
-                                                            type="text"
-                                                            value={measurements[item.key as keyof typeof measurements]}
-                                                            onChange={(e) => setMeasurements(prev => ({ ...prev, [item.key]: e.target.value.replace(/[^0-9]/g, '') }))}
-                                                            placeholder="СМ"
-                                                            className="w-full bg-black/70 border border-white/10 rounded-lg p-1.5 text-white text-xs font-bold outline-none focus:border-yellow-500 transition-all placeholder:text-gray-700"
-                                                        />
+                                    <AnimatePresence>
+                                        {isCustomMeasurementsOpen && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="pt-2 space-y-2.5 overflow-hidden"
+                                            >
+                                                {/* Helpful parent hint */}
+                                                <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-[10px] sm:text-[11px] text-yellow-300 leading-snug">
+                                                    💡 <strong>Индивидуальный пошив:</strong> укажите мерки, только если у ребенка нестандартная фигура. Если оставить пустыми — сошьем точно по выбранному стандартному размеру.
+                                                </div>
+
+                                                {/* Silhouette Selection */}
+                                                <div>
+                                                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                                                        Крой формы:
+                                                    </label>
+                                                    <div className="grid grid-cols-3 gap-1.5">
+                                                        {['Приталенный', 'Стандарт', 'Свободный'].map(style => (
+                                                            <button
+                                                                key={style}
+                                                                type="button"
+                                                                onClick={() => setFitStyle(style)}
+                                                                className={`py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
+                                                                    fitStyle === style
+                                                                        ? 'bg-yellow-500 text-black border-yellow-500 shadow-sm'
+                                                                        : 'bg-black/50 text-gray-400 border-white/10 hover:border-white/20'
+                                                                }`}
+                                                            >
+                                                                {style}
+                                                            </button>
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </motion.div>
-                                    )}
+                                                </div>
+
+                                                {/* Measurements */}
+                                                <div>
+                                                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                                                        Мерки ребенка (см, опционально):
+                                                    </label>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                                                        {[
+                                                            { label: 'Рост (см)', key: 'height' },
+                                                            { label: 'Обхват груди', key: 'chest' },
+                                                            { label: 'Ширина плеч', key: 'shoulders' },
+                                                            { label: 'Длина рукава', key: 'sleeve' },
+                                                            { label: 'Обхват талии', key: 'waist' },
+                                                            { label: 'Обхват бедер', key: 'hips' },
+                                                            { label: 'Длина изделия', key: 'length' },
+                                                        ].map(item => (
+                                                            <div key={item.key} className="space-y-0.5">
+                                                                <label className="text-[8px] font-bold text-gray-500 uppercase tracking-tighter block">{item.label}</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={measurements[item.key as keyof typeof measurements]}
+                                                                    onChange={(e) => setMeasurements(prev => ({ ...prev, [item.key]: e.target.value.replace(/[^0-9]/g, '') }))}
+                                                                    placeholder="СМ"
+                                                                    className="w-full bg-black/70 border border-white/10 rounded-lg p-1.5 text-white text-xs font-bold outline-none focus:border-yellow-500 transition-all placeholder:text-gray-700"
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                             </div>
                         )}
 
-                        {/* Promo Code System (Inline, clean) */}
-                        <div>
-                            {appliedPromo ? (
-                                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between">
-                                    <div className="flex items-center gap-2.5 text-green-400">
-                                        <div className="bg-green-500/20 p-1.5 rounded-lg">
-                                            <Check size={16} />
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-xs">Промокод <span className="font-mono text-green-300">{appliedPromo.code}</span> применен!</div>
-                                            <div className="text-[11px] text-green-500">Скидка -{appliedPromo.value}%</div>
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setAppliedPromo(null)}
-                                        className="text-green-500/60 hover:text-green-400 p-1.5 cursor-pointer"
-                                        title="Отменить промокод"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            ) : showPromoInput ? (
-                                <div className="flex items-start gap-2">
-                                    <div className="flex-1">
-                                        <div className="relative">
-                                            <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-                                            <input
-                                                type="text"
-                                                value={promoCode}
-                                                onChange={e => setPromoCode(e.target.value.toUpperCase())}
-                                                placeholder="ВВЕДИТЕ ПРОМОКОД"
-                                                className={`w-full bg-[#181818] border ${promoError ? 'border-red-500/50' : 'border-white/10'} rounded-xl py-2.5 pl-9 pr-3 text-white uppercase font-mono tracking-widest text-xs focus:border-yellow-500 outline-none`}
-                                            />
-                                        </div>
-                                        {promoError && <p className="text-red-400 text-[10px] mt-1 ml-1 font-bold">{promoError}</p>}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={applyPromoCode}
-                                        disabled={isApplyingPromo || !promoCode.trim()}
-                                        className="px-4 h-[38px] bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50 cursor-pointer"
-                                    >
-                                        {isApplyingPromo ? <Loader2 className="animate-spin" size={16} /> : 'Применить'}
-                                    </button>
-                                </div>
-                            ) : (
-                                <button type="button" onClick={() => setShowPromoInput(true)} className="text-white/40 text-xs font-bold uppercase tracking-wider hover:text-yellow-500 transition-colors flex items-center gap-1.5 cursor-pointer">
-                                    <Tag size={13} /> У меня есть промокод
-                                </button>
-                            )}
-                        </div>
 
-                        {/* 4. Actions: Add to Cart & Favorite (Big tactile button) */}
-                        <div className="flex gap-3 pt-1">
+
+                        {/* 4. Actions: Add to Cart & Favorite (Only on Desktop lg:, on mobile floating sticky bar is used) */}
+                        <div className="hidden lg:flex gap-3 pt-1">
                             <button
                                 type="button"
                                 onClick={() => {
@@ -1654,850 +1868,216 @@ const ProductDetails = () => {
                             </button>
                         </div>
 
-                        {/* 5. Service Highlights (Clean horizontal chips) */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                            <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 flex items-center gap-2.5">
-                                <Clock size={16} className="text-yellow-500 flex-shrink-0" />
-                                <div className="min-w-0">
-                                    <p className="text-[8px] uppercase font-bold text-gray-400">Срок пошива</p>
-                                    <p className="text-xs font-russo text-white truncate">{product.productionTime || '3–5 рабочих дней'}</p>
-                                </div>
-                            </div>
-                            <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 flex items-center gap-2.5">
-                                <MapPin size={16} className="text-emerald-400 flex-shrink-0" />
-                                <div className="min-w-0">
-                                    <p className="text-[8px] uppercase font-bold text-gray-400">Получение</p>
-                                    <p className="text-xs font-russo text-white truncate">{product.deliveryInfo || 'Выдача в манеже'}</p>
-                                </div>
-                            </div>
-                            <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 flex items-center gap-2.5">
-                                <ShieldCheck size={16} className="text-blue-400 flex-shrink-0" />
-                                <div className="min-w-0">
-                                    <p className="text-[8px] uppercase font-bold text-gray-400">Гарантия</p>
-                                    <p className="text-xs font-russo text-white truncate">100% ФК Спарта</p>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-
-
-                {/* 🌟 2. Секция отзывов родителей */}
-                <div id="reviews-section" className="mt-12 pt-8 border-t border-white/10 space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h3 className="font-russo uppercase text-xl sm:text-2xl text-white tracking-wider flex items-center gap-2.5">
-                                    <Star className={reviews.length > 0 ? "fill-yellow-500 text-yellow-500" : "text-gray-500"} size={24} />
-                                    Отзывы родителей
-                                </h3>
-                                <span className="px-2.5 py-0.5 bg-yellow-500/10 text-yellow-400 text-xs font-russo rounded-full border border-yellow-500/20">
-                                    {reviews.length}
-                                </span>
-                            </div>
-                            <p className="text-gray-400 text-xs sm:text-sm mt-1">
-                                Реальные впечатления и фото юных спортсменов клуба Спарта
-                            </p>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => setIsReviewFormOpen(!isReviewFormOpen)}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-xl text-xs font-russo uppercase tracking-wider transition-all cursor-pointer self-start sm:self-auto"
-                        >
-                            <MessageSquarePlus size={15} />
-                            <span>{isReviewFormOpen ? 'Скрыть форму' : '+ Написать отзыв'}</span>
-                        </button>
-                    </div>
-
-                    {/* Средний рейтинг если отзывы есть */}
-                    {reviews.length > 0 && (
-                        <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-4">
-                            <div className="flex items-center gap-4">
-                                <div className="text-4xl font-russo text-yellow-400 leading-none">
-                                    {averageRating.toFixed(1)}
-                                </div>
-                                <div>
-                                    <div className="flex gap-1 text-yellow-400">
-                                        {[1, 2, 3, 4, 5].map(star => (
-                                            <Star
-                                                key={star}
-                                                size={16}
-                                                fill={star <= Math.round(averageRating) ? "currentColor" : "none"}
-                                                className={star <= Math.round(averageRating) ? "text-yellow-400" : "text-gray-600"}
-                                            />
-                                        ))}
-                                    </div>
-                                    <p className="text-xs text-gray-400 font-bold uppercase mt-1">
-                                        Средняя оценка на основе {getPluralReviews(reviews.length)}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Баннер когда отзывов 0 */}
-                    {reviews.length === 0 && !isReviewFormOpen && (
-                        <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 text-center space-y-4">
-                            <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 flex items-center justify-center mx-auto shadow-inner">
-                                <MessageSquarePlus size={26} />
-                            </div>
-                            <div className="max-w-md mx-auto">
-                                <h4 className="font-russo uppercase text-base text-white mb-1.5 tracking-wider">
-                                    У этого комплекта пока нет отзывов
-                                </h4>
-                                <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
-                                    Ваш юный футболист уже тренируется в этой форме? Поделитесь своими впечатлениями и фото — это поможет другим родителям клуба!
-                                </p>
-                            </div>
+                        {/* 5. Trust & Service Info Bar */}
+                        <div className="pt-2 border-t border-white/5">
                             <button
                                 type="button"
-                                onClick={() => setIsReviewFormOpen(true)}
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl font-russo uppercase text-xs tracking-wider transition-all shadow-[0_0_20px_rgba(234,179,8,0.25)] cursor-pointer active:scale-95"
+                                onClick={() => setIsDescriptionModalOpen(true)}
+                                className="w-full flex items-center justify-between gap-2 sm:gap-3 text-[11px] sm:text-xs text-gray-400 flex-wrap py-2.5 px-3.5 bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-yellow-500/30 rounded-2xl transition-all cursor-pointer group text-left"
                             >
-                                <MessageSquarePlus size={16} />
-                                <span>Написать первый отзыв</span>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-sm">⚽</span>
+                                    <span className="text-gray-300 font-medium truncate">Выдача на тренировке</span>
+                                </div>
+                                <span className="text-gray-600 hidden sm:inline">•</span>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-sm">🧵</span>
+                                    <span className="text-gray-300 font-medium truncate">{product.productionTime ? `Пошив ${product.productionTime}` : 'Пошив 3–5 дней'}</span>
+                                </div>
+                                <span className="text-gray-600 hidden sm:inline">•</span>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-sm">🛡️</span>
+                                    <span className="text-gray-300 font-medium truncate">Официальная экипировка</span>
+                                </div>
+                                <span className="text-yellow-500 text-[11px] font-bold ml-auto group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                                    Инфо <ChevronRight size={12} />
+                                </span>
                             </button>
                         </div>
-                    )}
 
-                    {/* Форма добавления отзыва */}
-                    <AnimatePresence>
-                        {isReviewFormOpen && (
-                            <motion.form
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="bg-[#121212] p-6 rounded-3xl border border-yellow-500/30 shadow-2xl space-y-4 max-w-2xl"
-                                onSubmit={handleSubmitReview}
-                            >
-                                <h4 className="font-russo uppercase text-sm text-white tracking-wider flex items-center gap-2">
-                                    <MessageSquarePlus size={16} className="text-yellow-500" />
-                                    Ваш отзыв о форме
-                                </h4>
-
-                                <div>
-                                    <label className="block text-gray-400 text-xs font-bold uppercase mb-2">Ваша оценка</label>
-                                    <div className="flex gap-2">
-                                        {[1, 2, 3, 4, 5].map(star => (
-                                            <button
-                                                key={star}
-                                                type="button"
-                                                onClick={() => setNewReviewRating(star)}
-                                                className={`transition-all hover:scale-110 cursor-pointer ${star <= newReviewRating ? 'text-yellow-500' : 'text-gray-600'}`}
-                                            >
-                                                <Star fill={star <= newReviewRating ? "currentColor" : "none"} size={26} />
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-gray-400 text-xs font-bold uppercase mb-2">Впечатления о комплекте</label>
-                                    <textarea
-                                        required
-                                        rows={3}
-                                        value={newReviewComment}
-                                        onChange={(e) => setNewReviewComment(e.target.value)}
-                                        className="w-full bg-black/80 border border-white/10 rounded-xl p-3 text-white focus:border-yellow-500 outline-none text-xs sm:text-sm"
-                                        placeholder="Напишите, как села форма, понравилось ли ребенку качество ткани..."
-                                    />
-                                </div>
-
-                                {/* Быстрые теги эмоций */}
-                                <div>
-                                    <label className="block text-gray-400 text-[11px] font-bold uppercase mb-1.5">Быстрые впечатления</label>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {EMOTION_TAGS.map((tag) => {
-                                            const isSelected = selectedEmotionTags.includes(tag);
-                                            return (
-                                                <button
-                                                    key={tag}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setSelectedEmotionTags(prev =>
-                                                            isSelected ? prev.filter(t => t !== tag) : [...prev, tag]
-                                                        );
-                                                    }}
-                                                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer border ${isSelected ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'bg-white/5 text-gray-400 border-white/5 hover:bg-white/10 hover:text-gray-200'}`}
-                                                >
-                                                    {tag}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Превью прикрепленных фото, видео и голосового */}
-                                {(reviewPhotos.length > 0 || reviewVideo || recordedAudioUrl || isRecordingAudio) && (
-                                    <div className="space-y-2">
-                                        {/* Живая панель записи аудио */}
-                                        {isRecordingAudio && (
-                                            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-between shadow-lg">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-                                                    <span className="text-xs font-bold text-red-300 flex items-center gap-1">
-                                                        <Mic size={14} className="text-red-400 animate-bounce" /> Запись голоса:
-                                                    </span>
-                                                    <span className="font-mono text-xs font-bold text-white bg-black/40 px-2 py-0.5 rounded-md">
-                                                        0:{recordingSeconds < 10 ? '0' : ''}{recordingSeconds} / 1:00
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={stopAudioRecording}
-                                                        className="px-3 py-1 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-md"
-                                                    >
-                                                        <Square size={11} fill="currentColor" /> Завершить
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={cancelAudioRecording}
-                                                        className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-gray-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                                                    >
-                                                        Отмена
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Превью записанного голосового отзыва */}
-                                        {recordedAudioUrl && !isRecordingAudio && (
-                                            <div className="relative group">
-                                                <VoiceReviewPlayer src={recordedAudioUrl} className="w-full" />
-                                                <button
-                                                    type="button"
-                                                    onClick={deleteRecordedAudio}
-                                                    className="absolute -top-2 -right-2 p-1.5 bg-black/80 hover:bg-red-500 text-white rounded-full border border-white/20 transition-all cursor-pointer shadow-lg"
-                                                    title="Удалить голосовую запись"
-                                                >
-                                                    <X size={12} />
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* Фото и видео миниатюры */}
-                                        {(reviewPhotos.length > 0 || reviewVideo) && (
-                                            <div className="flex gap-2 overflow-x-auto pb-1 items-center">
-                                                {reviewPhotos.map((photo, index) => (
-                                                    <div key={index} className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 group">
-                                                        <img src={URL.createObjectURL(photo)} alt="preview" className="w-full h-full object-cover" />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setReviewPhotos(prev => prev.filter((_, i) => i !== index))}
-                                                            className="absolute top-1 right-1 p-1 bg-black/70 text-white rounded-full cursor-pointer hover:bg-red-500 transition-colors"
-                                                        >
-                                                            <X size={10} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-
-                                                {reviewVideo && (
-                                                    <div className="relative w-24 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-yellow-500/40 bg-black/80 flex items-center justify-center group">
-                                                        <video src={URL.createObjectURL(reviewVideo)} className="w-full h-full object-cover opacity-50" />
-                                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                            <Play size={16} className="text-yellow-400 fill-yellow-400" />
-                                                        </div>
-                                                        <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 px-1 rounded text-yellow-400 font-bold">Видео</span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setReviewVideo(null)}
-                                                            className="absolute top-1 right-1 p-1 bg-black/70 text-white rounded-full cursor-pointer hover:bg-red-500 transition-colors"
-                                                        >
-                                                            <X size={10} />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className="flex items-center justify-between pt-2 flex-wrap gap-2">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        {/* Записать голосовой отзыв */}
-                                        <button
-                                            type="button"
-                                            onClick={isRecordingAudio ? stopAudioRecording : startAudioRecording}
-                                            className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
-                                                isRecordingAudio
-                                                    ? 'bg-red-500 text-white border-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.4)]'
-                                                    : (recordedAudioUrl ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40 shadow-sm' : 'bg-white/5 hover:bg-white/10 text-gray-300 border-white/10')
-                                            }`}
-                                        >
-                                            <Mic size={14} className={isRecordingAudio ? 'text-white' : 'text-yellow-400'} />
-                                            <span>{isRecordingAudio ? 'Идет запись...' : (recordedAudioUrl ? 'Голос записан ✓' : 'Голос')}</span>
-                                        </button>
-
-                                        {/* Прикрепить фото */}
-                                        <label className="cursor-pointer px-3.5 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-bold border border-white/10 flex items-center gap-1.5 transition-colors">
-                                            <Camera size={14} className="text-yellow-400" />
-                                            <span>Фото</span>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                multiple
-                                                className="hidden"
-                                                onChange={(e) => {
-                                                    if (e.target.files) {
-                                                        setReviewPhotos(prev => [...prev, ...Array.from(e.target.files || [])]);
-                                                    }
-                                                }}
-                                            />
-                                        </label>
-
-                                        {/* Прикрепить видеофайл */}
-                                        <label className="cursor-pointer px-3.5 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-bold border border-white/10 flex items-center gap-1.5 transition-colors">
-                                            <VideoIcon size={14} className="text-emerald-400" />
-                                            <span>Видео</span>
-                                            <input
-                                                type="file"
-                                                accept="video/*"
-                                                className="hidden"
-                                                onChange={(e) => {
-                                                    if (e.target.files && e.target.files[0]) {
-                                                        setReviewVideo(e.target.files[0]);
-                                                    }
-                                                }}
-                                            />
-                                        </label>
-
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsReviewFormOpen(false)}
-                                            className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:bg-white/5 cursor-pointer"
-                                        >
-                                            Отмена
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            disabled={reviewSubmitting}
-                                            className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl text-xs font-russo uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(234,179,8,0.2)]"
-                                        >
-                                            {reviewSubmitting ? 'Отправка...' : 'Отправить отзыв'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.form>
-                        )}
-                    </AnimatePresence>
-
-                    {/* Вкладки фильтрации отзывов */}
-                    {reviews.length > 0 && (
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1">
-                            {[
-                                { id: 'all', label: `Все (${reviews.length})` },
-                                { id: 'media', label: `📸 С медиа (${reviews.filter(r => (r.photos && r.photos.length > 0) || r.video || r.audio).length})` },
-                                { id: 'pinned', label: `📌 Закрепленные (${reviews.filter(r => r.isPinned).length})` },
-                                { id: 'staff', label: `🏛️ С ответом клуба (${reviews.filter(r => (Array.isArray(r.staffLikes) && r.staffLikes.length > 0) || (r.replies && r.replies.some(rp => rp.userRole === 'admin' || rp.userRole === 'trainer' || rp.userRole === 'coach' || rp.userRole === 'director'))).length})` },
-                            ].map(tab => (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() => setReviewFilter(tab.id as any)}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${reviewFilter === tab.id ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_12px_rgba(234,179,8,0.3)]' : 'bg-white/5 text-gray-400 border-white/5 hover:bg-white/10 hover:text-white'}`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Список отзывов в сетке карточек */}
-                    {displayReviews.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                            {displayReviews.map(review => (
-                                <div key={review.id} className={`bg-white/[0.02] p-5 rounded-2xl border transition-all ${review.isPinned ? 'border-yellow-500/50 bg-gradient-to-b from-yellow-500/[0.04] to-transparent shadow-[0_0_20px_rgba(234,179,8,0.06)]' : ((review as any).isOptimistic ? 'border-yellow-500/40 bg-yellow-500/[0.02]' : 'border-white/10')} space-y-3 relative`}>
-                                    {/* Закреплено персоналом Спарта */}
-                                    {review.isPinned && (
-                                        <div className="bg-yellow-500/15 border border-yellow-500/30 text-yellow-300 px-3 py-1 rounded-xl text-[10px] font-bold flex items-center justify-between">
-                                            <div className="flex items-center gap-1.5">
-                                                <Pin size={11} className="fill-yellow-300 shrink-0" />
-                                                <span>Закреплено Клубом Спарта</span>
-                                            </div>
-                                            {review.pinnedBy && <span className="text-yellow-400/80 font-normal">от {review.pinnedBy}</span>}
-                                        </div>
-                                    )}
-
-                                    {/* Отмечено персоналом */}
-                                    {Array.isArray(review.staffLikes) && review.staffLikes.length > 0 && (
-                                        <div className="bg-red-500/10 border border-red-500/20 text-red-300 px-3 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1.5">
-                                            <Heart size={11} className="fill-red-400 text-red-400 shrink-0" />
-                                            <span>Отмечено персоналом: {review.staffLikes.map(s => `${s.role} ${s.name}`).join(', ')}</span>
-                                        </div>
-                                    )}
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center font-black text-sm flex-shrink-0">
-                                                {review.userName?.[0]?.toUpperCase() || 'Р'}
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-bold text-white flex items-center gap-2 flex-wrap">
-                                                    <span>{review.userName || 'Родитель игрока'}</span>
-                                                    {(review.childName || review.groupName || review.userRole) && (
-                                                        <span className="text-[9px] bg-yellow-500/15 text-yellow-400 px-2 py-0.5 rounded-full font-bold border border-yellow-500/20 flex items-center gap-1">
-                                                            <span>⚽</span>
-                                                            <span>{review.childName ? `${review.childName} • ` : ''}{review.groupName || review.userRole || 'Семья Спарты'}</span>
-                                                        </span>
-                                                    )}
-                                                    {(review as any).isOptimistic && (
-                                                        <span className="text-[9px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded font-bold flex items-center gap-1 animate-pulse">
-                                                            <Loader2 size={10} className="animate-spin" /> Загрузка в облако...
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-0.5 text-yellow-400 mt-0.5">
-                                                    {[...Array(review.rating || 5)].map((_, i) => (
-                                                        <Star key={i} size={11} fill="currentColor" />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            {/* Кнопка закрепить (для персонала) */}
-                                            {isStaff && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleTogglePinReview(review.id, !!review.isPinned)}
-                                                    className={`p-1.5 rounded-lg border transition-all cursor-pointer ${review.isPinned ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}
-                                                    title={review.isPinned ? "Открепить отзыв" : "Закрепить отзыв вверху"}
-                                                >
-                                                    <Pin size={13} className={review.isPinned ? 'fill-yellow-300' : ''} />
-                                                </button>
-                                            )}
-
-                                            {/* Кнопка отметки тренера/персонала */}
-                                            {isStaff && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleStaffLikeReview(review)}
-                                                    className={`p-1.5 rounded-lg border transition-all cursor-pointer ${Array.isArray(review.staffLikes) && review.staffLikes.some(s => s.userId === user?.uid) ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-red-400'}`}
-                                                    title="Отметить отзыв от лица клуба"
-                                                >
-                                                    <Heart size={13} className={Array.isArray(review.staffLikes) && review.staffLikes.some(s => s.userId === user?.uid) ? 'fill-red-400' : ''} />
-                                                </button>
-                                            )}
-
-                                            <span className="text-[11px] text-gray-500 ml-1">
-                                                {review.createdAt?.toDate ? review.createdAt.toDate().toLocaleDateString('ru-RU') : 'Недавно'}
-                                            </span>
-                                            {!(review as any).isOptimistic && Boolean(user?.uid && ((review.userId && user.uid === review.userId) || userProfile?.role === 'admin' || userProfile?.role === 'developer' || userProfile?.isAdmin)) && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteReview(review.id, review.userId)}
-                                                    className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer"
-                                                    title="Удалить отзыв"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-{/* Голосовой отзыв */}
-                                    {review.audio && (
-                                        <div className="pt-1">
-                                            <VoiceReviewPlayer
-                                                src={review.audio}
-                                                authorName={review.userName}
-                                                className="w-full"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Текст отзыва */}
-                                    {review.comment && (
-                                        <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">{review.comment}</p>
-                                    )}
-
-                                    {/* Теги впечатлений */}
-                                    {review.emotionTags && review.emotionTags.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 pt-0.5">
-                                            {review.emotionTags.map((tag, idx) => (
-                                                <span key={idx} className="text-[10px] bg-white/5 text-gray-300 px-2.5 py-0.5 rounded-full border border-white/5 font-medium">
-                                                    {tag}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Медиа отзыва (Фото и Видео) */}
-                                    {((review.photos && review.photos.length > 0) || review.video) && (
-                                        <div className="flex gap-2 pt-1 overflow-x-auto pb-1 items-center">
-                                            {/* Видео-карточка */}
-                                            {review.video && (
-                                                <ReviewVideoThumbnail
-                                                    videoSrc={review.video}
-                                                    onClick={() => {
-                                                        setSelectedReviewMedia(review);
-                                                        setInitialMediaUrl(review.video!);
-                                                        setIsMediaModalOpen(true);
-                                                    }}
-                                                />
-                                            )}
-
-                                            {/* Фото-карточки */}
-                                            {review.photos?.map((photo, i) => (
-                                                <img
-                                                    key={i}
-                                                    src={photo}
-                                                    alt="Review photo"
-                                                    className="w-16 h-16 object-cover rounded-xl border border-white/10 cursor-pointer hover:scale-105 transition-transform flex-shrink-0"
-                                                    onClick={() => {
-                                                        setSelectedReviewMedia(review);
-                                                        setInitialMediaUrl(photo);
-                                                        setIsMediaModalOpen(true);
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Нижняя строка отзыва: счетчик комментариев и кнопка ответить */}
-                                    <div className="flex items-center justify-between pt-2.5 border-t border-white/5 text-xs text-gray-400 flex-wrap gap-2">
-                                        {/* Кнопка открыть шторку комментариев */}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setCommentsDrawerReview(review);
-                                                setIsCommentsDrawerOpen(true);
-                                            }}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer bg-white/5 hover:bg-white/10 hover:border-yellow-500/30 text-gray-300 active:scale-95"
-                                        >
-                                            <MessageCircle size={13} className="text-yellow-400" />
-                                            <span>
-                                                {review.replies && review.replies.length > 0
-                                                    ? `${review.replies.length} ${
-                                                          review.replies.length % 10 === 1 && review.replies.length % 100 !== 11
-                                                              ? 'комментарий'
-                                                              : review.replies.length % 10 >= 2 &&
-                                                                review.replies.length % 10 <= 4 &&
-                                                                (review.replies.length % 100 < 10 || review.replies.length % 100 >= 20)
-                                                              ? 'комментария'
-                                                              : 'комментариев'
-                                                      }`
-                                                    : 'Комментарии (0)'}
-                                            </span>
-                                        </button>
-
-                                        {/* Кнопка ответить (только если это чужой отзыв) */}
-                                        {(!user || ((review.userId && user.uid !== review.userId) || (!review.userId && review.userName !== (user.displayName || (userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim() : ''))))) && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    if (!user) {
-                                                        showToast("Войдите, чтобы оставить комментарий", "info");
-                                                        return;
-                                                    }
-                                                    setCommentsDrawerReview(review);
-                                                    setIsCommentsDrawerOpen(true);
-                                                }}
-                                                className="px-3.5 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 hover:text-yellow-300 border border-yellow-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                                            >
-                                                <Mic size={13} className="text-amber-400" />
-                                                <span>Комментировать</span>
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* Форма ответа на отзыв */}
-                                    {replyingReviewId === review.id && (
-                                        <motion.div
-                                            initial={{ opacity: 0, height: 0 }}
-                                            animate={{ opacity: 1, height: 'auto' }}
-                                            className="pt-2 space-y-2 bg-[#0c0c0c] p-3 rounded-2xl border border-yellow-500/30 shadow-lg"
-                                        >
-                                            {/* Live Recording Panel for Inline Reply */}
-                                            {isRecordingInlineReplyAudio && (
-                                                <div className="p-2.5 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between shadow-sm">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-                                                        <span className="text-xs font-bold text-red-300">Запись голоса:</span>
-                                                        <span className="font-mono text-xs font-bold text-white bg-black/40 px-2 py-0.5 rounded">
-                                                            0:{inlineReplyRecordingSeconds < 10 ? '0' : ''}{inlineReplyRecordingSeconds} / 1:00
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <button
-                                                            type="button"
-                                                            onClick={stopInlineReplyRecording}
-                                                            className="px-2.5 py-1 bg-red-500 hover:bg-red-400 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
-                                                        >
-                                                            <Square size={10} fill="currentColor" /> Готово
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={cancelInlineReplyRecording}
-                                                            className="px-2 py-1 bg-white/10 hover:bg-white/20 text-gray-300 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                                        >
-                                                            Отмена
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Voice Preview for Inline Reply */}
-                                            {inlineReplyRecordedUrl && !isRecordingInlineReplyAudio && (
-                                                <div className="relative group">
-                                                    <VoiceReviewPlayer src={inlineReplyRecordedUrl} className="w-full py-1 px-3 text-xs" />
-                                                    <button
-                                                        type="button"
-                                                        onClick={deleteInlineReplyAudio}
-                                                        className="absolute -top-1.5 -right-1.5 p-1 bg-black/80 hover:bg-red-500 text-white rounded-full border border-white/20 transition-all cursor-pointer shadow-md"
-                                                        title="Удалить голосовую запись"
-                                                    >
-                                                        <X size={10} />
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                            {/* Быстрые фразы-подсказки */}
-                                            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-                                                {['⚽ Красавчик!', '🔥 Супер форма!', '👏 Гордимся!', '👕 Село отлично!', '❓ Какой размер?'].map((chip, idx) => (
-                                                    <button
-                                                        key={idx}
-                                                        type="button"
-                                                        onClick={() => setReplyComment(prev => prev ? `${prev} ${chip}` : chip)}
-                                                        className="shrink-0 px-2.5 py-1 rounded-full bg-white/5 hover:bg-yellow-500/20 text-gray-300 hover:text-yellow-300 text-[10px] font-semibold border border-white/5 transition-all cursor-pointer shadow-sm active:scale-95"
-                                                    >
-                                                        {chip}
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            <div className="flex gap-2 items-center">
-                                                <button
-                                                    type="button"
-                                                    onClick={isRecordingInlineReplyAudio ? stopInlineReplyRecording : startInlineReplyRecording}
-                                                    className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
-                                                        isRecordingInlineReplyAudio
-                                                            ? 'bg-red-500 text-white border-red-400 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.4)]'
-                                                            : (inlineReplyRecordedUrl ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' : 'bg-[#181818] hover:bg-white/10 text-yellow-400 border-white/10')
-                                                    }`}
-                                                    title="Записать голосовой ответ"
-                                                >
-                                                    <Mic size={15} />
-                                                </button>
-                                                <input
-                                                    type="text"
-                                                    value={replyComment}
-                                                    onChange={(e) => setReplyComment(e.target.value)}
-                                                    placeholder={inlineReplyRecordedUrl ? "Текст к голосу (опционально)..." : "Написать ответ на отзыв..."}
-                                                    className="flex-1 bg-[#161616] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition-colors shadow-inner"
-                                                    autoFocus
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSubmitReply(review.id)}
-                                                    disabled={!replyComment.trim() && !inlineReplyRecordedBlob}
-                                                    className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-400 hover:from-yellow-400 hover:to-amber-300 text-black rounded-xl text-xs font-bold transition-all disabled:opacity-30 cursor-pointer shadow-sm"
-                                                >
-                                                    Отправить
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    )}
-
-                                    {/* Список ответов к отзыву (YouTube Architecture) */}
-                                    {review.replies && review.replies.length > 0 && (expandedReplies[review.id] || replyingReviewId === review.id) && (
-                                        <div className="space-y-2 pt-2 border-t border-white/5">
-                                            {(() => {
-                                                const rootReplies = review.replies.filter((r: any) => !r.replyToCommentId);
-                                                const childRepliesMap: Record<string, any[]> = {};
-                                                review.replies.forEach((r: any) => {
-                                                    if (r.replyToCommentId) {
-                                                        if (!childRepliesMap[r.replyToCommentId]) childRepliesMap[r.replyToCommentId] = [];
-                                                        childRepliesMap[r.replyToCommentId].push(r);
-                                                    }
-                                                });
-
-                                                const displayRoots = rootReplies.length > 0 ? rootReplies : review.replies;
-
-                                                const renderProductReplyCard = (reply: any, isChild = false) => {
-                                                    const isClubStaff = reply.userRole === 'admin' || reply.userRole === 'trainer' || reply.userRole === 'coach' || reply.userRole === 'director';
-                                                    const isReviewAuthor = !isClubStaff && Boolean((review?.userId && reply.userId === review.userId) || (!review?.userId && reply.userName === review?.userName));
-                                                    const isOwnReply = Boolean(user && ((reply.userId && user.uid === reply.userId) || (!reply.userId && (reply.userName === user.displayName || (userProfile?.firstName && reply.userName === `${userProfile.firstName} ${userProfile.lastName || ''}`.trim())))));
-                                                    const isEditingThisReply = editingReplyId === reply.id;
-                                                    const childReplies = childRepliesMap[reply.id] || [];
-                                                    const isChildExpanded = expandedReplies[`${review.id}_${reply.id}`];
-
-                                                    return (
-                                                        <div key={reply.id} className="flex flex-col gap-1">
-                                                            <div className={`p-3 rounded-2xl text-xs space-y-1.5 border transition-all ${isClubStaff ? 'bg-gradient-to-br from-yellow-500/15 via-[#16140c] to-[#0f0f0f] border-yellow-500/40 shadow-[0_4px_20px_rgba(234,179,8,0.06)]' : (isReviewAuthor ? 'bg-[#14130f] border border-amber-500/25 hover:border-amber-500/40' : 'bg-[#141414] border-white/[0.06] hover:border-white/10')}`}>
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] ${isClubStaff ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black shadow-sm' : (isReviewAuthor ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30')}`}>
-                                                                            {isClubStaff ? '🛡️' : (reply.userName?.[0]?.toUpperCase() || 'У')}
-                                                                        </div>
-                                                                        <span className="font-bold text-white text-[11px] flex items-center gap-1.5">
-                                                                            <span>{reply.userName}</span>
-                                                                            {isClubStaff && (
-                                                                                <span className="text-[8px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full font-black uppercase border border-yellow-500/30 shadow-[0_0_8px_rgba(234,179,8,0.2)]">
-                                                                                    🏛️ Тренер / Спарта
-                                                                                </span>
-                                                                            )}
-                                                                            {isReviewAuthor && (
-                                                                                <span className="text-[8px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full font-bold uppercase border border-amber-500/30 shadow-sm flex items-center gap-0.5">
-                                                                                    👑 Автор отзыва
-                                                                                </span>
-                                                                            )}
-                                                                        </span>
-                                                                    </div>
-                                                                    <span className="text-[10px] text-gray-500 font-mono">
-                                                                        {reply.createdAt ? new Date(reply.createdAt).toLocaleDateString('ru-RU') : ''}
-                                                                        {reply.isEdited && ' (ред.)'}
-                                                                    </span>
-                                                                </div>
-
-                                                                {/* Редактирование ответа */}
-                                                                {isEditingThisReply ? (
-                                                                    <div className="mt-1.5 space-y-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            value={editReplyComment}
-                                                                            onChange={(e) => setEditReplyComment(e.target.value)}
-                                                                            className="w-full bg-black/80 border border-yellow-500/50 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none shadow-inner"
-                                                                            autoFocus
-                                                                        />
-                                                                        <div className="flex gap-2 justify-end">
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => setEditingReplyId(null)}
-                                                                                className="px-3 py-1 text-xs text-gray-400 hover:text-white rounded-lg cursor-pointer"
-                                                                            >
-                                                                                Отмена
-                                                                            </button>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => handleSaveReplyEdit(review.id, review.replies || [])}
-                                                                                className="px-3.5 py-1 bg-yellow-500 text-black font-bold text-xs rounded-xl cursor-pointer hover:bg-yellow-400 shadow-sm"
-                                                                            >
-                                                                                Сохранить
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="space-y-1">
-                                                                        {reply.audio && (
-                                                                            <VoiceReviewPlayer
-                                                                                src={reply.audio}
-                                                                                authorName={reply.userName}
-                                                                                className="my-1 py-1 px-2.5 text-xs w-full max-w-[320px]"
-                                                                            />
-                                                                        )}
-                                                                        {reply.comment && (
-                                                                            <p className={`text-[11px] leading-relaxed ${isClubStaff ? 'text-yellow-100 font-medium' : 'text-gray-300'}`}>
-                                                                                {reply.replyToUser && (
-                                                                                    <span className="text-yellow-400 font-semibold mr-1">@{reply.replyToUser},</span>
-                                                                                )}
-                                                                                {reply.comment}
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Видимые кнопки взаимодействия с ответом */}
-                                                                {!isEditingThisReply && (
-                                                                    <div className="flex items-center gap-2.5 pt-1.5 border-t border-white/[0.04] mt-1 text-xs">
-                                                                        {/* Кнопка ответить (только для чужих ответов) */}
-                                                                        {!isOwnReply && (
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => {
-                                                                                    setReplyingReviewId(review.id);
-                                                                                    setReplyComment(`@${reply.userName} `);
-                                                                                }}
-                                                                                className="text-gray-400 hover:text-yellow-300 font-bold transition-colors cursor-pointer text-[11px] flex items-center gap-1"
-                                                                            >
-                                                                                <Reply size={11} className="text-yellow-400" />
-                                                                                <span>Ответить</span>
-                                                                            </button>
-                                                                        )}
-
-                                                                        {/* Кнопка редактировать */}
-                                                                        {isOwnReply && (
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => handleStartReplyEdit(reply)}
-                                                                                className="text-gray-500 hover:text-cyan-300 text-[10px] font-medium transition-colors cursor-pointer flex items-center gap-0.5"
-                                                                            >
-                                                                                <Edit2 size={10} />
-                                                                                <span>Ред.</span>
-                                                                            </button>
-                                                                        )}
-
-                                                                        {/* Кнопка удалить */}
-                                                                        {(isOwnReply || Boolean(user && (userProfile?.role === 'admin' || userProfile?.role === 'developer' || userProfile?.isAdmin))) && (
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => handleDeleteReply(review.id, reply.id, review.replies || [])}
-                                                                                className="text-gray-500 hover:text-red-400 text-[10px] font-medium transition-colors cursor-pointer ml-auto flex items-center gap-0.5"
-                                                                                title="Удалить"
-                                                                            >
-                                                                                <Trash2 size={11} />
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-
-                                                                {/* YouTube Expand Nested Replies */}
-                                                                {!isChild && childReplies.length > 0 && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setExpandedReplies(prev => ({
-                                                                            ...prev,
-                                                                            [`${review.id}_${reply.id}`]: !prev[`${review.id}_${reply.id}`]
-                                                                        }))}
-                                                                        className="flex items-center gap-1 text-[11px] font-bold text-yellow-400 hover:text-yellow-300 py-1 px-2 rounded-full hover:bg-yellow-500/10 transition-colors cursor-pointer mt-1 w-fit"
-                                                                    >
-                                                                        {isChildExpanded ? (
-                                                                            <>
-                                                                                <ChevronUp size={12} />
-                                                                                <span>Скрыть ответы</span>
-                                                                            </>
-                                                                        ) : (
-                                                                            <>
-                                                                                <ChevronDown size={12} />
-                                                                                <span>{childReplies.length} {childReplies.length === 1 ? 'ответ' : 'ответа'}</span>
-                                                                            </>
-                                                                        )}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Nested Child Replies */}
-                                                            {!isChild && childReplies.length > 0 && isChildExpanded && (
-                                                                <div className="pl-4 border-l-2 border-yellow-500/20 space-y-1.5 mt-1 ml-3">
-                                                                    {childReplies.map((child: any) => renderProductReplyCard(child, true))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                };
-
-                                                return (
-                                                    <div className="space-y-2">
-                                                        {displayRoots.map((root: any) => renderProductReplyCard(root, false))}
-                                                    </div>
-                                                );
-                                            })()}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-10 text-xs text-gray-500 bg-white/[0.01] rounded-2xl border border-white/5">
-                            В этой категории пока нет отзывов.
-                        </div>
-                    )}
+                    </div>
                 </div>
+
+                {/* 2. BUNDLE / COMPLETE THE KIT RECOMMENDATIONS */}
+                {bundleItems.length > 0 && (
+                    <div className="mt-10 sm:mt-14 bg-gradient-to-br from-[#141416] via-[#101012] to-[#0d0d0f] border border-white/10 rounded-3xl p-5 sm:p-7 relative overflow-hidden shadow-2xl">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl pointer-events-none" />
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-5 relative z-10">
+                            <div>
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-400 text-[10px] font-black uppercase tracking-wider mb-1.5">
+                                    <Sparkles size={12} />
+                                    <span>Дополните комплект</span>
+                                </div>
+                                <h2 className="text-lg sm:text-2xl font-russo uppercase tracking-wider text-white">
+                                    Аксессуары к этой форме
+                                </h2>
+                                <p className="text-gray-400 text-xs mt-0.5">
+                                    Гетры, рюкзак и экипировка в едином клубном стиле Спарта
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 relative z-10">
+                            {bundleItems.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="bg-[#18181b]/80 border border-white/5 hover:border-yellow-500/30 rounded-2xl p-3 sm:p-4 flex flex-col justify-between transition-all hover:bg-[#1f1f23] group shadow-lg"
+                                >
+                                    <div
+                                        className="relative aspect-square rounded-xl bg-black/40 overflow-hidden mb-2.5 cursor-pointer"
+                                        onClick={() => {
+                                            navigate(`/shop/${item.id}`);
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}
+                                    >
+                                        <img
+                                            src={item.imageUrl || '/shop/sparta-uniform-green.png'}
+                                            alt={item.title}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            onError={(e) => { (e.target as HTMLImageElement).src = '/shop/sparta-uniform-green.png'; }}
+                                        />
+                                        {item.badges?.includes('hit') && (
+                                            <span className="absolute top-2 left-2 bg-red-600 text-white text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded shadow">
+                                                Хит
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <span className="text-[9px] text-gray-500 font-bold uppercase block mb-0.5">{item.category}</span>
+                                        <h3
+                                            onClick={() => {
+                                                navigate(`/shop/${item.id}`);
+                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                            }}
+                                            className="text-xs sm:text-sm font-bold text-white line-clamp-1 group-hover:text-yellow-400 transition-colors cursor-pointer"
+                                        >
+                                            {item.title}
+                                        </h3>
+                                        <div className="text-xs sm:text-sm font-russo text-yellow-400 font-bold mt-1">
+                                            {item.price.toLocaleString()} ₽
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            navigate(`/shop/${item.id}`);
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}
+                                        className="mt-2.5 w-full py-2 bg-white/5 hover:bg-yellow-500 hover:text-black text-gray-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-white/10 hover:border-yellow-500 flex items-center justify-center gap-1.5 cursor-pointer"
+                                    >
+                                        <span>Смотреть</span>
+                                        <ArrowRight size={12} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. RELATED PRODUCTS CAROUSEL (OTHER KITS / SIMILAR ITEMS) */}
+                {relatedProducts.length > 0 && (
+                    <div className="mt-10 sm:mt-14">
+                        <div className="flex items-center justify-between gap-4 mb-4">
+                            <div>
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-gray-300 text-[10px] font-black uppercase tracking-wider mb-1">
+                                    <Award size={12} className="text-yellow-500" />
+                                    <span>Коллекция Sparta</span>
+                                </div>
+                                <h2 className="text-lg sm:text-2xl font-russo uppercase tracking-wider text-white">
+                                    Смотрите также
+                                </h2>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (relatedScrollRef.current) {
+                                            relatedScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+                                        }
+                                    }}
+                                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white flex items-center justify-center transition-all cursor-pointer"
+                                    aria-label="Назад"
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (relatedScrollRef.current) {
+                                            relatedScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+                                        }
+                                    }}
+                                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white flex items-center justify-center transition-all cursor-pointer"
+                                    aria-label="Вперед"
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            ref={relatedScrollRef}
+                            className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scrollbar-none pb-3 snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0"
+                        >
+                            {relatedProducts.map((item) => {
+                                const totalStock = calculateTotalStock(item);
+                                const isItemOutOfStock = !item.isMadeToOrder && totalStock <= 0;
+                                const isItemLowStock = !item.isMadeToOrder && totalStock <= (item.lowStockThreshold || 3) && totalStock > 0;
+
+                                return (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => {
+                                            navigate(`/shop/${item.id}`);
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}
+                                        className="min-w-[160px] sm:min-w-[200px] max-w-[200px] bg-[#111113] border border-white/5 hover:border-yellow-500/40 rounded-2xl sm:rounded-3xl p-3 flex flex-col justify-between transition-all hover:bg-[#161619] group shadow-xl snap-start cursor-pointer flex-shrink-0"
+                                    >
+                                        <div className="relative aspect-[4/5] rounded-xl sm:rounded-2xl bg-black/40 overflow-hidden mb-2.5">
+                                            <img
+                                                src={item.imageUrl || '/shop/sparta-uniform-green.png'}
+                                                alt={item.title}
+                                                className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 opacity-90 group-hover:opacity-100"
+                                                onError={(e) => { (e.target as HTMLImageElement).src = '/shop/sparta-uniform-green.png'; }}
+                                            />
+                                            <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+                                                {item.isMadeToOrder ? (
+                                                    <span className="bg-amber-500/90 text-black text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md shadow backdrop-blur-sm">
+                                                        Под заказ
+                                                    </span>
+                                                ) : isItemLowStock ? (
+                                                    <span className="bg-amber-600/90 text-white text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md shadow backdrop-blur-sm animate-pulse">
+                                                        🔥 {totalStock} шт
+                                                    </span>
+                                                ) : isItemOutOfStock ? (
+                                                    <span className="bg-red-600/90 text-white text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md shadow backdrop-blur-sm">
+                                                        0 шт
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 flex flex-col justify-between">
+                                            <div>
+                                                <span className="text-[8px] sm:text-[9px] text-yellow-500/80 font-bold uppercase block mb-1 truncate">{item.category}</span>
+                                                <h3 className="text-xs sm:text-sm font-bold text-white line-clamp-2 group-hover:text-yellow-400 transition-colors leading-snug min-h-[2rem]">
+                                                    {item.title}
+                                                </h3>
+                                            </div>
+                                            <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between">
+                                                <div className="text-xs sm:text-base font-russo text-yellow-400 font-bold">
+                                                    {item.price.toLocaleString()} ₽
+                                                </div>
+                                                <span className="text-[10px] font-bold text-gray-400 group-hover:text-yellow-400 flex items-center gap-0.5 transition-colors">
+                                                    Открыть <ChevronRight size={12} />
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Floating Video Upload Progress Widget */}
@@ -2525,6 +2105,765 @@ const ProductDetails = () => {
                                 />
                             </div>
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Reviews Drawer / Bottom Sheet Modal */}
+            <AnimatePresence>
+                {isReviewsDrawerOpen && product && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex justify-end items-end sm:items-stretch"
+                    >
+                        <div
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                            onClick={() => setIsReviewsDrawerOpen(false)}
+                        />
+
+                        <motion.div
+                            initial={{ y: '100%', opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: '100%', opacity: 0 }}
+                            transition={{ type: 'spring', damping: 26, stiffness: 260 }}
+                            className="relative w-full sm:max-w-2xl bg-[#121214] border-t sm:border-l sm:border-t-0 border-white/10 rounded-t-[2rem] sm:rounded-none sm:rounded-l-[2rem] flex flex-col h-[90vh] sm:h-full shadow-[0_0_80px_rgba(0,0,0,0.9)] z-10 overflow-hidden"
+                        >
+                            {/* Mobile Drag Indicator */}
+                            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
+
+                            {/* Header */}
+                            <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between gap-4 bg-[#141416] shrink-0">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-400 text-[10px] font-black uppercase tracking-wider mb-1">
+                                        <Star size={12} className="fill-yellow-400" />
+                                        <span>Отзывы родителей</span>
+                                    </div>
+                                    <h3 className="text-base sm:text-lg font-russo uppercase text-white tracking-wider line-clamp-1">
+                                        {product.title}
+                                    </h3>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        {reviews.length > 0
+                                            ? `Средняя оценка: ${averageRating.toFixed(1)} ★ (${getPluralReviews(reviews.length)})`
+                                            : 'Честные отзывы родителей юных спортсменов'}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsReviewsDrawerOpen(false)}
+                                    className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer shrink-0"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Drawer Scrollable Body */}
+                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+                                {/* Top Filter Tabs & Write Review Button */}
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none max-w-full">
+                                        <button
+                                            type="button"
+                                            onClick={() => setReviewFilter('all')}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                                reviewFilter === 'all'
+                                                    ? 'bg-yellow-500 text-black shadow-md font-black'
+                                                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                                            }`}
+                                        >
+                                            Все ({reviews.length})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setReviewFilter('media')}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                                reviewFilter === 'media'
+                                                    ? 'bg-yellow-500 text-black shadow-md font-black'
+                                                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                                            }`}
+                                        >
+                                            📸 С фото и видео
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setReviewFilter('pinned')}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                                reviewFilter === 'pinned'
+                                                    ? 'bg-yellow-500 text-black shadow-md font-black'
+                                                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                                            }`}
+                                        >
+                                            📌 Закрепленные
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setReviewFilter('staff')}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                                reviewFilter === 'staff'
+                                                    ? 'bg-yellow-500 text-black shadow-md font-black'
+                                                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                                            }`}
+                                        >
+                                            ❤️ Выбор клуба
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!user) {
+                                                showToast("Пожалуйста, войдите, чтобы оставить отзыв", "info");
+                                                return;
+                                            }
+                                            setIsReviewFormOpen(prev => !prev);
+                                        }}
+                                        className="px-3.5 py-1.5 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-russo uppercase text-xs tracking-wider rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer ml-auto"
+                                    >
+                                        <MessageSquarePlus size={14} />
+                                        <span>{isReviewFormOpen ? 'Скрыть форму' : 'Написать отзыв'}</span>
+                                    </button>
+                                </div>
+
+                                {/* Interactive Add Review Form */}
+                                <AnimatePresence>
+                                    {isReviewFormOpen && (
+                                        <motion.form
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            onSubmit={handleSubmitReview}
+                                            className="bg-[#18181b] border border-yellow-500/30 rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-4 shadow-xl"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-sm sm:text-base font-russo uppercase text-white">
+                                                    Ваш отзыв о товаре
+                                                </h4>
+                                                {/* Rating Stars */}
+                                                <div className="flex items-center gap-1">
+                                                    {[1, 2, 3, 4, 5].map((star) => (
+                                                        <button
+                                                            type="button"
+                                                            key={star}
+                                                            onClick={() => setNewReviewRating(star)}
+                                                            className="p-1 text-gray-600 hover:text-yellow-400 transition-colors cursor-pointer"
+                                                        >
+                                                            <Star
+                                                                size={20}
+                                                                className={star <= newReviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}
+                                                            />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Emotion Tags */}
+                                            <div>
+                                                <p className="text-[10px] uppercase font-bold text-gray-400 mb-1.5">Что понравилось больше всего?</p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {EMOTION_TAGS.map((tag) => {
+                                                        const isSelected = selectedEmotionTags.includes(tag);
+                                                        return (
+                                                            <button
+                                                                type="button"
+                                                                key={tag}
+                                                                onClick={() => {
+                                                                    setSelectedEmotionTags(prev =>
+                                                                        isSelected ? prev.filter(t => t !== tag) : [...prev, tag]
+                                                                    );
+                                                                }}
+                                                                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                                                                    isSelected
+                                                                        ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50'
+                                                                        : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/20'
+                                                                }`}
+                                                            >
+                                                                {tag}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Comment Textarea */}
+                                            <div>
+                                                <textarea
+                                                    value={newReviewComment}
+                                                    onChange={(e) => setNewReviewComment(e.target.value)}
+                                                    placeholder="Расскажите о качестве формы, как сидит на ребенке, удобстве..."
+                                                    rows={3}
+                                                    className="w-full bg-[#111] border border-white/10 focus:border-yellow-500 rounded-xl p-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none transition-colors"
+                                                />
+                                            </div>
+
+                                            {/* Media Actions Strip: Photo, Video, Voice */}
+                                            <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    {/* Photo Upload */}
+                                                    <label className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-medium border border-white/10 flex items-center gap-1.5 cursor-pointer transition-colors">
+                                                        <Camera size={14} className="text-yellow-400" />
+                                                        <span>Фото {reviewPhotos.length > 0 ? `(${reviewPhotos.length})` : ''}</span>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            multiple
+                                                            className="hidden"
+                                                            onChange={(e) => {
+                                                                if (e.target.files) {
+                                                                    setReviewPhotos(Array.from(e.target.files));
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+
+                                                    {/* Video Upload */}
+                                                    <label className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-medium border border-white/10 flex items-center gap-1.5 cursor-pointer transition-colors">
+                                                        <VideoIcon size={14} className="text-yellow-400" />
+                                                        <span>{reviewVideo ? 'Видео добавлено' : 'Видео'}</span>
+                                                        <input
+                                                            type="file"
+                                                            accept="video/*"
+                                                            className="hidden"
+                                                            onChange={(e) => {
+                                                                if (e.target.files && e.target.files[0]) {
+                                                                    setReviewVideo(e.target.files[0]);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+
+                                                    {/* Voice Recording */}
+                                                    {!isRecordingAudio && !recordedAudioUrl && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={startAudioRecording}
+                                                            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-medium border border-white/10 flex items-center gap-1.5 cursor-pointer transition-colors"
+                                                        >
+                                                            <Mic size={14} className="text-yellow-400" />
+                                                            <span>Голосовой отзыв</span>
+                                                        </button>
+                                                    )}
+
+                                                    {isRecordingAudio && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={stopAudioRecording}
+                                                            className="px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/40 rounded-xl text-xs font-medium flex items-center gap-2 cursor-pointer animate-pulse"
+                                                        >
+                                                            <Square size={12} className="fill-red-400" />
+                                                            <span>Запись {recordingSeconds}с (Стоп)</span>
+                                                        </button>
+                                                    )}
+
+                                                    {recordedAudioUrl && (
+                                                        <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 px-3 py-1 rounded-xl text-xs text-yellow-300">
+                                                            <span>🎤 Запись готова</span>
+                                                            <button type="button" onClick={deleteRecordedAudio} className="text-gray-400 hover:text-red-400 ml-1">
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    type="submit"
+                                                    disabled={reviewSubmitting || (!newReviewComment.trim() && !recordedAudioBlob && reviewPhotos.length === 0 && !reviewVideo)}
+                                                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-black font-russo uppercase text-xs tracking-wider rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer ml-auto"
+                                                >
+                                                    {reviewSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                                    <span>Опубликовать</span>
+                                                </button>
+                                            </div>
+                                        </motion.form>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Empty State when 0 reviews */}
+                                {displayedReviews.length === 0 ? (
+                                    <div className="text-center py-12 px-4 bg-white/[0.02] rounded-3xl border border-white/5 space-y-4">
+                                        <div className="w-14 h-14 rounded-3xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 mx-auto text-2xl shadow-inner">
+                                            🏆
+                                        </div>
+                                        <div>
+                                            <h4 className="text-base sm:text-lg font-russo uppercase text-white tracking-wider">
+                                                Будьте первыми!
+                                            </h4>
+                                            <p className="text-xs sm:text-sm text-gray-400 max-w-sm mx-auto mt-1 leading-relaxed">
+                                                На этот товар пока нет отзывов. Поделитесь впечатлением о посадке формы, качестве ткани и эмоциях ребенка!
+                                            </p>
+                                        </div>
+                                        {!isReviewFormOpen && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (!user) {
+                                                        showToast("Пожалуйста, войдите, чтобы оставить отзыв", "info");
+                                                        return;
+                                                    }
+                                                    setIsReviewFormOpen(true);
+                                                }}
+                                                className="px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-russo uppercase text-xs tracking-wider rounded-xl transition-all shadow-lg inline-flex items-center gap-2 cursor-pointer"
+                                            >
+                                                <MessageSquarePlus size={16} />
+                                                <span>Написать первый отзыв</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {displayedReviews.map((review) => (
+                                            <div
+                                                key={review.id}
+                                                className={`bg-[#141416] border rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3 transition-all ${
+                                                    review.isPinned
+                                                        ? 'border-yellow-500/40 bg-yellow-500/[0.02] shadow-[0_0_25px_rgba(234,179,8,0.06)]'
+                                                        : 'border-white/5 hover:border-white/10'
+                                                }`}
+                                            >
+                                                {/* Header: Avatar, Name, Role badge, Group, Date & Stars */}
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 font-russo font-bold text-sm shrink-0 overflow-hidden">
+                                                            {review.userAvatar ? (
+                                                                <img src={review.userAvatar} alt={review.userName} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                review.userName?.charAt(0)?.toUpperCase() || 'U'
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="text-xs sm:text-sm font-bold text-white">
+                                                                    {review.userName}
+                                                                </span>
+                                                                {review.userRole && (
+                                                                    <span className={`text-[8px] sm:text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                                                        review.userRole === 'Администратор' || review.userRole === 'admin'
+                                                                            ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                                                            : review.userRole === 'Тренер' || review.userRole === 'trainer' || review.userRole === 'coach'
+                                                                            ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                                                                            : review.userRole === 'Директор' || review.userRole === 'director'
+                                                                            ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                                                            : 'bg-white/10 text-gray-300'
+                                                                    }`}>
+                                                                        {review.userRole}
+                                                                    </span>
+                                                                )}
+                                                                {review.isPinned && (
+                                                                    <span className="text-[9px] font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                                        <Pin size={10} className="fill-yellow-400" /> Закреплен
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
+                                                                {review.groupName && <span>{review.groupName}</span>}
+                                                                {review.childName && <span>• Игрок: {review.childName}</span>}
+                                                                <span>• {review.createdAt?.toDate ? review.createdAt.toDate().toLocaleDateString('ru-RU') : 'Недавно'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Stars & Staff pin */}
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-0.5">
+                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                <Star
+                                                                    key={star}
+                                                                    size={13}
+                                                                    className={star <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-700'}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                        {isStaff && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleTogglePinReview(review.id, Boolean(review.isPinned))}
+                                                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                                                    review.isPinned
+                                                                        ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-400'
+                                                                        : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'
+                                                                }`}
+                                                                title={review.isPinned ? 'Открепить' : 'Закрепить отзыв'}
+                                                            >
+                                                                <Pin size={13} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Voice Review Player */}
+                                                {review.audio && (
+                                                    <div className="py-1">
+                                                        <VoiceReviewPlayer src={review.audio} />
+                                                    </div>
+                                                )}
+
+                                                {/* Comment Content (View or Edit Mode) */}
+                                                {editingReviewId === review.id ? (
+                                                    <div className="space-y-2 pt-1">
+                                                        <textarea
+                                                            value={editComment}
+                                                            onChange={(e) => setEditComment(e.target.value)}
+                                                            rows={2}
+                                                            className="w-full bg-[#111] border border-yellow-500/40 rounded-xl p-2.5 text-xs text-white focus:outline-none"
+                                                        />
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditingReviewId(null)}
+                                                                className="px-3 py-1 bg-white/5 text-gray-400 text-xs rounded-lg hover:text-white"
+                                                            >
+                                                                Отмена
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleSaveEdit}
+                                                                className="px-3 py-1 bg-yellow-500 text-black text-xs font-bold rounded-lg hover:bg-yellow-400"
+                                                            >
+                                                                Сохранить
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    review.comment && (
+                                                        <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
+                                                            {review.comment}
+                                                        </p>
+                                                    )
+                                                )}
+
+                                                {/* Emotion Tags */}
+                                                {review.emotionTags && review.emotionTags.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                                        {review.emotionTags.map((tag, idx) => (
+                                                            <span key={idx} className="text-[10px] bg-white/5 text-gray-300 px-2.5 py-0.5 rounded-full border border-white/5 font-medium">
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Media Gallery (Photos & Video) */}
+                                                {((review.photos && review.photos.length > 0) || review.video) && (
+                                                    <div className="flex gap-2 pt-1 overflow-x-auto pb-1 items-center">
+                                                        {review.video && (
+                                                            <ReviewVideoThumbnail
+                                                                videoSrc={review.video}
+                                                                onClick={() => {
+                                                                    setSelectedReviewMedia(review);
+                                                                    setInitialMediaUrl(review.video!);
+                                                                    setIsMediaModalOpen(true);
+                                                                }}
+                                                            />
+                                                        )}
+                                                        {review.photos?.map((photo, i) => (
+                                                            <img
+                                                                key={i}
+                                                                src={photo}
+                                                                alt="Review photo"
+                                                                className="w-16 h-16 object-cover rounded-xl border border-white/10 cursor-pointer hover:scale-105 transition-transform flex-shrink-0"
+                                                                onClick={() => {
+                                                                    setSelectedReviewMedia(review);
+                                                                    setInitialMediaUrl(photo);
+                                                                    setIsMediaModalOpen(true);
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Bottom Action Strip: Reactions, Staff Like, Comments Drawer */}
+                                                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-gray-400 flex-wrap gap-2">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        {/* Emoji Reactions */}
+                                                        {['🔥', '⚽', '👏', '❤️'].map((emoji) => {
+                                                            const count = review.reactions?.[emoji] || 0;
+                                                            const userReacted = user && review.userReactions?.[user.uid] === emoji;
+                                                            return (
+                                                                <button
+                                                                    key={emoji}
+                                                                    type="button"
+                                                                    onClick={() => handleToggleReaction(review.id, emoji, review.reactions, review.userReactions)}
+                                                                    className={`px-2 py-1 rounded-lg text-xs border flex items-center gap-1 transition-all cursor-pointer ${
+                                                                        userReacted
+                                                                            ? 'bg-yellow-500/20 border-yellow-500/50 text-white font-bold'
+                                                                            : 'bg-white/5 border-white/5 hover:border-white/15 text-gray-400 hover:text-white'
+                                                                    }`}
+                                                                >
+                                                                    <span>{emoji}</span>
+                                                                    {count > 0 && <span className="text-[10px]">{count}</span>}
+                                                                </button>
+                                                            );
+                                                        })}
+
+                                                        {/* Staff Like Button */}
+                                                        {isStaff && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleStaffLikeReview(review)}
+                                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                                                                    review.staffLikes?.some(s => s.userId === user?.uid)
+                                                                        ? 'bg-red-500/20 border-red-500/40 text-red-400'
+                                                                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-red-400'
+                                                                }`}
+                                                            >
+                                                                <span>❤️ Спарта</span>
+                                                                {review.staffLikes && review.staffLikes.length > 0 && (
+                                                                    <span className="text-[10px]">({review.staffLikes.length})</span>
+                                                                )}
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 ml-auto">
+                                                        {/* Comments Drawer Button */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setCommentsDrawerReview(review);
+                                                                setIsCommentsDrawerOpen(true);
+                                                            }}
+                                                            className="flex items-center gap-1.5 text-gray-400 hover:text-yellow-400 transition-colors py-1 cursor-pointer"
+                                                        >
+                                                            <MessageCircle size={14} />
+                                                            <span>
+                                                                {review.replies && review.replies.length > 0
+                                                                    ? `${review.replies.length} ${review.replies.length === 1 ? 'ответ' : review.replies.length < 5 ? 'ответа' : 'ответов'}`
+                                                                    : 'Ответить'}
+                                                            </span>
+                                                        </button>
+
+                                                        {/* Edit / Delete for Author or Admin */}
+                                                        {user && (user.uid === review.userId || isStaff) && (
+                                                            <div className="flex items-center gap-1 pl-2 border-l border-white/5">
+                                                                {user.uid === review.userId && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleStartEdit(review)}
+                                                                        className="p-1 hover:text-yellow-400 text-gray-500 transition-colors cursor-pointer"
+                                                                        title="Редактировать отзыв"
+                                                                    >
+                                                                        <Edit2 size={13} />
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteReview(review.id, review.userId)}
+                                                                    className="p-1 hover:text-red-400 text-gray-500 transition-colors cursor-pointer"
+                                                                    title="Удалить отзыв"
+                                                                >
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Product Description & Fabric Modal (Rich Bottom Sheet / Modal) */}
+            <AnimatePresence>
+                {isDescriptionModalOpen && product && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6"
+                    >
+                        <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setIsDescriptionModalOpen(false)} />
+
+                        <motion.div
+                            initial={{ y: '100%', opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: '100%', opacity: 0 }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                            className="relative w-full max-w-2xl bg-[#121214] border-t sm:border border-white/10 rounded-t-[2rem] sm:rounded-3xl p-5 sm:p-7 overflow-y-auto max-h-[90vh] sm:max-h-[85vh] shadow-[0_20px_80px_rgba(0,0,0,0.9)] space-y-6"
+                        >
+                            {/* Mobile Swipe Handle Indicator */}
+                            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto -mt-1 mb-3 sm:hidden" />
+
+                            {/* Modal Header */}
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-400 text-[10px] font-black uppercase tracking-wider mb-1.5">
+                                        <Sparkles size={12} />
+                                        <span>О комплекте и материалах</span>
+                                    </div>
+                                    <h3 className="text-lg sm:text-2xl font-russo uppercase tracking-wider text-white">
+                                        {product.title}
+                                    </h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDescriptionModalOpen(false)}
+                                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Section 1: Fabric & Description */}
+                            <div className="space-y-3.5">
+                                <div className="flex items-center gap-2 text-xs font-russo uppercase text-yellow-400 tracking-wider">
+                                    <Zap size={15} />
+                                    <span>Спортивная ткань DRY-FIT и свойства</span>
+                                </div>
+
+                                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-line">
+                                    {product.description || 'Фирменная спортивная экипировка футбольного клуба Спарта. Разработана для комфорта юных чемпионов на тренировках и официальных матчах.'}
+                                </div>
+
+                                {/* 4 Feature Cards */}
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-base">💧</span>
+                                            <h5 className="font-russo text-xs text-white uppercase">Отвод влаги</h5>
+                                        </div>
+                                        <p className="text-[11px] text-gray-400">Быстро сохнет, не прилипает к телу при беге</p>
+                                    </div>
+
+                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-base">🌬️</span>
+                                            <h5 className="font-russo text-xs text-white uppercase">Вентиляция</h5>
+                                        </div>
+                                        <p className="text-[11px] text-gray-400">Дышащая структура для правильного теплообмена</p>
+                                    </div>
+
+                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-base">🛡️</span>
+                                            <h5 className="font-russo text-xs text-white uppercase">100+ стирок</h5>
+                                        </div>
+                                        <p className="text-[11px] text-gray-400">Сохраняет форму и насыщенный цвет ткани</p>
+                                    </div>
+
+                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-base">🏃</span>
+                                            <h5 className="font-russo text-xs text-white uppercase">Свободный крой</h5>
+                                        </div>
+                                        <p className="text-[11px] text-gray-400">Анатомический крой не сковывает движений</p>
+                                    </div>
+                                </div>
+
+                                {/* Specifications Chips (Dynamic from Admin Panel) */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                                    {product.specifications && Object.keys(product.specifications).length > 0 ? (
+                                        Object.entries(product.specifications).map(([key, val]) => (
+                                            <div key={key} className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
+                                                <span className="text-[9px] font-bold text-gray-500 uppercase block truncate">{key}</span>
+                                                <span className="text-[11px] font-russo text-white mt-0.5 block truncate">{String(val)}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
+                                                <span className="text-[9px] font-bold text-gray-500 uppercase block">Материал</span>
+                                                <span className="text-[11px] font-russo text-white mt-0.5 block truncate">DRY-FIT 100%</span>
+                                            </div>
+                                            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
+                                                <span className="text-[9px] font-bold text-gray-500 uppercase block">Производство</span>
+                                                <span className="text-[11px] font-russo text-white mt-0.5 block truncate">Ателье Спарта</span>
+                                            </div>
+                                            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
+                                                <span className="text-[9px] font-bold text-gray-500 uppercase block">Нанесение</span>
+                                                <span className="text-[11px] font-russo text-yellow-400 mt-0.5 block truncate">Сублимация</span>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Section 2: Care Instructions */}
+                            <div className="space-y-3 pt-1 border-t border-white/5">
+                                <div className="flex items-center gap-2 text-xs font-russo uppercase text-yellow-400 tracking-wider">
+                                    <span>🧼</span>
+                                    <span>Памятка по уходу за формой</span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
+                                        <p className="text-xs font-bold text-white">🌡️ Стирка до 30°C</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Вывернув наизнанку, деликатный отжим до 800 об/мин</p>
+                                    </div>
+                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
+                                        <p className="text-xs font-bold text-white">🚫 Без отбеливателей</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Не использовать хлор и агрессивные пятновыводители</p>
+                                    </div>
+                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
+                                        <p className="text-xs font-bold text-white">⚡ Глажка с изнанки</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Не прикасаться горячим утюгом к термопечати номера</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Delivery & Handover */}
+                            <div className="space-y-3 pt-1 border-t border-white/5">
+                                <div className="flex items-center gap-2 text-xs font-russo uppercase text-emerald-400 tracking-wider">
+                                    <MapPin size={15} />
+                                    <span>Сроки изготовления и получение</span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="bg-[#18181b] border border-white/5 rounded-2xl p-3.5 flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 shrink-0">
+                                            <Clock size={16} />
+                                        </div>
+                                        <div>
+                                            <h5 className="text-xs font-russo uppercase text-white">Индивидуальный пошив</h5>
+                                            <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                                                Срок изготовления формы с персонализацией: <strong>{product.productionTime || '3–5 рабочих дней'}</strong>.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#18181b] border border-white/5 rounded-2xl p-3.5 flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                                            <MapPin size={16} />
+                                        </div>
+                                        <div>
+                                            <h5 className="text-xs font-russo uppercase text-white">Выдача на тренировке</h5>
+                                            <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                                                {product.deliveryInfo || 'Форма передается тренеру вашей группы и торжественно вручается ребенку на тренировке.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-3">
+                                {matchingChart ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsDescriptionModalOpen(false);
+                                            setIsSizeChartOpen(true);
+                                        }}
+                                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-yellow-400 border border-yellow-500/30 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                                    >
+                                        <Ruler size={14} />
+                                        <span>Таблица размеров</span>
+                                    </button>
+                                ) : <div />}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDescriptionModalOpen(false)}
+                                    className="px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-russo uppercase text-xs rounded-xl transition-all shadow-md cursor-pointer"
+                                >
+                                    Понятно
+                                </button>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -2688,14 +3027,105 @@ const ProductDetails = () => {
             </AnimatePresence>
 
             {/* --- STICKY MOBILE/TABLET PURCHASE BAR (< 1024px) --- */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d0d0d]/95 backdrop-blur-xl border-t border-white/10 p-3 sm:p-4 px-4 sm:px-6 shadow-[0_-10px_35px_rgba(0,0,0,0.85)]">
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d0d0d]/95 backdrop-blur-2xl border-t border-yellow-500/20 p-3 sm:p-4 px-4 sm:px-6 shadow-[0_-12px_40px_rgba(0,0,0,0.9)]">
+                {/* Quick Size Popover above bar */}
+                <AnimatePresence>
+                    {isQuickSizeOpen && product?.sizes && product.sizes.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="max-w-md mx-auto mb-3 bg-[#161618] border border-yellow-500/30 p-3 rounded-2xl shadow-2xl space-y-2"
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-russo uppercase text-yellow-400 tracking-wider flex items-center gap-1.5">
+                                    <Ruler size={13} /> Выберите размер:
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsQuickSizeOpen(false)}
+                                    className="text-gray-400 hover:text-white text-xs p-1 cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-4 gap-1.5">
+                                {product.sizes.map(size => {
+                                    const stock = product.stock?.[size];
+                                    const isOutOfStock = !product.isMadeToOrder && stock === 0;
+                                    const isLowStock = !product.isMadeToOrder && stock !== undefined && stock > 0 && stock <= (product.lowStockThreshold || 3);
+                                    const isSelected = selectedSize === size;
+                                    const hint = getSizeHint(size);
+                                    return (
+                                        <button
+                                            key={size}
+                                            type="button"
+                                            disabled={isOutOfStock}
+                                            onClick={() => {
+                                                if (!isOutOfStock) {
+                                                    setSelectedSize(size);
+                                                    setIsQuickSizeOpen(false);
+                                                }
+                                            }}
+                                            className={`py-2 px-1 rounded-xl text-center font-bold transition-all border cursor-pointer ${
+                                                isOutOfStock
+                                                    ? 'bg-black/40 text-gray-600 border-white/5 opacity-40 line-through'
+                                                    : isSelected
+                                                        ? 'bg-yellow-500 text-black border-yellow-500 font-black shadow-md'
+                                                        : 'bg-black/60 text-white border-white/10 hover:border-yellow-500/40'
+                                            }`}
+                                        >
+                                            <div className="font-russo text-xs">{size}</div>
+                                            {!product.isMadeToOrder && stock !== undefined ? (
+                                                isOutOfStock ? (
+                                                    <div className="text-[7px] text-gray-500 font-bold">0 шт</div>
+                                                ) : isLowStock ? (
+                                                    <div className={`text-[7px] font-black uppercase truncate ${isSelected ? 'text-black' : 'text-amber-400'}`}>🔥 {stock} шт</div>
+                                                ) : (
+                                                    <div className={`text-[7px] truncate ${isSelected ? 'text-black/80 font-bold' : 'text-gray-400'}`}>{stock} шт</div>
+                                                )
+                                            ) : hint ? (
+                                                <div className={`text-[7px] truncate ${isSelected ? 'text-black/80 font-bold' : 'text-gray-400'}`}>{hint}</div>
+                                            ) : null}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 <div className="max-w-md mx-auto flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                        <div className="text-[10px] uppercase font-bold text-gray-400 truncate">
-                            {selectedSize ? `Размер: ${selectedSize}` : (product.sizes && product.sizes.length > 0 ? 'Выберите размер' : 'Sparta')}
+                    <div
+                        className="min-w-0 cursor-pointer group"
+                        onClick={() => {
+                            if (product?.sizes && product.sizes.length > 0) {
+                                setIsQuickSizeOpen(!isQuickSizeOpen);
+                            }
+                        }}
+                    >
+                        <div className="text-[10px] uppercase font-bold text-gray-400 truncate flex items-center gap-1">
+                            {selectedSize ? (
+                                <span className="text-yellow-400 font-russo flex items-center gap-1">
+                                    Размер: {selectedSize}
+                                    {!product.isMadeToOrder && product.stock?.[selectedSize] !== undefined && product.stock[selectedSize] <= (product.lowStockThreshold || 3) && product.stock[selectedSize] > 0 && (
+                                        <span className="text-[8px] bg-amber-500/20 text-amber-400 px-1 rounded font-black font-sans ml-1">🔥 {product.stock[selectedSize]} шт</span>
+                                    )}
+                                    <ChevronDown size={11} className={`transition-transform ${isQuickSizeOpen ? 'rotate-180' : ''}`} />
+                                </span>
+                            ) : (product.sizes && product.sizes.length > 0 ? (
+                                <span className="text-amber-400 font-bold flex items-center gap-1 underline decoration-amber-400/40 underline-offset-2">
+                                    Выбрать размер <ChevronDown size={11} />
+                                </span>
+                            ) : 'Sparta')}
                         </div>
-                        <div className="font-russo text-lg sm:text-xl text-yellow-400 font-bold truncate">
+                        <div className="font-russo text-lg sm:text-xl text-white font-bold truncate">
                             {(appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price).toLocaleString()} ₽
+                            {customName && (
+                                <span className="text-[9px] font-mono text-emerald-400 font-normal ml-1.5 tracking-tight">
+                                    • {customNumber || '22'} {customName}
+                                </span>
+                            )}
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -2715,8 +3145,8 @@ const ProductDetails = () => {
                             type="button"
                             onClick={() => {
                                 if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+                                    setIsQuickSizeOpen(true);
                                     showToast('Пожалуйста, выберите размер', 'warning');
-                                    scrollToSection('size-section');
                                     return;
                                 }
                                 if (product.colors && product.colors.length > 0 && !selectedColor) {
@@ -2724,12 +3154,27 @@ const ProductDetails = () => {
                                     return;
                                 }
                                 addToCart(product, 1, selectedSize || undefined, selectedColor || undefined, customName, customNumber, measurements, fitStyle);
+                                setIsAddedSuccess(true);
+                                setTimeout(() => setIsAddedSuccess(false), 2000);
                             }}
-                            disabled={(selectedSize && product.stock?.[selectedSize] === 0) || (!selectedSize && product.sizes && product.sizes.length > 0)}
-                            className="px-5 py-3 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 disabled:opacity-40 disabled:bg-[#1a1a1a] disabled:text-gray-600 text-black rounded-xl font-russo uppercase text-xs sm:text-sm tracking-wider flex items-center gap-2 shadow-lg shadow-yellow-500/20 active:scale-95 cursor-pointer whitespace-nowrap"
+                            disabled={(selectedSize && product.stock?.[selectedSize] === 0) || (!selectedSize && product.sizes && product.sizes.length > 0 && !isQuickSizeOpen)}
+                            className={`px-5 py-3 rounded-xl font-russo uppercase text-xs sm:text-sm tracking-wider flex items-center gap-2 shadow-lg active:scale-95 cursor-pointer whitespace-nowrap transition-all ${
+                                isAddedSuccess
+                                    ? 'bg-emerald-500 text-black shadow-emerald-500/30 font-black'
+                                    : 'bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 disabled:opacity-40 disabled:bg-[#1a1a1a] disabled:text-gray-600 text-black shadow-yellow-500/20'
+                            }`}
                         >
-                            <ShoppingCart size={16} />
-                            <span>{(selectedSize && product.stock?.[selectedSize] === 0) ? 'Раскупили' : 'В корзину'}</span>
+                            {isAddedSuccess ? (
+                                <>
+                                    <Check size={16} className="stroke-[3]" />
+                                    <span>В корзине!</span>
+                                </>
+                            ) : (
+                                <>
+                                    <ShoppingCart size={16} />
+                                    <span>{(selectedSize && product.stock?.[selectedSize] === 0) ? 'Раскупили' : 'В корзину'}</span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Всероссийская школа танца — LOTUS & SoMA (3D Cutout Master Edition A4)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,600;1,700&family=Onest:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --graphite-dark: #121815;
+      --graphite-soft: #242E28;
+      --lotus-green: #284B35;
+      --soma-lavender: #3E3458;
+      --btn-gold: #D4A853;
+      --footer-bg: #14181E;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    @page {
+      size: 1240px 1754px;
+      margin: 0;
+    }
+
+    html, body {
+      width: 1240px;
+      height: 1754px;
+      margin: 0;
+      padding: 0;
+      background: #EAEBE8;
+      color: var(--graphite-dark);
+      font-family: 'Onest', 'Montserrat', sans-serif;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .poster-a4-dance {
+      width: 1240px;
+      height: 1754px;
+      position: relative;
+      background: #EAEBE8;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    /* ================= 0. РЕАЛИСТИЧНЫЙ ФОН СТУДИИ С ДЕТЬМИ ================= */
+    .bg-studio-photo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      object-fit: cover;
+      object-position: center top;
+      z-index: 1;
+    }
+
+    /* Мягкий градиентный рассеиватель сверху для кристальной читаемости заголовка */
+    .top-light-vignette {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 500px;
+      background: linear-gradient(180deg, 
+        rgba(255, 255, 255, 0.88) 0%, 
+        rgba(255, 255, 255, 0.6) 55%, 
+        rgba(255, 255, 255, 0) 100%
+      );
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* ================= 1. ШАПКА И ГЛАВНЫЙ ЗАГОЛОВОК ================= */
+    .header-top-block {
+      position: relative;
+      z-index: 10;
+      padding: 38px 60px 0 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    /* Тонкие геометрические орбиты */
+    .orbit-decor-rings {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 380px;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .orbit-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+    }
+    .ring-1 { width: 580px; height: 270px; transform: translate(-50%, -50%) rotate(-8deg); }
+    .ring-2 { width: 740px; height: 340px; transform: translate(-50%, -50%) rotate(5deg); border-color: rgba(255, 255, 255, 0.45); }
+
+    /* Пилюля-надзаголовок в стиле жидкого стекла */
+    .top-brand-pill {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.35) 100%);
+      border: 1.5px solid rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      padding: 7px 28px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--graphite-dark);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+      margin-bottom: 14px;
+    }
+
+    /* Главный акцентный заголовок */
+    .main-title-h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 70px;
+      font-weight: 700;
+      line-height: 0.95;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--graphite-dark);
+      text-shadow: 0 2px 20px rgba(255, 255, 255, 0.95);
+      margin-bottom: 16px;
+    }
+    .main-title-h1 span {
+      display: block;
+    }
+
+    /* Подстрочник */
+    .main-subtitle-p {
+      max-width: 900px;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--graphite-soft);
+      text-shadow: 0 1px 10px rgba(255, 255, 255, 0.95);
+    }
+
+    /* =========================================================================
+       2. ДВЕ КАРТОЧКИ НАПРАВЛЕНИЙ: ЭФФЕКТ ЖИДКОГО СТЕКЛА + 3D ИКОНКИ БЕЗ ФОНА
+       ========================================================================= */
+    .middle-cards-container {
+      position: relative;
+      z-index: 12;
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      padding: 0 60px;
+      margin-top: auto;
+      margin-bottom: 16px;
+    }
+
+    .liquid-glass-card {
+      flex: 1;
+      max-width: 540px;
+      background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.64) 0%, 
+        rgba(255, 255, 255, 0.34) 50%, 
+        rgba(255, 255, 255, 0.48) 100%
+      );
+      border: 1.5px solid rgba(255, 255, 255, 0.75);
+      border-top: 2px solid rgba(255, 255, 255, 0.95);
+      border-radius: 26px;
+      padding: 22px 26px;
+      box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.12),
+        0 4px 15px rgba(0, 0, 0, 0.05),
+        inset 0 1px 2px rgba(255, 255, 255, 0.95),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.04);
+      backdrop-filter: blur(28px) saturate(180%) brightness(104%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(104%);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Плашка-заголовок карточки */
+    .card-header-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 18px;
+      border-radius: 12px;
+      color: #FFFFFF;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      width: fit-content;
+      position: relative;
+      z-index: 2;
+    }
+    .badge-lotus {
+      background: linear-gradient(135deg, rgba(40, 75, 53, 0.92) 0%, rgba(25, 52, 35, 0.98) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 6px 18px rgba(40, 75, 53, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+    }
+    .badge-soma {
+      background: linear-gradient(135deg, rgba(62, 52, 88, 0.92) 0%, rgba(42, 34, 62, 0.98) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 6px 18px rgba(62, 52, 88, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+    }
+
+    /* Список преимуществ с прозрачными 3D иконками */
+    .card-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      z-index: 2;
+    }
+    .card-item-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    
+    /* 3D Иконка в глянцевой стеклянной капсуле */
+    .item-3d-icon-box {
+      width: 52px;
+      height: 52px;
+      min-width: 52px;
+      min-height: 52px;
+      border-radius: 15px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.4) 100%);
+      border: 1.5px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .item-3d-icon-box img {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.16));
+    }
+
+    .item-text-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .item-main-title {
+      font-size: 17.5px;
+      font-weight: 800;
+      color: var(--graphite-dark);
+      line-height: 1.2;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    }
+    .item-sub-desc {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #384640;
+      line-height: 1.2;
+    }
+
+    /* =========================================================================
+       3. БЛОК ГАРАНТИЙ: КАПСУЛЫ ЖИДКОГО СТЕКЛА
+       ========================================================================= */
+    .guarantees-three-row {
+      position: relative;
+      z-index: 12;
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 60px;
+      margin-bottom: 20px;
+    }
+
+    .guarantee-liquid-pill {
+      flex: 1;
+      background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.58) 0%, 
+        rgba(255, 255, 255, 0.3) 100%
+      );
+      border: 1.5px solid rgba(255, 255, 255, 0.75);
+      border-top: 2px solid rgba(255, 255, 255, 0.95);
+      border-radius: 18px;
+      padding: 12px 18px;
+      box-shadow: 
+        0 12px 28px rgba(0, 0, 0, 0.08),
+        inset 0 1px 2px rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+    }
+    .guarantee-bold-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--graphite-dark);
+      line-height: 1.2;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+    }
+    .guarantee-soft-desc {
+      font-size: 14px;
+      font-weight: 600;
+      color: #44524C;
+      line-height: 1.2;
+    }
+
+    /* =========================================================================
+       4. ПРЕМИУМ-ФУТЕР (ТЕМНЫЙ ГЛЯНЦЕВЫЙ ДОК)
+       ========================================================================= */
+    .footer-dark-dock {
+      position: relative;
+      z-index: 15;
+      margin: 0 40px 30px 40px;
+      background: linear-gradient(135deg, #181E24 0%, #101418 100%);
+      border-radius: 24px;
+      padding: 18px 30px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      color: #FFFFFF;
+    }
+
+    /* Филиалы (слева) */
+    .footer-branches-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 320px;
+    }
+    .branches-header-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #D4A853;
+      letter-spacing: 0.02em;
+    }
+    .branch-line-item {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #D8E0DC;
+      line-height: 1.3;
+    }
+
+    /* Центральная кнопка CTA */
+    .footer-button-col {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+    .btn-gold-action {
+      width: 100%;
+      max-width: 360px;
+      height: 60px;
+      background: linear-gradient(135deg, #E2B866 0%, #D4A853 50%, #C49642 100%);
+      color: #14181E;
+      border: 2px solid #FFFFFF;
+      border-radius: 30px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(212, 168, 83, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    /* Контакты и QR (справа) */
+    .footer-contacts-col {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .phones-text-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-align: right;
+    }
+    .phones-header-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #A0ABA5;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .phone-item-number {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 15.5px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 0.02em;
+    }
+
+    .qr-card-container {
+      width: 72px;
+      height: 72px;
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 4px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-card-container img {
+      width: 64px;
+      height: 64px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="poster-a4-dance" id="poster-dance-stage">
+    
+    <!-- 0. ФОН: РЕАЛИСТИЧНЫЙ ЗАЛ С ДЕТЬМИ -->
+    <img src="/banner-assets/dance-kids-hero-split.jpg" alt="Танцевальный зал с детьми" class="bg-studio-photo">
+    <div class="top-light-vignette"></div>
+
+    <!-- 1. ШАПКА И ГЛАВНЫЙ ЗАГОЛОВОК -->
+    <div class="header-top-block">
+      <!-- Тонкие орбиты -->
+      <div class="orbit-decor-rings">
+        <div class="orbit-ring ring-1"></div>
+        <div class="orbit-ring ring-2"></div>
+      </div>
+
+      <!-- Пилюля -->
+      <div class="top-brand-pill">ВСЕРОССИЙСКАЯ ШКОЛА ТАНЦА • НОВОСИБИРСК</div>
+
+      <!-- Заголовок -->
+      <h1 class="main-title-h1">
+        <span>ОТКРЫВАЕМ НАБОР</span>
+        <span>НА НОВЫЙ СЕЗОН</span>
+      </h1>
+
+      <!-- Подстрочник -->
+      <p class="main-subtitle-p">
+        Помогаем раскрыть природную грацию, пластику и уверенность в себе. Создаём пространство, где берегут детское здоровье, учат слышать музыку и искренне радоваться каждому движению.
+      </p>
+    </div>
+
+    <!-- 2. ДВЕ КАРТОЧКИ НАПРАВЛЕНИЙ: LIQUID GLASS + ФИРМЕННЫЕ 3D ИКОНКИ БЕЗ ФОНА -->
+    <div class="middle-cards-container">
+      
+      <!-- Карточка LOTUS -->
+      <div class="liquid-glass-card">
+        <div class="card-header-badge badge-lotus">
+          Школа балета LOTUS (от 3 лет)
+        </div>
+        <div class="card-items-list">
+          <!-- Пункт 1: Пуанты 3D -->
+          <div class="card-item-row">
+            <div class="item-3d-icon-box">
+              <img src="/banner-assets/icon-3d-ballet.png" alt="3D Пуанты">
+            </div>
+            <div class="item-text-wrapper">
+              <div class="item-main-title">Красивая осанка</div>
+              <div class="item-sub-desc">(ровная спина и лёгкость)</div>
+            </div>
+          </div>
+
+          <!-- Пункт 2: Лотос / Растяжка 3D -->
+          <div class="card-item-row">
+            <div class="item-3d-icon-box">
+              <img src="/banner-assets/icon-3d-stretch.png" alt="3D Растяжка">
+            </div>
+            <div class="item-text-wrapper">
+              <div class="item-main-title">Мягкая растяжка</div>
+              <div class="item-sub-desc">(без боли и слёз)</div>
+            </div>
+          </div>
+
+          <!-- Пункт 3: Золотой ключ / Ритм 3D -->
+          <div class="card-item-row">
+            <div class="item-3d-icon-box">
+              <img src="/banner-assets/icon-3d-rhythm.png" alt="3D Ритм">
+            </div>
+            <div class="item-text-wrapper">
+              <div class="item-main-title">Чувство ритма</div>
+              <div class="item-sub-desc">(учимся слышать музыку)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Карточка SoMA -->
+      <div class="liquid-glass-card">
+        <div class="card-header-badge badge-soma">
+          Современные танцы SoMA (для детей и подростков)
+        </div>
+        <div class="card-items-list">
+          <!-- Пункт 1: Молния 3D -->
+          <div class="card-item-row">
+            <div class="item-3d-icon-box">
+              <img src="/banner-assets/icon-3d-lightning.png" alt="3D Молния">
+            </div>
+            <div class="item-text-wrapper">
+              <div class="item-main-title">Уверенность в себе</div>
+              <div class="item-sub-desc">(раскрепощение и смелость)</div>
+            </div>
+          </div>
+
+          <!-- Пункт 2: Кроссовки 3D -->
+          <div class="card-item-row">
+            <div class="item-3d-icon-box">
+              <img src="/banner-assets/icon-3d-sneaker.png" alt="3D Кроссовки">
+            </div>
+            <div class="item-text-wrapper">
+              <div class="item-main-title">Хип-хоп и модные танцы</div>
+            </div>
+          </div>
+
+          <!-- Пункт 3: Кубок 3D -->
+          <div class="card-item-row">
+            <div class="item-3d-icon-box">
+              <img src="/banner-assets/icon-3d-trophy.png" alt="3D Кубок">
+            </div>
+            <div class="item-text-wrapper">
+              <div class="item-main-title">Выступления на сцене</div>
+              <div class="item-sub-desc">(команда и новые друзья)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3. БЛОК ГАРАНТИЙ (3 ПЛАШКИ В РЯД): LIQUID GLASS -->
+    <div class="guarantees-three-row">
+      <!-- Гарантия 1 -->
+      <div class="guarantee-liquid-pill">
+        <div class="guarantee-bold-title">0 ₽ — Пробный урок</div>
+        <div class="guarantee-soft-desc">для мягкого знакомства.</div>
+      </div>
+
+      <!-- Гарантия 2 -->
+      <div class="guarantee-liquid-pill">
+        <div class="guarantee-bold-title">Чуткие педагоги —</div>
+        <div class="guarantee-soft-desc">бережная методика</div>
+      </div>
+
+      <!-- Гарантия 3 -->
+      <div class="guarantee-liquid-pill">
+        <div class="guarantee-bold-title">Гослицензия —</div>
+        <div class="guarantee-soft-desc">Налоговый вычет 13%</div>
+      </div>
+    </div>
+
+    <!-- 4. ПРЕМИУМ-ФУТЕР -->
+    <div class="footer-dark-dock">
+      <!-- Филиалы -->
+      <div class="footer-branches-col">
+        <div class="branches-header-title">📍 Филиалы в Новосибирске:</div>
+        <div class="branch-line-item">• ул. Большевистская, 125</div>
+        <div class="branch-line-item">• ул. Планетная, 53</div>
+        <div class="branch-line-item">• ул. Мясниковой, 25/2</div>
+      </div>
+
+      <!-- Кнопка CTA -->
+      <div class="footer-button-col">
+        <button class="btn-gold-action">
+          ЗАПИСАТЬСЯ НА ПРОБНЫЙ УРОК →
+        </button>
+      </div>
+
+      <!-- Контакты и QR -->
+      <div class="footer-contacts-col">
+        <div class="phones-text-group">
+          <div class="phones-header-title">Телефоны руководства</div>
+          <div class="phone-item-number">+7 (913) 765-4321</div>
+          <div class="phone-item-number">+7 (383) 221-1222</div>
+        </div>
+
+        <div class="qr-card-container">
+          <img src="/banner-assets/vk-qr-real.png" alt="ВКонтакте QR">
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

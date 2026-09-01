@@ -28,6 +28,7 @@ const AdminBans = lazyWithRetry(() => import('./pages/admin/AdminBans'));
 const AdminBroadcasts = lazyWithRetry(() => import('./pages/admin/AdminBroadcasts'));
 const AdminReviews = lazyWithRetry(() => import('./pages/admin/AdminReviews'));
 const AdminFinance = lazyWithRetry(() => import('./pages/admin/AdminFinance'));
+const AdminSubscriptions = lazyWithRetry(() => import('./pages/admin/AdminSubscriptions'));
 const AdminScanner = lazyWithRetry(() => import('./pages/admin/AdminScanner'));
 const AdminLocations = lazyWithRetry(() => import('./pages/admin/AdminLocations'));
 const DirectorDashboard = lazyWithRetry(() => import('./pages/admin/DirectorDashboard'));
@@ -224,6 +225,8 @@ const App: React.FC = () => {
                                     <Route path="/broadcasts" element={<Broadcasts />} />
                                     <Route path="/camera-streamer" element={<CameraStreamer />} />
                                     <Route path="/dashboard" element={<Dashboard />} />
+                                    <Route path="/awards" element={<Navigate to="/dashboard?tab=achievements" replace />} />
+                                    <Route path="/trophies" element={<Navigate to="/dashboard?tab=achievements" replace />} />
                                     <Route path="/reset-password" element={<ResetPassword />} />
                                     <Route path="/settings" element={<Navigate to="/dashboard" replace />} />
 
@@ -252,12 +255,13 @@ const App: React.FC = () => {
                                         <Route path="news" element={<AdminNews />} />
                                         <Route path="directions" element={<AdminDirections />} />
                                         <Route path="team" element={<AdminTeam />} />
-                                        <Route path="schedule" element={<AdminSchedule />} />
+                                        <Route path="schedule" element={<Navigate to="/admin/groups" replace />} />
                                         <Route path="comments" element={<AdminComments />} />
                                         <Route path="settings" element={<AdminSettings />} />
                                         <Route path="scanner" element={<AdminScanner />} />
                                         <Route path="promos" element={<AdminPromos />} />
                                         <Route path="shop" element={<AdminShop />} />
+                                        <Route path="subscriptions" element={<AdminSubscriptions />} />
                                         <Route path="groups" element={<AdminGroups />} />
                                         <Route path="achievements" element={<AdminAchievements />} /> {/* Route */}
                                         <Route path="bans" element={<AdminBans />} />

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     LayoutDashboard, Users, CreditCard, MessageSquare, User,
-    Flame, Trophy, TrendingUp, Activity, Bell, Home
+    Flame, Trophy, TrendingUp, Activity, Bell, Home, Terminal, ShoppingBag
 } from 'lucide-react';
 import { UserItem } from '../../types/user';
 
@@ -42,7 +42,15 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
         }
 
         if (isStaff) {
-            if (role === 'director' || role === 'admin' || role === 'developer' || role === 'dev') {
+            if (role === 'developer' || role === 'dev') {
+                return [
+                    { id: 'analytics', label: 'Пульт', icon: Terminal },
+                    { id: 'requests', label: 'Сводка', icon: LayoutDashboard },
+                    { id: 'messages_unified', label: 'Чат', icon: MessageSquare },
+                    { id: 'profile', label: 'Профиль', icon: User },
+                ];
+            }
+            if (role === 'director' || role === 'admin') {
                 return [
                     { id: 'requests', label: 'Сводка', icon: LayoutDashboard },
                     { id: 'analytics', label: 'Аналитика', icon: TrendingUp },
@@ -64,7 +72,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
         return [
             { id: 'requests', label: 'Дневник', icon: Flame },
             { id: 'achievements', label: 'Награды', icon: Trophy },
-            { id: 'subscriptions', label: 'Абонемент', icon: CreditCard },
+            { id: 'orders', label: 'Призы', icon: ShoppingBag },
             { id: 'messages_unified', label: 'Чат', icon: MessageSquare },
             { id: 'profile', label: 'Профиль', icon: User },
         ];

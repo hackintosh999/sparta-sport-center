@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ЦСП СПАРТА — Футбол (Формат А4 Крупный шрифт)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    body {
+      width: 1240px;
+      height: 1754px;
+      overflow: hidden;
+      background-color: #041226;
+      font-family: 'Montserrat', sans-serif;
+      position: relative;
+    }
+
+    .poster-a4 {
+      width: 1240px;
+      height: 1754px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 36px 50px 36px 50px;
+    }
+
+    .bg-photo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    .content-layer {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* ==================== ЕДИНСТВЕННЫЙ ЗАГОЛОВОК ЦСП СПАРТА В ШАПКЕ ==================== */
+    .top-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .gold-crest {
+      width: 112px;
+      height: auto;
+      filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.45));
+    }
+
+    .header-text-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header-title {
+      font-size: 40px;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+    }
+
+    .header-subtitle {
+      font-size: 22px;
+      font-weight: 800;
+      color: #00FFFF;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+
+    /* ==================== ЦЕНТР: ГЛАВНЫЙ 3D ЗАГОЛОВОК ==================== */
+    .center-title-group {
+      margin-top: 240px; /* Свободное место под мальчика с мячом */
+      margin-bottom: 16px;
+    }
+
+    .title-3d-red {
+      font-size: 110px;
+      font-weight: 900;
+      line-height: 0.92;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #FF1A1A;
+      text-shadow: 
+        0px 1px 0px #8B0000,
+        0px 2px 0px #780000,
+        0px 3px 0px #680000,
+        0px 4px 0px #580000,
+        0px 5px 0px #480000,
+        0px 6px 0px #380000,
+        0px 8px 0px #2A0000,
+        0px 14px 28px rgba(0, 0, 0, 0.9);
+      -webkit-text-stroke: 1.6px #FFE5E5;
+    }
+
+    /* ==================== 4 КАРТОЧКИ ПРЕИМУЩЕСТВ (2x2) ==================== */
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 20px;
+      margin-bottom: 22px;
+    }
+
+    .benefit-card {
+      position: relative;
+      height: 124px;
+      background: rgba(8, 30, 56, 0.80);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 2px solid #00FFFF;
+      border-radius: 22px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(0, 255, 255, 0.25);
+      display: flex;
+      align-items: center;
+      padding: 12px 22px;
+      gap: 18px;
+    }
+
+    .card-icon {
+      width: 88px;
+      height: 88px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
+      flex-shrink: 0;
+    }
+
+    .card-text {
+      color: #FFFFFF;
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: 0.2px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+    }
+
+    /* ==================== ПОДВАЛ (4 АДРЕСА) ==================== */
+    .footer-panel {
+      width: 100%;
+      background: rgba(5, 19, 38, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 2px solid rgba(0, 255, 255, 0.5);
+      border-radius: 24px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 255, 255, 0.2);
+      padding: 22px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .footer-col {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex: 1;
+    }
+
+    .footer-icon-box {
+      width: 58px;
+      height: 58px;
+      flex-shrink: 0;
+    }
+
+    .footer-icon-box svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 2px 8px rgba(0, 255, 255, 0.45));
+    }
+
+    .footer-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: #FFFFFF;
+      line-height: 1.36;
+      letter-spacing: 0.2px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="poster-a4">
+    <img src="/banner-assets/sparta-football-a4-clean-bg.jpg" alt="Спарта Футбол" class="bg-photo">
+
+    <div class="content-layer">
+      
+      <!-- ЕДИНСТВЕННАЯ ШАПКА: ЦСП «СПАРТА» -->
+      <div class="top-header">
+        <img src="/banner-assets/sparta-crest-gold.png" alt="ЦСП Спарта" class="gold-crest">
+        <div class="header-text-block">
+          <div class="header-title">ЦСП «СПАРТА»</div>
+          <div class="header-subtitle">Футбольная школа</div>
+        </div>
+      </div>
+
+      <!-- ГЛАВНЫЙ ЗАГОЛОВОК БЕЗ ДУБЛИРОВАНИЯ -->
+      <div class="center-title-group">
+        <h1 class="title-3d-red">
+          СТАНЬ ЧАСТЬЮ<br>КОМАНДЫ!
+        </h1>
+      </div>
+
+      <!-- КАРТОЧКИ ПРЕИМУЩЕСТВ -->
+      <div class="benefits-grid">
+        
+        <div class="benefit-card">
+          <img src="/banner-assets/icon-gift-nobg.png" alt="Пробная тренировка" class="card-icon">
+          <div class="card-text">
+            <div>Пробная</div>
+            <div>тренировка 0 ₽</div>
+          </div>
+        </div>
+
+        <div class="benefit-card">
+          <img src="/banner-assets/icon-ice-nobg.png" alt="Заморозка" class="card-icon">
+          <div class="card-text">
+            <div>Заморозка</div>
+            <div>при болезни</div>
+          </div>
+        </div>
+
+        <div class="benefit-card">
+          <img src="/banner-assets/icon-license-nobg.png" alt="Гос лицензия" class="card-icon">
+          <div class="card-text">
+            <div>Гос. лицензия</div>
+          </div>
+        </div>
+
+        <div class="benefit-card">
+          <img src="/banner-assets/icon-nalogi-nobg.png" alt="Налоговый вычет" class="card-icon">
+          <div class="card-text">
+            <div>Налоговый</div>
+            <div>вычет 13%</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ПОДВАЛ (4 АДРЕСА КАЖДЫЙ С НОВОЙ СТРОКИ) -->
+      <div class="footer-panel">
+        <div class="footer-col">
+          <div class="footer-icon-box">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="22" fill="rgba(0, 255, 255, 0.15)" stroke="#00FFFF" stroke-width="2"/>
+              <path d="M32 27.5V30.5C32 31.5 31 32.5 30 32.5C21 32 16 27 15.5 18C15.5 17 16.5 16 17.5 16H20.5C21.5 16 22.3 16.8 22.5 17.8C22.7 19 23.2 20.2 23.9 21.2C24.4 21.9 24.2 22.8 23.5 23.3L22.2 24.3C23.4 26.5 25.5 28.6 27.7 29.8L28.7 28.5C29.2 27.8 30.1 27.6 30.8 28.1C31.8 28.8 33 29.3 34.2 29.5C35.2 29.7 36 30.5 36 31.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            <div>+7 919 339 33 99 (Директор)</div>
+            <div>+7 (351) 230-12-69 (Админ)</div>
+            <div style="color: #00FFFF; font-size: 20px; font-weight: 600;">bugrova.k@bk.ru</div>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-icon-box">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="22" fill="rgba(0, 255, 255, 0.15)" stroke="#00FFFF" stroke-width="2"/>
+              <path d="M24 13C19.5 13 16 16.5 16 21C16 26.5 24 35 24 35C24 35 32 26.5 32 21C32 16.5 28.5 13 24 13Z" stroke="#FFFFFF" stroke-width="2.2" stroke-linejoin="round"/>
+              <circle cx="24" cy="21" r="3.5" fill="#00FFFF"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            <div>ул. Большевистская 125,</div>
+            <div>ул. Планетная 53,</div>
+            <div>ул. Мясниковой 25/2,</div>
+            <div>ул. Ласковая 18</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

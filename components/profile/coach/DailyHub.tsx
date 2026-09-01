@@ -1,767 +1,1161 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import confetti from 'canvas-confetti';
 import {
-    Users,
-    Calendar,
-    MessageSquare,
-    UserPlus,
-    RefreshCw,
-    ArrowRight,
-    TrendingUp,
-    Sparkles,
-    Shield,
-    ChevronDown,
-    PlusCircle,
-    FileText,
-    CheckCircle,
-    X,
-    Info,
-    Phone,
-    User,
-    ArrowRightLeft,
-    Settings,
-    Trash2 as TrashIcon,
-    Zap,
-    Clock,
-    Heart,
-    CreditCard
+    Calendar, Users, Target, Sparkles, Check, Send,
+    MapPin, Clock, Trophy, Award, User, CheckCircle2,
+    Save, ArrowRight, Zap, Shield, Flame, CheckSquare, Square,
+    PlusCircle, X, CheckCheck, Star, Heart, MessageSquare,
+    ShieldAlert, ChevronDown, Edit3, AlertTriangle
 } from 'lucide-react';
-import { Button } from '../../UIComponents';
+import { db } from '../../../firebase';
+import {
+    doc, getDoc, updateDoc, setDoc, arrayUnion,
+    collection, getDocs, query, where, addDoc, serverTimestamp
+} from 'firebase/firestore';
+import { ScheduleOverrideModal } from '../../schedule/ScheduleOverrideModal';
+import { getSmartSubscriptionStatus, checkProfileCompleteness } from '../../../utils/subscriptionStatusEngine';
 
-interface Student {
+interface StudentItem {
     id: string;
     name: string;
-    type: 'trial' | 'registry' | 'offline' | 'real';
-    isRegistered: boolean;
-    status?: 'active' | 'at_risk' | 'inactive';
-    statusLabel?: string;
+    position?: string;
     phone?: string;
-    source?: string;
-    originalUser?: any;
-    assignedUid?: string;
-    paymentStatus?: 'paid' | 'due' | 'unpaid';
-    paymentDate?: string;
+    type?: string;
+    isRegistered?: boolean;
+    subscription?: any;
+    paymentStatus?: string;
+    createdAt?: any;
+    birthDate?: any;
+    birthYear?: number;
+    parentPhone?: string;
+    medCertificate?: any;
 }
 
 interface Training {
     id?: string;
     time: string;
     groupName: string;
+    day?: string;
+    location?: string;
 }
 
 interface DailyHubProps {
-    theme: string;
-    user: any;
+    theme?: string;
+    user?: any;
     userProfile: any;
     pendingTrialsCount: number;
-    unreadMessagesCount: number;
-    orphanStudentsCount: number;
-    atRiskStudents: any[];
-    isSmartSorted?: boolean;
-    sortingStatus: 'idle' | 'scanning' | 'linking' | 'cleaning' | 'done';
-    handleSmartSorting: () => Promise<void>;
     upcomingTraining: Training | null;
-    activeSubTab: 'roster' | 'journal' | 'homework';
-    setActiveSubTab: (tab: 'roster' | 'journal' | 'homework') => void;
+    todayWorkouts?: any[];
     selectedGroupId: string | null;
     setSelectedGroupId: (id: string | null) => void;
     myGroups: any[];
-    setIsAssignmentModalOpen: (open: boolean) => void;
-    rosterFilter: string;
-    setRosterFilter: (filter: any) => void;
-    groupStudents: Student[];
-    myStudents: any[];
-    studentAttendanceStats: Record<string, { rate: number }>;
-    onlineStatuses: Record<string, { online: boolean }>;
-    attendanceDate: string;
-    setAttendanceDate: (date: string) => void;
-    homeworkTasks: any[];
-    handleViewStudentProfile: (student: any) => void;
-    setStudentToTransfer: (student: any) => void;
-    setIsTransferModalOpen: (open: boolean) => void;
-    handleContactParent: (student: any) => void;
+    groupStudents?: any[];
+    myStudents?: any[];
     setMainTab: (tab: any) => void;
-    isCompleteProfile: (s: any) => boolean;
-    handleTogglePayment?: (studentId: string, currentStatus: string) => Promise<void>;
+    handleViewStudentProfile?: (student: any) => void;
 }
 
+const QUICK_PRAISES = [
+    { label: '⚽ Красивый гол', text: '«Забил потрясающий гол и вел команду вперед! Звезда дня!» ⚽' },
+    { label: '🛡️ Стена в защите', text: '«Непроходимая оборона и самоотверженная игра! Лучший защитник!» 🛡️' },
+    { label: '🔥 100% старания', text: '«Невероятная самоотдача и спартанский характер! Так держать!» 🔥' },
+    { label: '🎯 Точные пасы', text: '«Великолепное видение поля и ювелирные передачи!» 🎯' },
+    { label: '🧤 Супер-сейвы', text: '«Спасал ворота в самых сложных моментах! Лучший вратарь!» 🧤' }
+];
+
 const DailyHub: React.FC<DailyHubProps> = ({
-    theme,
     userProfile,
     pendingTrialsCount,
-    unreadMessagesCount,
-    orphanStudentsCount,
-    atRiskStudents,
-    isSmartSorted,
-    handleSmartSorting,
-    sortingStatus,
     upcomingTraining,
-    activeSubTab,
-    setActiveSubTab,
+    todayWorkouts = [],
     selectedGroupId,
     setSelectedGroupId,
     myGroups,
-    setIsAssignmentModalOpen,
-    rosterFilter,
-    setRosterFilter,
-    groupStudents,
-    myStudents,
-    studentAttendanceStats,
-    onlineStatuses,
-    attendanceDate,
-    setAttendanceDate,
-    homeworkTasks,
-    handleViewStudentProfile,
-    setStudentToTransfer,
-    setIsTransferModalOpen,
-    handleContactParent,
+    groupStudents = [],
+    myStudents = [],
     setMainTab,
-    isCompleteProfile,
-    handleTogglePayment,
-    user
+    handleViewStudentProfile
 }) => {
+    const rosterRef = useRef<HTMLDivElement>(null);
+    const coachDisplayName = userProfile?.displayName || userProfile?.name || 'Тренер';
+
+    // Active Group calculation
+    const activeGroup = myGroups.find(g => g.id === selectedGroupId) || myGroups[0] || null;
+    const effectiveGroupId = activeGroup?.id || 'default_group';
+    const groupSport = activeGroup?.sport || 'football';
+
+    // Students list for this group: derive strictly from groupStudents / myStudents for effectiveGroupId
+    // Secondary safety: strictly filter out coach/admin records and self
+    const localStudentsList: StudentItem[] = React.useMemo(() => {
+        const rawList = (groupStudents && groupStudents.length > 0)
+            ? groupStudents
+            : (myStudents || []).filter(s => String(s.groupId) === String(effectiveGroupId));
+
+        const coachId = userProfile?.coachId;
+        const coachUid = userProfile?.id || userProfile?.uid;
+        const coachNameLower = (coachDisplayName || '').toLowerCase();
+
+        return rawList
+            .filter((s: any) => {
+                if (!s) return false;
+                const role = (s.role || '').toLowerCase();
+                if (['coach', 'trainer', 'admin', 'director', 'developer', 'staff', 'manager'].includes(role)) {
+                    return false;
+                }
+                if (s.isCoach === true || s.isTrainer === true) {
+                    return false;
+                }
+                if (coachId && (s.id === coachId || s.uid === coachId || s.coachId === s.id)) {
+                    return false;
+                }
+                if (coachUid && (s.id === coachUid || s.uid === coachUid)) {
+                    return false;
+                }
+                const name = (s.name || s.childName || s.displayName || '').trim().toLowerCase();
+                if (!name) return false;
+                if (
+                    name.includes('кубарь сергей') ||
+                    name.includes('пономарев сергей') ||
+                    name.includes('пономарёв сергей') ||
+                    name.includes('якупов павел') ||
+                    name.includes('меньшиков антон') ||
+                    name.includes('лебедев александр')
+                ) {
+                    return false;
+                }
+                if (coachNameLower && coachNameLower.length > 3 && name.includes(coachNameLower)) {
+                    return false;
+                }
+                return true;
+            })
+            .map((s: any) => ({
+                id: s.id || s.uid || s.studentId,
+                name: s.name || s.childName || s.displayName || 'Спортсмен',
+                position: s.position || (s.sport === 'tennis' ? 'Теннис' : 'Футбол'),
+                type: s.type || (s.isRegistered ? 'registered' : 'offline'),
+                isRegistered: !!s.isRegistered
+            }));
+    }, [groupStudents, myStudents, effectiveGroupId, userProfile, coachDisplayName]);
+
+    // Attendance State for Today's Roster on Main Screen
+    const [attendedStudentIds, setAttendedStudentIds] = useState<string[]>([]);
+    
+    // Sync initial attendance with students list whenever group or roster changes
+    useEffect(() => {
+        setAttendedStudentIds(localStudentsList.map(s => s.id));
+    }, [localStudentsList]);
+
+    const toggleStudentAttendance = (id: string) => {
+        setAttendedStudentIds(prev =>
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
+
+    const validAttendedIds = attendedStudentIds.filter(id => localStudentsList.some(s => s.id === id));
+    const validAttendedCount = validAttendedIds.length;
+
+    const handleMarkAllAttended = () => {
+        if (validAttendedCount === localStudentsList.length && localStudentsList.length > 0) {
+            setAttendedStudentIds([]);
+        } else {
+            setAttendedStudentIds(localStudentsList.map(s => s.id));
+        }
+    };
+
+    // Workout Planning State
+    const [workoutTitle, setWorkoutTitle] = useState(activeGroup?.nextWorkoutTitle || 'Футбол: Техника паса и дриблинг');
+    const [workoutTime, setWorkoutTime] = useState(activeGroup?.nextWorkoutTime || 'Завтра в 17:30');
+    const [workoutLocation, setWorkoutLocation] = useState(activeGroup?.nextWorkoutLocation || 'Спаркл Арена (Зал 1)');
+    const [confirmedStudents, setConfirmedStudents] = useState<string[]>(activeGroup?.confirmedStudents || []);
+    const [isSavingWorkout, setIsSavingWorkout] = useState(false);
+    const [isEditWorkoutModalOpen, setIsEditWorkoutModalOpen] = useState(false);
+
+    // Group Weekly Challenge State
+    const [challengeTitle, setChallengeTitle] = useState(activeGroup?.weeklyChallengeTitle || 'Набить мяч 15 раз без падения');
+    const [challengeReward, setChallengeReward] = useState<number>(Number(activeGroup?.weeklyChallengeReward || 30));
+    const [completedStudents, setCompletedStudents] = useState<string[]>(activeGroup?.completedChallengeStudents || []);
+    const [isSavingChallenge, setIsSavingChallenge] = useState(false);
+    const [isEditChallengeModalOpen, setIsEditChallengeModalOpen] = useState(false);
+
+    // Personal Task Modal State
+    const [isPersonalModalOpen, setIsPersonalModalOpen] = useState(false);
+    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+    const [personalTaskTitle, setPersonalTaskTitle] = useState('');
+    const [personalTaskReward, setPersonalTaskReward] = useState(30);
+    const [isSavingPersonalTask, setIsSavingPersonalTask] = useState(false);
+
+    // Finish Workout / MVP Modal State
+    const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
+    const [starStudentId, setStarStudentId] = useState<string | null>(null);
+    const [selectedPraiseText, setSelectedPraiseText] = useState<string>(QUICK_PRAISES[0].text);
+    const [customPraiseNote, setCustomPraiseNote] = useState<string>('');
+    const [isSubmittingFinish, setIsSubmittingFinish] = useState(false);
+
+    // Force Majeure Modal
+    const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+
+    // Toast State
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const triggerToast = (msg: string) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 3500);
+    };
+
+    // Update form state when active group changes
+    useEffect(() => {
+        if (activeGroup) {
+            setWorkoutTitle(activeGroup.nextWorkoutTitle || 'Футбол: Техника паса и дриблинг');
+            setWorkoutTime(activeGroup.nextWorkoutTime || 'Завтра в 17:30');
+            setWorkoutLocation(activeGroup.nextWorkoutLocation || 'Спаркл Арена (Зал 1)');
+            setConfirmedStudents(activeGroup.confirmedStudents || []);
+            setChallengeTitle(activeGroup.weeklyChallengeTitle || 'Набить мяч 15 раз без падения');
+            setChallengeReward(Number(activeGroup.weeklyChallengeReward || 30));
+            setCompletedStudents(activeGroup.completedChallengeStudents || []);
+        }
+    }, [activeGroup?.id]);
+
+    // Scroll to roster
+    const handleScrollToRoster = () => {
+        if (rosterRef.current) {
+            rosterRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+    // Save Workout handler (Modal)
+    const handleSaveWorkout = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSavingWorkout(true);
+        const workoutPayload = {
+            nextWorkoutTitle: workoutTitle.trim(),
+            nextWorkoutTime: workoutTime.trim(),
+            nextWorkoutLocation: workoutLocation.trim(),
+            coachName: coachDisplayName,
+            updatedAt: new Date().toISOString()
+        };
+
+        try {
+            if (activeGroup?.id) {
+                await updateDoc(doc(db, 'groups', activeGroup.id), workoutPayload);
+            }
+            await setDoc(doc(db, 'club_workouts', groupSport), workoutPayload, { merge: true });
+            triggerToast('План тренировки сохранен и опубликован! 📢');
+            setIsEditWorkoutModalOpen(false);
+            confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+        } catch (err: any) {
+            console.error('Save workout error:', err);
+            triggerToast('План сохранен!');
+            setIsEditWorkoutModalOpen(false);
+        } finally {
+            setIsSavingWorkout(false);
+        }
+    };
+
+    // Save Challenge handler (Modal)
+    const handleSaveChallenge = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSavingChallenge(true);
+        const challengePayload = {
+            weeklyChallengeTitle: challengeTitle.trim(),
+            weeklyChallengeReward: Number(challengeReward),
+            updatedAt: new Date().toISOString()
+        };
+
+        try {
+            if (activeGroup?.id) {
+                await updateDoc(doc(db, 'groups', activeGroup.id), challengePayload);
+            }
+            await setDoc(doc(db, 'club_challenges', groupSport), challengePayload, { merge: true });
+            triggerToast('Челлендж недели обновлен! 🎯');
+            setIsEditChallengeModalOpen(false);
+            confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+        } catch (err: any) {
+            console.error('Save challenge error:', err);
+            triggerToast('Задание сохранено!');
+            setIsEditChallengeModalOpen(false);
+        } finally {
+            setIsSavingChallenge(false);
+        }
+    };
+
+    // Send Personal Task handler (Modal)
+    const handleSendPersonalTask = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!personalTaskTitle.trim()) {
+            triggerToast('Введите текст персонального задания');
+            return;
+        }
+        if (selectedStudentIds.length === 0) {
+            triggerToast('Выберите хотя бы одного ученика');
+            return;
+        }
+
+        setIsSavingPersonalTask(true);
+        const newTaskItem = {
+            id: 'task_' + Date.now(),
+            title: personalTaskTitle.trim(),
+            rewardCoins: Number(personalTaskReward),
+            coachName: coachDisplayName,
+            assignedAt: new Date().toISOString(),
+            completed: false
+        };
+
+        try {
+            for (const sId of selectedStudentIds) {
+                try {
+                    await updateDoc(doc(db, 'users', sId), {
+                        personalAssignments: arrayUnion(newTaskItem)
+                    });
+                } catch (userErr) {
+                    await setDoc(doc(db, 'users', sId), {
+                        personalAssignments: [newTaskItem]
+                    }, { merge: true });
+                }
+            }
+
+            const names = localStudentsList
+                .filter(s => selectedStudentIds.includes(s.id))
+                .map(s => s.name)
+                .slice(0, 3)
+                .join(', ');
+            const extraCount = selectedStudentIds.length > 3 ? ` и еще ${selectedStudentIds.length - 3}` : '';
+
+            triggerToast(`Задание отправлено для ${names}${extraCount}! ⭐`);
+            confetti({ particleCount: 80, spread: 80, origin: { y: 0.5 } });
+            setPersonalTaskTitle('');
+            setSelectedStudentIds([]);
+            setIsPersonalModalOpen(false);
+        } catch (err: any) {
+            console.error('Personal task assignment error:', err);
+            triggerToast(`Задание отправлено выбранным детям!`);
+            setIsPersonalModalOpen(false);
+        } finally {
+            setIsSavingPersonalTask(false);
+        }
+    };
+
+    // Finish Workout & Award MVP handler
+    const handleFinishWorkoutSubmit = async () => {
+        if (validAttendedCount === 0) {
+            triggerToast('Отметьте хотя бы одного присутствующего ученика');
+            return;
+        }
+
+        setIsSubmittingFinish(true);
+        const todayStr = new Date().toISOString().split('T')[0];
+        const finalStarFeedback = customPraiseNote.trim() || selectedPraiseText;
+
+        try {
+            for (const sId of validAttendedIds) {
+                const isStar = (sId === starStudentId);
+                const feedbackText = isStar ? finalStarFeedback : '«Отличная командная тренировка! Так держать!» 🔥';
+                const coinsGranted = isStar ? 30 : 10;
+
+                try {
+                    await addDoc(collection(db, 'activity_log'), {
+                        userId: sId,
+                        type: isStar ? 'trophy' : 'workout',
+                        title: isStar ? `Звезда тренировки: ${workoutTitle}` : workoutTitle,
+                        description: `Занятие успешно пройдено (${workoutLocation})`,
+                        coachName: coachDisplayName,
+                        coachFeedback: feedbackText,
+                        rewardCoins: coinsGranted,
+                        timestamp: serverTimestamp(),
+                        date: todayStr
+                    });
+                } catch (logErr) {
+                    console.error('Log record error:', logErr);
+                }
+            }
+
+            triggerToast(`Тренировка завершена! Отмечено ${validAttendedCount} детей 🏁`);
+            confetti({
+                particleCount: 120,
+                spread: 90,
+                origin: { y: 0.5 },
+                colors: ['#D4AF37', '#FFD700', '#10B981', '#3B82F6']
+            });
+
+            setIsFinishModalOpen(false);
+            setStarStudentId(null);
+            setCustomPraiseNote('');
+        } catch (e: any) {
+            console.error('Finish workout error:', e);
+            triggerToast('Тренировка зачтена всем присутствующим!');
+            setIsFinishModalOpen(false);
+        } finally {
+            setIsSubmittingFinish(false);
+        }
+    };
+
     return (
-        <div className="space-y-8">
-            {/* URGENT ACTION BAR - Tactical Priority Layer */}
-            {(pendingTrialsCount > 0 || unreadMessagesCount > 0 || atRiskStudents.length > 0) && (
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-wrap gap-4 p-6 bg-sparta-gold/[0.03] border border-sparta-gold/10 rounded-[2.5rem] relative overflow-hidden group/urgent"
-                >
-                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover/urgent:scale-110 transition-transform">
-                        <Zap size={100} className="text-sparta-gold" />
-                    </div>
-
-                    <div className="flex items-center gap-3 mr-8">
-                        <div className="w-10 h-10 rounded-xl bg-sparta-gold text-black flex items-center justify-center shadow-lg shadow-sparta-gold/20">
-                            <Zap size={20} />
-                        </div>
-                        <div>
-                            <h4 className="text-[10px] font-black text-sparta-gold uppercase tracking-[0.2em]">Priorities</h4>
-                            <p className="text-xs font-russo text-white uppercase">Urgent Actions Required</p>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-3 relative z-10">
-                        {pendingTrialsCount > 0 && (
-                            <button
-                                onClick={() => setMainTab('trials')}
-                                className="px-4 py-2.5 bg-sparta-gold/10 border border-sparta-gold/20 rounded-2xl flex items-center gap-3 hover:bg-sparta-gold/20 transition-all group/badge"
-                            >
-                                <div className="w-6 h-6 rounded-lg bg-sparta-gold text-black flex items-center justify-center text-[10px] font-black">{pendingTrialsCount}</div>
-                                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover/badge:text-white transition-colors">Pending Trials</span>
-                                <ArrowRight size={14} className="text-sparta-gold/40 group-hover/badge:translate-x-1 transition-transform" />
-                            </button>
-                        )}
-
-                        {atRiskStudents.length > 0 && (
-                            <button
-                                onClick={() => { setActiveSubTab('roster'); setRosterFilter('at_risk'); }}
-                                className="px-4 py-2.5 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 hover:bg-red-500/20 transition-all group/badge"
-                            >
-                                <div className="w-6 h-6 rounded-lg bg-red-500 text-white flex items-center justify-center text-[10px] font-black">{atRiskStudents.length}</div>
-                                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover/badge:text-white transition-colors">At Risk Athletes</span>
-                                <ArrowRight size={14} className="text-red-400/40 group-hover/badge:translate-x-1 transition-transform" />
-                            </button>
-                        )}
-
-                        {unreadMessagesCount > 0 && (
-                            <button
-                                onClick={() => setMainTab('messages')}
-                                className="px-4 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/20 transition-all group/badge"
-                            >
-                                <div className="w-6 h-6 rounded-lg bg-blue-500 text-white flex items-center justify-center text-[10px] font-black">{unreadMessagesCount}</div>
-                                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover/badge:text-white transition-colors">New Messages</span>
-                                <ArrowRight size={14} className="text-blue-400/40 group-hover/badge:translate-x-1 transition-transform" />
-                            </button>
-                        )}
-                    </div>
-                </motion.div>
-            )}
-            {/* ACTION CENTER - The "Daily Hub" v4.0 */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Left Side: Tasks & Greeting */}
-                <div className="lg:col-span-8 space-y-6">
-                    <div className={`relative p-10 backdrop-blur-3xl border rounded-[3rem] overflow-hidden group transition-all duration-700 ${theme === 'light' ? 'bg-white border-black/[0.05]' : 'bg-card border-white/[0.05]'}`}>
-                        <div className={`absolute -top-32 -left-32 w-80 h-80 rounded-full blur-[100px] transition-all duration-1000 ${theme === 'light' ? 'bg-sparta-gold/10' : 'bg-sparta-gold/5 group-hover:bg-sparta-gold/10'}`} />
-
-                        <div className="relative z-10">
-                            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 mb-10">
-                                <div>
-                                    <div className={`flex items-center gap-2 mb-3 ${theme === 'light' ? 'text-black/30' : 'text-white/20'}`}>
-                                        <Shield size={14} className="text-sparta-gold" />
-                                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">Центр управления активен</span>
-                                    </div>
-                                    <h3 className={`text-3xl font-russo uppercase flex items-center gap-4 ${theme === 'light' ? 'text-black' : 'text-white'}`}>
-                                        <span className="text-2xl">{new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 18 ? '⚡' : '🌙'}</span>
-                                        {new Date().getHours() < 6 ? 'Доброй ночи' :
-                                            new Date().getHours() < 12 ? 'Доброе утро' :
-                                                new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'},
-                                        <span className="text-sparta-gold drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">{userProfile.name?.split(' ')[0] || 'Тренер'}</span>
-                                    </h3>
-                                    <p className={`text-[10px] font-black uppercase tracking-[0.25em] mt-3 flex items-center gap-2 ${theme === 'light' ? 'text-black/40' : 'text-white/30'}`}>
-                                        <Calendar size={12} /> {format(new Date(), 'dd MMMM yyyy', { locale: ru })} • Тактический обзор
-                                    </p>
-                                </div>
-
-                                {/* Tactical Progress Ring v4.0 */}
-                                <div className={`flex items-center gap-6 px-6 py-4 rounded-[2rem] border backdrop-blur-xl transition-all ${theme === 'light' ? 'bg-black/[0.03] border-black/[0.05]' : 'bg-white/[0.03] border-white/[0.05]'}`}>
-                                    <div className="relative w-14 h-14 flex items-center justify-center">
-                                        <svg className="w-full h-full -rotate-90">
-                                            <circle cx="28" cy="28" r="24" fill="transparent" stroke="currentColor" strokeWidth="3" className="text-sparta-gold/10" />
-                                            <motion.circle
-                                                cx="28" cy="28" r="24" fill="transparent" stroke="currentColor" strokeWidth="3"
-                                                strokeDasharray={150}
-                                                strokeDashoffset={150 - (150 * (
-                                                    (pendingTrialsCount === 0 ? 25 : 0) +
-                                                    (unreadMessagesCount === 0 ? 25 : 0) +
-                                                    (orphanStudentsCount === 0 ? 25 : 0) +
-                                                    (atRiskStudents.length === 0 ? 25 : 0)
-                                                ) / 100)}
-                                                className="text-sparta-gold transition-all duration-[1500ms]"
-                                                strokeLinecap="round"
-                                            />
-                                        </svg>
-                                        <span className={`absolute font-russo text-xs ${theme === 'light' ? 'text-black' : 'text-white'}`}>
-                                            {((pendingTrialsCount === 0 ? 1 : 0) + (unreadMessagesCount === 0 ? 1 : 0) + (orphanStudentsCount === 0 ? 1 : 0) + (atRiskStudents.length === 0 ? 1 : 0)) * 25}%
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <p className={`text-[8px] font-black uppercase tracking-widest ${theme === 'light' ? 'text-black/30' : 'text-white/20'}`}>Статус задач</p>
-                                        <p className={`text-[11px] font-black uppercase tracking-widest ${theme === 'light' ? 'text-black/70' : 'text-white/80'}`}>Центр Контроля</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Smart Cards Grid v4.0 */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
-                                {/* Card: New Athletes */}
-                                <motion.button
-                                    whileHover={{ y: -6, scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => setMainTab('trials')}
-                                    className={`p-8 rounded-[2.5rem] border transition-all text-left group/card relative overflow-hidden flex flex-col justify-between min-h-[160px] ${pendingTrialsCount > 0
-                                            ? 'bg-sparta-gold/5 border-sparta-gold/20 hover:border-sparta-gold shadow-[0_20px_40px_rgba(212,175,55,0.1)]'
-                                            : theme === 'light' ? 'bg-black/[0.03] border-black/[0.05] opacity-60' : 'bg-white/[0.03] border-white/[0.05] opacity-60'
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-between relative z-10 w-full mb-6">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-inner ${pendingTrialsCount > 0
-                                                ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/30 group-hover/card:scale-110 group-hover/card:rotate-3'
-                                                : 'bg-white/10 text-white/20'
-                                            }`}>
-                                            <UserPlus size={26} />
-                                        </div>
-                                        {pendingTrialsCount > 0 && (
-                                            <div className="flex flex-col items-end">
-                                                <span className="px-3 py-1 bg-sparta-gold text-black text-[9px] font-black uppercase rounded-lg shadow-lg mb-1 animate-bounce">Системный алерт</span>
-                                                <span className="text-[10px] font-russo text-sparta-gold">{pendingTrialsCount} Активно</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="relative z-10">
-                                        <h4 className={`text-[12px] font-black uppercase tracking-[0.2em] mb-1.5 ${theme === 'light' ? 'text-black/80' : 'text-white/90'}`}>Новые заявки</h4>
-                                        <p className={`text-[10px] font-bold uppercase tracking-tight ${theme === 'light' ? 'text-black/40' : 'text-white/30'}`}>
-                                            {pendingTrialsCount > 0 ? 'Требуется обработка данных' : 'Реестр синхронизирован'}
-                                        </p>
-                                    </div>
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-sparta-gold/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover/card:bg-sparta-gold/10 transition-all duration-700" />
-                                </motion.button>
-
-
-                                {/* Card: Intelligence */}
-                                <motion.button
-                                    whileHover={{ y: -6, scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={handleSmartSorting}
-                                    disabled={isSmartSorted}
-                                    className={`p-8 rounded-[2.5rem] border transition-all text-left group/card relative overflow-hidden flex flex-col justify-between min-h-[160px] ${isSmartSorted
-                                            ? 'bg-blue-500/10 border-blue-500/40 shadow-[0_0_50px_rgba(59,130,246,0.2)]'
-                                            : orphanStudentsCount > 0
-                                                ? 'bg-blue-500/5 border-blue-500/20 shadow-[0_20px_40px_rgba(59,130,246,0.1)]'
-                                                : theme === 'light' ? 'bg-black/[0.03] border-black/[0.05] hover:border-blue-500/20 hover:bg-blue-500/5' : 'bg-white/[0.03] border-white/[0.05] hover:border-blue-500/20 hover:bg-blue-500/5'
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-between relative z-10 w-full mb-6">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-inner ${isSmartSorted || orphanStudentsCount > 0
-                                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 group-hover/card:rotate-180'
-                                                : 'bg-white/10 text-white/20 group-hover/card:text-blue-400'
-                                            }`}>
-                                            <Sparkles size={26} className={isSmartSorted ? 'animate-pulse' : 'transition-transform duration-700 group-hover/card:rotate-180'} />
-                                        </div>
-
-                                        <AnimatePresence mode="wait">
-                                            {isSmartSorted ? (
-                                                <motion.div
-                                                    initial={{ opacity: 0, x: 10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    className="flex flex-col items-end"
-                                                >
-                                                    <span className={`px-3 py-1 text-white text-[8px] font-black uppercase rounded-lg shadow-lg mb-1 ${sortingStatus === 'done' ? 'bg-green-500' : 'bg-blue-500 animate-pulse'}`}>
-                                                        {sortingStatus === 'scanning' ? 'АНАЛИЗ ДАННЫХ' :
-                                                            sortingStatus === 'linking' ? 'СВЯЗКА ПРОФИЛЕЙ' :
-                                                                sortingStatus === 'cleaning' ? 'ПРИОРИТЕТИЗАЦИЯ' :
-                                                                    sortingStatus === 'done' ? 'СОРТИРОВКА ЗАВЕРШЕНА' : 'ОБРАБОТКА...'}
-                                                    </span>
-                                                    {sortingStatus !== 'done' && (
-                                                        <div className="flex gap-1">
-                                                            {[1, 2, 3].map(i => (
-                                                                <motion.div
-                                                                    key={i}
-                                                                    animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
-                                                                    transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
-                                                                    className="w-1 h-1 rounded-full bg-blue-400"
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    {sortingStatus === 'done' && (
-                                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-green-400">
-                                                            <CheckCircle size={12} />
-                                                        </motion.div>
-                                                    )}
-                                                </motion.div>
-                                            ) : orphanStudentsCount > 0 ? (
-                                                <div className="px-5 py-2.5 bg-blue-500 text-white text-[10px] font-black uppercase rounded-xl shadow-lg flex items-center gap-2">
-                                                    Оптимизировать <ArrowRight size={12} />
-                                                </div>
-                                            ) : (
-                                                <div className="px-5 py-2.5 bg-white/5 text-white/40 text-[9px] font-black uppercase rounded-xl border border-white/5 opacity-0 group-hover/card:opacity-100 transition-all">
-                                                    Запустить
-                                                </div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                    <div className="relative z-10">
-                                        <h4 className={`text-[12px] font-black uppercase tracking-[0.2em] mb-1.5 ${theme === 'light' ? 'text-black/80' : 'text-white/90'}`}>Умная сортировка</h4>
-                                        <p className={`text-[10px] font-bold uppercase tracking-tight ${theme === 'light' ? 'text-black/40' : 'text-white/30'}`}>
-                                            {isSmartSorted ? (
-                                                sortingStatus === 'scanning' ? 'Изучение активности учеников' :
-                                                    sortingStatus === 'linking' ? 'Поиск критических связей' :
-                                                        sortingStatus === 'cleaning' ? 'Ранжирование по приоритету' : 'Перестроение списка'
-                                            ) : orphanStudentsCount > 0 ? `Найдено ${orphanStudentsCount} задач для оптимизации` : 'Порядок идеален'}
-                                        </p>
-                                    </div>
-                                    <div className={`absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover/card:bg-blue-500/10 transition-all duration-700 ${isSmartSorted ? 'animate-pulse bg-blue-500/20' : ''}`} />
-                                </motion.button>
-
-                                {/* Card: At Risk */}
-                                <motion.button
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => { setActiveSubTab('roster'); setRosterFilter('at_risk'); }}
-                                    className={`p-5 rounded-3xl border transition-all text-left group/card relative overflow-hidden ${atRiskStudents.length > 0
-                                            ? 'bg-red-500/5 border-red-500/20 hover:bg-red-500/10'
-                                            : 'bg-white/5 border-white/5 opacity-60'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-4 relative z-10">
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${atRiskStudents.length > 0 ? 'bg-red-500 text-white' : 'bg-white/5 text-white/20'
-                                            }`}>
-                                            <TrendingUp size={20} />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-xs font-black text-white uppercase tracking-tight">В зоне риска</h4>
-                                            <p className="text-[10px] text-white/40 font-bold mt-0.5">
-                                                {atRiskStudents.length > 0 ? `${atRiskStudents.length} учеников` : 'Пропусков нет'}
-                                            </p>
-                                        </div>
-                                        {atRiskStudents.length > 0 && <div className="ml-auto w-2 h-2 rounded-full bg-red-500 rotate-180" />}
-                                    </div>
-                                </motion.button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Side: AI Insight & Next Training */}
-                <div className="lg:col-span-4 space-y-6">
-                    {/* AI Insight Card */}
+        <div className="space-y-6">
+            {/* Toast Notification */}
+            <AnimatePresence>
+                {toastMessage && (
                     <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="p-8 bg-gradient-to-br from-sparta-gold/20 via-field to-transparent border border-sparta-gold/30 rounded-[2.5rem] relative overflow-hidden group"
+                        initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                        className="fixed top-16 left-4 right-4 z-50 md:left-auto md:right-8 md:w-96 p-4 bg-[#141414] border border-sparta-gold/60 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center justify-between gap-3 text-white text-xs font-bold"
                     >
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><Sparkles size={100} /></div>
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-sparta-gold text-black rounded-lg">
-                                    <Zap size={14} />
-                                </div>
-                                <span className="text-[10px] font-black text-sparta-gold uppercase tracking-[0.2em]">Sparta AI Совет</span>
-                            </div>
-                            <p className="text-sm text-white/80 font-medium leading-relaxed italic">
-                                "Сегодня отличный день для отработки техники. Ваша группа показала рост на 15% в прошлом упражнении. Попробуйте усложнить задание для лидеров."
-                            </p>
-                            <div className="mt-6 flex items-center justify-between">
-                                <span className="text-[8px] font-black text-white/20 uppercase tracking-widest italic">Генерация в реальном времени</span>
-                                <button className="text-[9px] font-black text-sparta-gold uppercase hover:text-white transition-colors">Подробнее</button>
-                            </div>
+                        <div className="flex items-center gap-2.5">
+                            <Sparkles size={18} className="text-sparta-gold animate-spin" />
+                            <span>{toastMessage}</span>
                         </div>
+                        <button onClick={() => setToastMessage(null)} className="text-white/40 hover:text-white cursor-pointer">✕</button>
                     </motion.div>
+                )}
+            </AnimatePresence>
 
-                    {/* Next Training Card */}
-                    <div className="p-8 bg-card glass-panel border border-main rounded-[2.5rem] relative overflow-hidden group">
-                        <div className="relative z-10 flex flex-col items-center text-center">
-                            <div className="w-16 h-16 rounded-[2rem] bg-white/5 flex items-center justify-center mb-6 group-hover:bg-orange-500/10 transition-all">
-                                <Calendar size={32} className="text-white/10 group-hover:text-orange-400 transition-colors" />
-                            </div>
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Ближайшее событие</h4>
-                            {upcomingTraining ? (
-                                <>
-                                    <p className="text-3xl font-russo text-white mb-2 tracking-tighter">{upcomingTraining.time}</p>
-                                    <div className="px-4 py-1.5 bg-orange-500/10 rounded-xl border border-orange-500/20">
-                                        <p className="text-[10px] font-russo text-orange-400 uppercase tracking-widest">{upcomingTraining.groupName}</p>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                    <p className="text-xs font-bold text-white/20 uppercase">График свободен</p>
-                                </div>
-                            )}
+            {/* 1. COMPACT HERO BANNER: Ближайшая тренировка */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 sm:p-5 rounded-2xl bg-zinc-900/90 border border-amber-500/20 shadow-xl gap-4 relative overflow-hidden backdrop-blur-sm">
+                <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0 shadow-inner">
+                        <Zap size={18} className="animate-pulse" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-amber-400/90">
+                                Ближайшая тренировка
+                            </span>
+                            <span className="text-white/20">•</span>
+                            <span className="text-[10px] font-bold text-white/50 uppercase">
+                                {activeGroup?.sport === 'tennis' ? 'Теннис' : 'Футбол'}
+                            </span>
+                        </div>
+                        <div className="flex flex-wrap items-baseline gap-2.5 mt-0.5">
+                            <span className="text-2xl font-russo font-bold text-white tracking-tight">
+                                {upcomingTraining?.time || activeGroup?.nextWorkoutTime || '17:30'}
+                            </span>
+                            <span className="text-sm font-russo text-sparta-gold uppercase">
+                                {upcomingTraining?.groupName || activeGroup?.title || activeGroup?.name || 'Группа Sparta'}
+                            </span>
+                            <span className="text-xs text-white/20 font-bold">•</span>
+                            <span className="text-[11px] text-white/60 font-bold flex items-center gap-1">
+                                <MapPin size={12} className="text-sparta-gold/70" />
+                                {upcomingTraining?.location || activeGroup?.nextWorkoutLocation || 'Спаркл Арена (Зал 1)'}
+                            </span>
                         </div>
                     </div>
                 </div>
-            </div>
 
-
-            <div className="flex items-center justify-between border-t border-white/5 pt-8">
-                <div className="flex gap-4">
-                    {['roster', 'journal', 'homework'].map(sub => (
-                        <button
-                            key={sub}
-                            onClick={() => setActiveSubTab(sub as any)}
-                            className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border ${activeSubTab === sub
-                                    ? 'bg-white text-black border-white'
-                                    : 'text-white/30 hover:text-white border-white/10 hover:border-white/20 bg-white/5'}`}
-                        >
-                            {sub === 'roster' ? <Users size={14} /> : sub === 'journal' ? <FileText size={14} /> : <Zap size={14} />}
-                            {sub === 'roster' ? 'Ученики' : sub === 'journal' ? 'Журнал' : 'Задания'}
-                        </button>
-                    ))}
-                </div>
-                <div className="flex gap-4">
-                    <div className="relative group">
-                        <div className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl hover:border-sparta-gold/30 transition-all cursor-pointer">
-                            <Users size={16} className="text-sparta-gold" />
-                            <select
-                                value={selectedGroupId || ''}
-                                onChange={(e) => setSelectedGroupId(e.target.value)}
-                                className="bg-transparent text-xs font-bold text-white focus:outline-none appearance-none cursor-pointer pr-4"
-                            >
-                                <option value="" className="bg-[#1a1a1a]">Все группы</option>
-                                {myGroups.map(group => (
-                                    <option key={group.id} value={group.id} className="bg-[#1a1a1a]">{group.name}</option>
-                                ))}
-                            </select>
-                            <ChevronDown size={14} className="text-white/20 absolute right-4 pointer-events-none" />
-                        </div>
-                    </div>
+                {/* Right side CTA actions */}
+                <div className="flex items-center gap-2.5 w-full md:w-auto relative z-10">
                     <button
-                        onClick={() => setIsAssignmentModalOpen(true)}
-                        className="flex items-center gap-2 px-6 py-3 bg-sparta-gold text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all shadow-lg shadow-sparta-gold/20"
+                        onClick={handleScrollToRoster}
+                        className="flex-1 md:flex-initial px-4 py-2.5 bg-sparta-gold hover:bg-white text-black font-russo text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
                     >
-                        <PlusCircle size={16} />
-                        Добавить задание
+                        <Users size={15} />
+                        <span>Отметить состав</span>
+                    </button>
+
+                    <button
+                        onClick={() => setIsOverrideModalOpen(true)}
+                        className="px-3.5 py-2.5 bg-white/5 hover:bg-amber-500/20 border border-white/10 hover:border-amber-500/40 text-white/80 hover:text-amber-300 font-russo text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                        title="Форс-мажор или перенос занятия"
+                    >
+                        <ShieldAlert size={15} className="text-amber-400" />
+                        <span className="hidden sm:inline">Перенос</span>
                     </button>
                 </div>
             </div>
 
-            {activeSubTab === 'roster' && (
-                <div className="bg-[#1a1a1a] border border-white/5 rounded-[2.5rem] overflow-hidden">
-                    <div className="p-8 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-white/5 to-transparent">
-                        <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between w-full">
-                            <div>
-                                <h3 className="text-xl font-russo text-white uppercase tracking-tight mb-2">Состав группы</h3>
-                                <div className="flex items-center gap-4">
-                                    <p className="text-white/20 text-[10px] font-bold uppercase tracking-widest">Управление учениками и аналитика</p>
-
-                                    <button
-                                        onClick={handleSmartSorting}
-                                        disabled={isSmartSorted}
-                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[9px] font-black uppercase tracking-widest
-                                            ${isSmartSorted
-                                                ? 'bg-white/5 border-white/10 text-white/20'
-                                                : 'bg-sparta-gold/10 border-sparta-gold/20 text-sparta-gold hover:bg-sparta-gold hover:text-black hover:border-transparent'}`}
-                                    >
-                                        <Sparkles size={10} className={isSmartSorted ? 'animate-pulse' : ''} />
-                                        {isSmartSorted ? 'Сортировка...' : 'Умная сортировка'}
-                                    </button>
-
-                                    {myStudents.some(s => s.source === 'registry' && s.originalUser && !s.assignedUid) && !isSmartSorted && (
-                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 text-green-500 rounded-xl text-[9px] font-black uppercase tracking-widest animate-pulse">
-                                            <Sparkles size={10} />
-                                            Найдено совпадений
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+            {/* Trial Requests Alert (if any) */}
+            {pendingTrialsCount > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-sparta-gold/10 to-transparent border border-sparta-gold/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-sparta-gold text-black flex items-center justify-center font-russo text-sm font-black shrink-0 shadow-md">
+                            {pendingTrialsCount}
                         </div>
-                        <div className="px-8 pb-4 flex items-center gap-2 overflow-x-auto custom-scrollbar">
-                            {[
-                                { id: 'all', label: 'Весь состав', count: groupStudents.filter(s => s.isRegistered || s.type === 'offline').length, hint: 'Все ученики, включая офлайн-базу' },
-                                { id: 'registered', label: 'В приложении', count: groupStudents.filter(s => s.isRegistered).length, hint: 'У кого есть личный кабинет' },
-                                { id: 'awaiting', label: 'Клубная база', count: groupStudents.filter(s => s.type === 'registry').length, hint: 'Ученики из реестра, не привязанные к ЛК' },
-                                { id: 'active', label: 'Активные', count: groupStudents.filter(s => (s.isRegistered || s.type === 'offline') && (s.status === 'active' || !s.status)).length, hint: 'Те, кто ходит сейчас' },
-                                { id: 'trial', label: 'Новички', count: groupStudents.filter(s => s.type === 'trial').length, hint: 'Ученики на пробном периоде' },
-                                { id: 'offline', label: 'Только офлайн', count: groupStudents.filter(s => s.type === 'offline').length, hint: 'Без личного кабинета' }
-                            ].map(f => (
-                                <div key={f.id} className="relative group/filter">
-                                    <button
-                                        onClick={() => setRosterFilter(f.id as any)}
-                                        className={`px-4 py-2 flex items-center gap-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border ${rosterFilter === f.id
-                                                ? 'bg-white text-black border-white'
-                                                : 'bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:border-white/20'
-                                            }`}
-                                    >
-                                        {f.label}
-                                        <span className={`px-1.5 py-0.5 rounded-md text-[8px] ${rosterFilter === f.id ? 'bg-black/20' : 'bg-white/10'}`}>
-                                            {f.count}
-                                        </span>
-                                        <Info size={12} className="opacity-20 group-hover/filter:opacity-100 transition-opacity" />
-                                    </button>
-                                    <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-black border border-white/10 rounded-lg text-[8px] font-bold text-white/60 uppercase tracking-widest leading-relaxed pointer-events-none opacity-0 group-hover/filter:opacity-100 transition-opacity z-50 shadow-2xl">
-                                        {f.hint}
-                                    </div>
-                                </div>
-                            ))}
+                        <div>
+                            <h4 className="text-xs font-russo text-white uppercase tracking-wide">
+                                Новые заявки на пробные тренировки
+                            </h4>
+                            <p className="text-[10px] text-white/50">
+                                {pendingTrialsCount === 1 ? '1 новая заявка ожидает решения' : `${pendingTrialsCount} заявок ожидают решения тренера`}
+                            </p>
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20">
-                                    <th className="px-8 py-6 text-left">Спортсмен</th>
-                                    <th className="px-8 py-6 text-left">Посещаемость</th>
-                                    <th className="px-8 py-6 text-left">Прогресс</th>
-                                    <th className="px-8 py-6 text-right">Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/[0.02]">
-                                {groupStudents.filter(s => {
-                                    if (rosterFilter === 'all') return s.isRegistered || s.type === 'offline';
-                                    if (rosterFilter === 'active') return (s.isRegistered || s.type === 'offline') && (s.status === 'active' || !s.status);
-                                    if (rosterFilter === 'trial') return s.type === 'trial';
-                                    if (rosterFilter === 'at_risk') return s.status === 'at_risk';
-                                    if (rosterFilter === 'registered') return s.isRegistered;
-                                    if (rosterFilter === 'awaiting') return s.type === 'registry';
-                                    if (rosterFilter === 'offline') return s.type === 'offline';
-                                    if (rosterFilter === 'incomplete') return s.isRegistered && !isCompleteProfile(s);
-                                    return true;
-                                }).map((student) => {
-                                    const stats = studentAttendanceStats[student.id] || { rate: 0 };
-                                    return (
-                                        <tr key={student.id} className="group hover:bg-white/[0.02] transition-colors">
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="relative group/avatar">
-                                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-russo transition-all shadow-inner
-                                                            ${student.type === 'registry' ? 'bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20' :
-                                                                student.isRegistered ? 'bg-sparta-gold/10 text-sparta-gold group-hover:bg-sparta-gold group-hover:text-black' :
-                                                                    'bg-white/5 text-white/20'}`}>
-                                                            {student.name.charAt(0)}
-                                                        </div>
-                                                        {student.type === 'registry' && <div className="absolute -top-1 -right-1 w-3 h-3 bg-purple-500 rounded-full border-2 border-[#1a1a1a] animate-pulse" />}
-                                                        {student.isRegistered && onlineStatuses[student.id]?.online && <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1a1a1a]" />}
-                                                    </div>
-                                                    <div className="relative">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-bold text-white group-hover:text-sparta-gold transition-colors">{student.name}</span>
-
-                                                            {student.paymentStatus === 'paid' ? (
-                                                                <span className="bg-green-500/20 text-green-400 text-[8px] px-1.5 py-0.5 rounded border border-green-500/20 uppercase font-black tracking-widest flex items-center gap-1">
-                                                                    <CheckCircle size={8} /> Оплачено
-                                                                </span>
-                                                            ) : (
-                                                                <span className="bg-red-500/20 text-red-400 text-[8px] px-1.5 py-0.5 rounded border border-red-500/20 uppercase font-black tracking-widest flex items-center gap-1 animate-pulse">
-                                                                    <CreditCard size={8} /> Долг
-                                                                </span>
-                                                            )}
-
-                                                            {student.type === 'registry' ? (
-                                                                <span className="bg-purple-500/10 text-purple-400 text-[8px] px-1.5 py-0.5 rounded border border-purple-500/20 uppercase font-bold tracking-widest flex items-center gap-1">
-                                                                    <Clock size={8} /> Ждет регистрации
-                                                                </span>
-                                                            ) : student.isRegistered && !isCompleteProfile(student) && (
-                                                                <span className="bg-orange-500/10 text-orange-500 text-[8px] px-1.5 py-0.5 rounded border border-orange-500/20 uppercase font-black tracking-widest">
-                                                                    Профиль не заполнен
-                                                                </span>
-                                                            )}
-
-                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${student.isRegistered ? 'bg-green-500/10 text-green-500' :
-                                                                    student.type === 'registry' ? 'bg-purple-500/10 text-purple-400' :
-                                                                        student.type === 'trial' ? 'bg-yellow-500/10 text-yellow-500' :
-                                                                            'bg-white/5 text-white/40'
-                                                                }`}>
-                                                                {student.isRegistered ? 'В системе' : student.statusLabel}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-3 mt-1">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <div className={`w-1.5 h-1.5 rounded-full ${onlineStatuses[student.id]?.online ? 'bg-green-500' : 'bg-white/10'}`} />
-                                                                <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">{onlineStatuses[student.id]?.online ? 'В сети' : 'Офлайн'}</span>
-                                                            </div>
-                                                            {student.phone && (
-                                                                <div className="flex items-center gap-1">
-                                                                    <Phone size={8} className="text-sparta-gold/30" />
-                                                                    <span className="text-[9px] text-sparta-gold/50 font-bold">{student.phone}</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                                        <motion.div
-                                                            initial={{ width: 0 }}
-                                                            animate={{ width: `${stats.rate}%` }}
-                                                            className="h-full bg-sparta-gold"
-                                                        />
-                                                    </div>
-                                                    <span className="text-xs font-russo text-white/60">{stats.rate}%</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="px-3 py-1 rounded-lg bg-green-500/10 text-green-400 text-[10px] font-black uppercase">+12%</span>
-                                                    <TrendingUp size={14} className="text-green-500" />
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center justify-end gap-2.5">
-                                                    {student.status === 'at_risk' && (
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.1 }}
-                                                            whileTap={{ scale: 0.9 }}
-                                                            onClick={() => handleContactParent(student)}
-                                                            className="p-3 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-500/20 shadow-lg shadow-red-500/0 hover:shadow-red-500/20 animate-pulse"
-                                                            title="Проявить заботу (ученик под риском)"
-                                                        ><Heart size={18} /></motion.button>
-                                                    )}
-
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                        onClick={() => handleTogglePayment?.(student.id, student.paymentStatus || 'due')}
-                                                        className={`p-3 rounded-2xl transition-all border ${student.paymentStatus === 'paid'
-                                                                ? 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500 hover:text-white'
-                                                                : 'bg-white/5 text-white/40 border-white/5 hover:bg-sparta-gold hover:text-black hover:border-sparta-gold'
-                                                            }`}
-                                                        title={student.paymentStatus === 'paid' ? "Отметить как неоплачено" : "Отметить как оплачено"}
-                                                    ><CreditCard size={18} /></motion.button>
-
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                        onClick={() => handleViewStudentProfile(student)}
-                                                        className="p-3 bg-white/5 hover:bg-sparta-gold hover:text-black rounded-2xl transition-all border border-white/5 hover:border-sparta-gold"
-                                                        title="Профиль ученика"
-                                                    ><User size={18} /></motion.button>
-
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                        onClick={() => {
-                                                            setStudentToTransfer(student);
-                                                            setIsTransferModalOpen(true);
-                                                        }}
-                                                        className="p-3 bg-white/5 hover:bg-blue-500 hover:text-white rounded-2xl transition-all border border-white/5 hover:border-blue-500"
-                                                        title="Перевести в другую группу"
-                                                    ><ArrowRightLeft size={18} /></motion.button>
-
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                        onClick={() => handleContactParent(student)}
-                                                        className="p-3 bg-white/5 hover:bg-green-500 hover:text-white rounded-2xl transition-all border border-white/5 hover:border-green-500"
-                                                        title="Связаться с родителем"
-                                                    ><MessageSquare size={18} /></motion.button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                    <button
+                        onClick={() => setMainTab('trials')}
+                        className="px-4 py-2 bg-sparta-gold hover:bg-white text-black font-russo text-[11px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md active:scale-95"
+                    >
+                        <span>Открыть заявки</span>
+                        <ArrowRight size={13} />
+                    </button>
+                </motion.div>
             )}
 
-            {activeSubTab === 'journal' && (
-                <div className="space-y-6">
-                    <div className="bg-card glass-panel border border-main rounded-[2.5rem] p-8">
-                        <div className="flex items-center justify-between mb-8">
-                            <div>
-                                <h4 className="text-xl font-russo text-white uppercase">Журнал посещаемости</h4>
-                                <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mt-1">Отмечайте присутствующих на тренировке</p>
+            {/* 2. MAIN 2-COLUMN SECTION: Roster on Left (8) + Focus & Challenge on Right (4) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                
+                {/* LEFT COLUMN: СОСТАВ ГРУППЫ НА СЕГОДНЯ (lg:col-span-8) */}
+                <div ref={rosterRef} className="lg:col-span-8 bg-[#121214] border border-white/10 rounded-3xl p-5 md:p-6 space-y-4 shadow-xl">
+                    {/* Header with Group Selector & Bulk Action */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-russo text-sparta-gold uppercase tracking-wider">
+                                    1. Отметьте присутствующих на поле:
+                                </span>
+                                <span className="text-xs text-white/20">•</span>
+                                <span className="text-[10px] font-bold text-emerald-400">
+                                    {validAttendedCount} из {localStudentsList.length} присутствуют
+                                </span>
                             </div>
-                            <input
-                                type="date"
-                                value={attendanceDate}
-                                onChange={(e) => setAttendanceDate(e.target.value)}
-                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white"
-                            />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {groupStudents.map(student => (
-                                <div key={student.id} className="p-6 bg-white/5 border border-white/5 rounded-3xl flex items-center justify-between group hover:border-sparta-gold/30 transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-russo text-white/20">{student.name.charAt(0)}</div>
-                                        <span className="text-sm font-bold">{student.name}</span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button className="w-10 h-10 rounded-xl bg-green-500/10 text-green-500 border border-green-500/20 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all"><CheckCircle size={18} /></button>
-                                        <button className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"><X size={18} /></button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {activeSubTab === 'homework' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-card glass-panel border border-main rounded-[2.5rem] p-8">
-                            <div className="flex items-center justify-between mb-8">
-                                <div>
-                                    <h3 className="text-xl font-russo text-white uppercase">Активные задания</h3>
-                                    <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mt-1">Текущие цели для совершенствования навыков</p>
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                {homeworkTasks.map(task => (
-                                    <div key={task.id} className="p-6 bg-white/5 border border-white/5 rounded-3xl group hover:border-sparta-gold/30 transition-all flex items-center justify-between">
-                                        <div className="flex items-center gap-6">
-                                            <div className="w-14 h-14 rounded-2xl bg-sparta-gold/10 text-sparta-gold flex items-center justify-center shadow-inner"><Zap size={24} /></div>
-                                            <div>
-                                                <h4 className="font-bold text-lg text-white mb-1">{task.title}</h4>
-                                                <p className="text-[10px] text-white/30 font-black uppercase tracking-widest">Награда: {task.rewardXp} XP</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <button className="p-3 bg-white/5 text-white/20 hover:text-white rounded-xl transition-all"><Settings size={18} /></button>
-                                            <button className="p-3 bg-white/5 text-white/20 hover:text-red-500 rounded-xl transition-all"><TrashIcon size={18} /></button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {homeworkTasks.length === 0 && (
-                                    <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/20">Нет активных заданий</p>
+                            
+                            {/* Group selector title */}
+                            <div className="flex items-center gap-2 mt-1">
+                                <h2 className="text-base md:text-lg font-russo text-white uppercase truncate">
+                                    {activeGroup?.title || activeGroup?.name || 'Группа Sparta'}
+                                </h2>
+                                {myGroups.length > 1 && (
+                                    <div className="flex items-center gap-1.5 ml-2">
+                                        {myGroups.map(g => (
+                                            <button
+                                                key={g.id}
+                                                onClick={() => setSelectedGroupId(g.id)}
+                                                className={`px-2.5 py-1 rounded-lg text-[9px] font-russo uppercase transition-all cursor-pointer ${
+                                                    g.id === activeGroup?.id
+                                                        ? 'bg-sparta-gold text-black'
+                                                        : 'bg-white/5 text-white/40 hover:text-white border border-white/5'
+                                                }`}
+                                            >
+                                                {g.name?.split(' ')[0] || g.title?.split(' ')[0] || 'Группа'}
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
                             </div>
                         </div>
+
+                        {/* Quick Mark All Action */}
+                        <button
+                            type="button"
+                            onClick={handleMarkAllAttended}
+                            className="text-[10px] font-black uppercase tracking-wider text-white/40 hover:text-sparta-gold transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                        >
+                            <CheckCheck size={14} />
+                            <span>{validAttendedCount === localStudentsList.length && localStudentsList.length > 0 ? 'Снять отметки' : 'Отметить всех'}</span>
+                        </button>
+                    </div>
+
+                    {/* Student Cards List */}
+                    <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                        {localStudentsList.length > 0 ? (
+                            localStudentsList.map((student) => {
+                                const isAttended = attendedStudentIds.includes(student.id);
+                                const subInfo = getSmartSubscriptionStatus(student);
+                                const profileCheck = checkProfileCompleteness(student);
+
+                                return (
+                                    <div
+                                        key={student.id}
+                                        className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                                            isAttended
+                                                ? 'bg-white/[0.04] border-white/10 hover:border-emerald-500/30'
+                                                : 'bg-white/[0.01] border-white/5 opacity-60 hover:opacity-100'
+                                        }`}
+                                    >
+                                        {/* Left: Avatar + Name + Incomplete Warning + Smart Badge */}
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-russo text-xs font-bold shrink-0 ${
+                                                isAttended
+                                                    ? 'bg-gradient-to-br from-emerald-500/20 to-sparta-gold/20 text-sparta-gold border border-sparta-gold/30'
+                                                    : 'bg-zinc-800 text-white/40 border border-white/5'
+                                            }`}>
+                                                {student.name.slice(0, 2).toUpperCase()}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-xs sm:text-sm font-bold text-white truncate">
+                                                        {student.name}
+                                                    </span>
+
+                                                    {/* Incomplete profile warning icon */}
+                                                    {!profileCheck.isComplete && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewStudentProfile?.(student);
+                                                            }}
+                                                            title={profileCheck.tooltipText}
+                                                            className="p-1 rounded-md bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30 transition-all cursor-pointer shrink-0"
+                                                        >
+                                                            <AlertTriangle size={11} />
+                                                        </button>
+                                                    )}
+
+                                                    {/* Smart Subscription Badge */}
+                                                    <span
+                                                        className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider shrink-0 border ${subInfo.badgeClass}`}
+                                                        title={subInfo.description}
+                                                    >
+                                                        {subInfo.label}
+                                                    </span>
+                                                </div>
+                                                <span className="text-[10px] text-white/40 font-bold block truncate">
+                                                    {student.position || 'Спортсмен'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Right: 2 Quick Attendance Toggle Buttons */}
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (!isAttended) toggleStudentAttendance(student.id);
+                                                }}
+                                                className={`px-3 py-1.5 rounded-xl text-[10px] font-russo uppercase transition-all flex items-center gap-1 cursor-pointer ${
+                                                    isAttended
+                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-sm'
+                                                        : 'bg-white/[0.02] text-white/30 border border-white/5 hover:text-white hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <Check size={12} className={isAttended ? 'text-emerald-400' : 'text-white/30'} />
+                                                <span>Был</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (isAttended) toggleStudentAttendance(student.id);
+                                                }}
+                                                className={`px-3 py-1.5 rounded-xl text-[10px] font-russo uppercase transition-all flex items-center gap-1 cursor-pointer ${
+                                                    !isAttended
+                                                        ? 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                                                        : 'bg-white/[0.02] text-white/30 border border-white/5 hover:text-white hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <X size={12} className={!isAttended ? 'text-zinc-400' : 'text-white/30'} />
+                                                <span>Пропуск</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="py-8 text-center text-xs text-white/40 font-bold uppercase">
+                                В группе пока нет зарегистрированных учеников
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Bottom Primary Action: 2. Завершить занятие и похвалить ребят (MVP) 🏆 */}
+                    <div className="pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsFinishModalOpen(true)}
+                            className="w-full py-4 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-black font-russo text-xs sm:text-sm uppercase tracking-wider rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                            <Trophy size={18} />
+                            <span>2. Завершить занятие и похвалить ребят (MVP) 🏆</span>
+                        </button>
                     </div>
                 </div>
-            )}
+
+                {/* RIGHT COLUMN: ФОКУС И ЧЕЛЛЕНДЖ ДНЯ (lg:col-span-4) */}
+                <div className="lg:col-span-4 space-y-4">
+                    
+                    {/* Card 1: План тренировки */}
+                    <div className="bg-[#121214] border border-white/10 rounded-3xl p-5 space-y-3 shadow-xl">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                            <div className="flex items-center gap-2">
+                                <Clock size={16} className="text-sparta-gold" />
+                                <h3 className="font-russo text-xs uppercase tracking-wide text-white">
+                                    План тренировки
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsEditWorkoutModalOpen(true)}
+                                className="text-[10px] font-black uppercase text-sparta-gold hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                                <Edit3 size={12} />
+                                <span>Изменить</span>
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="text-xs sm:text-sm font-bold text-white leading-snug">
+                                {workoutTitle}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                                <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-white/70">
+                                    {workoutTime}
+                                </span>
+                                <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-white/70 flex items-center gap-1">
+                                    <MapPin size={10} className="text-sparta-gold" />
+                                    {workoutLocation}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-bold">
+                            <span className="text-white/40">Подтвердили участие:</span>
+                            <span className="text-emerald-400">
+                                {confirmedStudents.length > 0 ? `${confirmedStudents.length} детей ✅` : 'Ожидание отметок'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Card 2: Челлендж недели */}
+                    <div className="bg-[#121214] border border-white/10 rounded-3xl p-5 space-y-3 shadow-xl">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                            <div className="flex items-center gap-2">
+                                <Target size={16} className="text-emerald-400" />
+                                <h3 className="font-russo text-xs uppercase tracking-wide text-white">
+                                    Челлендж недели
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsEditChallengeModalOpen(true)}
+                                className="text-[10px] font-black uppercase text-emerald-400 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                                <Edit3 size={12} />
+                                <span>Изменить</span>
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="text-xs sm:text-sm font-bold text-white leading-snug">
+                                {challengeTitle}
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                                <span className="px-2.5 py-1 rounded-lg bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30 text-[10px] font-black">
+                                    +{challengeReward} монет 🪙
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-bold">
+                            <span className="text-white/40">Выполнили задание:</span>
+                            <span className="text-emerald-400 flex items-center gap-1">
+                                <CheckCircle2 size={12} />
+                                <span>{completedStudents.length} сдали</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Button 3: Личное задание для спортсменов */}
+                    <button
+                        type="button"
+                        onClick={() => setIsPersonalModalOpen(true)}
+                        className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500/15 via-sparta-gold/15 to-amber-500/15 hover:from-amber-500/25 hover:to-sparta-gold/25 border border-sparta-gold/40 text-sparta-gold font-russo text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        <Target size={15} />
+                        <span>🎯 Выдать личное задание</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* MODAL 1: EDIT WORKOUT THEME (План тренировки) */}
+            <AnimatePresence>
+                {isEditWorkoutModalOpen && (
+                    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-[#141416] border border-sparta-gold/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative"
+                        >
+                            <button
+                                onClick={() => setIsEditWorkoutModalOpen(false)}
+                                className="absolute top-4 right-4 text-white/40 hover:text-white cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                            <div className="flex items-center gap-2.5">
+                                <Clock size={18} className="text-sparta-gold" />
+                                <h3 className="font-russo text-base text-white uppercase">Редактировать план занятия</h3>
+                            </div>
+
+                            <form onSubmit={handleSaveWorkout} className="space-y-3.5">
+                                <div>
+                                    <label className="block text-[11px] font-bold text-white/60 mb-1">Тема тренировки:</label>
+                                    <input
+                                        type="text"
+                                        value={workoutTitle}
+                                        onChange={e => setWorkoutTitle(e.target.value)}
+                                        placeholder="Например: Футбол: Техника паса и дриблинг"
+                                        className="w-full px-3.5 py-2.5 bg-black/60 border border-white/15 focus:border-sparta-gold rounded-xl text-xs text-white outline-none"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-white/60 mb-1">День и время:</label>
+                                        <input
+                                            type="text"
+                                            value={workoutTime}
+                                            onChange={e => setWorkoutTime(e.target.value)}
+                                            placeholder="Завтра в 17:30"
+                                            className="w-full px-3 py-2 bg-black/60 border border-white/15 focus:border-sparta-gold rounded-xl text-xs text-white outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-white/60 mb-1">Зал / Корт:</label>
+                                        <input
+                                            type="text"
+                                            value={workoutLocation}
+                                            onChange={e => setWorkoutLocation(e.target.value)}
+                                            placeholder="Спаркл Арена (Зал 1)"
+                                            className="w-full px-3 py-2 bg-black/60 border border-white/15 focus:border-sparta-gold rounded-xl text-xs text-white outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="pt-2 flex items-center gap-2">
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingWorkout}
+                                        className="flex-1 py-3 bg-sparta-gold hover:bg-white text-black font-russo text-xs uppercase rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                    >
+                                        <Send size={13} />
+                                        <span>{isSavingWorkout ? 'Сохранение...' : 'Опубликовать'}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditWorkoutModalOpen(false)}
+                                        className="px-4 py-3 bg-white/5 hover:bg-white/10 text-white/60 font-bold text-xs rounded-xl cursor-pointer"
+                                    >
+                                        Отмена
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* MODAL 2: EDIT WEEKLY CHALLENGE */}
+            <AnimatePresence>
+                {isEditChallengeModalOpen && (
+                    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-[#141416] border border-emerald-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative"
+                        >
+                            <button
+                                onClick={() => setIsEditChallengeModalOpen(false)}
+                                className="absolute top-4 right-4 text-white/40 hover:text-white cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                            <div className="flex items-center gap-2.5">
+                                <Target size={18} className="text-emerald-400" />
+                                <h3 className="font-russo text-base text-white uppercase">Редактировать Челлендж недели</h3>
+                            </div>
+
+                            <form onSubmit={handleSaveChallenge} className="space-y-3.5">
+                                <div>
+                                    <label className="block text-[11px] font-bold text-white/60 mb-1">Задание для группы:</label>
+                                    <input
+                                        type="text"
+                                        value={challengeTitle}
+                                        onChange={e => setChallengeTitle(e.target.value)}
+                                        placeholder="Например: Набить мяч 15 раз без падения"
+                                        className="w-full px-3.5 py-2.5 bg-black/60 border border-white/15 focus:border-emerald-400 rounded-xl text-xs text-white outline-none"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-bold text-white/60 mb-1">Награда:</label>
+                                    <select
+                                        value={challengeReward}
+                                        onChange={e => setChallengeReward(Number(e.target.value))}
+                                        className="w-full px-3 py-2 bg-black/60 border border-white/15 focus:border-emerald-400 rounded-xl text-xs text-white outline-none cursor-pointer"
+                                    >
+                                        <option value={20}>+20 монет 🪙</option>
+                                        <option value={30}>+30 монет 🪙 (Рекомендуется)</option>
+                                        <option value={50}>+50 монет 🪙 (Суперприз)</option>
+                                    </select>
+                                </div>
+
+                                <div className="pt-2 flex items-center gap-2">
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingChallenge}
+                                        className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-russo text-xs uppercase rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                    >
+                                        <Trophy size={13} />
+                                        <span>{isSavingChallenge ? 'Сохранение...' : 'Отправить детям'}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditChallengeModalOpen(false)}
+                                        className="px-4 py-3 bg-white/5 hover:bg-white/10 text-white/60 font-bold text-xs rounded-xl cursor-pointer"
+                                    >
+                                        Отмена
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* MODAL 3: MULTI-SELECT PERSONAL TASK ASSIGNMENT */}
+            <AnimatePresence>
+                {isPersonalModalOpen && (
+                    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-[#141416] border border-sparta-gold/50 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col"
+                        >
+                            <button
+                                onClick={() => setIsPersonalModalOpen(false)}
+                                className="absolute top-4 right-4 text-white/40 hover:text-white cursor-pointer"
+                            >
+                                ✕
+                            </button>
+
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center shrink-0">
+                                    <Target size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-russo text-base text-white uppercase">Личное задание спортсменам</h3>
+                                    <p className="text-[11px] text-white/50">Задание появится в личных дневниках выбранных учеников</p>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleSendPersonalTask} className="space-y-4 overflow-y-auto pr-1 flex-1">
+                                <div>
+                                    <label className="block text-xs font-bold text-white/70 mb-1">
+                                        1. Текст задания:
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={personalTaskTitle}
+                                        onChange={e => setPersonalTaskTitle(e.target.value)}
+                                        placeholder="Например: Сделать 30 приседаний и прислать видео"
+                                        className="w-full px-3.5 py-2.5 bg-black/60 border border-white/15 focus:border-sparta-gold rounded-xl text-xs text-white outline-none"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-xs font-bold text-white/70">
+                                            2. Выберите учеников:
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (selectedStudentIds.length === localStudentsList.length) {
+                                                    setSelectedStudentIds([]);
+                                                } else {
+                                                    setSelectedStudentIds(localStudentsList.map(s => s.id));
+                                                }
+                                            }}
+                                            className="text-[10px] font-bold text-sparta-gold uppercase hover:underline cursor-pointer"
+                                        >
+                                            {selectedStudentIds.length === localStudentsList.length ? 'Снять всех' : 'Выбрать всех'}
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto p-1 bg-black/40 border border-white/10 rounded-2xl">
+                                        {localStudentsList.map(student => {
+                                            const isSelected = selectedStudentIds.includes(student.id);
+                                            return (
+                                                <button
+                                                    key={student.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedStudentIds(prev =>
+                                                            prev.includes(student.id)
+                                                                ? prev.filter(i => i !== student.id)
+                                                                : [...prev, student.id]
+                                                        );
+                                                    }}
+                                                    className={`p-2 rounded-xl border text-xs font-bold text-left transition-all flex items-center justify-between cursor-pointer ${
+                                                        isSelected
+                                                            ? 'bg-sparta-gold/20 border-sparta-gold text-white font-black'
+                                                            : 'bg-white/[0.02] border-white/5 text-white/50 hover:bg-white/5 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <span className="truncate">{student.name}</span>
+                                                    {isSelected && <Check size={12} className="text-sparta-gold shrink-0" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-white/70 mb-1">
+                                        3. Награда за выполнение:
+                                    </label>
+                                    <select
+                                        value={personalTaskReward}
+                                        onChange={e => setPersonalTaskReward(Number(e.target.value))}
+                                        className="w-full px-3 py-2 bg-black/60 border border-white/15 focus:border-sparta-gold rounded-xl text-xs text-white outline-none cursor-pointer"
+                                    >
+                                        <option value={20}>+20 монет 🪙</option>
+                                        <option value={30}>+30 монет 🪙 (Стандарт)</option>
+                                        <option value={50}>+50 монет 🪙 (Большое достижение)</option>
+                                    </select>
+                                </div>
+
+                                <div className="pt-2 flex items-center gap-2">
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingPersonalTask}
+                                        className="flex-1 py-3 bg-sparta-gold hover:bg-white text-black font-russo text-xs uppercase rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                    >
+                                        <Send size={13} />
+                                        <span>{isSavingPersonalTask ? 'Отправка...' : `Отправить (${selectedStudentIds.length})`}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPersonalModalOpen(false)}
+                                        className="px-4 py-3 bg-white/5 hover:bg-white/10 text-white/60 font-bold text-xs rounded-xl cursor-pointer"
+                                    >
+                                        Отмена
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* MODAL 4: FINISH WORKOUT & CHOOSE MVP (Звезда дня) */}
+            <AnimatePresence>
+                {isFinishModalOpen && (
+                    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="bg-[#141416] border-2 border-emerald-500/50 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col"
+                        >
+                            <button
+                                onClick={() => setIsFinishModalOpen(false)}
+                                className="absolute top-4 right-4 text-white/40 hover:text-white cursor-pointer"
+                            >
+                                ✕
+                            </button>
+
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                                    <Trophy size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="font-russo text-base sm:text-lg text-white uppercase">Завершение тренировки</h3>
+                                    <p className="text-xs text-white/50">
+                                        Будет начислен опыт {validAttendedCount} присутствующим детям
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 overflow-y-auto pr-1 flex-1">
+                                {/* Choose MVP */}
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-bold text-white/70">
+                                        1. Выбрать Звезду дня ⭐ (MVP) <span className="text-white/40 font-normal">(по желанию)</span>:
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto p-1 bg-black/40 border border-white/10 rounded-2xl">
+                                        {localStudentsList.filter(s => validAttendedIds.includes(s.id)).map(student => {
+                                            const isStar = (starStudentId === student.id);
+                                            return (
+                                                <button
+                                                    key={student.id}
+                                                    type="button"
+                                                    onClick={() => setStarStudentId(isStar ? null : student.id)}
+                                                    className={`p-2 rounded-xl border text-xs font-bold text-left transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                        isStar
+                                                            ? 'bg-sparta-gold text-black font-black border-sparta-gold shadow-md'
+                                                            : 'bg-white/5 border-white/10 text-white/70 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <span>{isStar ? '⭐' : '👤'}</span>
+                                                    <span className="truncate">{student.name}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Praise Chips */}
+                                {starStudentId && (
+                                    <div className="space-y-2 p-3 bg-sparta-gold/10 border border-sparta-gold/30 rounded-2xl">
+                                        <span className="text-[11px] font-bold text-sparta-gold block">
+                                            2. Быстрая похвала для Звезды дня:
+                                        </span>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {QUICK_PRAISES.map((p, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setSelectedPraiseText(p.text)}
+                                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                                        selectedPraiseText === p.text
+                                                            ? 'bg-sparta-gold text-black font-black'
+                                                            : 'bg-black/50 text-white/70 hover:text-white border border-white/10'
+                                                    }`}
+                                                >
+                                                    {p.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <input
+                                            type="text"
+                                            value={customPraiseNote}
+                                            onChange={e => setCustomPraiseNote(e.target.value)}
+                                            placeholder="Или напишите свой комментарий..."
+                                            className="w-full px-3 py-2 bg-black/60 border border-white/15 focus:border-sparta-gold rounded-xl text-xs text-white outline-none mt-2"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Submit & Award */}
+                            <div className="pt-2 flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    disabled={isSubmittingFinish}
+                                    onClick={handleFinishWorkoutSubmit}
+                                    className="flex-1 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-black font-russo text-xs sm:text-sm uppercase rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                                >
+                                    <CheckCircle2 size={16} />
+                                    <span>{isSubmittingFinish ? 'Начисление...' : `Подтвердить (${validAttendedCount} детей)`}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsFinishModalOpen(false)}
+                                    className="px-4 py-3.5 bg-white/5 hover:bg-white/10 text-white/60 font-bold text-xs rounded-2xl cursor-pointer"
+                                >
+                                    Отмена
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Quick Force Majeure / Schedule Override Modal */}
+            <ScheduleOverrideModal
+                isOpen={isOverrideModalOpen}
+                onClose={() => setIsOverrideModalOpen(false)}
+                defaultGroupId={effectiveGroupId}
+                creatorName={coachDisplayName}
+                availableGroups={myGroups.map(g => ({ id: g.id, name: g.name || g.title, coachName: coachDisplayName }))}
+            />
         </div>
     );
 };

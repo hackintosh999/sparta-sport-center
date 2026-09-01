@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Расписание секций • ЦСП «СПАРТА»</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: 1080px 1920px;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    html, body {
+      width: 1080px;
+      height: 1920px;
+      margin: 0;
+      padding: 0;
+      background-color: #2B2118;
+      font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    @media screen {
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        width: 100%;
+        height: auto;
+        padding: 20px;
+      }
+    }
+
+    /* Главный корневой фрейм: schedule-poster 1 (1080 × 1920) */
+    .poster-canvas {
+      width: 1080px;
+      height: 1920px;
+      min-height: 1920px;
+      max-height: 1920px;
+      background-color: #FAF7F2;
+      padding: 48px 44px 44px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.45);
+      position: relative;
+      overflow: hidden;
+    }
+
+    @media print {
+      body {
+        background-color: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .poster-canvas {
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 48px 44px 44px 44px !important;
+        width: 1080px !important;
+        height: 1920px !important;
+      }
+    }
+
+    /* Декоративные мягкие орбы */
+    .glow-sun {
+      position: absolute;
+      top: -80px;
+      right: -80px;
+      width: 420px;
+      height: 420px;
+      background: radial-gradient(circle, rgba(252, 211, 77, 0.25) 0%, rgba(250, 247, 242, 0) 70%);
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    .glow-peach {
+      position: absolute;
+      bottom: 180px;
+      left: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(248, 113, 113, 0.16) 0%, rgba(250, 247, 242, 0) 70%);
+      filter: blur(90px);
+      pointer-events: none;
+    }
+
+    /* ШАПКА (Header) */
+    .header-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 8px;
+      z-index: 1;
+    }
+
+    .brand-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: #FDEED9;
+      border: 1px solid #F7D5B0;
+      color: #B84A28;
+      font-size: 14.5px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      padding: 6px 20px;
+      border-radius: 100px;
+    }
+
+    .main-title {
+      font-size: 42px;
+      font-weight: 800;
+      color: #2B2118;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+      line-height: 1.15;
+    }
+
+    .location-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .location-primary {
+      font-size: 20px;
+      font-weight: 700;
+      color: #E06D44;
+    }
+
+    .location-secondary {
+      font-size: 15px;
+      font-weight: 500;
+      color: #736357;
+    }
+
+    /* СЕТКА НАПРАВЛЕНИЙ (8 независимых карточек в 2 колонки) */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 16px;
+      z-index: 1;
+      flex: 1;
+    }
+
+    /* Карточка направления (Top / Pack Auto Layout с естественным заполнением) */
+    .section-card {
+      background: #FFFFFF;
+      border: 1px solid #EFE8DE;
+      border-radius: 22px;
+      padding: 18px 20px 16px 20px;
+      box-shadow: 0 8px 24px rgba(120, 80, 40, 0.04);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Верхняя акцентная полоска направления */
+    .card-top-bar {
+      height: 4px;
+      border-radius: 2px;
+      width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
+    .bar-music { background-color: #3B6955; }
+    .bar-sport { background-color: #E06D44; }
+    .bar-art   { background-color: #5850EC; }
+    .bar-amber { background-color: #D97706; }
+
+    /* Блок 1: Header + Subtitle + Divider */
+    .card-top-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px; /* Gap: 16px до Schedule List */
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .card-icon-slot {
+      width: 50px;
+      height: 50px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-icon-slot img {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.08));
+    }
+
+    .card-titles {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+    }
+
+    .direction-title {
+      font-size: 16.5px;
+      font-weight: 800;
+      color: #2B2118;
+      line-height: 1.25;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .hall-pill {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #4B5563;
+      background-color: #F7EFE6;
+      padding: 2px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    /* Подзаголовок: #374151, 13.5px */
+    .direction-benefit {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #374151;
+      line-height: 1.35;
+    }
+
+    .card-divider {
+      height: 1px;
+      background-color: #F3EDE4;
+      width: 100%;
+    }
+
+    /* Блок 2: Schedule List */
+    .schedule-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      justify-content: flex-start;
+      margin-bottom: 14px; /* Gap: 14px до Footer Tag */
+    }
+
+    .schedule-slot-item {
+      background-color: #FAF7F2;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13.5px;
+    }
+
+    .schedule-slot-item.compact {
+      padding: 8px 12px;
+      font-size: 12.5px;
+      border-radius: 10px;
+    }
+
+    .group-tag {
+      font-weight: 600;
+      color: #2B2118;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .group-dot {
+      width: 7.5px;
+      height: 7.5px;
+      border-radius: 50%;
+      background-color: #E06D44;
+      flex-shrink: 0;
+    }
+    .dot-music { background-color: #3B6955; }
+    .dot-sport { background-color: #E06D44; }
+    .dot-art   { background-color: #5850EC; }
+    .dot-amber { background-color: #D97706; }
+
+    .time-val {
+      font-weight: 700;
+      color: #2B2118;
+      background-color: #F7EFE6;
+      padding: 5px 11px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      white-space: nowrap;
+    }
+
+    .compact .time-val {
+      padding: 3px 8px;
+      font-size: 12px;
+    }
+
+    .days-val {
+      font-weight: 700;
+      color: #374151;
+      margin-right: 4px;
+    }
+
+    /* Блок 3: Нижняя плашка-тег в футере карточки (#4B5563) */
+    .card-footer-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #FAF7F2;
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #4B5563;
+      margin-top: auto;
+    }
+
+    /* ПОДВАЛ (Footer_Contacts) */
+    .footer-block {
+      background-color: #2B2118;
+      border-radius: 20px;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #FAF7F2;
+      box-shadow: 0 10px 25px rgba(43, 33, 24, 0.25);
+      z-index: 1;
+    }
+
+    .footer-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .footer-subtitle {
+      font-size: 12px;
+      font-weight: 600;
+      color: #C4B5A5;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .footer-phone {
+      font-size: 25px;
+      font-weight: 800;
+      color: #FAF7F2;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-director {
+      font-size: 14.5px;
+      font-weight: 500;
+      color: #E5DDD4;
+    }
+
+    .footer-right {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sneaker-icon {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .notice-desc {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #E5DDD4;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Главный корневой фрейм: schedule-poster 1 -->
+  <div class="poster-canvas" id="schedule-poster 1">
+    <div class="glow-sun"></div>
+    <div class="glow-peach"></div>
+
+    <!-- ШАПКА -->
+    <header class="header-block" id="Header">
+      <div class="brand-pill" id="Brand_Badge">
+        ✨ ЦСП СПАРТА • ДЕТСКИЙ СПОРТ
+      </div>
+      <h1 class="main-title">РАСПИСАНИЕ СЕКЦИЙ</h1>
+      <div class="location-card" id="Location_Info">
+        <div class="location-primary">Детский сад «Солнышко» • ЖК «Парковый Premium»</div>
+        <div class="location-secondary">ул. Ласковая, 26 • Сезон 2026/2027</div>
+      </div>
+    </header>
+
+    <!-- СЕТКА ИЗ 8 НЕЗАВИСИМЫХ КАРТОЧЕК СЕКЦИЙ -->
+    <main class="cards-grid" id="Sections_Grid">
+
+      <!-- 1. Школа танцев -->
+      <section class="section-card" id="Card_Dance">
+        <div class="card-top-bar bar-music"></div>
+        <div class="card-top-section">
+          <div class="card-head">
+            <div class="card-icon-slot">
+              <img src="sparta_3d_icons/dance.png" alt="Школа танцев">
+            </div>
+            <div class="card-titles">
+              <h2 class="direction-title">Школа танцев <span class="hall-pill">Музыкальный зал 🏡</span></h2>
+              <p class="direction-benefit">Красивая осанка, гибкость, пластика и чувство ритма.</p>
+            </div>
+          </div>
+          <div class="card-divider"></div>
+        </div>
+        <div class="schedule-list">
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-music"></span>Младшая группа (2–4 года)</div>
+            <div><span class="days-val">Вт, Чт</span> — <span class="time-val">17:00</span></div>
+          </div>
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-music"></span>Старшая группа (5–7 лет)</div>
+            <div><span class="days-val">Вт, Чт</span> — <span class="time-val">17:30</span></div>
+          </div>
+        </div>
+        <div class="card-footer-badge">
+          <span>🩰 Ритмика и базовая хореография</span>
+          <span>⏱ 30 мин</span>
+        </div>
+      </section>
+
+      <!-- 2. Оздоровительная гимнастика цигун -->
+      <section class="section-card" id="Card_Qigong">
+        <div class="card-top-bar bar-music"></div>
+        <div class="card-top-section">
+          <div class="card-head">
+            <div class="card-icon-slot">
+              <img src="sparta_3d_icons/qigong.png" alt="Цигун">
+            </div>
+            <div class="card-titles">
+              <h2 class="direction-title">Оздоровительный цигун <span class="hall-pill">Музыкальный зал 🏡</span></h2>
+              <p class="direction-benefit">Здоровый рост, позвоночник, гибкость и спокойствие.</p>
+            </div>
+          </div>
+          <div class="card-divider"></div>
+        </div>
+        <div class="schedule-list">
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-music"></span>Младшая группа (2–4 года)</div>
+            <div><span class="days-val">Вт, Чт</span> — <span class="time-val">16:00</span></div>
+          </div>
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-music"></span>Старшая группа (5–7 лет)</div>
+            <div><span class="days-val">Вт, Чт</span> — <span class="time-val">16:30</span></div>
+          </div>
+        </div>
+        <div class="card-footer-badge">
+          <span>🌿 Мягкая гимнастика и дыхание</span>
+          <span>⏱ 30 мин</span>
+        </div>
+      </section>
+
+      <!-- 3. Проект «Чемпион» -->
+      <section class="section-card" id="Card_Champion">
+        <div class="card-top-bar bar-sport"></div>
+        <div class="card-top-section">
+          <div class="card-head">
+            <div class="card-icon-slot">
+              <img src="sparta_3d_icons/champion.png" alt="Чемпион">
+            </div>
+            <div class="card-titles">
+              <h2 class="direction-title">Проект «Чемпион» <span class="hall-pill">Спортивный зал 🏡</span></h2>
+              <p class="direction-benefit">Спортивная база, качественное ОФП, растяжка и характер.</p>
+            </div>
+          </div>
+          <div class="card-divider"></div>
+        </div>
+        <div class="schedule-list">
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-sport"></span>Младшая группа (2–4 года)</div>
+            <div><span class="days-val">Пн, Ср, Пт</span> — <span class="time-val">16:00</span></div>
+          </div>
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-sport"></span>Старшая группа (5–7 лет)</div>
+            <div><span class="days-val">Пн, Ср, Пт</span> — <span class="time-val">16:30</span></div>
+          </div>
+        </div>
+        <div class="card-footer-badge">
+          <span>⚡ 3 раза в неделю для супер-формы</span>
+          <span>⏱ 30 мин</span>
+        </div>
+      </section>
+
+      <!-- 4. Боевые искусства / Единоборства -->
+      <section class="section-card" id="Card_Martial">
+        <div class="card-top-bar bar-sport"></div>
+        <div class="card-top-section">
+          <div class="card-head">
+            <div class="card-icon-slot">
+              <img src="sparta_3d_icons/martial.png" alt="Единоборства">
+            </div>
+            <div class="card-titles">
+              <h2 class="direction-title">Боевые искусства <span class="hall-pill">Спортивный зал 🏡</span></h2>
+              <p class="direction-benefit">ОФП, дисциплина, уверенность в себе и самооборона.</p>
+            </div>
+          </div>
+          <div class="card-divider"></div>
+        </div>
+        <div class="schedule-list">
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-sport"></span>Младшая группа (2–4 года)</div>
+            <div><span class="days-val">Пн, Ср</span> — <span class="time-val">17:00</span></div>
+          </div>
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-sport"></span>Старшая группа (5–7 лет)</div>
+            <div><span class="days-val">Пн, Ср, Пт</span> — <span class="time-val">17:30</span></div>
+          </div>
+        </div>
+        <div class="card-footer-badge">
+          <span>🛡 Самооборона и координация</span>
+          <span>⏱ 30 мин</span>
+        </div>
+      </section>
+
+      <!-- 5. Робототехника и легоконструирование -->
+      <section class="section-card" id="Card_Lego">
+        <div class="card-top-bar bar-amber"></div>
+        <div class="card-top-section">
+          <div class="card-head">
+            <div class="card-icon-slot">
+              <img src="sparta_3d_icons/lego.png" alt="Лего">
+            </div>
+            <div class="card-titles">
+              <h2 class="direction-title">Легоконструирование <span class="hall-pill">Зал ИЗО 🏡</span></h2>
+              <p class="direction-benefit">Сборка моделей, логика, моторика и основы IT.</p>
+            </div>
+          </div>
+          <div class="card-divider"></div>
+        </div>
+        <div class="schedule-list">
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-amber"></span>Младшая группа (2–4 года)</div>
+            <div><span class="days-val">Пн, Ср</span> — <span class="time-val">17:00</span></div>
+          </div>
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-amber"></span>Старшая группа (5–7 лет)</div>
+            <div><span class="days-val">Пн, Ср</span> — <span class="time-val">17:30</span></div>
+          </div>
+        </div>
+        <div class="card-footer-badge">
+          <span>🤖 Моделирование и инженерная мысль</span>
+          <span>⏱ 30 мин</span>
+        </div>
+      </section>
+
+      <!-- 6. Английский язык для детей -->
+      <section class="section-card" id="Card_English">
+        <div class="card-top-bar bar-art"></div>
+        <div class="card-top-section">
+          <div class="card-head">
+            <div class="card-icon-slot">
+              <img src="sparta_3d_icons/english.png" alt="Английский">
+            </div>
+            <div class="card-titles">
+              <h2 class="direction-title">Английский язык <span class="hall-pill">Зал ИЗО 🏡</span></h2>
+              <p class="direction-benefit">Игровой формат, расширение словаря и произношение.</p>
+            </div>
+          </div>
+          <div class="card-divider"></div>
+        </div>
+        <div class="schedule-list">
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-art"></span>Младшая группа (2–4 года)</div>
+            <div><span class="days-val">Вт, Чт</span> — <span class="time-val">16:00</span></div>
+          </div>
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-art"></span>Старшая группа (5–7 лет)</div>
+            <div><span class="days-val">Вт, Чт</span> — <span class="time-val">16:30</span></div>
+          </div>
+        </div>
+        <div class="card-footer-badge">
+          <span>🗣 Разговорная практика в играх</span>
+          <span>⏱ 30 мин</span>
+        </div>
+      </section>
+
+      <!-- 7. Подготовка к школе -->
+      <section class="section-card" id="Card_School">
+        <div class="card-top-bar bar-art"></div>
+        <div class="card-top-section">
+          <div class="card-head">
+            <div class="card-icon-slot">
+              <img src="sparta_3d_icons/school.png" alt="Подготовка к школе">
+            </div>
+            <div class="card-titles">
+              <h2 class="direction-title">Подготовка к школе <span class="hall-pill">Зал ИЗО 🏡</span></h2>
+              <p class="direction-benefit">Лёгкий старт перед 1 классом: чтение, письмо, счёт.</p>
+            </div>
+          </div>
+          <div class="card-divider"></div>
+        </div>
+        <div class="schedule-list">
+          <div class="schedule-slot-item">
+            <div class="group-tag"><span class="group-dot dot-art"></span>Старшая группа (6–7 лет)</div>
+            <div><span class="days-val">Вт, Чт</span> — <span class="time-val">17:00–17:45</span></div>
+          </div>
+          <div class="schedule-slot-item" style="background-color: #FAF7F2; opacity: 0.95;">
+            <div class="group-tag" style="font-size:13px; color:#4B5563;">⏱ Комплекс занятий</div>
+            <div><span class="days-val" style="font-size:12.5px; color:#4B5563;">Чтение • Письмо • Счёт</span></div>
+          </div>
+        </div>
+        <div class="card-footer-badge">
+          <span>📖 Интеллектуальное развитие</span>
+          <span>⏱ 45 мин</span>
+        </div>
+      </section>
+
+      <!-- 8. Логопед -->
+      <section class="section-card" id="Card_Logoped">
+        <div class="card-top-bar bar-amber"></div>
+        <div class="card-top-section">
+          <div class="card-head">
+            <div class="card-icon-slot">
+              <img src="sparta_3d_icons/logoped.png" alt="Логопед">
+            </div>
+            <div class="card-titles">
+              <h2 class="direction-title">Логопед <span class="hall-pill">Зал ИЗО 🏡</span></h2>
+              <p class="direction-benefit">Речь, звукопроизношение, постановка звуков.</p>
+            </div>
+          </div>
+          <div class="card-divider"></div>
+        </div>
+        <div class="schedule-list" style="gap: 6px;">
+          <div class="schedule-slot-item compact">
+            <div class="group-tag"><span class="group-dot dot-amber"></span>Младшая (2–4 года)</div>
+            <div><span class="days-val">Пн, Ср</span> — <span class="time-val">16:00</span></div>
+          </div>
+          <div class="schedule-slot-item compact">
+            <div class="group-tag"><span class="group-dot dot-amber"></span>Старшая (5–7 лет)</div>
+            <div><span class="days-val">Пн, Ср</span> — <span class="time-val">16:30</span></div>
+          </div>
+          <div class="schedule-slot-item compact" style="background-color: #F7EFE6;">
+            <div class="group-tag" style="font-weight:700;"><span class="group-dot dot-amber"></span>Индивидуально</div>
+            <div><span class="days-val">Пятница</span> — <span class="time-val" style="background-color:#FFFFFF;">по записи</span></div>
+          </div>
+        </div>
+        <div class="card-footer-badge">
+          <span>💬 Постановка звуков и словарь</span>
+          <span>⏱ 30 мин</span>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ПОДВАЛ / Footer_Contacts -->
+    <footer class="footer-block" id="Footer_Contacts">
+      <div class="footer-left">
+        <div class="footer-subtitle">ЗАПИСЬ И КОНСУЛЬТАЦИИ:</div>
+        <a href="tel:+79193393399" class="footer-phone">📞 +7 (919) 339-33-99</a>
+        <div class="footer-director">Руководитель: Ксения Лебедева</div>
+      </div>
+      <div class="footer-right">
+        <div class="sneaker-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M2.5 16C2.5 17.1 3.4 18 4.5 18H19.5C20.6 18 21.5 17.1 21.5 16V14.8C21.5 13.9 20.8 13.1 19.9 12.8L14.5 11L12.5 7.2C12.1 6.4 11.3 5.9 10.4 5.9H6C4.9 5.9 4 6.8 4 7.9V13.5L2.5 16Z" stroke="#FAF7F2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3.5 14H20.5" stroke="#FAF7F2" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M8 9.5H11" stroke="#FAF7F2" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M7.5 11.5H11.5" stroke="#FAF7F2" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="notice-desc">Форма: удобная одежда + сменная чистая обувь</div>
+      </div>
+    </footer>
+
+  </div>
+
+</body>
+</html>

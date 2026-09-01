@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ЦСП СПАРТА — Большой теннис (Плотная печатная композиция A4)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    body {
+      width: 1240px;
+      height: 1754px;
+      overflow: hidden;
+      background-color: #FFFFFF;
+      font-family: 'Montserrat', sans-serif;
+      position: relative;
+    }
+
+    .poster {
+      width: 1240px;
+      height: 1754px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Фоновое изображение (100% чистый солнечный корт и ребенок) */
+    .bg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Передний план: Размытые макро-мячи боке по нижней кромке */
+    .foreground-bokeh-layer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 1240px;
+      height: 420px;
+      object-fit: cover;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.92;
+    }
+
+    /* Мягкая теплая подложка в самом низу для 100% читаемости контактов */
+    .bottom-mask {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 1240px;
+      height: 360px;
+      background: linear-gradient(180deg, 
+        rgba(255, 255, 255, 0) 0%, 
+        rgba(255, 255, 255, 0.45) 30%, 
+        rgba(255, 255, 255, 0.88) 75%, 
+        rgba(255, 255, 255, 0.98) 100%);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* Основной контентный слой */
+    .content-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1240px;
+      height: 1754px;
+      z-index: 4;
+      padding: 65px 0 50px 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ==================== БЛОК 1: ВЕРХНИЙ БЛОК (СБИТЫЙ, ЦЕНТРИРОВАННЫЙ) ==================== */
+    .top-center-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 8px;
+      padding: 0 60px;
+    }
+
+    .top-nadzagolovok {
+      font-size: 35px;
+      font-weight: 900;
+      color: #1A3628;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .top-podzagolovok {
+      font-size: 25px;
+      font-weight: 700;
+      color: #1A3628;
+      letter-spacing: 3.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .center-logo-box {
+      width: 145px;
+      height: 145px;
+      margin-bottom: 6px;
+    }
+
+    .center-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.16));
+    }
+
+    /* ==================== БЛОК 2: ГЛАВНЫЙ ЗАГОЛОВОК С ПЛОТНОЙ ТЕКСТУРОЙ ==================== */
+    .main-title-container {
+      position: relative;
+      text-align: center;
+      margin-bottom: 22px;
+      padding: 0 40px;
+    }
+
+    .volumetric-title-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    .title-extrusion-back {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      width: 100%;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 165px;
+      font-weight: 900;
+      line-height: 0.88;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #0E2117;
+      z-index: 1;
+      user-select: none;
+    }
+
+    .title-front-textured {
+      position: relative;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 165px;
+      font-weight: 900;
+      line-height: 0.88;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      z-index: 2;
+      color: transparent;
+      background-color: #122E20;
+      background-image: url('/banner-assets/sparta-tennis-net-fill.jpg');
+      background-size: cover;
+      background-position: center;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-stroke: 3px #FFFBEB;
+    }
+
+    .volumetric-title-wrap span {
+      display: block;
+    }
+
+    /* ==================== БЛОК 3: УПЛОТНЕННЫЕ ПЛАШКИ ПРЕИМУЩЕСТВ (GAP: 10px) ==================== */
+    .benefits-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px; /* Уплотненное монолитное расстояние */
+      align-items: flex-start;
+      margin-bottom: 12px; /* Вплотную к CTA */
+      padding-left: 0;
+    }
+
+    .trapezoid-badge {
+      height: 86px;
+      background: linear-gradient(90deg, rgba(19, 44, 32, 0.90) 0%, rgba(26, 54, 40, 0.88) 50%, rgba(42, 78, 57, 0.85) 100%);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1.5px solid rgba(212, 175, 55, 0.65);
+      border-left: none;
+      box-shadow: 0 6px 16px rgba(14, 33, 23, 0.25);
+      display: flex;
+      align-items: center;
+      padding-left: 145px;
+      padding-right: 25px;
+      clip-path: polygon(0 0, 100% 0, calc(100% - 28px) 100%, 0 100%);
+    }
+
+    .badge-1 { width: 435px; }
+    .badge-2 { width: 410px; }
+    .badge-3 { width: 390px; }
+    .badge-4 { width: 440px; }
+
+    .badge-text {
+      color: #FFFFFF;
+      font-size: 23.5px;
+      font-weight: 700;
+      line-height: 1.16;
+      letter-spacing: 0.2px;
+    }
+
+    /* ==================== БЛОК 4: САЛАТОВАЯ ПЛАШКА CTA (ВПЛОТНУЮ К СПИСКУ) ==================== */
+    .cta-trapezoid-badge {
+      width: 460px;
+      height: 90px;
+      background-color: #D4FF00;
+      clip-path: polygon(0 0, 100% 0, calc(100% - 32px) 100%, 0 100%);
+      box-shadow: 0 10px 24px rgba(212, 255, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-left: 50px;
+      margin-bottom: auto;
+    }
+
+    .cta-badge-text {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 22.5px;
+      font-weight: 800;
+      color: #1A3628;
+      line-height: 1.22;
+      letter-spacing: 0.3px;
+    }
+
+    /* ==================== БЛОК 5: ПОДВАЛ (ПРИЖАТ К САМОМУ НИЗУ) ==================== */
+    .footer-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 55px;
+      margin-top: auto;
+      padding-left: 60px;
+      padding-bottom: 10px;
+      position: relative;
+      z-index: 5;
+    }
+
+    .footer-col {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .footer-icon {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.6));
+    }
+
+    .footer-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .footer-text {
+      font-size: 22.5px;
+      font-weight: 700;
+      color: #1A3628;
+      line-height: 1.36;
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 3px rgba(255, 255, 255, 0.85);
+    }
+  </style>
+</head>
+<body>
+  <div class="poster">
+    <!-- Фоновое изображение (100% чистый фон с ребенком) -->
+    <img src="/banner-assets/sparta-tennis-sunny-bg.png" alt="Большой теннис Спарта" class="bg-layer">
+
+    <!-- Передний план: кинематографичное боке с теннисными мячами -->
+    <img src="/banner-assets/sparta-tennis-foreground-bokeh.png" alt="Боке теннисных мячей" class="foreground-bokeh-layer">
+
+    <!-- Мягкая светлая подложка для контактов внизу -->
+    <div class="bottom-mask"></div>
+
+    <!-- Основной контентный слой -->
+    <div class="content-layer">
+      
+      <!-- БЛОК 1: Верхний блок (Центрирование) -->
+      <div class="top-center-group">
+        <div class="top-nadzagolovok">ЦСП «СПАРТА»</div>
+        <div class="top-podzagolovok">ОТКРЫВАЕТ НОВОЕ НАПРАВЛЕНИЕ</div>
+        <div class="center-logo-box">
+          <img src="/banner-assets/sparta-crest-gold.png" alt="Герб SPARTA" class="center-logo-img">
+        </div>
+      </div>
+
+      <!-- БЛОК 2: Главный заголовок (Плотная фото-текстура сетки + 3D) -->
+      <div class="main-title-container">
+        <div class="volumetric-title-wrap">
+          <!-- 1. Задняя жесткая тень (3D экструзия X:5, Y:5, #0E2117) -->
+          <div class="title-extrusion-back">
+            <span>БОЛЬШОЙ</span>
+            <span>ТЕННИС</span>
+          </div>
+          <!-- 2. Лицевой слой со 100% плотной текстурой сетки и светлой обводкой -->
+          <h1 class="title-front-textured">
+            <span>БОЛЬШОЙ</span>
+            <span>ТЕННИС</span>
+          </h1>
+        </div>
+      </div>
+
+      <!-- БЛОК 3: Уплотненные плашки преимуществ (Gap: 10px) -->
+      <div class="benefits-column">
+        <!-- 1. Пробная тренировка 0 ₽ -->
+        <div class="trapezoid-badge badge-1">
+          <div class="badge-text">
+            <div>- Пробная</div>
+            <div>тренировка 0 ₽</div>
+          </div>
+        </div>
+
+        <!-- 2. Заморозка при болезни -->
+        <div class="trapezoid-badge badge-2">
+          <div class="badge-text">
+            <div>- Заморозка</div>
+            <div>при болезни</div>
+          </div>
+        </div>
+
+        <!-- 3. Гос. лицензия -->
+        <div class="trapezoid-badge badge-3">
+          <div class="badge-text">
+            <div>- Гос.</div>
+            <div>лицензия</div>
+          </div>
+        </div>
+
+        <!-- 4. Налоговый вычет 13% -->
+        <div class="trapezoid-badge badge-4">
+          <div class="badge-text">
+            <div>- Налоговый</div>
+            <div>вычет 13%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- БЛОК 4: Салатовая плашка CTA (вплотную к карточкам) -->
+      <div class="cta-trapezoid-badge">
+        <div class="cta-badge-text">
+          <div>Успейте записаться</div>
+          <div>на первую тренировку →</div>
+        </div>
+      </div>
+
+      <!-- БЛОК 5: Подвал / Контакты (Прижат к самому низу, 4 филиала) -->
+      <div class="footer-group">
+        <!-- Левая колонка: Телефоны -->
+        <div class="footer-col">
+          <div class="footer-icon">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="21" stroke="#1A3628" stroke-width="2.4"/>
+              <path d="M32 27.5V30.5C32 31.5 31 32.5 30 32.5C21 32 16 27 15.5 18C15.5 17 16.5 16 17.5 16H20.5C21.5 16 22.3 16.8 22.5 17.8C22.7 19 23.2 20.2 23.9 21.2C24.4 21.9 24.2 22.8 23.5 23.3L22.2 24.3C23.4 26.5 25.5 28.6 27.7 29.8L28.7 28.5C29.2 27.8 30.1 27.6 30.8 28.1C31.8 28.8 33 29.3 34.2 29.5C35.2 29.7 36 30.5 36 31.5" stroke="#1A3628" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            <div>+7 919 339 33 99 - Директор</div>
+            <div>+7 (351) 230-12-69 - Администратор</div>
+          </div>
+        </div>
+
+        <!-- Правая колонка: Все 4 Адреса Филиалов -->
+        <div class="footer-col">
+          <div class="footer-icon">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="21" stroke="#1A3628" stroke-width="2.4"/>
+              <path d="M24 13C19.5 13 16 16.5 16 21C16 26.5 24 35 24 35C24 35 32 26.5 32 21C32 16.5 28.5 13 24 13Z" stroke="#1A3628" stroke-width="2.4" stroke-linejoin="round"/>
+              <circle cx="24" cy="21" r="3.5" fill="#1A3628"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            <div>ул. Ласковая, 18</div>
+            <div>ул. Большевистская, 125</div>
+            <div>ул. Планетная, 53</div>
+            <div>ул. Мясниковой, 25/2</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

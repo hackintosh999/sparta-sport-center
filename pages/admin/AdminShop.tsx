@@ -334,6 +334,8 @@ const AdminShop: React.FC = () => {
                 gallery: galleryUrls,
                 specifications: finalSpecs,
                 isCustomizable: !!currentProduct.isCustomizable,
+                isMadeToOrder: !!currentProduct.isMadeToOrder,
+                lowStockThreshold: Number(currentProduct.lowStockThreshold) || 3,
                 productionTime: currentProduct.productionTime || '',
                 deliveryInfo: currentProduct.deliveryInfo || '',
                 sizeChartUrl: currentProduct.sizeChartUrl || '',
@@ -1098,8 +1100,16 @@ const AdminShop: React.FC = () => {
                                             </div>
 
                                             {/* Stock Badge */}
-                                            <div className={`absolute bottom-2 right-2 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest backdrop-blur-md border ${totalStock === 0 ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-black/60 border-white/10 text-gray-300'}`}>
-                                                Склад: {totalStock}
+                                            <div className={`absolute bottom-2 right-2 px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider backdrop-blur-md border ${
+                                                product.isMadeToOrder
+                                                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                                                    : totalStock === 0
+                                                        ? 'bg-red-500/20 border-red-500/50 text-red-500'
+                                                        : totalStock <= (product.lowStockThreshold || 3)
+                                                            ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400'
+                                                            : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                                            }`}>
+                                                {product.isMadeToOrder ? '🧵 Под заказ' : `Склад: ${totalStock} шт`}
                                             </div>
 
                                             {/* Action Buttons Overlay */}
@@ -1973,28 +1983,138 @@ const AdminShop: React.FC = () => {
 
                                     {activeTab === 'stock' && (
                                         <div className="space-y-6 max-w-2xl mx-auto">
-                                            <div className="bg-white/5 p-6 rounded-3xl border border-white/10 shadow-2xl">
-                                                <div className="flex items-center justify-between mb-6">
-                                                    <div>
-                                                        <h3 className="text-white font-black uppercase tracking-widest flex items-center gap-2">
-                                                            <Layers size={20} className="text-yellow-500" />
-                                                            Инвентаризация
-                                                        </h3>
-                                                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Добавьте размеры и укажите остатки на складе</p>
+                                            {/* 1. Mode Switcher: Made-to-Order vs Strict Stock Management */}
+                                            <div className="bg-white/5 p-5 rounded-3xl border border-white/10 shadow-2xl space-y-4">
+                                                <div>
+                                                    <h3 className="text-white font-black uppercase tracking-widest flex items-center gap-2 text-sm">
+                                                        <Layers size={18} className="text-yellow-500" />
+                                                        Режим наличия и производства
+                                                    </h3>
+                                                    <p className="text-gray-400 text-xs mt-1">
+                                                        Выберите, как товар доступен для заказа родителям
+                                                    </p>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCurrentProduct({ ...currentProduct, isMadeToOrder: true })}
+                                                        className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                                                            currentProduct.isMadeToOrder
+                                                                ? 'bg-amber-500/15 border-amber-500 text-white ring-2 ring-amber-500/30'
+                                                                : 'bg-black/40 border-white/10 text-gray-400 hover:border-white/20'
+                                                        }`}
+                                                    >
+                                                        <div className={`p-2.5 rounded-xl flex-shrink-0 ${currentProduct.isMadeToOrder ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400'}`}>
+                                                            <Sparkles size={18} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-russo text-sm text-white uppercase">🧵 Пошив под заказ</h4>
+                                                            <p className="text-[11px] text-gray-400 mt-1 leading-snug">
+                                                                Все размеры доступны всегда (пошив 3–5 дней на фабрике)
+                                                            </p>
+                                                        </div>
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCurrentProduct({ ...currentProduct, isMadeToOrder: false })}
+                                                        className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                                                            !currentProduct.isMadeToOrder
+                                                                ? 'bg-yellow-500/15 border-yellow-500 text-white ring-2 ring-yellow-500/30'
+                                                                : 'bg-black/40 border-white/10 text-gray-400 hover:border-white/20'
+                                                        }`}
+                                                    >
+                                                        <div className={`p-2.5 rounded-xl flex-shrink-0 ${!currentProduct.isMadeToOrder ? 'bg-yellow-500 text-black' : 'bg-white/5 text-gray-400'}`}>
+                                                            <Layers size={18} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-russo text-sm text-white uppercase">📦 Складской учёт</h4>
+                                                            <p className="text-[11px] text-gray-400 mt-1 leading-snug">
+                                                                Строгий учёт количества штук для каждого размера
+                                                            </p>
+                                                        </div>
+                                                    </button>
+                                                </div>
+
+                                                {currentProduct.isMadeToOrder && (
+                                                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex items-center gap-3">
+                                                        <Sparkles className="text-amber-400 flex-shrink-0" size={20} />
+                                                        <p className="text-xs text-amber-200 leading-relaxed">
+                                                            В карточке товара отображается бейдж <strong>«Пошив под заказ: {currentProduct.productionTime || '3–5 дней'}»</strong>. Родители смогут свободно заказывать форму любого размера с нанесением имени и номера.
+                                                        </p>
                                                     </div>
+                                                )}
+                                            </div>
+
+                                            {/* 2. Stock Inventory & Sizes */}
+                                            <div className="bg-white/5 p-6 rounded-3xl border border-white/10 shadow-2xl space-y-4">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                    <div>
+                                                        <h3 className="text-white font-black uppercase tracking-widest text-sm flex items-center gap-2">
+                                                            Размерная сетка и остатки
+                                                        </h3>
+                                                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                                                            {currentProduct.isMadeToOrder ? 'Доступные размеры для заказа' : 'Количество штук на складе'}
+                                                        </p>
+                                                    </div>
+
+                                                    {!currentProduct.isMadeToOrder && currentProduct.sizes && currentProduct.sizes.length > 0 && (
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const stockObj = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null) ? { ...currentProduct.stock } : {};
+                                                                    currentProduct.sizes?.forEach(s => {
+                                                                        stockObj[s] = 10;
+                                                                    });
+                                                                    setCurrentProduct({ ...currentProduct, stock: stockObj });
+                                                                }}
+                                                                className="px-2.5 py-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer"
+                                                            >
+                                                                Все по 10 шт
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const stockObj = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null) ? { ...currentProduct.stock } : {};
+                                                                    currentProduct.sizes?.forEach(s => {
+                                                                        stockObj[s] = 5;
+                                                                    });
+                                                                    setCurrentProduct({ ...currentProduct, stock: stockObj });
+                                                                }}
+                                                                className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer"
+                                                            >
+                                                                Все по 5 шт
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const stockObj = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null) ? { ...currentProduct.stock } : {};
+                                                                    currentProduct.sizes?.forEach(s => {
+                                                                        stockObj[s] = 0;
+                                                                    });
+                                                                    setCurrentProduct({ ...currentProduct, stock: stockObj });
+                                                                }}
+                                                                className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer"
+                                                            >
+                                                                Обнулить
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {(!currentProduct.sizes || currentProduct.sizes.length === 0) ? (
-                                                    <div className="flex items-center gap-4 bg-yellow-500/5 p-6 rounded-2xl border border-yellow-500/10 mb-6">
+                                                    <div className="flex items-center gap-4 bg-yellow-500/5 p-5 rounded-2xl border border-yellow-500/10">
                                                         <div className="flex-1">
-                                                            <h4 className="text-white font-black text-sm uppercase">ОБЩИЙ ОСТАТОК</h4>
-                                                            <p className="text-gray-500 text-[10px] font-bold uppercase mt-1">Для товаров без размерной сетки</p>
+                                                            <h4 className="text-white font-black text-xs uppercase">ОБЩИЙ ОСТАТОК (БЕЗРАЗМЕРНЫЙ)</h4>
+                                                            <p className="text-gray-500 text-[10px] font-bold uppercase mt-1">Для аксессуаров, рюкзаков, бутылок</p>
                                                         </div>
                                                         <div className="relative">
                                                             <input
                                                                 type="number"
                                                                 min="0"
-                                                                className="w-32 bg-black border border-white/20 rounded-xl p-4 text-center text-xl font-black text-yellow-500 focus:border-yellow-500 outline-none"
+                                                                className="w-28 bg-black border border-white/20 rounded-xl p-3 text-center text-lg font-black text-yellow-500 focus:border-yellow-500 outline-none"
                                                                 value={currentProduct.stock?.['N/A'] !== undefined ? currentProduct.stock['N/A'] : ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value;
@@ -2008,58 +2128,123 @@ const AdminShop: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="space-y-3 mb-6">
-                                                        {currentProduct.sizes.map(size => (
-                                                            <div key={size} className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5 group/size">
-                                                                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-black text-lg font-black shadow-lg">
-                                                                    {size}
-                                                                </div>
-                                                                <div className="flex-1 flex items-center justify-end gap-6">
-                                                                    <div className="text-right">
-                                                                        <label className="block text-gray-600 text-[10px] font-black uppercase tracking-widest mb-1">ОСТАТОК</label>
-                                                                        <input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            className="w-24 bg-black border border-white/10 rounded-xl p-3 text-center text-lg font-mono font-bold text-white focus:border-yellow-500 outline-none"
-                                                                            value={currentProduct.stock?.[size] !== undefined ? currentProduct.stock[size] : ''}
-                                                                            onChange={(e) => {
-                                                                                const val = e.target.value;
+                                                    <div className="space-y-2.5">
+                                                        {currentProduct.sizes.map(size => {
+                                                            const currentQty = currentProduct.stock?.[size] !== undefined ? currentProduct.stock[size] : 0;
+                                                            const isZero = currentQty === 0;
+                                                            const isLow = currentQty > 0 && currentQty <= (currentProduct.lowStockThreshold || 3);
+
+                                                            return (
+                                                                <div key={size} className="flex items-center justify-between gap-3 bg-black/50 p-3 sm:p-4 rounded-2xl border border-white/5 hover:border-white/15 transition-all">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-black font-russo font-black text-base shadow flex-shrink-0">
+                                                                            {size}
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-xs font-bold text-white uppercase tracking-wider">{size}</span>
+                                                                            {!currentProduct.isMadeToOrder && (
+                                                                                <div className="mt-0.5">
+                                                                                    {isZero ? (
+                                                                                        <span className="text-[9px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded">
+                                                                                            ● Нет на складе
+                                                                                        </span>
+                                                                                    ) : isLow ? (
+                                                                                        <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded animate-pulse">
+                                                                                            🔥 Заканчивается: {currentQty} шт
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                                                                                            ● В наличии: {currentQty} шт
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex items-center gap-2">
+                                                                        {!currentProduct.isMadeToOrder && (
+                                                                            <div className="flex items-center bg-black border border-white/10 rounded-xl overflow-hidden">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        const stockObj = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null) ? currentProduct.stock : {};
+                                                                                        const newQty = Math.max(0, (Number(stockObj[size]) || 0) - 1);
+                                                                                        setCurrentProduct({ ...currentProduct, stock: { ...stockObj, [size]: newQty } });
+                                                                                    }}
+                                                                                    className="px-2.5 py-2 text-gray-400 hover:text-white hover:bg-white/10 transition-colors font-black text-sm"
+                                                                                >
+                                                                                    -1
+                                                                                </button>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    className="w-14 bg-transparent py-2 text-center text-sm font-mono font-bold text-white focus:outline-none"
+                                                                                    value={currentProduct.stock?.[size] !== undefined ? currentProduct.stock[size] : ''}
+                                                                                    onChange={(e) => {
+                                                                                        const val = e.target.value;
+                                                                                        const stockObj = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null) ? currentProduct.stock : {};
+                                                                                        const newStock = { ...stockObj };
+                                                                                        if (val === '') delete newStock[size];
+                                                                                        else newStock[size] = Math.max(0, Number(val));
+                                                                                        setCurrentProduct({ ...currentProduct, stock: newStock });
+                                                                                    }}
+                                                                                />
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        const stockObj = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null) ? currentProduct.stock : {};
+                                                                                        const newQty = (Number(stockObj[size]) || 0) + 1;
+                                                                                        setCurrentProduct({ ...currentProduct, stock: { ...stockObj, [size]: newQty } });
+                                                                                    }}
+                                                                                    className="px-2.5 py-2 text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 transition-colors font-black text-sm"
+                                                                                >
+                                                                                    +1
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        const stockObj = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null) ? currentProduct.stock : {};
+                                                                                        const newQty = (Number(stockObj[size]) || 0) + 5;
+                                                                                        setCurrentProduct({ ...currentProduct, stock: { ...stockObj, [size]: newQty } });
+                                                                                    }}
+                                                                                    className="px-2.5 py-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors font-black text-xs border-l border-white/10"
+                                                                                >
+                                                                                    +5
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                const newSizes = currentProduct.sizes?.filter(s => s !== size) || [];
                                                                                 const stockObj = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null) ? currentProduct.stock : {};
                                                                                 const newStock = { ...stockObj };
-                                                                                if (val === '') delete newStock[size];
-                                                                                else newStock[size] = Number(val);
-                                                                                setCurrentProduct({ ...currentProduct, stock: newStock });
+                                                                                delete newStock[size];
+                                                                                setCurrentProduct({ ...currentProduct, sizes: newSizes, stock: newStock });
                                                                             }}
-                                                                        />
+                                                                            className="p-2.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer"
+                                                                            title="Удалить размер"
+                                                                        >
+                                                                            <Trash2 size={16} />
+                                                                        </button>
                                                                     </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            const newSizes = currentProduct.sizes?.filter(s => s !== size) || [];
-                                                                            const stockObj = (typeof currentProduct.stock === 'object' && currentProduct.stock !== null) ? currentProduct.stock : {};
-                                                                            const newStock = { ...stockObj };
-                                                                            delete newStock[size];
-                                                                            setCurrentProduct({ ...currentProduct, sizes: newSizes, stock: newStock });
-                                                                        }}
-                                                                        className="p-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
-                                                                    >
-                                                                        <Trash2 size={20} />
-                                                                    </button>
                                                                 </div>
-                                                            </div>
-                                                        ))}
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
 
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 pt-2">
                                                     <div className="relative flex-1">
-                                                        <List size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                                                        <List size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                                                         <input
                                                             type="text"
                                                             value={customSize}
                                                             onChange={e => setCustomSize(e.target.value)}
-                                                            placeholder="Новый размер (XL, 42...)"
-                                                            className="w-full bg-black border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white focus:border-yellow-500 outline-none shadow-inner"
+                                                            placeholder="Новый размер (116, 122, 128, S, M...)"
+                                                            className="w-full bg-black border border-white/10 rounded-2xl pl-11 pr-4 py-3 text-white text-sm focus:border-yellow-500 outline-none shadow-inner"
                                                             onKeyDown={e => {
                                                                 if (e.key === 'Enter') {
                                                                     e.preventDefault();
@@ -2085,9 +2270,10 @@ const AdminShop: React.FC = () => {
                                                                 setCustomSize('');
                                                             }
                                                         }}
-                                                        className="h-14 w-14 bg-yellow-500 text-black rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-500/20 active:scale-95 transition-all"
+                                                        className="h-12 px-5 bg-yellow-500 hover:bg-yellow-400 text-black font-russo uppercase text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-lg shadow-yellow-500/20 active:scale-95 transition-all cursor-pointer"
                                                     >
-                                                        <Plus size={28} />
+                                                        <Plus size={18} />
+                                                        <span>Добавить</span>
                                                     </button>
                                                 </div>
                                             </div>

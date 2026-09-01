@@ -584,7 +584,9 @@ const Shop = () => {
                                 <AnimatePresence>
                                     {filteredProducts.map((product, index) => {
                                         const totalStock =
-                                            typeof product.stock === 'number'
+                                            product.isMadeToOrder
+                                                ? 999
+                                                : typeof product.stock === 'number'
                                                 ? product.stock
                                                 : typeof product.stock === 'object' && product.stock !== null
                                                 ? Object.values(product.stock as unknown as Record<string, number>).reduce(
@@ -592,11 +594,26 @@ const Shop = () => {
                                                       0
                                                   )
                                                 : 999;
-                                        const isOutOfStock = totalStock <= 0;
+                                        const isOutOfStock = !product.isMadeToOrder && totalStock <= 0;
+                                        const isLowStock = !product.isMadeToOrder && totalStock <= (product.lowStockThreshold || 3) && totalStock > 0;
 
                                         // Badge priority
                                         let singleBadge = null;
-                                        if (!isOutOfStock) {
+                                        if (product.isMadeToOrder) {
+                                            singleBadge = (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 bg-amber-500/90 backdrop-blur-md rounded-lg text-[9px] sm:text-[11px] font-black text-black shadow-lg uppercase tracking-wider">
+                                                    <Sparkles size={11} className="text-black fill-black shrink-0" />
+                                                    <span>Под заказ</span>
+                                                </span>
+                                            );
+                                        } else if (isLowStock) {
+                                            singleBadge = (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 bg-amber-600/90 backdrop-blur-md rounded-lg text-[9px] sm:text-[11px] font-black text-white shadow-lg uppercase tracking-wider animate-pulse">
+                                                    <Flame size={11} className="text-white fill-white shrink-0" />
+                                                    <span>Осталось: {totalStock} шт</span>
+                                                </span>
+                                            );
+                                        } else if (!isOutOfStock) {
                                             if (product.badges?.includes('hit')) {
                                                 singleBadge = (
                                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 bg-red-600/90 backdrop-blur-md rounded-lg text-[9px] sm:text-[11px] font-black text-white shadow-lg uppercase tracking-wider">

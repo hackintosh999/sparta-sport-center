@@ -45,6 +45,7 @@ import { doc, getDoc, collection, query, orderBy, onSnapshot } from 'firebase/fi
 import ContactModal from './ContactModal';
 import { ScheduleSection } from './ScheduleSection';
 import MembershipModal from './MembershipModal';
+import SubscriptionsShowcase from './SubscriptionsShowcase';
 import ReviewsSection from './ReviewsSection';
 import LeaveReviewModal from './LeaveReviewModal';
 import SmartEnrollmentWizard from './SmartEnrollmentWizard';
@@ -1147,7 +1148,7 @@ const LandingPage: React.FC = () => {
         setIsRouteModalOpen(true);
     };
 
-    const [duration, setDuration] = useState<1 | 3 | 6 | 12>(3);
+    const [duration, setDuration] = useState<1 | 3 | 6 | 12>(1);
     const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
     const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string } | null>(null);
 
@@ -1297,16 +1298,15 @@ const LandingPage: React.FC = () => {
                 {/* GROUPS LIST SECTION */}
                 <GroupsSection onJoinClick={handleJoinClick} />
 
-                {/* PROGRAMS with custom bg */}
-                <div className="relative bg-programs-bg bg-cover bg-center bg-fixed">
-                    <div className="absolute inset-0 bg-black/75 z-0"></div>
+                {/* SEGMENTED SUBSCRIPTIONS & TARIFFS SHOWCASE */}
+                <div id="tariffs" className="relative bg-programs-bg bg-cover bg-center bg-fixed">
+                    <div className="absolute inset-0 bg-black/85 z-0"></div>
                     <div className="relative z-10">
-                        <Programs
-                            duration={duration}
-                            setDuration={setDuration}
-                            onOpenMembership={(p, mode) => {
-                                setSelectedProgram(p);
-                                setMembershipMode(mode || 'purchase');
+                        <SubscriptionsShowcase
+                            onSelectPlan={(plan, chosenPeriod = 1) => {
+                                setSelectedProgram(plan as any);
+                                setDuration(chosenPeriod as any);
+                                setMembershipMode('purchase');
                                 setIsMembershipOpen(true);
                             }}
                         />

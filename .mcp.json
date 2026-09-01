@@ -34,6 +34,9 @@
         "mcp-remote@latest",
         "https://mcp.canva.com/mcp"
       ]
+    },
+    "figma": {
+      "url": "https://mcp.figma.com/mcp"
     }
   }
 }

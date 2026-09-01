@@ -5,6 +5,9 @@
       "headers": {
         "x-api-key": "21st_sk_f59274ccad4d58dc7d069bcbe3e4ae1e3fc1105e8e156ca6f4c396b276c4dfda"
       }
+    },
+    "figma": {
+      "url": "https://mcp.figma.com/mcp"
     }
   }
 }

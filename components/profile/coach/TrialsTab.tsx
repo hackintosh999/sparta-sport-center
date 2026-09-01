@@ -125,9 +125,21 @@ const TrialsTab: React.FC<TrialsTabProps> = ({
                                                         {(trial.childSurname || trial.name || 'Н').charAt(0)}
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="px-2 py-0.5 bg-sparta-gold/10 text-sparta-gold border border-sparta-gold/20 rounded-lg text-[8px] font-black uppercase tracking-widest mb-2 w-fit">
-                                                            Новая заявка
-                                                        </span>
+                                                        {(trial as any).isMembership ? (
+                                                            (trial as any).paymentMethod === 'cash' ? (
+                                                                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-[8px] font-black uppercase tracking-widest mb-2 w-fit">
+                                                                    💵 Абонемент (Оплата на поле)
+                                                                </span>
+                                                            ) : (
+                                                                <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-[8px] font-black uppercase tracking-widest mb-2 w-fit">
+                                                                    💳 Абонемент (Оплачен)
+                                                                </span>
+                                                            )
+                                                        ) : (
+                                                            <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[8px] font-black uppercase tracking-widest mb-2 w-fit">
+                                                                🆓 Пробное занятие
+                                                            </span>
+                                                        )}
                                                         <div className="flex items-center gap-2">
                                                             <div className="flex -space-x-2">
                                                                 {[1, 2, 3].map(i => (

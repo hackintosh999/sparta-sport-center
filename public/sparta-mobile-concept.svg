@@ -1,0 +1,352 @@
+<svg width="390" height="844" viewBox="0 0 390 844" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Google Fonts Embed -->
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Russo+One&amp;display=swap');
+      .font-russo { font-family: 'Russo One', 'Inter', 'Segoe UI', sans-serif; }
+      .font-manrope { font-family: 'Manrope', 'Inter', 'Segoe UI', sans-serif; }
+    </style>
+
+    <!-- Deep Ambient Liquid Stage -->
+    <radialGradient id="liquid_stage" cx="50%" cy="15%" r="85%" fx="50%" fy="15%">
+      <stop offset="0%" stop-color="#181524"/>
+      <stop offset="35%" stop-color="#0E0D16"/>
+      <stop offset="70%" stop-color="#07060A"/>
+      <stop offset="100%" stop-color="#030305"/>
+    </radialGradient>
+
+    <!-- Molten Liquid Gold Flow -->
+    <linearGradient id="liquid_gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="20%" stop-color="#FDE68A"/>
+      <stop offset="45%" stop-color="#F59E0B"/>
+      <stop offset="75%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#78350F"/>
+    </linearGradient>
+
+    <!-- Liquid Glass Card Base (Curved Refraction) -->
+    <linearGradient id="liquid_glass_body" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="25%" stop-color="#232135" stop-opacity="0.65"/>
+      <stop offset="70%" stop-color="#12101D" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#08070D" stop-opacity="0.9"/>
+    </linearGradient>
+
+    <!-- Liquid Glass Button Gradient -->
+    <linearGradient id="liquid_glass_btn" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.25"/>
+      <stop offset="40%" stop-color="#2A2640" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#13111C" stop-opacity="0.9"/>
+    </linearGradient>
+
+    <!-- Fluid Emerald Neon -->
+    <linearGradient id="liquid_emerald" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#A7F3D0"/>
+      <stop offset="40%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+
+    <!-- Liquid Specular Sheen (Curved Light Arc) -->
+    <linearGradient id="liquid_sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="30%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="liquid_border" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="35%" stop-color="#D4AF37" stop-opacity="0.4"/>
+      <stop offset="70%" stop-color="#FFFFFF" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0.25"/>
+    </linearGradient>
+
+    <!-- Liquid Filters -->
+    <filter id="liquid_drop_shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.85"/>
+    </filter>
+
+    <filter id="liquid_glow_gold" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#F59E0B" flood-opacity="0.35"/>
+    </filter>
+
+    <filter id="liquid_glow_emerald" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#10B981" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas Frame -->
+  <rect width="390" height="844" rx="44" fill="url(#liquid_stage)"/>
+
+  <!-- Molten Ambient Liquid Light Droplets (Behind Glass) -->
+  <g id="Fluid_Caustics_Background">
+    <ellipse cx="140" cy="160" rx="140" ry="110" fill="#D4AF37" fill-opacity="0.12" transform="rotate(-15 140 160)"/>
+    <ellipse cx="280" cy="240" rx="120" ry="90" fill="#8B5CF6" fill-opacity="0.08" transform="rotate(25 280 240)"/>
+    <ellipse cx="320" cy="480" rx="130" ry="100" fill="#E50914" fill-opacity="0.06"/>
+    <ellipse cx="80" cy="620" rx="110" ry="80" fill="#10B981" fill-opacity="0.07"/>
+  </g>
+
+  <!-- ==================== 1. STATUS BAR ==================== -->
+  <g id="StatusBar">
+    <text x="36" y="32" fill="#FFFFFF" class="font-manrope" font-size="14" font-weight="700" text-anchor="middle">09:41</text>
+    
+    <!-- Liquid Dynamic Island Pill -->
+    <rect x="135" y="13" width="120" height="30" rx="15" fill="#000000" stroke="url(#liquid_border)" stroke-width="0.8"/>
+    <circle cx="236" cy="28" r="4.5" fill="#121218"/>
+    <circle cx="236" cy="28" r="2" fill="#2563EB"/>
+    <circle cx="152" cy="28" r="3.5" fill="#10B981" filter="url(#liquid_glow_emerald)"/>
+
+    <!-- Status Icons -->
+    <g transform="translate(315, 21)">
+      <rect x="0" y="8" width="3" height="4" rx="1" fill="#FFFFFF"/>
+      <rect x="4" y="5" width="3" height="7" rx="1" fill="#FFFFFF"/>
+      <rect x="8" y="2" width="3" height="10" rx="1" fill="#FFFFFF"/>
+      <rect x="12" y="0" width="3" height="12" rx="1" fill="#FFFFFF"/>
+      <path d="M22 2C24.5 0 28.5 0 31 2M24 5C25.5 3.5 27.5 3.5 29 5M26.5 9V9.01" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+      <rect x="36" y="1" width="22" height="11" rx="3.5" stroke="#FFFFFF" stroke-width="1.2"/>
+      <rect x="38" y="3" width="15" height="7" rx="2" fill="#FFFFFF"/>
+      <path d="M59 4.5V8.5" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- ==================== 2. LIQUID PROFILE HEADER ==================== -->
+  <g id="Header" transform="translate(20, 58)">
+    <!-- Liquid Glass Avatar Bubble -->
+    <circle cx="24" cy="24" r="24" fill="url(#liquid_glass_btn)" stroke="url(#liquid_border)" stroke-width="1.5" filter="url(#liquid_drop_shadow)"/>
+    <!-- Specular Arc -->
+    <path d="M6 18C8 10 16 6 24 6C32 6 40 10 42 18" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="24" cy="24" r="20" fill="#161320" fill-opacity="0.8"/>
+    <text x="24" y="29" fill="url(#liquid_gold)" class="font-russo" font-size="14" text-anchor="middle">МА</text>
+    
+    <!-- User Labels -->
+    <text x="60" y="16" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="600">Привет, чемпион! 🥋</text>
+    <text x="60" y="36" fill="#FFFFFF" class="font-russo" font-size="16">Михаил Андреев</text>
+
+    <!-- Liquid Glass Points Capsule -->
+    <g transform="translate(242, 6)">
+      <rect width="108" height="36" rx="18" fill="url(#liquid_glass_btn)" stroke="url(#liquid_border)" stroke-width="1" filter="url(#liquid_drop_shadow)"/>
+      <path d="M10 5H98" stroke="url(#liquid_sheen)" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="18" cy="18" r="9" fill="url(#liquid_gold)" filter="url(#liquid_glow_gold)"/>
+      <text x="18" y="22" fill="#040306" class="font-russo" font-size="10" text-anchor="middle">★</text>
+      <text x="34" y="22" fill="#FDE68A" class="font-manrope" font-size="12" font-weight="800">450</text>
+      <text x="66" y="22" fill="#A1A1AA" class="font-manrope" font-size="10" font-weight="700">BP</text>
+    </g>
+  </g>
+
+  <!-- ==================== 3. FLUID LIQUID GLASS SPARTA PASS ==================== -->
+  <g id="Sparta_Pass" transform="translate(20, 118)">
+    <!-- Base Curved Liquid Glass Slab -->
+    <rect width="350" height="184" rx="24" fill="url(#liquid_glass_body)" stroke="url(#liquid_border)" stroke-width="1.5" filter="url(#liquid_drop_shadow)"/>
+    
+    <!-- Liquid Caustic Wave Curves inside glass -->
+    <path d="M0 60C80 30 160 90 240 50C290 25 330 40 350 55V184H0V60Z" fill="url(#liquid_gold)" fill-opacity="0.06"/>
+    <path d="M0 110C90 80 180 140 270 100C310 80 340 90 350 95V184H0V110Z" fill="#10B981" fill-opacity="0.04"/>
+
+    <!-- High Gloss Glass Specular Highlights (Top Curve & Edge) -->
+    <path d="M12 4C80 1.5 270 1.5 338 4" stroke="url(#liquid_sheen)" stroke-width="2" stroke-linecap="round"/>
+    <path d="M4 14C2 40 2 120 4 170" stroke="url(#liquid_sheen)" stroke-width="1" stroke-linecap="round"/>
+
+    <!-- Liquid Molten Smart Chip -->
+    <g transform="translate(24, 22)">
+      <rect width="36" height="28" rx="8" fill="url(#liquid_gold)" stroke="#FFFBEB" stroke-width="0.75" filter="url(#liquid_glow_gold)"/>
+      <path d="M0 14H36M18 0V28M11 0V28M25 0V28" stroke="#78350F" stroke-width="0.75" stroke-opacity="0.7"/>
+      <rect x="10" y="8" width="16" height="12" rx="4" fill="#161208" stroke="#FDE68A" stroke-width="0.75"/>
+    </g>
+
+    <text x="70" y="40" fill="url(#liquid_gold)" class="font-russo" font-size="14" letter-spacing="1">SPARTA PASS • LIQUID PRO</text>
+    
+    <!-- Liquid Emerald Status Capsule -->
+    <g transform="translate(254, 22)">
+      <rect width="76" height="24" rx="12" fill="url(#liquid_emerald)" fill-opacity="0.2" stroke="#10B981" stroke-width="1" filter="url(#liquid_glow_emerald)"/>
+      <path d="M6 3H70" stroke="url(#liquid_sheen)" stroke-width="1" stroke-linecap="round"/>
+      <circle cx="14" cy="12" r="3.5" fill="#10B981"/>
+      <text x="44" y="16" fill="#A7F3D0" class="font-manrope" font-size="10" font-weight="800" text-anchor="middle">АКТИВЕН</text>
+    </g>
+
+    <!-- Remaining Balance -->
+    <text x="24" y="82" fill="#A1A1AA" class="font-manrope" font-size="12" font-weight="600">Остаток абонемента</text>
+    <text x="24" y="114" fill="#FFFFFF" class="font-russo" font-size="28">8</text>
+    <text x="48" y="110" fill="#A1A1AA" class="font-manrope" font-size="14" font-weight="600">/ 12 занятий</text>
+
+    <!-- Liquid Molten Progress Bar -->
+    <g transform="translate(24, 126)">
+      <!-- Glass Tube Cavity -->
+      <rect width="302" height="10" rx="5" fill="#0A0812" stroke="url(#liquid_border)" stroke-width="0.75"/>
+      <!-- Glowing Liquid Mercury Gold Flow -->
+      <rect width="206" height="10" rx="5" fill="url(#liquid_gold)" filter="url(#liquid_glow_gold)"/>
+      <!-- Glossy Reflection Streak -->
+      <path d="M4 2H202" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+    </g>
+
+    <!-- Schedule Ribbon -->
+    <g transform="translate(24, 152)">
+      <circle cx="6" cy="12" r="4" fill="#10B981" filter="url(#liquid_glow_emerald)"/>
+      <text x="16" y="16" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="500">Следующая:</text>
+      <text x="86" y="16" fill="#FFFFFF" class="font-manrope" font-size="11" font-weight="700">Сегодня в 16:00 (Зал 1)</text>
+      <text x="260" y="16" fill="url(#liquid_gold)" class="font-manrope" font-size="11" font-weight="800">QR-код →</text>
+    </g>
+  </g>
+
+  <!-- ==================== 4. LIQUID GLASS ACTION DROPLETS ==================== -->
+  <g id="Quick_Actions" transform="translate(20, 320)">
+    <!-- Droplet 1: Schedule -->
+    <g transform="translate(0, 0)">
+      <rect width="78" height="80" rx="20" fill="url(#liquid_glass_btn)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_drop_shadow)"/>
+      <path d="M8 4H70" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="39" cy="27" r="16" fill="#151222" stroke="url(#liquid_border)" stroke-width="1"/>
+      <rect x="31" y="19" width="16" height="15" rx="3" stroke="url(#liquid_gold)" stroke-width="1.5"/>
+      <line x1="31" y1="24" x2="47" y2="24" stroke="url(#liquid_gold)" stroke-width="1.2"/>
+      <text x="39" y="64" fill="#E4E4E7" class="font-manrope" font-size="10" font-weight="700" text-anchor="middle">Расписание</text>
+    </g>
+
+    <!-- Droplet 2: Awards -->
+    <g transform="translate(90, 0)">
+      <rect width="78" height="80" rx="20" fill="url(#liquid_glass_btn)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_drop_shadow)"/>
+      <path d="M8 4H70" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="39" cy="27" r="16" fill="#151222" stroke="url(#liquid_border)" stroke-width="1"/>
+      <path d="M32 21L39 17L46 21V27C46 31.5 39 35 39 35C39 35 32 31.5 32 27V21Z" stroke="url(#liquid_gold)" stroke-width="1.5"/>
+      <text x="39" y="64" fill="#E4E4E7" class="font-manrope" font-size="10" font-weight="700" text-anchor="middle">Награды</text>
+    </g>
+
+    <!-- Droplet 3: Top-up -->
+    <g transform="translate(180, 0)">
+      <rect width="78" height="80" rx="20" fill="url(#liquid_glass_btn)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_drop_shadow)"/>
+      <path d="M8 4H70" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="39" cy="27" r="16" fill="#151222" stroke="url(#liquid_border)" stroke-width="1"/>
+      <rect x="30" y="20" width="18" height="14" rx="3" stroke="#10B981" stroke-width="1.5"/>
+      <circle cx="39" cy="27" r="2.5" fill="#10B981" filter="url(#liquid_glow_emerald)"/>
+      <text x="39" y="64" fill="#E4E4E7" class="font-manrope" font-size="10" font-weight="700" text-anchor="middle">Продлить</text>
+    </g>
+
+    <!-- Droplet 4: Coach -->
+    <g transform="translate(270, 0)">
+      <rect width="80" height="80" rx="20" fill="url(#liquid_glass_btn)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_drop_shadow)"/>
+      <path d="M8 4H72" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="40" cy="27" r="16" fill="#151222" stroke="url(#liquid_border)" stroke-width="1"/>
+      <rect x="32" y="20" width="16" height="13" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+      <path d="M35 33L33 36V33H35Z" fill="#EF4444"/>
+      <circle cx="58" cy="16" r="4.5" fill="#EF4444" stroke="#0F0D16" stroke-width="1.5"/>
+      <text x="40" y="64" fill="#E4E4E7" class="font-manrope" font-size="10" font-weight="700" text-anchor="middle">Тренер</text>
+    </g>
+  </g>
+
+  <!-- ==================== 5. LIQUID GLASS WORKOUT CARD ==================== -->
+  <g id="Today_Workout" transform="translate(20, 418)">
+    <text x="0" y="16" fill="#FFFFFF" class="font-russo" font-size="15">ТРЕНИРОВКА СЕГОДНЯ</text>
+    <text x="350" y="16" fill="url(#liquid_gold)" class="font-manrope" font-size="11" font-weight="700" text-anchor="end">Все дни →</text>
+
+    <!-- Workout Liquid Glass Card -->
+    <g transform="translate(0, 26)">
+      <rect width="350" height="122" rx="22" fill="url(#liquid_glass_body)" stroke="url(#liquid_border)" stroke-width="1.5" filter="url(#liquid_drop_shadow)"/>
+      <path d="M12 3H338" stroke="url(#liquid_sheen)" stroke-width="1.5" stroke-linecap="round"/>
+      
+      <!-- Liquid Emerald Time Pill -->
+      <rect x="16" y="16" width="104" height="28" rx="14" fill="url(#liquid_emerald)" fill-opacity="0.2" stroke="#10B981" stroke-width="1"/>
+      <path d="M26 19H110" stroke="url(#liquid_sheen)" stroke-width="1" stroke-linecap="round"/>
+      <circle cx="28" cy="30" r="3" fill="#10B981" filter="url(#liquid_glow_emerald)"/>
+      <text x="68" y="34" fill="#A7F3D0" class="font-manrope" font-size="12" font-weight="800" text-anchor="middle">16:00 - 17:30</text>
+      
+      <!-- Liquid Hall Pill -->
+      <rect x="232" y="16" width="102" height="26" rx="13" fill="url(#liquid_glass_btn)" stroke="url(#liquid_border)" stroke-width="0.8"/>
+      <text x="283" y="32" fill="#FDE68A" class="font-manrope" font-size="10" font-weight="700" text-anchor="middle">Зал 1 • Татами</text>
+
+      <!-- Details -->
+      <text x="16" y="70" fill="#FFFFFF" class="font-russo" font-size="14">Спарта Юниор 1 (Единоборства)</text>
+      <text x="16" y="92" fill="#A1A1AA" class="font-manrope" font-size="11">Тренер:</text>
+      <text x="66" y="92" fill="#FFFFFF" class="font-manrope" font-size="11" font-weight="700">Александр Медведев</text>
+
+      <!-- Liquid Gold Glowing Pill Button -->
+      <g transform="translate(230, 66)">
+        <rect width="104" height="40" rx="20" fill="url(#liquid_gold)" filter="url(#liquid_glow_gold)"/>
+        <!-- Gloss Reflection -->
+        <path d="M12 4H92" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.65"/>
+        <text x="52" y="25" fill="#040306" class="font-manrope" font-size="11" font-weight="900" text-anchor="middle">Я БУДУ ✓</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== 6. LIQUID GLASS PROGRESS & BELT ==================== -->
+  <g id="Athlete_Progress" transform="translate(20, 584)">
+    <text x="0" y="16" fill="#FFFFFF" class="font-russo" font-size="15">ПРОГРЕСС И РАНГ</text>
+    <text x="350" y="16" fill="#A1A1AA" class="font-manrope" font-size="11" text-anchor="end">Август 2026</text>
+
+    <!-- Two Glass Capsules -->
+    <g transform="translate(0, 26)">
+      <!-- Capsule 1: Belt -->
+      <rect width="168" height="118" rx="20" fill="url(#liquid_glass_body)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_drop_shadow)"/>
+      <path d="M8 3H160" stroke="url(#liquid_sheen)" stroke-width="1.2" stroke-linecap="round"/>
+      <text x="16" y="26" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="600">Текущий пояс</text>
+      <text x="16" y="52" fill="#FDE68A" class="font-russo" font-size="14">ЖЕЛТЫЙ ПОЯС</text>
+      
+      <!-- Liquid Glossy Belt -->
+      <g transform="translate(16, 62)">
+        <rect width="136" height="16" rx="6" fill="url(#liquid_gold)" stroke="#FFFBEB" stroke-width="0.75" filter="url(#liquid_glow_gold)"/>
+        <path d="M4 2H132" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+        <rect x="114" y="0" width="6" height="16" fill="#0A0812"/>
+        <rect x="124" y="0" width="6" height="16" fill="#0A0812"/>
+      </g>
+      <text x="16" y="100" fill="#A1A1AA" class="font-manrope" font-size="10" font-weight="500">Экзамен: 15 сентября</text>
+
+      <!-- Capsule 2: Attendance Gauge -->
+      <g transform="translate(182, 0)">
+        <rect width="168" height="118" rx="20" fill="url(#liquid_glass_body)" stroke="url(#liquid_border)" stroke-width="1.2" filter="url(#liquid_drop_shadow)"/>
+        <path d="M8 3H160" stroke="url(#liquid_sheen)" stroke-width="1.2" stroke-linecap="round"/>
+        <text x="16" y="26" fill="#A1A1AA" class="font-manrope" font-size="11" font-weight="600">Посещаемость</text>
+        <text x="16" y="60" fill="#FFFFFF" class="font-russo" font-size="24">92%</text>
+        
+        <!-- Liquid Emerald Trend Drop -->
+        <rect x="90" y="42" width="64" height="24" rx="12" fill="url(#liquid_emerald)" fill-opacity="0.2" stroke="#10B981" stroke-width="1"/>
+        <text x="122" y="58" fill="#A7F3D0" class="font-manrope" font-size="11" font-weight="800" text-anchor="middle">+5.4%</text>
+        <text x="16" y="100" fill="#A1A1AA" class="font-manrope" font-size="10" font-weight="500">11 из 12 тренировок</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== 7. FLOATING LIQUID GLASS DOCK TABBAR ==================== -->
+  <g id="Bottom_Bar" transform="translate(15, 746)">
+    <!-- Translucent Liquid Arc Capsule -->
+    <rect width="360" height="72" rx="36" fill="url(#liquid_glass_body)" stroke="url(#liquid_border)" stroke-width="1.5" filter="url(#liquid_drop_shadow)"/>
+    <path d="M20 3H340" stroke="url(#liquid_sheen)" stroke-width="1.8" stroke-linecap="round"/>
+    
+    <!-- Tab 1: Home (Active Liquid Glow) -->
+    <g transform="translate(36, 18)">
+      <circle cx="12" cy="12" r="16" fill="url(#liquid_gold)" fill-opacity="0.2" filter="url(#liquid_glow_gold)"/>
+      <path d="M6 14L12 8L18 14V19H6V14Z" stroke="url(#liquid_gold)" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="12" cy="28" r="2.5" fill="#FDE68A" filter="url(#liquid_glow_gold)"/>
+    </g>
+
+    <!-- Tab 2: Calendar -->
+    <g transform="translate(100, 20)">
+      <rect x="4" y="4" width="16" height="14" rx="3" stroke="#A1A1AA" stroke-width="1.6"/>
+      <line x1="4" y1="9" x2="20" y2="9" stroke="#A1A1AA" stroke-width="1.4"/>
+    </g>
+
+    <!-- Tab 3: Center Molten Gold QR Drop Orb -->
+    <g transform="translate(154, 3)">
+      <circle cx="26" cy="26" r="28" fill="url(#liquid_gold)" filter="url(#liquid_glow_gold)"/>
+      <!-- Glossy Reflection Dome -->
+      <ellipse cx="26" cy="14" rx="14" ry="6" fill="#FFFFFF" opacity="0.6"/>
+      
+      <rect x="17" y="17" width="8" height="8" rx="2" fill="#040306"/>
+      <rect x="27" y="17" width="8" height="8" rx="2" fill="#040306"/>
+      <rect x="17" y="27" width="8" height="8" rx="2" fill="#040306"/>
+      <rect x="27" y="27" width="3.5" height="3.5" fill="#040306"/>
+      <rect x="31.5" y="31.5" width="3.5" height="3.5" fill="#040306"/>
+    </g>
+
+    <!-- Tab 4: Messages with Liquid Red Drop -->
+    <g transform="translate(236, 20)">
+      <rect x="4" y="4" width="16" height="13" rx="3" stroke="#A1A1AA" stroke-width="1.6"/>
+      <path d="M6 17L4 20V17H6Z" fill="#A1A1AA"/>
+      <circle cx="20" cy="4" r="4.5" fill="#EF4444" stroke="#12101D" stroke-width="1.5"/>
+    </g>
+
+    <!-- Tab 5: Profile -->
+    <g transform="translate(300, 20)">
+      <circle cx="12" cy="8" r="4.5" stroke="#A1A1AA" stroke-width="1.6"/>
+      <path d="M5 20C5 17 8 15.5 12 15.5C16 15.5 19 17 19 20" stroke="#A1A1AA" stroke-width="1.6"/>
+    </g>
+  </g>
+
+  <!-- iPhone Home Bar -->
+  <rect x="128" y="828" width="134" height="4.5" rx="2.25" fill="#FFFFFF" fill-opacity="0.4"/>
+</svg>

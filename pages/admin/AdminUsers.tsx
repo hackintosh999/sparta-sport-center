@@ -72,6 +72,8 @@ const AdminUsers = () => {
     const [registry, setRegistry] = useState<UserItem[]>([]);
 
     const [groups, setGroups] = useState<any[]>([]);
+    const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('ALL');
+    const [isSyncing, setIsSyncing] = useState(false);
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
     const [selectedUserForGroup, setSelectedUserForGroup] = useState<UserItem | null>(null);
     const [selectedGroupId, setSelectedGroupId] = useState('');
@@ -121,9 +123,9 @@ const AdminUsers = () => {
         setSelectedUserForReset(targetUser);
         const cleanPhone = targetUser.phone ? targetUser.phone.replace(/\D/g, '').slice(-4) : Math.floor(1000 + Math.random() * 9000).toString();
         const roleSlug = (targetUser.role as string) === 'coach' ? 'coach' : (targetUser.role as string) === 'student' ? 'athlete' : 'parent';
-        const genEmail = targetUser.email && !targetUser.email.endsWith('@example.com') ? targetUser.email : `temp_${roleSlug}_${cleanPhone}@sparta.ru`;
+        const genEmail = targetUser.tempEmail || (targetUser.email && !targetUser.email.endsWith('@example.com') ? targetUser.email : `temp_${roleSlug}_${cleanPhone}@sparta.ru`);
         const genPass = `Sparta${Math.floor(1000 + Math.random() * 9000)}!`;
-        setTempEmail(genEmail);
+        setTempEmail(genEmail.toLowerCase());
         setTempPassword(genPass);
         setCopySuccessMessage(false);
         setIsSavedSuccess(false);
@@ -134,9 +136,13 @@ const AdminUsers = () => {
         if (!selectedUserForReset || !tempEmail || !tempPassword) return;
         setIsSavingTempAccess(true);
         try {
+            const cleanTempEmail = tempEmail.trim().toLowerCase();
+            const cleanTempPass = tempPassword.trim();
+
             await updateDoc(doc(db, "users", selectedUserForReset.id), {
-                email: tempEmail.trim(),
-                tempPassword: tempPassword.trim(),
+                email: cleanTempEmail,
+                tempEmail: cleanTempEmail,
+                tempPassword: cleanTempPass,
                 isTemporaryCredentials: true,
                 tempAssignedAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
@@ -144,7 +150,9 @@ const AdminUsers = () => {
 
             setUsers(prev => prev.map(u => u.id === selectedUserForReset.id ? {
                 ...u,
-                email: tempEmail.trim(),
+                email: cleanTempEmail,
+                tempEmail: cleanTempEmail,
+                tempPassword: cleanTempPass,
                 isTemporaryCredentials: true
             } : u));
 
@@ -722,7 +730,7 @@ const AdminUsers = () => {
     const activeParentPhones = new Set(
         users
             .map(u => (u.parentPhone || u.phone || '').replace(/\D/g, ''))
-            .filter(p => p.length >= 4)
+            .filter(p => p.length >= 7)
     );
 
     // Merge users and strictly UNCLAIMED/UNREGISTERED pending entries
@@ -734,7 +742,7 @@ const AdminUsers = () => {
         const rPhone = (r.parentPhone || '').replace(/\D/g, '');
 
         const isNameMatched = Boolean(rName && activeStudentNames.has(rName));
-        const isPhoneMatched = Boolean(rPhone && rPhone.length >= 4 && activeParentPhones.has(rPhone));
+        const isPhoneMatched = Boolean(rPhone && rPhone.length >= 7 && (activeParentPhones.has(rPhone) || (rPhone.length >= 10 && activeParentPhones.has(rPhone.slice(-10)))));
 
         // Exclude pending entry if active user account already exists
         return !isNameMatched && !isPhoneMatched;
@@ -747,12 +755,20 @@ const AdminUsers = () => {
             ...r,
             id: r.id,
             email: r.parentEmail || r.email || r.parentPhone || `pending_${r.id}`,
+            displayName: r.childFullName || `${r.childFirstName || ''} ${r.childLastName || ''}`.trim() || r.childName || r.originalName || 'Ученик',
+            name: r.childFullName || `${r.childFirstName || ''} ${r.childLastName || ''}`.trim() || r.childName || r.originalName || 'Ученик',
             childName: r.childFullName || `${r.childFirstName || ''} ${r.childLastName || ''}`.trim() || r.childName || r.originalName || 'Ученик',
-            parentPhone: r.parentPhone || '',
+            childFullName: r.childFullName || `${r.childFirstName || ''} ${r.childLastName || ''}`.trim() || r.childName || r.originalName,
+            childFirstName: r.childFirstName || '',
+            childLastName: r.childLastName || '',
+            parentName: r.parentName || '',
+            parentPhone: r.parentPhone || r.phone || '',
+            phone: r.parentPhone || r.phone || '',
             role: 'user' as UserRole,
             isPendingRegistration: true,
             entityType: 'registry' as const,
             groupId: r.groupId || r.targetGroupId,
+            groupName: (r as any).groupName,
             status: 'pending' as any,
             createdAt: r.createdAt || r.importedAt,
             ban: null,
@@ -762,21 +778,53 @@ const AdminUsers = () => {
         } as UserItem))
     ];
 
+    const isUserInGroup = (user: any, filterGroupId: string) => {
+        if (!filterGroupId || filterGroupId === 'ALL') return true;
+        if (filterGroupId === 'UNASSIGNED') {
+            const gid = user.groupId || user.targetGroupId || user.group;
+            return !gid || gid === '' || gid === 'none' || gid === 'Без группы';
+        }
+        const targetGroup = groups.find(g => g.id === filterGroupId);
+        const targetGroupName = (targetGroup?.name || '').trim().toLowerCase();
+
+        const uGroupId = (user.groupId || user.targetGroupId || user.group || '').trim();
+        const uGroupName = (user.groupName || '').trim().toLowerCase();
+
+        if (uGroupId === filterGroupId) return true;
+        if (targetGroup && uGroupId === targetGroup.id) return true;
+        if (targetGroupName) {
+            if (uGroupId.toLowerCase() === targetGroupName) return true;
+            if (uGroupName && uGroupName === targetGroupName) return true;
+            if (uGroupName && targetGroupName.includes(uGroupName)) return true;
+            if (uGroupId && targetGroupName.includes(uGroupId.toLowerCase())) return true;
+        }
+        return false;
+    };
+
     // Filter & Sort
     const filteredUsers = allEntities
         .filter(user => {
-            const matchesSearch = (
-                user.childName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.childFirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.childLastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.childBirthYear?.toString().includes(searchTerm) ||
-                user.parentPhone?.includes(searchTerm)
+            const searchLower = searchTerm.trim().toLowerCase();
+            const matchesSearch = !searchLower || (
+                (user.childName && user.childName.toLowerCase().includes(searchLower)) ||
+                (user.childFullName && user.childFullName.toLowerCase().includes(searchLower)) ||
+                (user.childFirstName && user.childFirstName.toLowerCase().includes(searchLower)) ||
+                (user.childLastName && user.childLastName.toLowerCase().includes(searchLower)) ||
+                (user.displayName && user.displayName.toLowerCase().includes(searchLower)) ||
+                (user.name && user.name.toLowerCase().includes(searchLower)) ||
+                (user.firstName && user.firstName.toLowerCase().includes(searchLower)) ||
+                (user.lastName && user.lastName.toLowerCase().includes(searchLower)) ||
+                (user.parentName && user.parentName.toLowerCase().includes(searchLower)) ||
+                (user.email && user.email.toLowerCase().includes(searchLower)) ||
+                (user.childBirthYear && user.childBirthYear.toString().includes(searchLower)) ||
+                (user.parentPhone && user.parentPhone.includes(searchLower)) ||
+                (user.phone && user.phone.includes(searchLower))
             );
 
             if (!matchesSearch) return false;
+
+            // Group Filter logic
+            if (!isUserInGroup(user, selectedGroupFilter)) return false;
 
             const roleLower = user.role?.toLowerCase() || 'user';
             const isStaffRole = ['admin', 'director', 'developer', 'trainer', 'coach', 'staff', 'dev'].includes(roleLower);
@@ -784,12 +832,12 @@ const AdminUsers = () => {
             const isComplete = isCompleteProfile(user);
             const isPendingUser = user.isPendingRegistration === true || (user as any).isPending === true || user.status === 'pending';
 
-            if (activeRoleTab === 'all') return !isStaff && !isPendingUser;
+            if (activeRoleTab === 'all') return !isStaff;
 
             // Smart Categories logic
             if (activeRoleTab === 'students') return !isStaff && isComplete && !isPendingUser;
             if (activeRoleTab === 'incomplete') return !isStaff && !isComplete && !isPendingUser;
-            if (activeRoleTab === 'staff') return isStaff && !isPendingUser;
+            if (activeRoleTab === 'staff') return isStaff;
             if (activeRoleTab === 'pending') return isPendingUser;
             if (activeRoleTab === 'expiring') return isSubscriptionExpiringSoon(user) && !isStaff && !isPendingUser;
 
@@ -923,13 +971,24 @@ const AdminUsers = () => {
         setIsSubmittingBulkGroup(true);
         try {
             const batch = writeBatch(db);
+            const targetGroup = groups.find(g => g.id === bulkSelectedGroupId);
+
             selectedUserIds.forEach(id => {
-                const userRef = doc(db, "users", id);
-                batch.update(userRef, { groupId: bulkSelectedGroupId });
+                const isPending = registry.some(r => r.id === id);
+                if (isPending) {
+                    batch.update(doc(db, "pending_students", id), {
+                        groupId: bulkSelectedGroupId,
+                        groupName: targetGroup?.name || '',
+                        updatedAt: serverTimestamp()
+                    });
+                } else {
+                    batch.update(doc(db, "users", id), { groupId: bulkSelectedGroupId });
+                }
             });
             await batch.commit();
 
             setUsers(prev => prev.map(u => selectedUserIds.includes(u.id) ? { ...u, groupId: bulkSelectedGroupId } : u));
+            setRegistry(prev => prev.map(r => selectedUserIds.includes(r.id) ? { ...r, groupId: bulkSelectedGroupId, groupName: targetGroup?.name || '' } : r));
             setIsBulkGroupModalOpen(false);
             setBulkSelectedGroupId('');
             setSelectedUserIds([]);
@@ -945,14 +1004,114 @@ const AdminUsers = () => {
     const handleAssignGroup = async () => {
         if (!selectedUserForGroup || !selectedGroupId) return;
         try {
-            await updateDoc(doc(db, "users", selectedUserForGroup.id), { groupId: selectedGroupId });
-            setUsers(users.map(u => u.id === selectedUserForGroup.id ? { ...u, groupId: selectedGroupId } : u));
+            const isPending = selectedUserForGroup.isPendingRegistration || (selectedUserForGroup as any).entityType === 'registry';
+            const targetGroup = groups.find(g => g.id === selectedGroupId);
+
+            if (isPending) {
+                await updateDoc(doc(db, "pending_students", selectedUserForGroup.id), {
+                    groupId: selectedGroupId,
+                    groupName: targetGroup?.name || '',
+                    updatedAt: serverTimestamp()
+                });
+                setRegistry(prev => prev.map(r => r.id === selectedUserForGroup.id ? { ...r, groupId: selectedGroupId, groupName: targetGroup?.name || '' } : r));
+            } else {
+                await updateDoc(doc(db, "users", selectedUserForGroup.id), {
+                    groupId: selectedGroupId,
+                    groupName: targetGroup?.name || '',
+                    updatedAt: serverTimestamp()
+                });
+                setUsers(users.map(u => u.id === selectedUserForGroup.id ? { ...u, groupId: selectedGroupId, groupName: targetGroup?.name || '' } : u));
+            }
+
             setIsGroupModalOpen(false);
             setSelectedUserForGroup(null);
             setSelectedGroupId('');
         } catch (error) {
             console.error("Error assigning group:", error);
             alert("Ошибка при назначении группы");
+        }
+    };
+
+    const handleSyncDatabase = async () => {
+        setIsSyncing(true);
+        try {
+            const pendingSnap = await getDocs(collection(db, "pending_students"));
+            const usersSnap = await getDocs(collection(db, "users"));
+
+            const allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+            const allPending = pendingSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+            let linkedCount = 0;
+            let batch = writeBatch(db);
+            let opCount = 0;
+
+            const safeBatchCommit = async () => {
+                if (opCount > 0) {
+                    await batch.commit();
+                    batch = writeBatch(db);
+                    opCount = 0;
+                }
+            };
+
+            for (const pending of allPending) {
+                if (pending.status === 'linked' && pending.assignedUid) continue;
+
+                const pendingPhone = (pending.parentPhone || '').replace(/\D/g, '');
+                const pendingName = (pending.childFullName || pending.childName || '').trim().toLowerCase();
+
+                const matchedUser = allUsers.find(u => {
+                    const uPhone = (u.parentPhone || u.phone || '').replace(/\D/g, '');
+                    const uName = (u.childName || u.displayName || `${u.childFirstName || ''} ${u.childLastName || ''}`).trim().toLowerCase();
+
+                    const isPhoneMatch = pendingPhone.length >= 10 && uPhone.length >= 10 && (pendingPhone.endsWith(uPhone.slice(-10)) || uPhone.endsWith(pendingPhone.slice(-10)));
+                    const isNameMatch = Boolean(pendingName && uName && pendingName === uName);
+
+                    return isPhoneMatch || isNameMatch;
+                });
+
+                if (matchedUser) {
+                    const targetGroupId = pending.groupId || pending.targetGroupId;
+                    const updateUserData: any = {};
+                    if (targetGroupId && (!matchedUser.groupId || matchedUser.groupId === 'none')) {
+                        updateUserData.groupId = targetGroupId;
+                        const targetGrp = groups.find(g => g.id === targetGroupId);
+                        if (targetGrp) updateUserData.groupName = targetGrp.name;
+                    }
+                    if (!matchedUser.childName && pending.childFullName) {
+                        updateUserData.childName = pending.childFullName;
+                    }
+                    if ((!matchedUser.childAge || matchedUser.childAge === 0) && pending.childAge) {
+                        updateUserData.childAge = pending.childAge;
+                    }
+
+                    if (Object.keys(updateUserData).length > 0) {
+                        updateUserData.updatedAt = serverTimestamp();
+                        batch.update(doc(db, "users", matchedUser.id), updateUserData);
+                        opCount++;
+                    }
+
+                    batch.update(doc(db, "pending_students", pending.id), {
+                        status: 'linked',
+                        linkedUserId: matchedUser.id,
+                        assignedUid: matchedUser.id,
+                        linkedAt: serverTimestamp()
+                    });
+                    opCount++;
+                    linkedCount++;
+
+                    if (opCount >= 350) {
+                        await safeBatchCommit();
+                    }
+                }
+            }
+
+            await safeBatchCommit();
+            alert(`✅ Синхронизация завершена!\n\nАвтоматически связано учеников: ${linkedCount}\nБаза групп и пользователей актуализирована.`);
+        } catch (err: any) {
+            console.error("Sync error in AdminUsers:", err);
+            alert("Ошибка синхронизации: " + err.message);
+        } finally {
+            setIsSyncing(false);
         }
     };
 
@@ -1588,6 +1747,16 @@ const AdminUsers = () => {
 
                 <div className="flex items-center gap-2.5 min-h-[38px]">
                     <button
+                        onClick={handleSyncDatabase}
+                        disabled={isSyncing}
+                        className="bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                        title="Связать ожидающих учеников из импортированных списков с зарегистрированными аккаунтами"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                        <span>{isSyncing ? 'Синхронизация...' : 'Синхронизировать'}</span>
+                    </button>
+
+                    <button
                         onClick={handleOpenCreateStaffModal}
                         className="bg-[#E2A012] hover:bg-[#F3B123] text-black font-semibold px-4 py-2 rounded-lg text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer"
                     >
@@ -1703,62 +1872,95 @@ const AdminUsers = () => {
                 })()}
             </div>
 
-            {/* Roles Filtering Tabs */}
-            <div className="flex flex-wrap items-center gap-2 mb-6">
-                {[
-                    { id: 'all', label: 'Все', icon: Globe, color: 'text-white/60' },
-                    { id: 'students', label: 'Ученики', icon: User, color: 'text-blue-400' },
-                    { id: 'expiring', label: 'Заканчиваются', icon: AlertTriangle, color: 'text-amber-400' },
-                    { id: 'staff', label: 'Персонал', icon: Shield, color: 'text-sparta-gold' },
-                    { id: 'pending', label: 'Ждут регистрации', icon: Clock, color: 'text-purple-400' },
-                ].map((tab) => {
-                    const count = allEntities.filter(u => {
-                        const roleLower = u.role?.toLowerCase() || 'user';
-                        const isStaffRole = ['admin', 'director', 'developer', 'trainer', 'coach', 'staff', 'dev'].includes(roleLower);
-                        const isStaff = isStaffRole || u.isStaff === true || u.isAdmin === true;
-                        const isComplete = isCompleteProfile(u);
+            {/* Roles Filtering & Group Filtering Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div className="flex flex-wrap items-center gap-2">
+                    {[
+                        { id: 'all', label: 'Все', icon: Globe, color: 'text-white/60' },
+                        { id: 'students', label: 'Ученики', icon: User, color: 'text-blue-400' },
+                        { id: 'expiring', label: 'Заканчиваются', icon: AlertTriangle, color: 'text-amber-400' },
+                        { id: 'staff', label: 'Персонал', icon: Shield, color: 'text-sparta-gold' },
+                        { id: 'pending', label: 'Ждут регистрации', icon: Clock, color: 'text-purple-400' },
+                    ].map((tab) => {
+                        const count = allEntities.filter(u => {
+                            const roleLower = u.role?.toLowerCase() || 'user';
+                            const isStaffRole = ['admin', 'director', 'developer', 'trainer', 'coach', 'staff', 'dev'].includes(roleLower);
+                            const isStaff = isStaffRole || u.isStaff === true || u.isAdmin === true;
+                            const isComplete = isCompleteProfile(u);
 
-                        const isPendingUser = u.isPendingRegistration === true || (u as any).isPending === true || u.status === 'pending';
+                            const isPendingUser = u.isPendingRegistration === true || (u as any).isPending === true || u.status === 'pending';
 
-                        if (tab.id === 'all') return !isStaff && !isPendingUser;
-                        if (tab.id === 'students') return !isStaff && isComplete && !isPendingUser;
-                        if (tab.id === 'incomplete') return !isStaff && !isComplete && !isPendingUser;
-                        if (tab.id === 'staff') return isStaff && !isPendingUser;
-                        if (tab.id === 'pending') return isPendingUser;
-                        if (tab.id === 'expiring') return isSubscriptionExpiringSoon(u) && !isStaff && !isPendingUser;
-                        return false;
-                    }).length;
+                            if (tab.id === 'all') return !isStaff && !isPendingUser;
+                            if (tab.id === 'students') return !isStaff && isComplete && !isPendingUser;
+                            if (tab.id === 'incomplete') return !isStaff && !isComplete && !isPendingUser;
+                            if (tab.id === 'staff') return isStaff && !isPendingUser;
+                            if (tab.id === 'pending') return isPendingUser;
+                            if (tab.id === 'expiring') return isSubscriptionExpiringSoon(u) && !isStaff && !isPendingUser;
+                            return false;
+                        }).length;
 
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveRoleTab(tab.id as any)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all cursor-pointer ${activeRoleTab === tab.id
+                                        ? 'bg-white/10 border-white/20 text-white shadow-lg shadow-black/20 font-bold'
+                                        : 'bg-white/5 border-white/5 text-white/40 hover:text-white hover:bg-white/8'
+                                    }`}
+                            >
+                                <tab.icon size={16} className={activeRoleTab === tab.id ? tab.color : 'text-current'} />
+                                <span className="text-xs font-bold uppercase tracking-wider">{tab.label}</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${activeRoleTab === tab.id ? 'bg-white/10 text-white' : 'bg-black/20 text-white/20 font-medium'}`}>
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
 
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveRoleTab(tab.id as any)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${activeRoleTab === tab.id
-                                    ? 'bg-white/10 border-white/20 text-white shadow-lg shadow-black/20'
-                                    : 'bg-white/5 border-white/5 text-white/40 hover:text-white hover:bg-white/8'
-                                }`}
+                <div className="flex items-center gap-2">
+                    {/* Group Filter Dropdown */}
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 focus-within:border-sparta-gold/50 shadow-sm">
+                        <Users size={14} className="text-sparta-gold shrink-0" />
+                        <select
+                            value={selectedGroupFilter}
+                            onChange={(e) => setSelectedGroupFilter(e.target.value)}
+                            className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer max-w-[200px] truncate [&>option]:bg-zinc-900"
                         >
-                            <tab.icon size={16} className={activeRoleTab === tab.id ? tab.color : 'text-current'} />
-                            <span className="text-xs font-bold uppercase tracking-wider">{tab.label}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${activeRoleTab === tab.id ? 'bg-white/10 text-white' : 'bg-black/20 text-white/20 font-medium'}`}>
-                                {count}
-                            </span>
-                        </button>
-                    );
-                })}
+                            <option value="ALL" className="bg-zinc-900 text-white">Все группы</option>
+                            <option value="UNASSIGNED" className="bg-zinc-900 text-amber-400">⚠️ Без группы ({allEntities.filter(u => isUserInGroup(u, 'UNASSIGNED')).length})</option>
+                            {groups.map(g => {
+                                const count = allEntities.filter(u => isUserInGroup(u, g.id)).length;
+                                return (
+                                    <option key={g.id} value={g.id} className="bg-zinc-900 text-white">
+                                        {g.name} ({count})
+                                    </option>
+                                );
+                            })}
+                        </select>
+                        {selectedGroupFilter !== 'ALL' && (
+                            <button
+                                onClick={() => setSelectedGroupFilter('ALL')}
+                                className="text-white/40 hover:text-white text-[11px] px-1 hover:bg-white/10 rounded cursor-pointer"
+                                title="Сбросить фильтр группы"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
 
-                {activeRoleTab === 'pending' && (
-                    <button
-                        type="button"
-                        onClick={handleClearAllPendingRegistry}
-                        className="ml-auto bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
-                        title="Удалить абсолютно все записи из pending_students и сбросить счетчик в 0"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                        <span>Очистить весь реестр ожидания</span>
-                    </button>
-                )}
+                    {activeRoleTab === 'pending' && (
+                        <button
+                            type="button"
+                            onClick={handleClearAllPendingRegistry}
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                            title="Удалить абсолютно все записи из pending_students и сбросить счетчик в 0"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            <span>Очистить весь реестр</span>
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl">

@@ -1,0 +1,53 @@
+<svg width="420" height="520" viewBox="0 0 420 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="w_card_grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#18181B" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0F0F12" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="w_gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="420" height="520" rx="16" fill="url(#w_card_grad)" stroke="#27272A" stroke-width="1"/>
+  
+  <text x="24" y="36" fill="#FFFFFF" font-family="'Russo One', sans-serif" font-size="16">РАСПИСАНИЕ ТРЕНИРОВОК</text>
+  <text x="24" y="56" fill="#71717A" font-family="'Manrope', sans-serif" font-size="12">Сегодня, 27 августа • 4 группы</text>
+
+  <!-- Live card -->
+  <g transform="translate(24, 76)">
+    <rect width="372" height="110" rx="12" fill="#18181F" stroke="#10B981" stroke-width="1.5"/>
+    <rect x="14" y="14" width="80" height="24" rx="6" fill="#10B981" fill-opacity="0.2"/>
+    <text x="54" y="30" fill="#10B981" font-family="'Manrope', sans-serif" font-size="11" font-weight="800" text-anchor="middle">16:00 - 17:30</text>
+    
+    <rect x="270" y="14" width="90" height="22" rx="11" fill="#10B981"/>
+    <circle cx="282" cy="25" r="3" fill="#FFFFFF"/>
+    <text x="320" y="29" fill="#FFFFFF" font-family="'Manrope', sans-serif" font-size="10" font-weight="800" text-anchor="middle">ИДЕТ СЕЙЧАС</text>
+
+    <text x="14" y="64" fill="#FFFFFF" font-family="'Russo One', sans-serif" font-size="15">Спарта Юниор 1 (8-10 лет)</text>
+    <text x="14" y="84" fill="#A1A1AA" font-family="'Manrope', sans-serif" font-size="11">Зал 1 • Присутствуют: 10 / 12</text>
+    <rect x="14" y="94" width="344" height="4" rx="2" fill="#27272A"/>
+    <rect x="14" y="94" width="220" height="4" rx="2" fill="#10B981"/>
+  </g>
+
+  <!-- Next item -->
+  <g transform="translate(24, 198)">
+    <rect width="372" height="96" rx="12" fill="#141417" stroke="#27272A" stroke-width="1"/>
+    <rect x="14" y="14" width="80" height="24" rx="6" fill="#27272A"/>
+    <text x="54" y="30" fill="#FCD34D" font-family="'Manrope', sans-serif" font-size="11" font-weight="700" text-anchor="middle">18:00 - 19:30</text>
+    <rect x="280" y="14" width="80" height="22" rx="6" fill="#FCD34D" fill-opacity="0.15"/>
+    <text x="320" y="29" fill="#FCD34D" font-family="'Manrope', sans-serif" font-size="10" font-weight="700" text-anchor="middle">Следующая</text>
+    <text x="14" y="62" fill="#FFFFFF" font-family="'Russo One', sans-serif" font-size="14">Спарта Профи (14-17 лет)</text>
+    <text x="14" y="80" fill="#71717A" font-family="'Manrope', sans-serif" font-size="11">Зал 1 • 14 записано • 2 пробных</text>
+  </g>
+
+  <!-- Upcoming item -->
+  <g transform="translate(24, 306)">
+    <rect width="372" height="96" rx="12" fill="#141417" stroke="#27272A" stroke-width="1"/>
+    <rect x="14" y="14" width="80" height="24" rx="6" fill="#27272A"/>
+    <text x="54" y="30" fill="#A1A1AA" font-family="'Manrope', sans-serif" font-size="11" font-weight="700" text-anchor="middle">20:00 - 21:30</text>
+    <text x="14" y="62" fill="#FFFFFF" font-family="'Russo One', sans-serif" font-size="14">Взрослая группа (18+)</text>
+    <text x="14" y="80" fill="#71717A" font-family="'Manrope', sans-serif" font-size="11">Зал единоборств • Силовая подготовка</text>
+  </g>
+</svg>

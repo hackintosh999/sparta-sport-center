@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ЦСП СПАРТА — Стань частью команды! (Финальный Мастер-Макет с 3D-Иконками)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    body {
+      width: 1012px;
+      height: 2048px;
+      overflow: hidden;
+      background-color: #030D1A;
+      font-family: 'Montserrat', sans-serif;
+      position: relative;
+    }
+
+    .poster {
+      width: 1012px;
+      height: 2048px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Фоновое изображение (100% чистый фон с мальчиком и молниями) */
+    .bg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1012px;
+      height: 2048px;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Плавающие 3D-пьедесталы в сцене (как на утвержденном референсе) */
+    .floating-pedestal {
+      position: absolute;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .pedestal-gift {
+      top: 360px;
+      left: 70px;
+      width: 360px;
+      filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.65));
+    }
+
+    .pedestal-ice {
+      top: 610px;
+      left: 285px;
+      width: 320px;
+      filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.65));
+    }
+
+    .pedestal-shield {
+      top: 860px;
+      right: 50px;
+      width: 370px;
+      filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.65));
+    }
+
+    /* Контентный слой */
+    .content-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1012px;
+      height: 2048px;
+      z-index: 3;
+      padding: 45px 65px 40px 65px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ==================== БЛОК 1: ШАПКА В ЛЕВОМ ВЕРХНЕМ УГЛУ ==================== */
+    .top-left-header {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      margin-bottom: auto;
+    }
+
+    .header-logo-box {
+      width: 140px;
+      height: 140px;
+      margin-bottom: 8px;
+    }
+
+    .header-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+    }
+
+    .header-club-sub {
+      font-size: 28px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9);
+      padding-left: 5px;
+    }
+
+    /* ==================== БЛОК 2: ГЛАВНЫЙ ЗАГОЛОВОК (МОНОЛИТНЫЙ 3D БЛОК) ==================== */
+    .main-title-group {
+      margin-top: 590px; /* Строго под ногой мальчика */
+      margin-bottom: 25px;
+    }
+
+    .title-pre-text {
+      font-size: 56px;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.95), 0 2px 6px rgba(0, 0, 0, 0.9);
+      margin-bottom: 10px;
+    }
+
+    .main-title-3d {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 125px;
+      font-weight: 900;
+      line-height: 0.92;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #EB3B3B;
+      display: inline-block;
+      text-shadow: 
+        0px 1px 0px #7A0A0A,
+        0px 2px 0px #6A0505,
+        0px 3px 0px #5A0000,
+        0px 4px 0px #5A0000,
+        0px 5px 0px #4A0000,
+        0px 6px 0px #4A0000,
+        0px 7px 0px #3A0000,
+        0px 8px 0px #3A0000,
+        0px 9px 0px #2A0000,
+        0 14px 28px rgba(0, 0, 0, 0.75);
+    }
+
+    .main-title-3d span {
+      display: block;
+    }
+
+    /* ==================== БЛОК 3: КАРТОЧКИ ПРЕИМУЩЕСТВ С ВЫСТУПАЮЩИМИ 3D ИКОНКАМИ ==================== */
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px 26px;
+      margin-bottom: 25px;
+      position: relative;
+    }
+
+    .glass-card-wrapper {
+      position: relative;
+      height: 122px;
+    }
+
+    .glass-card-bevel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.10) 40%, rgba(4, 24, 52, 0.12) 100%);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1.2px solid #00FFFF;
+      border-radius: 20px;
+      box-shadow: 
+        inset 0 2px 2px rgba(255, 255, 255, 0.75),
+        inset 0 -2px 4px rgba(0, 10, 24, 0.75),
+        inset 0 0 12px rgba(0, 255, 255, 0.25),
+        0 0 16px rgba(0, 255, 255, 0.40),
+        0 8px 24px rgba(0, 0, 0, 0.50);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 16px 22px;
+      z-index: 1;
+    }
+
+    .glass-card-text {
+      color: #FFFFFF;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.22;
+      letter-spacing: 0.2px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+      position: relative;
+      z-index: 3;
+      max-width: 250px;
+    }
+
+    /* 3D Иконки, выступающие над верхним краем плашек */
+    .card-3d-icon {
+      position: absolute;
+      z-index: 2;
+      pointer-events: none;
+      filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 10px rgba(0, 255, 255, 0.25));
+    }
+
+    /* 1. Подарок (выступает за верхний край на 45px) */
+    .icon-gift {
+      top: -46px;
+      right: 18px;
+      width: 125px;
+      height: 140px;
+      object-fit: contain;
+    }
+
+    /* 2. Кубик льда (выступает за верхний край на 42px) */
+    .icon-ice {
+      top: -42px;
+      right: 16px;
+      width: 125px;
+      height: 135px;
+      object-fit: contain;
+    }
+
+    /* 3. Золотой щит (выступает за верхний край на 38px) */
+    .icon-shield {
+      top: -38px;
+      right: 20px;
+      width: 120px;
+      height: 135px;
+      object-fit: contain;
+    }
+
+    /* 4. Налоги 13% (выступает за верхний край на 38px) */
+    .icon-tax {
+      top: -38px;
+      right: 10px;
+      width: 145px;
+      height: 135px;
+      object-fit: contain;
+    }
+
+    /* ==================== БЛОК 4: ПОДВАЛ (ТЕМНАЯ ПАНЕЛЬ С КОНТАКТАМИ И ВСЕМИ 4 АДРЕСАМИ) ==================== */
+    .footer-panel {
+      width: 100%;
+      background: rgba(5, 19, 38, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1.5px solid rgba(255, 255, 255, 0.16);
+      border-radius: 28px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 16px rgba(0, 255, 255, 0.15);
+      padding: 26px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 30px;
+      margin-top: auto;
+    }
+
+    .footer-col {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .footer-icon-box {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+    }
+
+    .footer-icon-box svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 2px 6px rgba(0, 255, 255, 0.4));
+    }
+
+    .footer-text {
+      font-size: 22.5px;
+      font-weight: 600;
+      color: #FFFFFF;
+      line-height: 1.38;
+      letter-spacing: 0.2px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="poster">
+    <!-- Фоновое изображение (100% чистый фон) -->
+    <img src="/banner-assets/sparta-football-clean-bg.jpg" alt="Спарта Футбол" class="bg-layer">
+
+    <!-- Плавающие 3D-пьедесталы в сцене -->
+    <img src="/banner-assets/icon-gift-nobg.png" alt="Плавающий подарок" class="floating-pedestal pedestal-gift">
+    <img src="/banner-assets/icon-ice-nobg.png" alt="Плавающий лед" class="floating-pedestal pedestal-ice">
+    <img src="/banner-assets/icon-license-nobg.png" alt="Плавающий щит" class="floating-pedestal pedestal-shield">
+
+    <!-- Основной контентный слой -->
+    <div class="content-layer">
+      
+      <!-- БЛОК 1: Шапка в верхнем левом углу -->
+      <div class="top-left-header">
+        <div class="header-logo-box">
+          <img src="/banner-assets/sparta-crest-gold.png" alt="Герб SPARTA" class="header-logo-img">
+        </div>
+        <div class="header-club-sub">ЦСП «СПАРТА»</div>
+      </div>
+
+      <!-- БЛОК 2: Главный 3D заголовок (Монолитная экструзия 8 слоев) -->
+      <div class="main-title-group">
+        <h1 class="main-title-3d">
+          <span>СТАНЬ</span>
+          <span>ЧАСТЬЮ</span>
+          <span>КОМАНДЫ!</span>
+        </h1>
+      </div>
+
+      <!-- БЛОК 3: Карточки преимуществ с 3D иконками, выступающими за край -->
+      <div class="benefits-grid">
+        
+        <!-- 1. Пробная тренировка 0 ₽ (Подарок) -->
+        <div class="glass-card-wrapper">
+          <div class="glass-card-bevel">
+            <div class="glass-card-text">
+              <div>Пробная</div>
+              <div>тренировка 0 ₽</div>
+            </div>
+          </div>
+          <!-- 3D-Иконка подарка с тенью, выступающая на 46px -->
+          <img src="/banner-assets/icon-gift-nobg.png" alt="Подарок" class="card-3d-icon icon-gift">
+        </div>
+
+        <!-- 2. Заморозка при болезни (Лед) -->
+        <div class="glass-card-wrapper">
+          <div class="glass-card-bevel">
+            <div class="glass-card-text">
+              <div>Заморозка</div>
+              <div>при болезни</div>
+            </div>
+          </div>
+          <!-- 3D-Иконка кубика льда с тенью, выступающая на 42px -->
+          <img src="/banner-assets/icon-ice-nobg.png" alt="Лед" class="card-3d-icon icon-ice">
+        </div>
+
+        <!-- 3. Гос. лицензия (Щит) -->
+        <div class="glass-card-wrapper">
+          <div class="glass-card-bevel">
+            <div class="glass-card-text">
+              <div>Гос. лицензия</div>
+            </div>
+          </div>
+          <!-- 3D-Иконка золотого щита с тенью, выступающая на 38px -->
+          <img src="/banner-assets/icon-license-nobg.png" alt="Лицензия" class="card-3d-icon icon-shield">
+        </div>
+
+        <!-- 4. Налоговый вычет 13% (Монеты и график) -->
+        <div class="glass-card-wrapper">
+          <div class="glass-card-bevel">
+            <div class="glass-card-text">
+              <div>Налоговый</div>
+              <div>вычет 13%</div>
+            </div>
+          </div>
+          <!-- 3D-Иконка налогов с тенью, выступающая на 38px -->
+          <img src="/banner-assets/icon-nalogi-nobg.png" alt="Налоги 13%" class="card-3d-icon icon-tax">
+        </div>
+
+      </div>
+
+      <!-- БЛОК 4: Подвал (Контакты и все 4 адреса филиалов) -->
+      <div class="footer-panel">
+        <!-- Левая колонка: Телефоны и Email -->
+        <div class="footer-col">
+          <div class="footer-icon-box">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="22" fill="rgba(0, 255, 255, 0.15)" stroke="#00FFFF" stroke-width="1.8"/>
+              <path d="M32 27.5V30.5C32 31.5 31 32.5 30 32.5C21 32 16 27 15.5 18C15.5 17 16.5 16 17.5 16H20.5C21.5 16 22.3 16.8 22.5 17.8C22.7 19 23.2 20.2 23.9 21.2C24.4 21.9 24.2 22.8 23.5 23.3L22.2 24.3C23.4 26.5 25.5 28.6 27.7 29.8L28.7 28.5C29.2 27.8 30.1 27.6 30.8 28.1C31.8 28.8 33 29.3 34.2 29.5C35.2 29.7 36 30.5 36 31.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            <div>+7 919 339 33 99,</div>
+            <div>+7 (351) 230-12-69</div>
+            <div style="color: #00FFFF;">bugrova.k@bk.ru</div>
+          </div>
+        </div>
+
+        <!-- Правая колонка: Все 4 адреса филиалов -->
+        <div class="footer-col">
+          <div class="footer-icon-box">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="24" cy="24" r="22" fill="rgba(0, 255, 255, 0.15)" stroke="#00FFFF" stroke-width="1.8"/>
+              <path d="M24 13C19.5 13 16 16.5 16 21C16 26.5 24 35 24 35C24 35 32 26.5 32 21C32 16.5 28.5 13 24 13Z" stroke="#FFFFFF" stroke-width="2.2" stroke-linejoin="round"/>
+              <circle cx="24" cy="19" r="3.5" fill="#00FFFF"/>
+            </svg>
+          </div>
+          <div class="footer-text">
+            <div>ул. Большевистская 125,</div>
+            <div>ул. Планетная 53,</div>
+            <div>ул. Мясниковой 25/2,</div>
+            <div>ул. Ласковая 18</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

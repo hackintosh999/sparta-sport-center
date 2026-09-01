@@ -18,6 +18,7 @@ import {
     Layers,
     Heart,
     Star,
+    Bookmark,
     Sparkles,
     Trash2,
     X,
@@ -32,7 +33,9 @@ import {
     History,
     ExternalLink,
     AlertTriangle,
-    Baby
+    Baby,
+    Crown,
+    Dumbbell
 } from 'lucide-react';
 import { db } from '../../firebase';
 import {
@@ -51,12 +54,19 @@ import {
     documentId,
     writeBatch,
     arrayUnion,
-    setDoc
+    setDoc,
+    limit
 } from 'firebase/firestore';
 import { GlassCard, Button } from '../UIComponents';
 import GroupChat from './GroupChat'; // We will adapt this or create UnifiedChat
+import { SpartaAvatar } from './SpartaAvatar';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { SpartaStoriesViewer, SpartaStoryGroup, SpartaStorySlide } from './SpartaStoriesViewer';
+import { SpartaCreateStoryModal } from './SpartaCreateStoryModal';
+import { SpartaModerationModal } from './SpartaModerationModal';
+import { SpartaHighlightsModal, SpartaHighlightAlbum } from './SpartaHighlightsModal';
+import { Sparta3DReactionIcon } from './SpartaReactions';
 
 interface MessagesSectionProps {
     user: any;
@@ -66,16 +76,18 @@ interface MessagesSectionProps {
     initialTargetName?: string | null;
     initialStudentName?: string | null;
     onMobileDetailChange?: (isVisible: boolean) => void;
+    onTabChange?: (tab: any) => void;
 }
 
 
-const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, initialChatId, initialTargetUid, initialTargetName, initialStudentName, onMobileDetailChange }) => {
+const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, initialChatId, initialTargetUid, initialTargetName, initialStudentName, onMobileDetailChange, onTabChange }) => {
     const [activeCategory, setActiveCategory] = useState('all');
     const [chats, setChats] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedChat, setSelectedChat] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isFriendPickerOpen, setIsFriendPickerOpen] = useState(false);
     const [newChatData, setNewChatData] = useState({
         name: '',
         type: 'group',
@@ -98,20 +110,108 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
     const [creationStep, setCreationStep] = useState<'type' | 'details' | 'bulk'>('type');
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, chatId: string | null } | null>(null);
     const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
-    const [participantData, setParticipantData] = useState<Record<string, { name: string, avatarUrl: string }>>({});
+    const [participantData, setParticipantData] = useState<Record<string, any>>({});
+    const [typingMap, setTypingMap] = useState<Record<string, string[]>>({});
     const [activeSubCategory, setActiveSubCategory] = useState('all');
     const [availableSubCategories, setAvailableSubCategories] = useState<string[]>([]);
     const [isMobileDetailVisible, setIsMobileDetailVisible] = useState(false);
+    const [isStoriesViewerOpen, setIsStoriesViewerOpen] = useState(false);
+    const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
+    const [selectedStoryGroupIndex, setSelectedStoryGroupIndex] = useState(0);
+    const [viewedStoryIds, setViewedStoryIds] = useState<string[]>(() => {
+        if (typeof window === 'undefined') return [];
+        try {
+            return JSON.parse(localStorage.getItem('sparta_viewed_stories') || '[]');
+        } catch {
+            return [];
+        }
+    });
+    const [firestoreStories, setFirestoreStories] = useState<any[]>([]);
+    const [isModerationModalOpen, setIsModerationModalOpen] = useState(false);
+    const [pendingReportsCount, setPendingReportsCount] = useState(0);
 
-    useEffect(() => {
-        onMobileDetailChange?.(isMobileDetailVisible);
-    }, [isMobileDetailVisible, onMobileDetailChange]);
+    // Highlights state
+    const [highlights, setHighlights] = useState<SpartaHighlightAlbum[]>([]);
+    const [isCreateHighlightOpen, setIsCreateHighlightOpen] = useState(false);
+    const [activeHighlightGroup, setActiveHighlightGroup] = useState<SpartaStoryGroup | null>(null);
 
     const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'developer';
     const isDirector = userProfile?.role === 'director' || userProfile?.role === 'developer';
     const isTrainer = userProfile?.role === 'trainer' || userProfile?.role === 'coach';
     const isStaff = isAdmin || isDirector || isTrainer;
     const isDeveloper = userProfile?.role === 'developer';
+
+    useEffect(() => {
+        onMobileDetailChange?.(isMobileDetailVisible);
+    }, [isMobileDetailVisible, onMobileDetailChange]);
+
+    // Real-Time subscription for pending moderation reports (for staff)
+    useEffect(() => {
+        if (!isStaff) return;
+        const q = query(
+            collection(db, 'reports'),
+            where('status', '==', 'pending')
+        );
+        const unsub = onSnapshot(q, (snap) => {
+            setPendingReportsCount(snap.size);
+        }, () => { });
+        return () => unsub();
+    }, [isStaff]);
+
+    // Real-Time subscription for highlights albums
+    useEffect(() => {
+        const q = query(collection(db, 'highlights'), orderBy('createdAt', 'desc'));
+        const unsub = onSnapshot(q, (snapshot) => {
+            const list: SpartaHighlightAlbum[] = [];
+            snapshot.docs.forEach(d => {
+                const data = d.data();
+                list.push({
+                    id: d.id,
+                    title: data.title,
+                    coverIcon: data.coverIcon || 'trophy',
+                    coverGradient: data.coverGradient || 'bg-gradient-to-br from-amber-600 via-[#1c140a] to-black',
+                    authorId: data.authorId,
+                    authorName: data.authorName,
+                    slides: data.slides || []
+                });
+            });
+            setHighlights(list);
+        }, (err) => {
+            console.warn("Error fetching highlights:", err);
+        });
+
+        return () => unsub();
+    }, []);
+
+    const handleDeleteHighlightDirect = async (albumId: string, albumTitle: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!window.confirm(`Удалить закрепленный альбом «${albumTitle}»?`)) return;
+        try {
+            await deleteDoc(doc(db, 'highlights', albumId));
+        } catch (err) {
+            console.error("Error deleting highlight:", err);
+        }
+    };
+
+    const handleOpenHighlight = (album: SpartaHighlightAlbum) => {
+        const group: SpartaStoryGroup = {
+            authorId: album.authorId,
+            authorName: album.title,
+            authorRole: 'club',
+            roleLabel: 'Актуальное',
+            slides: album.slides && album.slides.length > 0 ? album.slides : [
+                {
+                    id: 'hl_empty_' + album.id,
+                    title: album.title,
+                    subtitle: 'Подборка Актуального',
+                    description: 'В этом альбоме пока нет историй. Нажмите + или сохраните историю в этот альбом.',
+                    gradient: album.coverGradient,
+                    mediaType: 'gradient'
+                }
+            ]
+        };
+        setActiveHighlightGroup(group);
+    };
 
     const missingGroupsForUser = React.useMemo(() => {
         if (!availableGroups || !chats || availableGroups.length === 0) return [];
@@ -130,29 +230,107 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
     const isParent = userProfile?.role === 'parent';
     const isStudent = !isStaff && !isParent;
 
+    const isDirectChat = (chat: any) => {
+        if (!chat) return false;
+        if (chat.type === 'saved' || chat.id?.startsWith('saved_')) return false;
+        if (chat.groupId) return false;
+        if (chat.type === 'group' || chat.type === 'team' || chat.type === 'channel') return false;
+        return chat.type === 'private' || chat.type === 'direct' || chat.type === 'parent' || chat.type === 'child' || chat.type === 'social' || (Array.isArray(chat.participants) && chat.participants.length === 2);
+    };
+
+    const isCoachChat = (chat: any) => {
+        if (!isDirectChat(chat)) return false;
+        const otherId = chat.participants?.find((id: string) => id !== user.uid);
+        const live = otherId ? participantData[otherId] : null;
+        const otherRole = (live?.role || (otherId && chat.participantRoles ? chat.participantRoles[otherId] : '') || '').toLowerCase();
+        if (otherRole === 'coach' || otherRole === 'trainer') return true;
+        const coachUid = userProfile?.coachId;
+        if (coachUid && chat.participants?.includes(coachUid)) return true;
+        if (chat.coachId) return true;
+        const name = (chat.name || '').toLowerCase();
+        return name.includes('тренер') || name.includes('coach');
+    };
+
+    const isChildChat = (chat: any) => {
+        if (!isDirectChat(chat)) return false;
+        if (isCoachChat(chat)) return false;
+        const otherId = chat.participants?.find((id: string) => id !== user.uid);
+        const live = otherId ? participantData[otherId] : null;
+        const otherRole = (live?.role || (otherId && chat.participantRoles ? chat.participantRoles[otherId] : '') || '').toLowerCase();
+        if (otherRole === 'student' || otherRole === 'kid' || otherRole === 'child') return true;
+        if (otherId && (otherId === userProfile?.studentUid || otherId === userProfile?.childId)) return true;
+        if (isParent && !isCoachChat(chat)) return true;
+        return false;
+    };
+
+    const isParentDirectChat = (chat: any) => {
+        if (!isDirectChat(chat)) return false;
+        if (isCoachChat(chat)) return false;
+        const otherId = chat.participants?.find((id: string) => id !== user.uid);
+        const live = otherId ? participantData[otherId] : null;
+        const otherRole = (live?.role || (otherId && chat.participantRoles ? chat.participantRoles[otherId] : '') || '').toLowerCase();
+        if (otherRole === 'parent') return true;
+        if (otherId && (otherId === userProfile?.parentId)) return true;
+        if (isStudent && !isCoachChat(chat) && (chat.name?.toLowerCase().includes('родитель') || chat.type === 'parent')) return true;
+        return false;
+    };
+
+    const isFriendChat = (chat: any) => {
+        if (!isDirectChat(chat)) return false;
+        if (isCoachChat(chat) || isParentDirectChat(chat) || (isParent && isChildChat(chat))) return false;
+        return true;
+    };
+
+    const isGroupChat = (chat: any) => {
+        if (!chat) return false;
+        if (chat.type === 'saved' || chat.id?.startsWith('saved_')) return false;
+        if (isDirectChat(chat)) return false;
+        return chat.type === 'group' || chat.type === 'team' || !!chat.groupId;
+    };
+
+    const [friends, setFriends] = useState<any[]>([]);
+    const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+
     const DYNAMIC_CATEGORIES = React.useMemo(() => {
+        const savedCount = chats.filter(c => c.type === 'saved' || c.id === `saved_${user?.uid}`).length;
+
         if (isStudent) {
+            const groupCount = chats.filter(isGroupChat).length;
+            const coachCount = chats.filter(isCoachChat).length;
+            const friendCount = chats.filter(isFriendChat).length;
+            const familyCount = chats.filter(isParentDirectChat).length;
+
             return [
-                { id: 'all', label: 'Все', icon: Layers },
-                { id: 'private', label: 'Тренер', icon: User },
-                { id: 'groups', label: 'Моя команда', icon: Users },
+                { id: 'all', label: 'Все', count: chats.length, icon: Layers },
+                { id: 'saved', label: '⭐️ Избранное', count: savedCount, icon: Bookmark },
+                { id: 'groups', label: 'Команда', count: groupCount, icon: Users },
+                { id: 'coach', label: 'Тренеры', count: coachCount, icon: Dumbbell },
+                { id: 'family', label: 'Родители', count: familyCount, icon: Baby },
+                { id: 'friends', label: 'Друзья', count: friendCount || friends.length, icon: Heart },
             ];
         }
 
         if (isParent) {
+            const childCount = chats.filter(isChildChat).length;
+            const coachCount = chats.filter(isCoachChat).length;
+            const groupCount = chats.filter(isGroupChat).length;
+
             return [
-                { id: 'all', label: 'Все', icon: Layers },
-                { id: 'private', label: 'Тренер ребёнка', icon: User },
-                { id: 'groups', label: 'Группа', icon: Users },
+                { id: 'all', label: 'Все', count: chats.length, icon: Layers },
+                { id: 'saved', label: '⭐️ Избранное', count: savedCount, icon: Bookmark },
+                { id: 'child', label: 'Спортсмен', count: childCount, icon: Baby },
+                { id: 'coach', label: 'Тренеры', count: coachCount, icon: Dumbbell },
+                { id: 'groups', label: 'Группы', count: groupCount, icon: Users },
             ];
         }
 
         const categories = [
-            { id: 'all', label: 'Все', icon: Layers },
-            { id: 'staff', label: 'Сотрудники', icon: Shield },
-            { id: 'groups', label: 'Группы', icon: Users },
-            { id: 'parents', label: isTrainer ? 'Родители' : 'Тренерские чаты', icon: Baby },
-            { id: 'private', label: 'Личные', icon: User },
+            { id: 'all', label: 'Все', count: chats.length, icon: Layers },
+            { id: 'saved', label: '⭐️ Избранное', count: savedCount, icon: Bookmark },
+            { id: 'staff', label: 'Сотрудники', count: chats.filter(c => c.type === 'staff' || c.type === 'support').length, icon: Shield },
+            { id: 'groups', label: 'Группы', count: chats.filter(isGroupChat).length, icon: Users },
+            { id: 'parents', label: isTrainer ? 'Родители' : 'Тренерские', count: chats.filter(c => c.type === 'parent' || isParentDirectChat(c)).length, icon: Baby },
+            { id: 'private', label: 'Личные', count: chats.filter(isDirectChat).length, icon: User },
         ];
 
         if (!isStaff) {
@@ -160,10 +338,7 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
         }
 
         return categories;
-    }, [isTrainer, isStaff, isParent, isStudent]);
-
-    const [friends, setFriends] = useState<any[]>([]);
-    const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+    }, [isTrainer, isStaff, isParent, isStudent, chats, friends.length, user?.uid]);
 
     // Fetch Friends
     useEffect(() => {
@@ -257,7 +432,9 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                     const directSnap = await getDocs(qDirect);
                     const existingCoachChat = directSnap.docs.find(d => {
                         const data = d.data();
-                        return (data.type === 'private' || data.type === 'direct') && data.participants?.includes(coachUid);
+                        const isMatchByUid = (data.type === 'private' || data.type === 'direct') && data.participants?.includes(coachUid);
+                        const isMatchByName = (data.name || '').toLowerCase().includes(coachName.toLowerCase());
+                        return isMatchByUid || isMatchByName;
                     });
 
                     if (!existingCoachChat) {
@@ -292,18 +469,30 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                         });
                     }
                 } else {
-                    console.log(`Auto-creating group chat for group ${groupIdStr}`);
-                    await addDoc(collection(db, 'chats'), {
-                        name: groupData.name || 'Групповой чат',
-                        type: 'group',
-                        groupId: groupIdStr,
-                        groupCategory: groupData.category || 'Спорт',
-                        coachId: coachUid || null,
-                        participants: [user.uid, coachUid].filter(Boolean),
-                        createdAt: serverTimestamp(),
-                        lastMessageAt: serverTimestamp(),
-                        lastMessage: 'Групповой чат создан'
-                    });
+                    // Check by name before creating a new doc
+                    const qName = query(collection(db, 'chats'), where('name', '==', groupData.name));
+                    const snapName = await getDocs(qName);
+
+                    if (!snapName.empty) {
+                        const existingDoc = snapName.docs[0];
+                        await updateDoc(doc(db, 'chats', existingDoc.id), {
+                            groupId: groupIdStr,
+                            participants: arrayUnion(user.uid)
+                        });
+                    } else {
+                        console.log(`Auto-creating group chat for group ${groupIdStr}`);
+                        await addDoc(collection(db, 'chats'), {
+                            name: groupData.name || 'Групповой чат',
+                            type: 'group',
+                            groupId: groupIdStr,
+                            groupCategory: groupData.category || 'Спорт',
+                            coachId: coachUid || null,
+                            participants: [user.uid, coachUid].filter(Boolean),
+                            createdAt: serverTimestamp(),
+                            lastMessageAt: serverTimestamp(),
+                            lastMessage: 'Групповой чат создан'
+                        });
+                    }
                 }
             } catch (err) {
                 console.error("Error initializing student chats:", err);
@@ -315,44 +504,183 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
 
     // Fetch Chats with Real-time Firestore Listener
     useEffect(() => {
-        if (!user?.uid) return;
+        if (!user?.uid) {
+            setLoading(false);
+            return;
+        }
+
+        // Safety fallback timer so skeleton loader never hangs indefinitely
+        const safetyTimer = setTimeout(() => {
+            setLoading(false);
+        }, 1500);
 
         const chatsRef = collection(db, 'chats');
-        let q = query(chatsRef, where('participants', 'array-contains', user.uid), orderBy('lastMessageAt', 'desc'));
+        let q = query(chatsRef, where('participants', 'array-contains', user.uid));
 
         if (isAdmin || isDeveloper) {
-            q = query(chatsRef, orderBy('lastMessageAt', 'desc'));
+            q = query(chatsRef);
         }
 
         const handleSnap = (snapshot: any) => {
-            const loadedChats = snapshot.docs.map((doc: any) => ({
+            clearTimeout(safetyTimer);
+            const rawChats = snapshot.docs.map((doc: any) => ({
                 id: doc.id,
                 ...doc.data()
             })).filter((chat: any) => {
                 if (isAdmin || isDeveloper) return true;
+                if (chat.type === 'saved' || chat.id === `saved_${user.uid}` || chat.id?.startsWith('saved_')) return true;
                 if (chat.type === 'staff') return isTrainer || isAdmin || isDirector;
-                if (chat.type === 'group' || chat.type === 'parent') {
+                if (chat.type === 'group' || chat.type === 'team') {
                     if (chat.participants?.includes(user.uid)) return true;
                     if (userProfile?.groupId === chat.groupId) return true;
                     if (isTrainer && userProfile?.coachId === chat.coachId) return true;
                 }
-                if (chat.type === 'private' || chat.type === 'direct') {
+                if (chat.type === 'private' || chat.type === 'direct' || chat.type === 'parent' || chat.type === 'child' || chat.type === 'social' || (Array.isArray(chat.participants) && chat.participants.includes(user.uid))) {
                     return chat.participants?.includes(user.uid);
                 }
                 return false;
             });
 
-            setChats(loadedChats);
+            // Helper to extract the exact other participant's UID from any direct chat
+            const getChatOtherUid = (chat: any) => {
+                // 1. Array check
+                if (Array.isArray(chat.participants)) {
+                    for (const p of chat.participants) {
+                        const uidStr = typeof p === 'string' ? p : (p?.id || p?.uid);
+                        if (uidStr && uidStr !== user.uid) return uidStr;
+                    }
+                }
+
+                // 2. Explicit direct UID fields
+                if (chat.coachId && chat.coachId !== user.uid) return chat.coachId;
+                if (chat.studentUid && chat.studentUid !== user.uid) return chat.studentUid;
+                if (chat.parentId && chat.parentId !== user.uid) return chat.parentId;
+                if (chat.targetUserId && chat.targetUserId !== user.uid) return chat.targetUserId;
+                if (chat.userId && chat.userId !== user.uid) return chat.userId;
+
+                // 3. Match family relations from user profile
+                if (isParent && userProfile?.studentUid) {
+                    const lowName = (chat.name || '').toLowerCase();
+                    if (chat.type === 'parent' || chat.type === 'child' || lowName.includes('ребенок') || lowName.includes('спортсмен') || (userProfile.childName && lowName.includes(userProfile.childName.toLowerCase()))) {
+                        return userProfile.studentUid;
+                    }
+                }
+                if (isStudent && userProfile?.parentId) {
+                    const lowName = (chat.name || '').toLowerCase();
+                    if (chat.type === 'parent' || lowName.includes('родитель') || (userProfile.parentName && lowName.includes(userProfile.parentName.toLowerCase()))) {
+                        return userProfile.parentId;
+                    }
+                }
+
+                // 4. Match student's coach
+                if (userProfile?.coachId) {
+                    const lowName = (chat.name || '').toLowerCase();
+                    if (lowName.includes('тренер') || lowName.includes('coach')) {
+                        return userProfile.coachId;
+                    }
+                }
+
+                return null;
+            };
+
+            // Smart Deduplication Map
+            const chatMap = new Map<string, any>();
+
+            for (const chat of rawChats) {
+                let dedupeKey = chat.id;
+
+                const isSaved = chat.type === 'saved' || chat.id === `saved_${user.uid}` || chat.id?.startsWith('saved_');
+                const isGroup = !isSaved && (chat.type === 'group' || chat.type === 'team' || (Boolean(chat.groupId) && chat.type !== 'private' && chat.type !== 'direct' && chat.type !== 'parent' && chat.type !== 'child'));
+                const isChannel = !isSaved && !isGroup && chat.type === 'channel';
+
+                if (isSaved) {
+                    dedupeKey = `saved_${user.uid}`;
+                } else if (isGroup) {
+                    const cleanName = (chat.name || '').toLowerCase().replace(/\s+/g, ' ').trim();
+                    dedupeKey = `group_${chat.groupId || cleanName}`;
+                } else if (isChannel) {
+                    dedupeKey = `channel_${(chat.name || 'general').toLowerCase().trim()}`;
+                } else {
+                    // Direct / 1-on-1 chat (Parent-Child, Coach-User, Friend-Friend, etc.)
+                    const otherUid = getChatOtherUid(chat);
+                    if (otherUid) {
+                        dedupeKey = `direct_${otherUid}`;
+                    } else {
+                        const cleanName = (chat.name || '')
+                            .replace(/\(тренер\)|\(сотрудник\)|\(родитель\)|\(спортсмен\)|\(ученик\)|\(друг\)/gi, '')
+                            .replace(/\s+/g, ' ')
+                            .toLowerCase()
+                            .trim();
+                        dedupeKey = `direct_name_${cleanName || 'chat'}`;
+                    }
+                }
+
+                const existing = chatMap.get(dedupeKey);
+                if (!existing) {
+                    chatMap.set(dedupeKey, chat);
+                } else {
+                    const existingTime = existing.lastMessageAt?.toMillis?.() || (existing.lastMessageAt?.seconds ? existing.lastMessageAt.seconds * 1000 : 0) || (existing.createdAt?.toMillis?.() || 0);
+                    const newTime = chat.lastMessageAt?.toMillis?.() || (chat.lastMessageAt?.seconds ? chat.lastMessageAt.seconds * 1000 : 0) || (chat.createdAt?.toMillis?.() || 0);
+
+                    // Prefer the chat with messages or newer activity
+                    const preferNew = (Boolean(chat.lastMessage) && !existing.lastMessage) || (newTime > existingTime);
+                    const primary = preferNew ? chat : existing;
+                    const secondary = preferNew ? existing : chat;
+
+                    chatMap.set(dedupeKey, {
+                        ...secondary,
+                        ...primary,
+                        id: primary.id,
+                        type: isGroup ? 'group' : 'private',
+                        isPrivate: !isGroup && !isSaved && !isChannel,
+                        participants: Array.from(new Set([...(secondary.participants || []), ...(primary.participants || [])])),
+                        participantNames: { ...(secondary.participantNames || {}), ...(primary.participantNames || {}) },
+                        participantRoles: { ...(secondary.participantRoles || {}), ...(primary.participantRoles || {}) },
+                        participantAvatars: { ...(secondary.participantAvatars || {}), ...(primary.participantAvatars || {}) }
+                    });
+                }
+            }
+
+            // Ensure Saved Messages item is always available for the current user
+            const savedChatId = `saved_${user.uid}`;
+            if (!chatMap.has(savedChatId)) {
+                chatMap.set(savedChatId, {
+                    id: savedChatId,
+                    name: 'Избранное',
+                    type: 'saved',
+                    participants: [user.uid],
+                    participantNames: { [user.uid]: userProfile?.childName || userProfile?.full_name || 'Я' },
+                    lastMessage: 'Личное хранилище заметок и файлов',
+                    isSaved: true
+                });
+            }
+
+            const deduplicated = Array.from(chatMap.values()).sort((a: any, b: any) => {
+                const aPinned = userPrefs[a.id]?.isPinned ? 1 : 0;
+                const bPinned = userPrefs[b.id]?.isPinned ? 1 : 0;
+                if (aPinned !== bPinned) return bPinned - aPinned;
+
+                const aTime = a.lastMessageAt?.toMillis?.() || (a.lastMessageAt?.seconds ? a.lastMessageAt.seconds * 1000 : 0);
+                const bTime = b.lastMessageAt?.toMillis?.() || (b.lastMessageAt?.seconds ? b.lastMessageAt.seconds * 1000 : 0);
+                if (bTime !== aTime) return bTime - aTime;
+
+                return (a.name || '').localeCompare(b.name || '');
+            });
+
+            setChats(deduplicated);
             setLoading(false);
         };
 
         const unsubscribe = onSnapshot(q, handleSnap, (error) => {
-            console.error("Firestore chats query index error, executing fallback:", error);
-            const fallbackQ = query(chatsRef, where('participants', 'array-contains', user.uid));
-            onSnapshot(fallbackQ, handleSnap);
+            console.error("Firestore chats query error, falling back:", error);
+            clearTimeout(safetyTimer);
+            setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+            clearTimeout(safetyTimer);
+            unsubscribe();
+        };
     }, [user?.uid, isAdmin, isDeveloper, isTrainer, userProfile?.groupId, userProfile?.coachId]);
 
     // Memoized Category Counts for Groups
@@ -399,16 +727,21 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
         return () => unsubscribe();
     }, [user?.uid]);
 
-    // Fetch dynamic avatars/names for private chats
+    // Fetch dynamic avatars/names/roles for direct chats
     useEffect(() => {
         const uidsToFetch = new Set<string>();
         chats.forEach(chat => {
-            if (chat.type === 'private' && chat.participants) {
+            if (isDirectChat(chat) && Array.isArray(chat.participants)) {
                 chat.participants.forEach((uid: string) => {
-                    if (uid !== user?.uid) uidsToFetch.add(uid);
+                    if (uid && uid !== user?.uid) uidsToFetch.add(uid);
                 });
             }
         });
+
+        // Also add parentId or studentUid from userProfile if available
+        if (userProfile?.parentId) uidsToFetch.add(userProfile.parentId);
+        if (userProfile?.studentUid) uidsToFetch.add(userProfile.studentUid);
+        if (userProfile?.childId) uidsToFetch.add(userProfile.childId);
 
         if (uidsToFetch.size === 0) return;
 
@@ -416,19 +749,312 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
 
         const q = query(collection(db, 'users'), where(documentId(), 'in', uidsArray));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const newData: Record<string, { name: string, avatarUrl: string }> = {};
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                newData[doc.id] = {
-                    name: data.childName || data.full_name || data.email || 'Участник',
-                    avatarUrl: data.photoURL || data.avatarUrl || ''
+            const newData: Record<string, any> = {};
+            snapshot.docs.forEach(docSnap => {
+                const data = docSnap.data();
+                newData[docSnap.id] = {
+                    id: docSnap.id,
+                    name: data.childName || data.full_name || data.name || data.email || 'Участник',
+                    avatarUrl: data.photoURL || data.avatarUrl || '',
+                    role: (data.role || 'student').toLowerCase(),
+                    parentId: data.parentId,
+                    studentUid: data.studentUid,
+                    parentName: data.parentName,
+                    childName: data.childName
                 };
             });
-            setParticipantData(newData);
+            setParticipantData(prev => ({ ...prev, ...newData }));
         });
 
         return () => unsubscribe();
+    }, [chats, user?.uid, userProfile?.parentId, userProfile?.studentUid, userProfile?.childId]);
+
+    // Listen to real-time typing indicators for top active chats
+    useEffect(() => {
+        if (!user?.uid || chats.length === 0) return;
+
+        const unsubscribes: Array<() => void> = [];
+        const topChats = chats.slice(0, 15);
+
+        topChats.forEach(chat => {
+            const typingRef = collection(db, 'chats', chat.id, 'typing');
+            const q = query(typingRef, where('isTyping', '==', true), limit(5));
+
+            const unsub = onSnapshot(q, (snapshot) => {
+                const names: string[] = [];
+                snapshot.docs.forEach(docSnap => {
+                    if (docSnap.id !== user.uid) {
+                        const data = docSnap.data();
+                        if (data.name) names.push(data.name.split(' ')[0]);
+                    }
+                });
+
+                setTypingMap(prev => ({
+                    ...prev,
+                    [chat.id]: names
+                }));
+            }, () => {
+                // Ignore silent permissions for legacy chat types
+            });
+
+            unsubscribes.push(unsub);
+        });
+
+        return () => {
+            unsubscribes.forEach(u => u());
+        };
     }, [chats, user?.uid]);
+
+    // Quick contacts: Coaches, Friends, and Recent DM contacts for the Top Stories row
+    const quickContacts = React.useMemo(() => {
+        const list: Array<{
+            id: string;
+            name: string;
+            avatar?: string;
+            isCoach?: boolean;
+            isFriend?: boolean;
+            chatId?: string;
+            targetUid?: string;
+        }> = [];
+
+        const seenIds = new Set<string>();
+
+        // 1. Direct Coach chats
+        chats.filter(isCoachChat).forEach(chat => {
+            const otherId = chat.participants?.find((id: string) => id !== user.uid) || chat.id;
+            if (!seenIds.has(otherId)) {
+                seenIds.add(otherId);
+                const liveData = participantData[otherId];
+                list.push({
+                    id: otherId,
+                    name: liveData?.name || chat.name || 'Тренер',
+                    avatar: liveData?.avatarUrl || chat.avatarUrl,
+                    isCoach: true,
+                    chatId: chat.id,
+                    targetUid: otherId
+                });
+            }
+        });
+
+        // 2. Friends from friendships
+        friends.forEach(f => {
+            if (!seenIds.has(f.id) && f.id !== user.uid) {
+                seenIds.add(f.id);
+                const existingChat = chats.find(c => c.type === 'private' && c.participants?.includes(f.id));
+                list.push({
+                    id: f.id,
+                    name: f.name || f.displayName || f.childName || 'Друг',
+                    avatar: f.avatarUrl || f.photoURL,
+                    isFriend: true,
+                    chatId: existingChat?.id,
+                    targetUid: f.id
+                });
+            }
+        });
+
+        // 3. Other direct chats (e.g. Developer, Staff)
+        chats.filter(c => c.type === 'private' || c.type === 'direct').forEach(chat => {
+            const otherId = chat.participants?.find((id: string) => id !== user.uid);
+            if (otherId && !seenIds.has(otherId)) {
+                seenIds.add(otherId);
+                const liveData = participantData[otherId];
+                list.push({
+                    id: otherId,
+                    name: liveData?.name || (chat.participantNames ? chat.participantNames[otherId] : chat.name),
+                    avatar: liveData?.avatarUrl || chat.avatarUrl,
+                    chatId: chat.id,
+                    targetUid: otherId
+                });
+            }
+        });
+
+        return list;
+    }, [chats, friends, participantData, user.uid]);
+
+    // Fetch live stories from Firestore
+    useEffect(() => {
+        const q = query(
+            collection(db, 'stories'),
+            orderBy('createdAt', 'desc'),
+            limit(25)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const list: any[] = [];
+            snapshot.docs.forEach(docSnap => {
+                list.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            setFirestoreStories(list);
+        }, () => {
+            // Ignore silent error
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Build unified rich Sparta Story Groups
+    const storyGroups = React.useMemo<SpartaStoryGroup[]>(() => {
+        const groupsMap = new Map<string, SpartaStoryGroup>();
+
+        // 1. Live Firestore Stories
+        firestoreStories.forEach(st => {
+            const authorId = st.authorId || 'club';
+            if (!groupsMap.has(authorId)) {
+                groupsMap.set(authorId, {
+                    authorId,
+                    authorName: st.authorName || 'Спартанец',
+                    authorAvatar: st.authorAvatar,
+                    authorRole: st.authorRole || 'coach',
+                    roleLabel: st.roleLabel || (st.authorRole === 'coach' ? 'Тренер' : 'Спарта'),
+                    isUnseen: !viewedStoryIds.includes(st.id),
+                    slides: []
+                });
+            }
+            groupsMap.get(authorId)!.slides.push({
+                id: st.id,
+                title: st.title,
+                subtitle: st.subtitle,
+                description: st.description,
+                gradient: st.gradient,
+                mediaUrl: st.mediaUrl,
+                mediaType: st.mediaType,
+                poll: st.poll
+            });
+        });
+
+        // 2. Default Trainer Pavel Story (rich interactive advice & workout updates)
+        if (!groupsMap.has('pavel_coach')) {
+            groupsMap.set('pavel_coach', {
+                authorId: 'pavel_coach',
+                authorName: 'Павел Якупов',
+                authorRole: 'coach',
+                roleLabel: 'Главный тренер',
+                isUnseen: !viewedStoryIds.includes('pavel_coach_1'),
+                slides: [
+                    {
+                        id: 'pavel_coach_1',
+                        subtitle: '⚡ Совет дня',
+                        title: 'Правильная постановка стопы при ударе',
+                        description: 'Опорная нога должна стоять строго на одной линии с мячом на расстоянии 10-15 см. Смотрим в точку удара!',
+                        gradient: 'bg-gradient-to-br from-amber-600 via-[#261908] to-black',
+                        poll: {
+                            question: 'Отработали это на прошлой тренировке?',
+                            options: ['🔥 Да, получается отлично!', '⚽ Еще тренирую']
+                        }
+                    },
+                    {
+                        id: 'pavel_coach_2',
+                        subtitle: '📢 Объявление команды',
+                        title: 'Субботний контрольный матч в 12:00',
+                        description: 'Всем быть за 20 минут до начала в белой форме Спарты. Будем играть двумя составами!',
+                        gradient: 'bg-gradient-to-br from-emerald-700 via-[#071f16] to-black'
+                    }
+                ]
+            });
+        }
+
+        // 3. Sparta Club Awards & News Story
+        if (!groupsMap.has('sparta_club')) {
+            groupsMap.set('sparta_club', {
+                authorId: 'sparta_club',
+                authorName: 'Sparta Club',
+                authorRole: 'club',
+                roleLabel: 'Спарта',
+                isUnseen: !viewedStoryIds.includes('sparta_club_1'),
+                slides: [
+                    {
+                        id: 'sparta_club_1',
+                        subtitle: '🏆 Доска почета',
+                        title: 'Топ-3 бомбардира недели',
+                        description: '1. Никита Зонов (12 голов)\n2. Артем Смирнов (9 голов)\n3. Максим Волков (8 голов)',
+                        gradient: 'bg-gradient-to-br from-purple-700 via-indigo-950 to-black',
+                        poll: {
+                            question: 'Поздравим чемпионов?',
+                            options: ['🔥 Красавцы!', '👏 Вперед Спарта!']
+                        }
+                    }
+                ]
+            });
+        }
+
+        return Array.from(groupsMap.values());
+    }, [firestoreStories, viewedStoryIds]);
+
+    const handleOpenStoryGroup = (idx: number) => {
+        setSelectedStoryGroupIndex(idx);
+        setIsStoriesViewerOpen(true);
+
+        const group = storyGroups[idx];
+        if (group) {
+            const newViewed = [...viewedStoryIds];
+            group.slides.forEach(s => {
+                if (!newViewed.includes(s.id)) newViewed.push(s.id);
+            });
+            setViewedStoryIds(newViewed);
+            try {
+                localStorage.setItem('sparta_viewed_stories', JSON.stringify(newViewed));
+            } catch { }
+        }
+    };
+
+    const handleStoryReply = async (authorId: string, authorName: string, text: string, storyTitle?: string) => {
+        const targetChat = chats.find(c =>
+            (c.type === 'private' || c.type === 'direct') &&
+            c.participants?.includes(authorId)
+        );
+
+        const replyMessageText = storyTitle
+            ? `💬 Ответ на историю «${storyTitle}»: ${text}`
+            : `💬 Ответ на историю: ${text}`;
+
+        if (targetChat) {
+            handleSelectChat(targetChat, true);
+            try {
+                await addDoc(collection(db, 'chats', targetChat.id, 'messages'), {
+                    senderId: user.uid,
+                    senderName: userProfile?.full_name || userProfile?.childName || 'Спартанец',
+                    text: replyMessageText,
+                    timestamp: serverTimestamp()
+                });
+                await updateDoc(doc(db, 'chats', targetChat.id), {
+                    lastMessage: replyMessageText,
+                    lastMessageAt: serverTimestamp(),
+                    lastMessageBy: user.uid
+                });
+            } catch (err) {
+                console.error("Error sending story reply:", err);
+            }
+        } else {
+            handleStartPrivateChat(authorId, authorName);
+        }
+    };
+
+    const handleForwardStoryToChat = async (chatId: string, storyTitle: string) => {
+        const text = `📢 Поделился историей Спарты: «${storyTitle}»`;
+        try {
+            await addDoc(collection(db, 'chats', chatId, 'messages'), {
+                senderId: user.uid,
+                senderName: userProfile?.full_name || userProfile?.childName || 'Спартанец',
+                text,
+                timestamp: serverTimestamp()
+            });
+            await updateDoc(doc(db, 'chats', chatId), {
+                lastMessage: text,
+                lastMessageAt: serverTimestamp(),
+                lastMessageBy: user.uid
+            });
+        } catch (err) {
+            console.error("Error forwarding story:", err);
+        }
+    };
+
+    const handleDeleteStory = async (slideId: string) => {
+        try {
+            await deleteDoc(doc(db, 'stories', slideId));
+        } catch (err) {
+            console.error("Error deleting story:", err);
+        }
+    };
 
     // Deep-linking: auto-select chat from initialChatId or targetUid
     useEffect(() => {
@@ -446,7 +1072,7 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
         if (effectiveChatId && chats.length > 0) {
             const chatToSelect = chats.find(c => c.id === effectiveChatId);
             if (chatToSelect && (!selectedChat || selectedChat.id !== effectiveChatId)) {
-                handleSelectChat(chatToSelect);
+                handleSelectChat(chatToSelect, true);
                 hasHandledParams.current = true;
                 prevParamsKey.current = currentParamsKey;
             }
@@ -463,7 +1089,7 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
 
             if (privateChat) {
                 if (!selectedChat || selectedChat.id !== privateChat.id) {
-                    handleSelectChat(privateChat);
+                    handleSelectChat(privateChat, true);
                     hasHandledParams.current = true;
                     prevParamsKey.current = currentParamsKey;
                 }
@@ -475,22 +1101,27 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
         }
     }, [initialChatId, initialTargetUid, initialTargetName, initialStudentName, chats, isCreating, loading, user?.uid]);
 
-    const handleSelectChat = async (chat: any) => {
+    const handleSelectChat = async (chat: any, openMobile: boolean = true) => {
         setSelectedChat(chat);
-        setIsMobileDetailVisible(true);
+        if (openMobile) {
+            setIsMobileDetailVisible(true);
+        }
 
-        // Ensure the chat is visible in the current category
+        // Ensure the chat is visible in the current category if user manually clicked
         if (activeCategory !== 'all') {
             const matchesCurrent =
-                activeCategory === chat.type ||
+                (activeCategory === 'groups' && isGroupChat(chat)) ||
+                (activeCategory === 'coach' && isCoachChat(chat)) ||
+                (activeCategory === 'friends' && isFriendChat(chat)) ||
+                (activeCategory === 'private' && (chat.type === 'private' || chat.type === 'direct')) ||
                 (activeCategory === 'parents' && chat.type === 'parent') ||
-                (activeCategory === 'groups' && (chat.type === 'group' || chat.type === 'parent')) ||
-                (activeCategory === 'private' && (chat.type === 'private' || chat.type === 'direct'));
+                (activeCategory === 'staff' && (chat.type === 'staff' || chat.type === 'support'));
 
             if (!matchesCurrent) {
-                if (chat.type === 'parent') setActiveCategory('parents');
-                else if (chat.type === 'group') setActiveCategory('groups');
-                else if (chat.type === 'private' || chat.type === 'direct') setActiveCategory('private');
+                if (isGroupChat(chat)) setActiveCategory('groups');
+                else if (isCoachChat(chat)) setActiveCategory('coach');
+                else if (isFriendChat(chat)) setActiveCategory('friends');
+                else if (chat.type === 'parent') setActiveCategory('parents');
                 else if (chat.type === 'staff') setActiveCategory('staff');
                 else setActiveCategory('all');
             }
@@ -514,12 +1145,14 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
         }
     };
 
-    // Auto-select first chat on load if none selected
+    // Auto-select on desktop ONLY (so on mobile, child always starts on the Chat List Hub)
     useEffect(() => {
         if (loading || chats.length === 0 || selectedChat) return;
 
         if (!initialChatId && !initialTargetUid) {
-            handleSelectChat(chats[0]);
+            if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                handleSelectChat(chats[0], false);
+            }
         }
     }, [chats, loading, selectedChat, initialChatId, initialTargetUid]);
 
@@ -574,13 +1207,28 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
     };
 
     const clearHistory = async (chatId: string) => {
-        if (!user?.uid || !window.confirm("Очистить историю для вас? Сообщения других участников останутся.")) return;
+        if (!user?.uid) return;
+        const targetChat = chats.find(c => c.id === chatId);
+        const isGroup = targetChat ? isGroupChat(targetChat) : false;
+
+        // In group chats, regular users cannot clear history
+        if (isGroup && !isStaff && !isAdmin && !isTrainer) {
+            alert("История командного чата является общей и может быть очищена только тренером или администрацией.");
+            setContextMenu(null);
+            return;
+        }
+
+        const confirmText = isGroup
+            ? "Очистить историю сообщений этой группы для всех участников?"
+            : "Очистить историю диалога для вас? Сообщения собеседника не пострадают.";
+
+        if (!window.confirm(confirmText)) return;
         setContextMenu(null);
 
         const now = new Date();
         const nowMillis = now.getTime();
 
-        // 1. Update user's chat_prefs with lastClearedAt
+        // 1. Update user's personal chat_prefs with lastClearedAt
         const prefRef = doc(db, 'users', user.uid, 'chat_prefs', chatId);
         const prefData = { lastClearedAt: serverTimestamp(), forceUnread: false };
         await updateDoc(prefRef, prefData).catch(async () => {
@@ -588,15 +1236,15 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
             await setDoc(prefRef, prefData, { merge: true });
         });
 
-        // 2. Reset chat document lastMessage metadata in Firestore
-        const chatRef = doc(db, 'chats', chatId);
-        await updateDoc(chatRef, {
-            lastMessage: "",
-            lastMessageAt: null,
-            updatedAt: serverTimestamp()
-        }).catch(err => {
-            console.warn("Could not reset chat metadata in Firestore:", err);
-        });
+        // 2. Only if Group Admin / Trainer is intentionally clearing group history for everyone
+        if (isGroup && (isAdmin || isTrainer || isDirector)) {
+            const chatRef = doc(db, 'chats', chatId);
+            await updateDoc(chatRef, {
+                lastMessage: "История группы очищена тренером",
+                lastMessageAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            }).catch(console.warn);
+        }
 
         // 3. Update local state immediately so UI updates without page refresh
         setUserPrefs(prev => ({
@@ -609,17 +1257,6 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                 },
                 forceUnread: false
             }
-        }));
-
-        setChats(prevChats => prevChats.map(c => {
-            if (c.id === chatId) {
-                return {
-                    ...c,
-                    lastMessage: "",
-                    lastMessageAt: null
-                };
-            }
-            return c;
         }));
 
         if (selectedChat?.id === chatId) {
@@ -995,12 +1632,19 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
     };
 
     const filteredChats = chats.filter(chat => {
-        const matchesCategory = activeCategory === 'all' ||
-            (activeCategory === 'groups' && (chat.type === 'group' || chat.type === 'parent')) ||
-            (activeCategory === 'parents' && chat.type === 'parent') ||
-            (activeCategory === 'private' && (chat.type === 'private' || chat.type === 'direct')) ||
-            (activeCategory === 'staff' && (chat.type === 'staff' || chat.type === 'support')) ||
-            chat.type === activeCategory;
+        const matchesCategory = (() => {
+            if (activeCategory === 'all') return true;
+            if (activeCategory === 'saved') return chat.type === 'saved' || chat.id === `saved_${user.uid}`;
+            if (activeCategory === 'groups') return isGroupChat(chat);
+            if (activeCategory === 'coach') return isCoachChat(chat);
+            if (activeCategory === 'child') return isChildChat(chat);
+            if (activeCategory === 'family') return isParentDirectChat(chat);
+            if (activeCategory === 'friends') return isFriendChat(chat);
+            if (activeCategory === 'private') return isDirectChat(chat);
+            if (activeCategory === 'parents') return isParentDirectChat(chat) || chat.type === 'parent';
+            if (activeCategory === 'staff') return chat.type === 'staff' || chat.type === 'support';
+            return chat.type === activeCategory;
+        })();
 
         // Admin Sub-category Filter
         const matchesSubCategory = (activeCategory !== 'groups' && activeCategory !== 'parents') ||
@@ -1017,11 +1661,14 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
         const aPinned = userPrefs[a.id]?.isPinned ? 1 : 0;
         const bPinned = userPrefs[b.id]?.isPinned ? 1 : 0;
         if (aPinned !== bPinned) return bPinned - aPinned;
-        return 0; // Maintain Firestore order secondary
+
+        const aTime = a.lastMessageAt?.toMillis?.() || (a.lastMessageAt?.seconds ? a.lastMessageAt.seconds * 1000 : 0);
+        const bTime = b.lastMessageAt?.toMillis?.() || (b.lastMessageAt?.seconds ? b.lastMessageAt.seconds * 1000 : 0);
+        return bTime - aTime;
     });
 
     return (
-        <div className="flex flex-col md:flex-row gap-6 h-[calc(100dvh-120px)] md:h-[800px] w-full relative overflow-hidden">
+        <div className="flex flex-col md:flex-row gap-4 h-full min-h-0 w-full relative overflow-hidden">
             {/* Sidebar: Chat List */}
             <AnimatePresence mode="wait">
                 {(!isMobileDetailVisible || (typeof window !== 'undefined' && window.innerWidth >= 768)) && (
@@ -1029,64 +1676,176 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        className={`md:w-80 flex flex-col gap-4 h-full w-full ${isMobileDetailVisible ? 'hidden md:flex' : 'flex'}`}
+                        className={`md:w-80 lg:w-96 shrink-0 flex flex-col gap-3 h-full min-h-0 w-full ${isMobileDetailVisible ? 'hidden md:flex' : 'flex'}`}
                     >
                         {/* Search & Action Bar */}
-                        <div className="flex flex-col gap-3">
-                            {!(isStudent && chats.length <= 2) && (
-                                <div className="relative">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                        <div className="flex flex-col gap-2.5">
+                            <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={17} />
                                     <input
                                         type="text"
-                                        placeholder="Поиск чатов..."
+                                        placeholder="Поиск по диалогам и друзьям..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-sm text-white outline-none focus:border-sparta-gold/50 transition-all font-medium placeholder:text-white/30"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-sparta-gold/50 transition-all font-medium placeholder:text-white/30"
                                     />
                                 </div>
-                            )}
-                            {isStaff && (
-                                <div className="flex flex-col gap-2">
-                                    {missingGroupsForUser.length > 0 && (
-                                        <Button
-                                            onClick={handleFixMissingChats}
-                                            disabled={isCreating}
-                                            className="w-full bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 animate-pulse"
-                                        >
-                                            <AlertTriangle size={16} /> ЧАТЫ НЕ СОЗДАНЫ ({missingGroupsForUser.length})
-                                        </Button>
-                                    )}
-                                    <Button
-                                        onClick={() => {
-                                            setCreationStep('type');
-                                            setIsCreateModalOpen(true);
-                                        }}
-                                        className="w-full bg-gradient-to-r from-sparta-gold to-yellow-500 text-black font-black uppercase tracking-widest text-[10px] py-4 rounded-xl shadow-lg shadow-sparta-gold/20 flex items-center justify-center gap-2"
+                                {isStaff && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsModerationModalOpen(true)}
+                                        className={`h-11 px-3.5 rounded-2xl border flex items-center gap-1.5 transition-all shrink-0 relative ${
+                                            pendingReportsCount > 0
+                                                ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse'
+                                                : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/60 hover:text-white'
+                                        }`}
+                                        title="Модерация и безопасность"
                                     >
-                                        <Sparkles size={16} /> Мастер создания чатов
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
+                                        <Shield size={17} />
+                                        {pendingReportsCount > 0 && (
+                                            <span className="text-[10px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full">
+                                                {pendingReportsCount}
+                                            </span>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
 
-                        {/* Categories */}
-                        {!(isStudent && chats.length <= 3) && (
-                            <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5 overflow-x-auto scrollbar-hide">
-                                {DYNAMIC_CATEGORIES.map(cat => {
-                                    const Icon = cat.icon;
+                            {/* Stories & Contacts Carousel */}
+                            <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar scrollbar-hide py-1.5 px-0.5">
+                                {/* + Add Story Button */}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreateStoryOpen(true)}
+                                    className="flex flex-col items-center gap-1 shrink-0 group focus:outline-none"
+                                >
+                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sparta-gold/25 via-yellow-500/20 to-amber-500/10 border border-sparta-gold/40 flex items-center justify-center text-sparta-gold shadow-md group-hover:border-sparta-gold group-hover:shadow-[0_0_15px_rgba(255,184,0,0.35)] transition-all group-active:scale-95">
+                                        <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+                                    </div>
+                                    <span className="text-[9px] font-bold text-white/50 group-hover:text-sparta-gold transition-colors tracking-tight">
+                                        + История
+                                    </span>
+                                </button>
+
+                                {/* Story Avatars with Live Rings */}
+                                {storyGroups.map((group, idx) => {
+                                    const isUnseen = group.isUnseen;
                                     return (
                                         <button
-                                            key={cat.id}
-                                            onClick={() => setActiveCategory(cat.id)}
-                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl transition-all whitespace-nowrap ${activeCategory === cat.id ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                                            key={group.authorId}
+                                            type="button"
+                                            onClick={() => handleOpenStoryGroup(idx)}
+                                            className="flex flex-col items-center gap-1 shrink-0 group relative focus:outline-none"
                                         >
-                                            <Icon size={14} />
-                                            <span className="text-[10px] font-black uppercase tracking-widest leading-none">{cat.label}</span>
+                                            <div className={`w-11 h-11 rounded-2xl p-0.5 flex items-center justify-center transition-all relative group-active:scale-95 ${
+                                                isUnseen
+                                                    ? 'bg-gradient-to-tr from-sparta-gold via-yellow-400 to-amber-500 shadow-[0_0_12px_rgba(255,184,0,0.45)]'
+                                                    : 'bg-white/15 hover:bg-white/30'
+                                            }`}>
+                                                <div className="w-full h-full rounded-[14px] bg-[#121216] flex items-center justify-center overflow-hidden border border-black/40">
+                                                    {group.authorAvatar ? (
+                                                        <img src={group.authorAvatar} alt={group.authorName} className="w-full h-full object-cover" />
+                                                    ) : group.authorRole === 'coach' ? (
+                                                        <Crown size={18} className="text-sparta-gold" />
+                                                    ) : (
+                                                        <Sparkles size={18} className="text-amber-300" />
+                                                    )}
+                                                </div>
+
+                                                {/* Mini role star badge */}
+                                                {group.authorRole === 'coach' && (
+                                                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-gradient-to-r from-sparta-gold to-yellow-500 text-black flex items-center justify-center text-[7px] font-black shadow-md">
+                                                        ★
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <span className="text-[9px] font-semibold text-white/70 group-hover:text-white truncate max-w-[52px] tracking-tight">
+                                                {group.authorName.split(' ')[0]}
+                                            </span>
                                         </button>
                                     );
                                 })}
                             </div>
-                        )}
+
+                            {/* Highlights / Актуальное Sub-bar */}
+                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scrollbar-hide py-1 px-0.5 border-t border-white/5 pt-1.5">
+                                <div className="flex items-center gap-1 shrink-0 pr-1">
+                                    <span className="text-[10px] font-russo uppercase tracking-wider text-sparta-gold flex items-center gap-1">
+                                        <Star size={11} className="fill-sparta-gold text-sparta-gold" />
+                                        <span>Актуальное</span>
+                                    </span>
+                                    {isStaff && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsCreateHighlightOpen(true)}
+                                            className="w-5 h-5 rounded-lg bg-sparta-gold/20 hover:bg-sparta-gold/40 text-sparta-gold flex items-center justify-center transition-all ml-0.5"
+                                            title="Создать альбом актуального"
+                                        >
+                                            <Plus size={12} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {highlights.map((album) => (
+                                    <button
+                                        key={album.id}
+                                        type="button"
+                                        onClick={() => handleOpenHighlight(album)}
+                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-sparta-gold/40 transition-all shrink-0 group focus:outline-none"
+                                    >
+                                        <div className={`w-5 h-5 rounded-lg ${album.coverGradient} flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform`}>
+                                            <Sparta3DReactionIcon emojiKey={album.coverIcon} size={13} />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-white/80 group-hover:text-sparta-gold transition-colors truncate max-w-[110px]">
+                                            {album.title}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Staff Missing Groups Alert */}
+                            {isStaff && missingGroupsForUser.length > 0 && (
+                                <Button
+                                    onClick={handleFixMissingChats}
+                                    disabled={isCreating}
+                                    className="w-full bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[10px] py-3 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 animate-pulse"
+                                >
+                                    <AlertTriangle size={15} /> ЧАТЫ НЕ СОЗДАНЫ ({missingGroupsForUser.length})
+                                </Button>
+                            )}
+                        </div>
+
+                        {/* Categories Horizontal Chip Bar */}
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-hide py-1">
+                            {DYNAMIC_CATEGORIES.map(cat => {
+                                const Icon = cat.icon;
+                                const isSelected = activeCategory === cat.id;
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setActiveCategory(cat.id)}
+                                        className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl transition-all whitespace-nowrap shrink-0 border text-xs font-bold ${
+                                            isSelected
+                                                ? 'bg-sparta-gold text-black border-sparta-gold shadow-md shadow-sparta-gold/25 font-black scale-[1.02]'
+                                                : 'bg-white/5 text-white/60 border-white/10 hover:text-white hover:bg-white/10 hover:border-white/20'
+                                        }`}
+                                    >
+                                        <Icon size={13} className={isSelected ? 'text-black' : 'text-sparta-gold'} />
+                                        <span className="text-[11px] uppercase tracking-wider font-extrabold">{cat.label}</span>
+                                        {cat.count !== undefined && cat.count > 0 && (
+                                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black leading-none transition-colors ${
+                                                isSelected
+                                                    ? 'bg-black text-sparta-gold border border-black/30 shadow-xs'
+                                                    : 'bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30'
+                                            }`}>
+                                                {cat.count}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
 
                         {/* Sub-Categories (Sport Specific) for Admin/Director */}
                         <AnimatePresence mode="wait">
@@ -1095,15 +1854,15 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: 'auto' }}
                                     exit={{ opacity: 0, height: 0 }}
-                                    className="flex flex-col gap-2 mb-2"
+                                    className="flex flex-col gap-2 mb-1"
                                 >
-                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 pl-1">Категории спорта</span>
-                                    <div className="flex gap-2 overflow-x-auto pb-2 px-1 scrollbar-hide no-scrollbar">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 pl-1">Категории спорта</span>
+                                    <div className="flex gap-2 overflow-x-auto pb-1 px-1 scrollbar-hide no-scrollbar">
                                         <button
                                             onClick={() => setActiveSubCategory('all')}
-                                            className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-2 border ${activeSubCategory === 'all'
+                                            className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 border ${activeSubCategory === 'all'
                                                 ? 'bg-white/10 text-white border-white/20 shadow-lg shadow-black/20'
-                                                : 'bg-white/5 text-white/30 border-white/5 hover:border-white/10'}`}
+                                                : 'bg-white/5 text-white/40 border-white/5 hover:border-white/10'}`}
                                         >
                                             <Layers size={12} /> Все ({chats.filter(c => c.type === 'group' || c.type === 'parent').length})
                                         </button>
@@ -1130,11 +1889,11 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                                                 <button
                                                     key={subCat}
                                                     onClick={() => setActiveSubCategory(subCat)}
-                                                    className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-2 border ${activeSubCategory === subCat
+                                                    className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 border ${activeSubCategory === subCat
                                                         ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30 shadow-lg shadow-indigo-500/10'
-                                                        : 'bg-white/5 text-white/30 border-white/5 hover:border-white/10'}`}
+                                                        : 'bg-white/5 text-white/40 border-white/5 hover:border-white/10'}`}
                                                 >
-                                                    <span className="text-sm">{display.icon}</span> {display.label} ({count})
+                                                    <span className="text-xs">{display.icon}</span> {display.label} ({count})
                                                 </button>
                                             );
                                         })}
@@ -1144,26 +1903,43 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                         </AnimatePresence>
 
                         {/* Chat List Scroll Area */}
-                        <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-2 custom-scrollbar">
                             {loading ? (
-                                Array(5).fill(0).map((_, i) => (
+                                Array(4).fill(0).map((_, i) => (
                                     <div key={i} className="h-20 bg-white/5 rounded-2xl animate-pulse" />
                                 ))
                             ) : filteredChats.length === 0 ? (
-                                <div className="py-20 text-center opacity-20">
-                                    <MessageCircle size={48} className="mx-auto mb-4" />
-                                    <p className="text-xs font-black uppercase tracking-widest">Нет активных чатов</p>
+                                <div className="py-14 text-center">
+                                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-3 text-white/30">
+                                        <MessageCircle size={32} />
+                                    </div>
+                                    <p className="text-xs font-bold text-white/60 uppercase tracking-wider mb-1">Диалогов пока нет</p>
+                                    <p className="text-[11px] text-white/30 max-w-[200px] mx-auto">
+                                        {activeCategory === 'friends'
+                                            ? 'Начни диалог с другом через кнопку «Написать» выше'
+                                            : 'Выбери другую категорию или начни диалог'}
+                                    </p>
                                 </div>
                             ) : (
                                 filteredChats.map(chat => {
+                                    const thisIsSaved = chat.type === 'saved' || chat.id === `saved_${user.uid}`;
                                     const otherId = chat.participants?.find((id: string) => id !== user.uid);
 
                                     const liveData = otherId ? participantData[otherId] : null;
-                                    const displayName = chat.type === 'private' && otherId
-                                        ? (liveData?.name || (chat.participantNames ? chat.participantNames[otherId] : chat.name))
-                                        : chat.name;
-                                    const displayAvatar = chat.type === 'private' && otherId
-                                        ? (liveData?.avatarUrl || chat.avatarUrl)
+                                    const isDirect = isDirectChat(chat);
+                                    const thisIsCoach = isCoachChat(chat);
+                                    const thisIsChild = isChildChat(chat);
+                                    const thisIsParentRole = isParentDirectChat(chat);
+                                    const thisIsFriend = isFriendChat(chat);
+                                    const thisIsGroup = isGroupChat(chat);
+
+                                    const displayName = thisIsSaved
+                                        ? '⭐️ Избранное'
+                                        : isDirect && otherId
+                                            ? (liveData?.name || (chat.participantNames ? chat.participantNames[otherId] : null) || (chat.name && !['родитель', 'ребенок', 'чат', 'группа'].includes(chat.name.toLowerCase()) ? chat.name : (isParent ? (userProfile?.childName || 'Ребенок') : (isStudent ? (userProfile?.parentName || 'Родитель') : chat.name))))
+                                            : chat.name;
+                                    const displayAvatar = isDirect && otherId
+                                        ? (liveData?.avatarUrl || (chat.participantAvatars ? chat.participantAvatars[otherId] : chat.avatarUrl))
                                         : chat.avatarUrl;
 
                                     const lastClearedTime = userPrefs[chat.id]?.lastClearedAt?.toMillis?.() ||
@@ -1191,61 +1967,150 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                                         userPrefs[chat.id]?.forceUnread
                                     );
 
+                                    const isSelected = selectedChat?.id === chat.id;
+                                    const isPinned = Boolean(userPrefs[chat.id]?.isPinned);
+
                                     return (
                                         <motion.div
                                             key={chat.id}
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            onClick={() => handleSelectChat(chat)}
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            onClick={() => handleSelectChat(chat, true)}
                                             role="button"
                                             tabIndex={0}
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' || e.key === ' ') {
-                                                    handleSelectChat(chat);
+                                                    handleSelectChat(chat, true);
                                                 }
                                             }}
                                             onContextMenu={(e) => handleContextMenu(e, chat.id)}
                                             onTouchStart={() => handleTouchStart(chat.id)}
                                             onTouchEnd={handleTouchEnd}
-                                            className={`w-full p-4 rounded-2xl border transition-all text-left flex items-start gap-3 group relative overflow-hidden cursor-pointer ${selectedChat?.id === chat.id ? 'bg-sparta-gold border-sparta-gold shadow-xl shadow-sparta-gold/10' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+                                            className={`w-full p-3 rounded-2xl border transition-all text-left flex items-start gap-3 group relative overflow-hidden cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-[#181820] border-sparta-gold/50 shadow-[0_0_25px_rgba(212,175,55,0.15)] ring-1 ring-sparta-gold/40'
+                                                    : isPinned
+                                                        ? 'bg-sparta-gold/[0.04] border-sparta-gold/25 hover:bg-sparta-gold/[0.08] hover:border-sparta-gold/40'
+                                                        : thisIsSaved
+                                                            ? 'bg-sparta-gold/[0.02] border-sparta-gold/15 hover:bg-sparta-gold/[0.06] hover:border-sparta-gold/30'
+                                                            : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.07] hover:border-white/20'
+                                            }`}
                                         >
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-colors ${selectedChat?.id === chat.id ? 'bg-black/20 border-black/20 text-black' : 'bg-white/10 border-white/10 text-sparta-gold'}`}>
-                                                {displayAvatar ? (
-                                                    <img src={displayAvatar} alt="" className="w-full h-full object-cover rounded-xl" />
+                                            {/* Left Golden Neon Indicator for Active Chat */}
+                                            {isSelected && (
+                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-sparta-gold via-yellow-400 to-sparta-gold shadow-[0_0_10px_rgba(255,184,0,0.8)]" />
+                                            )}
+
+                                            {/* Avatar with Status & Role Ring */}
+                                            <div className="relative shrink-0">
+                                                {thisIsSaved ? (
+                                                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-sparta-gold to-yellow-600 flex items-center justify-center text-black shadow-md shadow-sparta-gold/20">
+                                                        <Bookmark size={20} className="fill-black" />
+                                                    </div>
                                                 ) : (
-                                                    chat.type === 'staff' ? <Shield size={20} /> : (chat.type === 'private' ? <User size={20} /> : <Users size={20} />)
+                                                    <SpartaAvatar
+                                                        src={displayAvatar}
+                                                        name={displayName}
+                                                        isGroup={thisIsGroup}
+                                                        isCoach={thisIsCoach}
+                                                        isAdmin={chat.type === 'channel' || displayName.toLowerCase().includes('администрация')}
+                                                        size="md"
+                                                        className={isSelected ? 'ring-2 ring-sparta-gold/60' : ''}
+                                                    />
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0 pr-4">
-                                                <div className="flex items-center justify-between mb-0.5">
+
+                                            <div className="flex-1 min-w-0 pr-1">
+                                                <div className="flex items-center justify-between mb-1">
                                                     <div className="flex items-center gap-1.5 min-w-0">
-                                                        <h4 className={`text-sm font-bold truncate ${selectedChat?.id === chat.id ? 'text-black' : 'text-white'}`}>
+                                                        <h4 className="text-sm font-bold truncate text-white">
                                                             {displayName}
                                                         </h4>
-                                                        {chat.type === 'parent' && chat.studentName && (
-                                                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${selectedChat?.id === chat.id ? 'bg-black/10 text-black/70' : 'bg-white/10 text-white/40'}`}>
-                                                                Родитель: {chat.studentName}
-                                                            </span>
-                                                        )}
-                                                        {userPrefs[chat.id]?.isPinned && <Pin size={10} className={selectedChat?.id === chat.id ? 'text-black/40' : 'text-sparta-gold'} />}
-                                                        {userPrefs[chat.id]?.isMuted && <BellOff size={10} className={selectedChat?.id === chat.id ? 'text-black/40' : 'text-white/20'} />}
-                                                        {/* Unread Indicator */}
-                                                        {isUnread && (
-                                                            <div className="w-2 h-2 rounded-full bg-sparta-gold shadow-[0_0_8px_rgba(255,184,0,0.6)] shrink-0" />
-                                                        )}
+                                                        {isPinned && <Pin size={11} className="text-sparta-gold shrink-0 fill-sparta-gold/30" />}
+                                                        {userPrefs[chat.id]?.isMuted && <BellOff size={11} className="text-white/30 shrink-0" />}
                                                     </div>
-                                                    <span className={`text-[9px] font-bold ${selectedChat?.id === chat.id ? 'text-black/60' : 'text-white/20'}`}>
+                                                    <span className="text-[10px] font-bold shrink-0 ml-1 text-white/40">
                                                         {previewTime}
                                                     </span>
                                                 </div>
-                                                <p className={`text-[11px] truncate italic ${selectedChat?.id === chat.id ? 'text-black/60' : 'text-white/40'}`}>
-                                                    {previewText}
-                                                </p>
+
+                                                {/* Role / Context Badge */}
+                                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                                    {thisIsSaved && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30">
+                                                            ⭐️ Заметки и файлы
+                                                        </span>
+                                                    )}
+                                                    {thisIsCoach && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-1 bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30">
+                                                            <Crown size={9} /> Тренер
+                                                        </span>
+                                                    )}
+                                                    {isDirect && isParent && thisIsChild && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                                                            <Baby size={9} /> Спортсмен
+                                                        </span>
+                                                    )}
+                                                    {isDirect && isStudent && thisIsParentRole && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                                            <Users size={9} /> Родитель
+                                                        </span>
+                                                    )}
+                                                    {isDirect && isTrainer && thisIsParentRole && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                                            <Users size={9} /> Родитель
+                                                        </span>
+                                                    )}
+                                                    {isDirect && isTrainer && thisIsChild && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                                                            <Baby size={9} /> Ученик
+                                                        </span>
+                                                    )}
+                                                    {thisIsFriend && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                                            🤝 Друг
+                                                        </span>
+                                                    )}
+                                                    {thisIsGroup && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                                            ⚽ Команда
+                                                        </span>
+                                                    )}
+                                                    {chat.type === 'parent' && chat.studentName && (
+                                                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                                            👨‍👩‍👧 Ребёнок: {chat.studentName}
+                                                        </span>
+                                                    )}
+                                                    {chat.type === 'staff' && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                                                            🛡️ Персонал
+                                                        </span>
+                                                    )}
+                                                    {isUnread && (
+                                                        <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-sparta-gold to-yellow-500 text-black text-[9px] font-black shadow-[0_0_8px_rgba(255,184,0,0.8)] animate-pulse shrink-0 ml-auto leading-none">
+                                                            НОВОЕ
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {typingMap[chat.id]?.length > 0 ? (
+                                                    <p className="text-[11px] truncate leading-relaxed text-emerald-400 font-bold flex items-center gap-1.5 animate-pulse">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                                        <span>{typingMap[chat.id][0]} печатает...</span>
+                                                    </p>
+                                                ) : (
+                                                    <p className={`text-[11px] truncate italic leading-relaxed ${
+                                                        isSelected ? 'text-white/75 font-medium' : 'text-white/45 group-hover:text-white/65'
+                                                    }`}>
+                                                        {previewText}
+                                                    </p>
+                                                )}
                                             </div>
+
                                             {isStaff && (
                                                 <button
                                                     onClick={(e) => handleDeleteChat(chat.id, e)}
-                                                    className={`absolute -right-10 group-hover:right-3 p-2 rounded-lg transition-all ${selectedChat?.id === chat.id ? 'text-black hover:bg-black/10' : 'text-red-500/40 hover:text-red-50'}`}
+                                                    className="absolute -right-10 group-hover:right-2 p-2 rounded-lg transition-all text-red-500/40 hover:text-red-500 hover:bg-red-500/10"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -1266,38 +2131,125 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
-                        className={`flex-1 min-h-[400px] h-full w-full ${!isMobileDetailVisible ? 'hidden md:flex' : 'flex'}`}
+                        className={`flex-1 h-full min-h-0 min-w-0 w-full ${!isMobileDetailVisible ? 'hidden md:flex flex-col' : 'flex flex-col'}`}
                     >
                         {selectedChat ? (
-                            <div className="w-full h-full animate-in fade-in zoom-in-95 duration-300">
-                                {/* We will update GroupChat to accept a chatId and work with the new unified structure */}
+                            <div className="w-full h-full flex flex-col min-h-0 min-w-0 animate-in fade-in zoom-in-95 duration-300">
                                 <GroupChat
                                     key={selectedChat.id}
                                     user={user}
                                     userProfile={userProfile}
                                     groupId={selectedChat.groupId || selectedChat.id}
                                     groupName={
-                                        selectedChat.type === 'private' && selectedChat.participantNames
-                                            ? selectedChat.participantNames[selectedChat.participants?.find((id: string) => id !== user.uid) || ''] || selectedChat.name
+                                        isDirectChat(selectedChat)
+                                            ? (() => {
+                                                const otherId = selectedChat.participants?.find((id: string) => id !== user.uid);
+                                                const liveData = otherId ? participantData[otherId] : null;
+                                                return liveData?.name || (otherId && selectedChat.participantNames ? selectedChat.participantNames[otherId] : null) || (selectedChat.name && !['родитель', 'ребенок', 'чат', 'группа'].includes(selectedChat.name.toLowerCase()) ? selectedChat.name : (isParent ? (userProfile?.childName || 'Ребенок') : (isStudent ? (userProfile?.parentName || 'Родитель') : selectedChat.name)));
+                                            })()
                                             : selectedChat.name
                                     }
                                     isUnifiedChat={true}
                                     chatId={selectedChat.id}
-                                    onSelectChat={handleSelectChat}
+                                    onSelectChat={(chat) => handleSelectChat(chat, true)}
                                     onStartPrivateChat={handleStartPrivateChat}
                                     onBack={() => setIsMobileDetailVisible(false)}
                                 />
                             </div>
                         ) : (
-                            <div className="w-full h-full bg-white/5 border border-white/5 rounded-[40px] flex flex-col items-center justify-center text-center p-12 opacity-60">
-                                <div className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-sparta-gold/20 to-transparent border border-white/10 flex items-center justify-center mb-8 animate-bounce transition-all duration-1000">
-                                    <MessageCircle size={48} className="text-sparta-gold" />
+                            <div className="w-full h-full bg-gradient-to-b from-[#111116] to-[#0a0a0d] border border-white/10 rounded-[32px] flex flex-col items-center justify-center text-center p-8 lg:p-12 relative overflow-hidden shadow-2xl">
+                                {/* Decorative Glow */}
+                                <div className="absolute -top-24 -right-24 w-72 h-72 bg-sparta-gold/10 rounded-full blur-[100px] pointer-events-none" />
+                                <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-amber-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+                                <div className="relative z-10 max-w-xl mx-auto flex flex-col items-center">
+                                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-sparta-gold/20 to-yellow-600/10 border border-sparta-gold/30 flex items-center justify-center mb-6 shadow-xl shadow-sparta-gold/10">
+                                        <MessageSquare size={36} className="text-sparta-gold" />
+                                    </div>
+
+                                    <h3 className="text-2xl lg:text-3xl font-russo text-white uppercase mb-2 tracking-tight">
+                                        Центр Общения Спарты
+                                    </h3>
+                                    <p className="text-white/50 text-xs lg:text-sm font-medium leading-relaxed mb-8 max-w-md">
+                                        Выбирай диалог слева или переходи сразу в нужный чат одним нажатием:
+                                    </p>
+
+                                    {/* 3 Quick Action Cards */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full text-left">
+                                        {/* 1. Group Team Chat */}
+                                        {(() => {
+                                            const groupChat = chats.find(isGroupChat);
+                                            return (
+                                                <button
+                                                    onClick={() => {
+                                                        if (groupChat) handleSelectChat(groupChat, true);
+                                                        else setActiveCategory('groups');
+                                                    }}
+                                                    className="p-5 rounded-2xl bg-white/5 hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/30 transition-all group flex flex-col justify-between"
+                                                >
+                                                    <div>
+                                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                                            <Users size={20} />
+                                                        </div>
+                                                        <h4 className="text-sm font-bold text-white uppercase mb-1">Чат Команды</h4>
+                                                        <p className="text-[11px] text-white/40 leading-snug">
+                                                            {groupChat ? groupChat.name : 'Групповой чат секции и расписание'}
+                                                        </p>
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 mt-4 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                                        Открыть →
+                                                    </span>
+                                                </button>
+                                            );
+                                        })()}
+
+                                        {/* 2. Coach Chat */}
+                                        {(() => {
+                                            const coachChat = chats.find(isCoachChat);
+                                            return (
+                                                <button
+                                                    onClick={() => {
+                                                        if (coachChat) handleSelectChat(coachChat, true);
+                                                        else setActiveCategory('coach');
+                                                    }}
+                                                    className="p-5 rounded-2xl bg-white/5 hover:bg-sparta-gold/10 border border-white/10 hover:border-sparta-gold/30 transition-all group flex flex-col justify-between"
+                                                >
+                                                    <div>
+                                                        <div className="w-10 h-10 rounded-xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                                            <Shield size={20} />
+                                                        </div>
+                                                        <h4 className="text-sm font-bold text-white uppercase mb-1">Чат с Тренером</h4>
+                                                        <p className="text-[11px] text-white/40 leading-snug">
+                                                            Персональные советы, вопросы и разбор техники
+                                                        </p>
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-sparta-gold mt-4 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                                        Написать →
+                                                    </span>
+                                                </button>
+                                            );
+                                        })()}
+
+                                        {/* 3. Friends Chat */}
+                                        <button
+                                            onClick={() => setIsFriendPickerOpen(true)}
+                                            className="p-5 rounded-2xl bg-white/5 hover:bg-purple-500/10 border border-white/10 hover:border-purple-500/30 transition-all group flex flex-col justify-between"
+                                        >
+                                            <div>
+                                                <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                                    <Heart size={20} />
+                                                </div>
+                                                <h4 className="text-sm font-bold text-white uppercase mb-1">Диалоги с Друзьями</h4>
+                                                <p className="text-[11px] text-white/40 leading-snug">
+                                                    {friends.length > 0 ? `${friends.length} друзей в сети` : 'Общение с одноклубниками'}
+                                                </p>
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-purple-400 mt-4 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                                Выбрать друга →
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <h3 className="text-2xl font-russo text-white uppercase mb-4 tracking-tight">Выберите диалог</h3>
-                                <p className="text-white/40 text-sm max-w-sm font-medium leading-relaxed uppercase tracking-tighter">
-                                    Здесь вы можете общаться с тренерами, родителями и другими участниками Sparta Sports Center.
-                                    Выберите чат в списке слева, чтобы начать общение.
-                                </p>
                             </div>
                         )}
                     </motion.div>
@@ -1667,64 +2619,313 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                 )}
             </AnimatePresence>
 
-            {/* Chat Context Menu */}
+            {/* Student Friend Picker Modal */}
             <AnimatePresence>
-                {contextMenu && (
-                    <>
-                        <div
-                            className="fixed inset-0 z-[120]"
-                            onClick={() => setContextMenu(null)}
-                            onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
+                {isFriendPickerOpen && (
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsFriendPickerOpen(false)}
+                            className="absolute inset-0 bg-black/85 backdrop-blur-md"
                         />
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            style={{
-                                position: 'fixed',
-                                left: Math.min(contextMenu.x, window.innerWidth - 220),
-                                top: Math.min(contextMenu.y, window.innerHeight - 350),
-                            }}
-                            className="z-[130] w-52 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden py-1.5"
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#111116] border border-white/15 rounded-[32px] overflow-hidden shadow-2xl z-10 font-manrope"
                         >
-                            <ContextMenuItem
-                                icon={userPrefs[contextMenu.chatId!]?.isPinned ? PinOff : Pin}
-                                label={userPrefs[contextMenu.chatId!]?.isPinned ? "Открепить" : "Закрепить"}
-                                onClick={() => togglePin(contextMenu.chatId!)}
-                            />
-                            <ContextMenuItem
-                                icon={userPrefs[contextMenu.chatId!]?.isMuted ? Bell : BellOff}
-                                label={userPrefs[contextMenu.chatId!]?.isMuted ? "Включить уведомления" : "Отключить уведомления"}
-                                onClick={() => toggleMute(contextMenu.chatId!)}
-                            />
-                            <ContextMenuItem
-                                icon={userPrefs[contextMenu.chatId!]?.forceUnread ? Eye : EyeOff}
-                                label={userPrefs[contextMenu.chatId!]?.forceUnread ? "Прочитано" : "Как непрочитанное"}
-                                onClick={() => toggleReadStatus(contextMenu.chatId!)}
-                            />
-                            <div className="h-px bg-white/5 my-1.5 mx-3" />
-                            <ContextMenuItem
-                                icon={ExternalLink}
-                                label="В отдельном окне"
-                                onClick={() => openInNewWindow(contextMenu.chatId!)}
-                            />
-                            <ContextMenuItem
-                                icon={History}
-                                label="Очистить историю"
-                                onClick={() => contextMenu?.chatId && clearHistory(contextMenu.chatId)}
-                            />
-                            {isStaff && (
-                                <ContextMenuItem
-                                    icon={Trash2}
-                                    label="Удалить чат"
-                                    danger
-                                    onClick={() => contextMenu?.chatId && handleDeleteChat(contextMenu.chatId, { stopPropagation: () => { } } as any)}
-                                />
-                            )}
+                            {/* Header */}
+                            <div className="p-6 pb-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                                        <Heart size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-russo text-white uppercase">Написать другу</h3>
+                                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                                            Твои друзья из Sparta Community ({friends.length})
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsFriendPickerOpen(false)}
+                                    className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-3">
+                                {friends.length === 0 ? (
+                                    <div className="py-10 px-6 text-center bg-white/5 rounded-2xl border border-white/5">
+                                        <Users size={36} className="text-white/20 mx-auto mb-3" />
+                                        <h4 className="text-white font-bold text-sm mb-1">Пока нет добавленных друзей</h4>
+                                        <p className="text-white/40 text-xs leading-relaxed mb-4">
+                                            Найди друзей и одноклубников в разделе «Sparta Community», чтобы общаться и делиться спортивными успехами!
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                setIsFriendPickerOpen(false);
+                                                if (onTabChange) {
+                                                    onTabChange('friends');
+                                                } else {
+                                                    window.dispatchEvent(new CustomEvent('sparta_navigate_tab', { detail: { tab: 'friends' } }));
+                                                }
+                                            }}
+                                            className="px-4 py-2.5 rounded-xl bg-sparta-gold text-black font-russo text-xs uppercase tracking-wider hover:bg-yellow-400 transition-all shadow-lg shadow-sparta-gold/20 cursor-pointer"
+                                        >
+                                            🚀 Перейти к поиску друзей
+                                        </button>
+                                    </div>
+                                ) : (
+                                    friends.map(friend => {
+                                        const friendName = friend.childName || friend.displayName || friend.full_name || friend.name || friend.email || 'Друг';
+                                        const friendAvatar = friend.photoURL || friend.avatarUrl || '';
+                                        const friendGroup = friend.group || friend.groupName || friend.sport || 'Спарта';
+
+                                        return (
+                                            <div
+                                                key={friend.id}
+                                                className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all flex items-center justify-between gap-3"
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-11 h-11 rounded-xl bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center text-sparta-gold font-bold shrink-0">
+                                                        {friendAvatar ? (
+                                                            <img src={friendAvatar} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            friendName.charAt(0).toUpperCase()
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h5 className="text-sm font-bold text-white truncate">{friendName}</h5>
+                                                        <p className="text-[11px] text-white/40 truncate">{friendGroup}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        setIsFriendPickerOpen(false);
+                                                        handleStartPrivateChat(friend.id, friendName);
+                                                    }}
+                                                    className="px-4 py-2 rounded-xl bg-sparta-gold/20 hover:bg-sparta-gold text-sparta-gold hover:text-black border border-sparta-gold/40 text-xs font-bold transition-all shrink-0 flex items-center gap-1.5"
+                                                >
+                                                    <MessageSquare size={14} /> Написать
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
                         </motion.div>
-                    </>
+                    </div>
                 )}
             </AnimatePresence>
+
+            {/* Role-Adaptive Chat Context Menu */}
+            <AnimatePresence>
+                {contextMenu && (() => {
+                    const activeChat = chats.find(c => c.id === contextMenu.chatId);
+                    if (!activeChat) return null;
+
+                    const isTargetSaved = activeChat.type === 'saved' || activeChat.id === `saved_${user.uid}` || activeChat.id?.startsWith('saved_');
+                    const isTargetDirect = isDirectChat(activeChat);
+                    const isTargetGroup = isGroupChat(activeChat);
+                    const otherId = activeChat.participants?.find((id: string) => id !== user.uid);
+                    const liveOther = otherId ? participantData[otherId] : null;
+                    const isTargetCoach = isCoachChat(activeChat);
+                    const isTargetChild = isChildChat(activeChat);
+                    const isTargetParent = isParentDirectChat(activeChat);
+
+                    const menuTitle = isTargetSaved
+                        ? '⭐️ Избранное'
+                        : isTargetDirect && otherId
+                            ? (liveOther?.name || (activeChat.participantNames ? activeChat.participantNames[otherId] : null) || (activeChat.name && !['родитель', 'ребенок', 'чат', 'группа'].includes(activeChat.name.toLowerCase()) ? activeChat.name : (isParent ? (userProfile?.childName || 'Ребенок') : (isStudent ? (userProfile?.parentName || 'Родитель') : activeChat.name))))
+                            : activeChat.name || 'Чат';
+
+                    const menuBadge = isTargetSaved
+                        ? { label: '⭐️ Избранное', cls: 'bg-sparta-gold/20 text-sparta-gold border-sparta-gold/30' }
+                        : isTargetCoach
+                            ? { label: '👑 Тренер', cls: 'bg-sparta-gold/20 text-sparta-gold border-sparta-gold/30' }
+                            : isTargetDirect && isParent && isTargetChild
+                                ? { label: '👶 Спортсмен', cls: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' }
+                                : isTargetDirect && isStudent && isTargetParent
+                                    ? { label: '👨‍👩‍👧 Родитель', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30' }
+                                    : isTargetDirect && isTrainer && isTargetParent
+                                        ? { label: '👨‍👩‍👧 Родитель', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30' }
+                                        : isTargetDirect && isTrainer && isTargetChild
+                                            ? { label: '👶 Ученик', cls: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' }
+                                            : isTargetDirect
+                                                ? { label: '🤝 Друг', cls: 'bg-purple-500/20 text-purple-300 border-purple-500/30' }
+                                                : { label: '⚽ Команда', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
+
+                    const canClearHistory = isTargetSaved || isTargetDirect || (isTargetGroup && (isAdmin || isTrainer || isDirector));
+                    const canDeleteChat = isStaff || isAdmin || (isTrainer && (isTargetDirect || isTargetGroup));
+
+                    return (
+                        <>
+                            <div
+                                className="fixed inset-0 z-[120]"
+                                onClick={() => setContextMenu(null)}
+                                onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                                style={{
+                                    position: 'fixed',
+                                    left: Math.min(contextMenu.x, window.innerWidth - 240),
+                                    top: Math.min(contextMenu.y, window.innerHeight - 380),
+                                }}
+                                className="z-[130] w-60 bg-[#16161c]/95 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl overflow-hidden py-1.5 ring-1 ring-white/5"
+                            >
+                                {/* Context Header with Chat Preview & Role Badge */}
+                                <div className="px-3.5 py-2.5 border-b border-white/10 bg-white/[0.02]">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <p className="text-xs font-black text-white truncate max-w-[130px]">
+                                            {menuTitle}
+                                        </p>
+                                        <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${menuBadge.cls}`}>
+                                            {menuBadge.label}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* General Actions */}
+                                <div className="py-1">
+                                    <ContextMenuItem
+                                        icon={userPrefs[contextMenu.chatId!]?.isPinned ? PinOff : Pin}
+                                        label={userPrefs[contextMenu.chatId!]?.isPinned ? "Открепить" : "Закрепить"}
+                                        onClick={() => togglePin(contextMenu.chatId!)}
+                                    />
+                                    {!isTargetSaved && (
+                                        <ContextMenuItem
+                                            icon={userPrefs[contextMenu.chatId!]?.isMuted ? Bell : BellOff}
+                                            label={userPrefs[contextMenu.chatId!]?.isMuted ? "Включить звук" : "Без звука"}
+                                            onClick={() => toggleMute(contextMenu.chatId!)}
+                                        />
+                                    )}
+                                    <ContextMenuItem
+                                        icon={userPrefs[contextMenu.chatId!]?.forceUnread ? Eye : EyeOff}
+                                        label={userPrefs[contextMenu.chatId!]?.forceUnread ? "Прочитано" : "Как непрочитанное"}
+                                        onClick={() => toggleReadStatus(contextMenu.chatId!)}
+                                    />
+                                    <ContextMenuItem
+                                        icon={ExternalLink}
+                                        label="В отдельном окне"
+                                        onClick={() => openInNewWindow(contextMenu.chatId!)}
+                                    />
+                                </div>
+
+                                {isTargetDirect && (
+                                    <>
+                                        <div className="h-px bg-white/10 my-1 mx-3" />
+                                        <div className="py-1">
+                                            <ContextMenuItem
+                                                icon={User}
+                                                label={isParent && isTargetChild ? "Карточка спортсмена" : "Профиль собеседника"}
+                                                onClick={() => {
+                                                    handleSelectChat(activeChat, true);
+                                                    setContextMenu(null);
+                                                }}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {canClearHistory && (
+                                    <>
+                                        <div className="h-px bg-white/10 my-1 mx-3" />
+                                        <div className="py-1">
+                                            <ContextMenuItem
+                                                icon={History}
+                                                label={isTargetSaved ? "Очистить заметки" : (isTargetGroup ? "Очистить историю группы" : "Очистить историю")}
+                                                onClick={() => contextMenu?.chatId && clearHistory(contextMenu.chatId)}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {canDeleteChat && (
+                                    <>
+                                        <div className="h-px bg-white/10 my-1 mx-3" />
+                                        <div className="py-1">
+                                            <ContextMenuItem
+                                                icon={Trash2}
+                                                label={isTargetGroup ? "Удалить группу" : "Удалить чат"}
+                                                danger
+                                                onClick={() => contextMenu?.chatId && handleDeleteChat(contextMenu.chatId, { stopPropagation: () => { } } as any)}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+                            </motion.div>
+                        </>
+                    );
+                })()}
+            </AnimatePresence>
+
+            {/* Sparta Stories Interactive Viewer */}
+            <SpartaStoriesViewer
+                isOpen={isStoriesViewerOpen}
+                initialGroupIndex={selectedStoryGroupIndex}
+                storyGroups={storyGroups}
+                currentUserId={user?.uid}
+                currentUserProfile={userProfile}
+                chats={chats}
+                onClose={() => setIsStoriesViewerOpen(false)}
+                onReplyToChat={handleStoryReply}
+                onForwardStoryToChat={handleForwardStoryToChat}
+                onDeleteStory={handleDeleteStory}
+            />
+
+            {/* Sparta Create Story Modal */}
+            <SpartaCreateStoryModal
+                isOpen={isCreateStoryOpen}
+                onClose={() => setIsCreateStoryOpen(false)}
+                user={user}
+                userProfile={userProfile}
+                onStoryCreated={() => {
+                    // Refetch or let optimistic update show
+                }}
+            />
+
+            {/* Sparta Moderation & Safety Modal (For Staff) */}
+            <SpartaModerationModal
+                isOpen={isModerationModalOpen}
+                onClose={() => setIsModerationModalOpen(false)}
+                currentUserId={user?.uid}
+                currentUserProfile={userProfile}
+            />
+
+            {/* Sparta Create Highlights Modal (For Staff/Coach) */}
+            <SpartaHighlightsModal
+                isOpen={isCreateHighlightOpen}
+                onClose={() => setIsCreateHighlightOpen(false)}
+                user={user}
+                userProfile={userProfile}
+                availableStories={storyGroups.flatMap(g => g.slides)}
+            />
+
+            {/* Sparta Highlight Album Viewer */}
+            {activeHighlightGroup && (
+                <SpartaStoriesViewer
+                    isOpen={!!activeHighlightGroup}
+                    initialGroupIndex={0}
+                    storyGroups={[activeHighlightGroup]}
+                    currentUserId={user?.uid}
+                    currentUserProfile={userProfile}
+                    chats={chats}
+                    onClose={() => setActiveHighlightGroup(null)}
+                    onReplyToChat={handleStoryReply}
+                    onForwardStoryToChat={handleForwardStoryToChat}
+                    onDeleteStory={(storyId) => {
+                        setActiveHighlightGroup(null);
+                    }}
+                />
+            )}
         </div>
     );
 };
