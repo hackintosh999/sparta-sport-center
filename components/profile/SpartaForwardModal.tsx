@@ -1,21 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
     X,
     Search,
     Bookmark,
     Heart,
-    Users,
     User,
     Dumbbell,
-    Shield,
     Check,
     Send,
     Loader2,
-    Sparkles,
-    Baby,
-    Crown,
-    MessageCircle
+    Baby
 } from 'lucide-react';
 import { db } from '../../firebase';
 import {
@@ -29,6 +23,7 @@ import {
     getDocs,
     limit
 } from 'firebase/firestore';
+import { BaseModal } from '../ui/BaseModal';
 
 export interface ForwardTarget {
     id: string;
@@ -274,7 +269,7 @@ export const SpartaForwardModal: React.FC<SpartaForwardModalProps> = ({
 
                         await addDoc(collection(db, 'chats', savedChatId, 'messages'), forwardData);
                     } else if (target.type === 'parent' || target.type === 'child' || targetUserId) {
-                        // 2. Direct 1-on-1 chat (Friend, Parent, Child, Coach)
+                        // 2. Direct 1-on-1 chat
                         const chatId = targetUserId
                             ? [currentUser.uid, targetUserId].sort().join('_')
                             : (target.type === 'parent' ? `family_${currentUser.uid}_parent` : `family_${currentUser.uid}_child`);
@@ -335,201 +330,199 @@ export const SpartaForwardModal: React.FC<SpartaForwardModalProps> = ({
         }
     };
 
-    if (!isOpen) return null;
-
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[400] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-xl">
-                <motion.div
-                    initial={{ scale: 0.94, opacity: 0, y: 10 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.94, opacity: 0, y: 10 }}
-                    className="bg-[#111116] border border-white/15 rounded-[28px] sm:rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {/* Header */}
-                    <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
-                        <div>
-                            <h3 className="text-base sm:text-lg font-black font-russo uppercase tracking-wider text-white flex items-center gap-2">
-                                <span>Переслать</span>
-                                <span className="text-sparta-gold text-xs px-2 py-0.5 rounded-full bg-sparta-gold/10 border border-sparta-gold/20">
-                                    {messagesToForward.length} {messagesToForward.length === 1 ? 'сообщение' : 'сообщения'}
-                                </span>
-                            </h3>
-                            <p className="text-[11px] text-white/50 font-medium mt-0.5">
-                                Выберите друга, родителя или группу
-                            </p>
-                        </div>
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-md"
+            showCloseButton={false}
+            noPadding
+            glowColor="amber"
+            zIndex="z-[400]"
+        >
+            <div className="bg-[#111116] rounded-2xl w-full overflow-hidden flex flex-col max-h-[85vh]">
+                {/* Header */}
+                <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-base sm:text-lg font-black font-russo uppercase tracking-wider text-white flex items-center gap-2">
+                            <span>Переслать</span>
+                            <span className="text-sparta-gold text-xs px-2 py-0.5 rounded-full bg-sparta-gold/10 border border-sparta-gold/20">
+                                {messagesToForward.length} {messagesToForward.length === 1 ? 'сообщение' : 'сообщения'}
+                            </span>
+                        </h3>
+                        <p className="text-[11px] text-white/50 font-medium mt-0.5">
+                            Выберите друга, родителя или группу
+                        </p>
+                    </div>
 
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Закрыть"
+                        className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                {/* Search Bar */}
+                <div className="p-3 sm:px-5 sm:pt-4">
+                    <div className="relative">
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Поиск получателя..."
+                            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs sm:text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-sparta-gold/60 transition-colors"
+                        />
+                    </div>
+                </div>
+
+                {/* Quick Category Filter Pills */}
+                <div className="px-3 sm:px-5 pb-3 flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
+                    {[
+                        { id: 'all', label: 'Все' },
+                        { id: 'saved', label: '⭐️ Избранное' },
+                        { id: 'family', label: '👨‍👩‍👧 Семья' },
+                        { id: 'friends', label: '⚽ Друзья' },
+                        { id: 'groups', label: '👥 Группы' }
+                    ].map(tab => (
                         <button
+                            key={tab.id}
                             type="button"
-                            onClick={onClose}
-                            className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
-                        >
-                            <X size={18} />
-                        </button>
-                    </div>
-
-                    {/* Search Bar */}
-                    <div className="p-3 sm:px-5 sm:pt-4">
-                        <div className="relative">
-                            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Поиск получателя..."
-                                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs sm:text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-sparta-gold/60 transition-colors"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Quick Category Filter Pills */}
-                    <div className="px-3 sm:px-5 pb-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                        {[
-                            { id: 'all', label: 'Все' },
-                            { id: 'saved', label: '⭐️ Избранное' },
-                            { id: 'family', label: '👨‍👩‍👧 Семья' },
-                            { id: 'friends', label: '⚽ Друзья' },
-                            { id: 'groups', label: '👥 Группы' }
-                        ].map(tab => (
-                            <button
-                                key={tab.id}
-                                type="button"
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider shrink-0 transition-all ${
-                                    activeTab === tab.id
-                                        ? 'bg-sparta-gold text-black shadow-md shadow-sparta-gold/20'
-                                        : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
-                                }`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Target List */}
-                    <div className="flex-1 overflow-y-auto px-3 sm:px-5 space-y-2 custom-scrollbar min-h-[220px]">
-                        {filteredTargets.map(target => {
-                            const isSelected = selectedTargetIds.includes(target.id);
-
-                            // Choose icon / badge based on type
-                            const getTargetIcon = () => {
-                                if (target.type === 'saved') {
-                                    return (
-                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400/20 to-sparta-gold/30 border border-sparta-gold/40 flex items-center justify-center text-sparta-gold">
-                                            <Bookmark size={18} />
-                                        </div>
-                                    );
-                                }
-                                if (target.type === 'parent') {
-                                    return (
-                                        <div className="w-9 h-9 rounded-xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400">
-                                            <Heart size={18} />
-                                        </div>
-                                    );
-                                }
-                                if (target.type === 'child') {
-                                    return (
-                                        <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
-                                            <Baby size={18} />
-                                        </div>
-                                    );
-                                }
-                                if (target.type === 'coach') {
-                                    return (
-                                        <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                                            <Dumbbell size={18} />
-                                        </div>
-                                    );
-                                }
-                                if (target.avatar) {
-                                    return (
-                                        <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 overflow-hidden shrink-0">
-                                            <img src={target.avatar} alt="" className="w-full h-full object-cover" />
-                                        </div>
-                                    );
-                                }
-                                return (
-                                    <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50">
-                                        <User size={18} />
-                                    </div>
-                                );
-                            };
-
-                            return (
-                                <button
-                                    key={target.id}
-                                    type="button"
-                                    onClick={() => toggleTarget(target.id)}
-                                    className={`w-full p-2.5 sm:p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left ${
-                                        isSelected
-                                            ? 'bg-sparta-gold/15 border-sparta-gold/60 text-white shadow-lg shadow-sparta-gold/10'
-                                            : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/10 text-white/90'
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        {getTargetIcon()}
-                                        <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm font-bold text-white truncate">
-                                                {target.name}
-                                            </p>
-                                            <p className="text-[10px] text-white/50 truncate font-medium">
-                                                {target.subtitle}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div
-                                        className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
-                                            isSelected
-                                                ? 'bg-sparta-gold border-sparta-gold text-black'
-                                                : 'border-white/20 bg-white/5'
-                                        }`}
-                                    >
-                                        {isSelected && <Check size={13} strokeWidth={3} />}
-                                    </div>
-                                </button>
-                            );
-                        })}
-
-                        {filteredTargets.length === 0 && (
-                            <div className="text-center py-10 text-white/40 text-xs">
-                                Ничего не найдено по запросу
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Bottom Action Button */}
-                    <div className="p-3 sm:p-5 border-t border-white/10 bg-black/40">
-                        <button
-                            type="button"
-                            disabled={selectedTargetIds.length === 0 || isSending}
-                            onClick={handleSendForward}
-                            className={`w-full py-3.5 rounded-2xl font-black font-russo uppercase tracking-wider text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
-                                selectedTargetIds.length > 0
-                                    ? 'bg-sparta-gold hover:bg-yellow-400 text-black shadow-lg shadow-sparta-gold/20 active:scale-[0.98]'
-                                    : 'bg-white/5 text-white/30 cursor-not-allowed border border-white/5'
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider shrink-0 transition-all cursor-pointer ${
+                                activeTab === tab.id
+                                    ? 'bg-sparta-gold text-black shadow-md shadow-sparta-gold/20'
+                                    : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
                             }`}
                         >
-                            {isSending ? (
-                                <>
-                                    <Loader2 size={16} className="animate-spin" />
-                                    <span>Отправка...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Send size={16} />
-                                    <span>
-                                        Переслать {selectedTargetIds.length > 0 ? `(${selectedTargetIds.length})` : ''}
-                                    </span>
-                                </>
-                            )}
+                            {tab.label}
                         </button>
-                    </div>
-                </motion.div>
+                    ))}
+                </div>
+
+                {/* Target List */}
+                <div className="flex-1 overflow-y-auto px-3 sm:px-5 space-y-2 custom-scrollbar min-h-[220px]">
+                    {filteredTargets.map(target => {
+                        const isSelected = selectedTargetIds.includes(target.id);
+
+                        const getTargetIcon = () => {
+                            if (target.type === 'saved') {
+                                return (
+                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400/20 to-sparta-gold/30 border border-sparta-gold/40 flex items-center justify-center text-sparta-gold">
+                                        <Bookmark size={18} />
+                                    </div>
+                                );
+                            }
+                            if (target.type === 'parent') {
+                                return (
+                                    <div className="w-9 h-9 rounded-xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400">
+                                        <Heart size={18} />
+                                    </div>
+                                );
+                            }
+                            if (target.type === 'child') {
+                                return (
+                                    <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                                        <Baby size={18} />
+                                    </div>
+                                );
+                            }
+                            if (target.type === 'coach') {
+                                return (
+                                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                                        <Dumbbell size={18} />
+                                    </div>
+                                );
+                            }
+                            if (target.avatar) {
+                                return (
+                                    <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 overflow-hidden shrink-0">
+                                        <img src={target.avatar} alt="" className="w-full h-full object-cover" />
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50">
+                                    <User size={18} />
+                                </div>
+                            );
+                        };
+
+                        return (
+                            <button
+                                key={target.id}
+                                type="button"
+                                onClick={() => toggleTarget(target.id)}
+                                className={`w-full p-2.5 sm:p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer ${
+                                    isSelected
+                                        ? 'bg-sparta-gold/15 border-sparta-gold/60 text-white shadow-lg shadow-sparta-gold/10'
+                                        : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/10 text-white/90'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3 min-w-0">
+                                    {getTargetIcon()}
+                                    <div className="min-w-0">
+                                        <p className="text-xs sm:text-sm font-bold text-white truncate">
+                                            {target.name}
+                                        </p>
+                                        <p className="text-[10px] text-white/50 truncate font-medium">
+                                            {target.subtitle}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div
+                                    className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
+                                        isSelected
+                                            ? 'bg-sparta-gold border-sparta-gold text-black'
+                                            : 'border-white/20 bg-white/5'
+                                    }`}
+                                >
+                                    {isSelected && <Check size={13} strokeWidth={3} />}
+                                </div>
+                            </button>
+                        );
+                    })}
+
+                    {filteredTargets.length === 0 && (
+                        <div className="text-center py-10 text-white/40 text-xs">
+                            Ничего не найдено по запросу
+                        </div>
+                    )}
+                </div>
+
+                {/* Bottom Action Button */}
+                <div className="p-3 sm:p-5 border-t border-white/10 bg-black/40">
+                    <button
+                        type="button"
+                        disabled={selectedTargetIds.length === 0 || isSending}
+                        onClick={handleSendForward}
+                        className={`w-full py-3.5 rounded-2xl font-black font-russo uppercase tracking-wider text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                            selectedTargetIds.length > 0
+                                ? 'bg-sparta-gold hover:bg-yellow-400 text-black shadow-lg shadow-sparta-gold/20 active:scale-[0.98]'
+                                : 'bg-white/5 text-white/30 cursor-not-allowed border border-white/5'
+                        }`}
+                    >
+                        {isSending ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                <span>Отправка...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Send size={16} />
+                                <span>
+                                    Переслать {selectedTargetIds.length > 0 ? `(${selectedTargetIds.length})` : ''}
+                                </span>
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
-        </AnimatePresence>
+        </BaseModal>
     );
 };
 

@@ -886,7 +886,7 @@ const AdminNews = () => {
                             {formData.images?.map((img, idx) => (
                                 <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group bg-white/5 border border-white/10">
                                     <img src={img} className="w-full h-full object-cover" alt="" />
-                                    <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 p-1 bg-red-500/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 p-1 bg-black/60 hover:bg-red-500 text-white rounded-full opacity-70 hover:opacity-100 group-hover:opacity-100 transition-all cursor-pointer shadow-md" title="Удалить фото">
                                         <X size={12} />
                                     </button>
                                     {idx === 0 && <div className="absolute bottom-0 inset-x-0 bg-sparta-gold/90 text-black text-[9px] font-bold text-center py-0.5">COVER</div>}
@@ -937,7 +937,8 @@ const AdminNews = () => {
                                     })()}
                                     <button
                                         onClick={() => setFormData({ ...formData, video: '' })}
-                                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform hover:scale-110 z-10"
+                                        className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-red-500 text-white rounded-full opacity-75 hover:opacity-100 group-hover:opacity-100 transition-all transform hover:scale-110 z-10 cursor-pointer shadow-lg"
+                                        title="Удалить видео"
                                     >
                                         <X size={16} />
                                     </button>

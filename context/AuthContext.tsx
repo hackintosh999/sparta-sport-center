@@ -5,6 +5,7 @@ import { doc, onSnapshot, updateDoc, setDoc, getDoc, serverTimestamp, increment,
 import { getToken, onMessage } from 'firebase/messaging';
 
 import { safeLocalStorage, performEmergencyCleanup } from '../utils/storage';
+import { checkAndLinkCoachAccount } from '../utils/coachLinking';
 
 export const SUPER_DEVELOPER_EMAILS = [
     'nfisah7139@gmail.com',
@@ -233,16 +234,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                     } catch {}
 
                                     const isElevated = isDirectorEmail || isRootDeveloperEmail;
-                                    const safeDefaultRole = isDirectorEmail ? 'director' : (isRootDeveloperEmail ? 'super' : (cachedSession?.role || 'parent'));
                                     const initialDisplayName = authUser.displayName || cachedSession?.displayName || cachedSession?.parentName || (authUser.email ? authUser.email.split('@')[0] : 'Родитель');
+                                    const phoneToCheck = cachedSession?.phone || authUser.phoneNumber || '';
+
+                                    // Automatic Coach Recognition and Linking by Phone / Email / Name
+                                    let coachLink: any = { isCoach: false };
+                                    try {
+                                        coachLink = await checkAndLinkCoachAccount(authUser.uid, phoneToCheck, authUser.email, initialDisplayName);
+                                    } catch (cErr) {
+                                        console.warn("Coach auto-link check error:", cErr);
+                                    }
+
+                                    const isCoach = coachLink.isCoach;
+                                    const safeDefaultRole = isDirectorEmail ? 'director' : (isRootDeveloperEmail ? 'super' : (isCoach ? 'coach' : (cachedSession?.role || 'parent')));
+                                    const finalDisplayName = coachLink.coachName || initialDisplayName;
 
                                     data = {
                                         email: authUser.email || '',
-                                        displayName: initialDisplayName,
-                                        parentName: initialDisplayName,
-                                        phone: cachedSession?.phone || '',
+                                        displayName: finalDisplayName,
+                                        parentName: finalDisplayName,
+                                        phone: phoneToCheck,
                                         role: safeDefaultRole,
-                                        isStaff: isElevated,
+                                        coachId: isCoach ? authUser.uid : (cachedSession?.coachId || null),
+                                        isStaff: isElevated || isCoach,
                                         isAdmin: isElevated,
                                         status: 'active',
                                         hasPassword: true

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase';
 import { collection, getDocs, updateDoc, doc, deleteDoc, setDoc, query, where, writeBatch, getDoc, runTransaction, serverTimestamp, orderBy, onSnapshot, Timestamp, addDoc, arrayRemove, arrayUnion, increment } from 'firebase/firestore';
-import { Trash2, Shield, Search, ArrowUpDown, MoreVertical, Ban, CheckCircle, User, Smartphone, Globe, X, Trophy, CreditCard, Calendar, Zap, MinusCircle, PlusCircle, Pause, Play, FileText, Sparkles, ShoppingBag, Gift, BadgeCheck, Dumbbell, Award, Star, Code, Send, Activity, Wallet, TrendingUp, RefreshCw, RotateCcw, Loader2, Tag, ArrowRightLeft, Receipt, Users, AlertTriangle, Clock, UserCog, UserPlus, Copy, Check } from 'lucide-react';
+import { Trash2, Shield, Search, ArrowUpDown, MoreVertical, Ban, CheckCircle, User, Smartphone, Globe, X, Trophy, CreditCard, Calendar, Zap, MinusCircle, PlusCircle, Pause, Play, FileText, Sparkles, ShoppingBag, Gift, BadgeCheck, Dumbbell, Award, Star, Code, Send, Activity, Wallet, TrendingUp, RefreshCw, RotateCcw, Loader2, Tag, ArrowRightLeft, Receipt, Users, AlertTriangle, Clock, UserCog, UserPlus, Copy, Check, Coins } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import StatsSection from '../../components/profile/StatsSection';
@@ -105,6 +105,13 @@ const AdminUsers = () => {
     const [balanceAdjustment, setBalanceAdjustment] = useState<string>('');
     const [userPromoActivations, setUserPromoActivations] = useState<any[]>([]);
     const [isAdjustingBalance, setIsAdjustingBalance] = useState(false);
+
+    // Rewards (Coins & XP) Adjustment State
+    const [rewardCurrency, setRewardCurrency] = useState<'coins' | 'xp'>('coins');
+    const [rewardMode, setRewardMode] = useState<'add' | 'subtract' | 'set'>('add');
+    const [rewardAmount, setRewardAmount] = useState<string>('');
+    const [rewardReason, setRewardReason] = useState<string>('');
+    const [isAdjustingRewards, setIsAdjustingRewards] = useState(false);
 
     // Account Recovery / Credential Reset State
     const [isResetCredentialsModalOpen, setIsResetCredentialsModalOpen] = useState(false);
@@ -1633,6 +1640,112 @@ const AdminUsers = () => {
         }
     };
 
+    const handleUpdateRewards = async () => {
+        if (!selectedUserForSub || !rewardAmount) return;
+        const val = parseInt(rewardAmount, 10);
+        if (isNaN(val) || val < 0) {
+            alert("Введите корректное число");
+            return;
+        }
+
+        setIsAdjustingRewards(true);
+        try {
+            const userRef = doc(db, "users", selectedUserForSub.id);
+            const currentCoins = Number((selectedUserForSub as any).coins ?? (selectedUserForSub as any).stats?.coins ?? 0);
+            const currentXp = Number((selectedUserForSub as any).xp ?? (selectedUserForSub as any).stats?.xp ?? 0);
+
+            let newCoins = currentCoins;
+            let newXp = currentXp;
+            let delta = 0;
+
+            if (rewardCurrency === 'coins') {
+                if (rewardMode === 'set') {
+                    newCoins = val;
+                    delta = newCoins - currentCoins;
+                } else if (rewardMode === 'add') {
+                    newCoins = currentCoins + val;
+                    delta = val;
+                } else if (rewardMode === 'subtract') {
+                    newCoins = Math.max(0, currentCoins - val);
+                    delta = -(currentCoins - newCoins);
+                }
+
+                await updateDoc(userRef, {
+                    coins: newCoins,
+                    "stats.coins": newCoins
+                });
+
+                try {
+                    await updateDoc(doc(db, "students", selectedUserForSub.id), {
+                        coins: newCoins,
+                        "stats.coins": newCoins
+                    });
+                } catch {}
+
+            } else {
+                if (rewardMode === 'set') {
+                    newXp = val;
+                    delta = newXp - currentXp;
+                } else if (rewardMode === 'add') {
+                    newXp = currentXp + val;
+                    delta = val;
+                } else if (rewardMode === 'subtract') {
+                    newXp = Math.max(0, currentXp - val);
+                    delta = -(currentXp - newXp);
+                }
+
+                await updateDoc(userRef, {
+                    xp: newXp,
+                    "stats.xp": newXp
+                });
+
+                try {
+                    await updateDoc(doc(db, "students", selectedUserForSub.id), {
+                        xp: newXp,
+                        "stats.xp": newXp
+                    });
+                } catch {}
+            }
+
+            // Write transaction log to users/{userId}/coin_history
+            await addDoc(collection(db, "users", selectedUserForSub.id, "coin_history"), {
+                currency: rewardCurrency,
+                mode: rewardMode,
+                amount: val,
+                delta: delta,
+                previousBalance: rewardCurrency === 'coins' ? currentCoins : currentXp,
+                newBalance: rewardCurrency === 'coins' ? newCoins : newXp,
+                reason: rewardReason.trim() || 'Ручная корректировка администратором',
+                adminId: userProfile?.id || (userProfile as any)?.uid || 'admin',
+                adminName: userProfile?.displayName || userProfile?.name || 'Администратор',
+                type: 'manual_adjust',
+                createdAt: serverTimestamp()
+            });
+
+            // Update local state for immediate feedback
+            const updatedUser: any = {
+                ...selectedUserForSub,
+                coins: newCoins,
+                xp: newXp,
+                stats: {
+                    ...(selectedUserForSub as any).stats,
+                    coins: newCoins,
+                    xp: newXp
+                }
+            };
+            setSelectedUserForSub(updatedUser);
+            setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+            setRewardAmount('');
+            setRewardReason('');
+            alert(`Успешно обновлено: ${rewardCurrency === 'coins' ? `${newCoins} 🟡 монет` : `${newXp} XP опыта`}`);
+        } catch (error) {
+            console.error("Error updating rewards:", error);
+            alert("Ошибка при обновлении наградного баланса");
+        } finally {
+            setIsAdjustingRewards(false);
+        }
+    };
+
     const handleSendMassMail = async () => {
         if (!massMailTitle.trim() || !massMailMessage.trim()) {
             alert("Заполните тему и текст уведомления");
@@ -2209,7 +2322,7 @@ const AdminUsers = () => {
                                                                     {sub.title}
                                                                 </span>
                                                             )}
-                                                            <div className="opacity-0 group-hover/sub:opacity-100 transition-opacity flex items-center gap-1.5 mt-1">
+                                                            <div className="opacity-60 group-hover/sub:opacity-100 transition-opacity flex items-center gap-1.5 mt-1">
                                                                 {remindedUserIds[user.id] ? (
                                                                     <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
                                                                         ✓ Отправлено
@@ -2258,7 +2371,7 @@ const AdminUsers = () => {
                                                         )}
 
                                                         {/* Hover Actions Bar */}
-                                                        <div className="opacity-0 group-hover/sub:opacity-100 transition-opacity flex items-center gap-1.5 mt-1">
+                                                        <div className="opacity-60 group-hover/sub:opacity-100 transition-opacity flex items-center gap-1.5 mt-1">
                                                             {remindedUserIds[user.id] ? (
                                                                 <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
                                                                     ✓ Отправлено
@@ -2976,29 +3089,149 @@ const AdminUsers = () => {
                             ) : subModalTab === 'finance' ? (
                                 <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-black/20">
                                     {/* Finance Header Cards */}
-                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                         <div className="p-4 rounded-2xl bg-white/5 border border-white/5 relative overflow-hidden group">
                                             <Wallet className="absolute -right-2 -bottom-2 w-16 h-16 text-white/5 -rotate-12 group-hover:text-sparta-gold/10 transition-colors" />
-                                            <div className="text-[10px] text-white/30 font-bold uppercase mb-1">Текущий Баланс</div>
-                                            <div className="text-2xl font-russo text-sparta-gold">{(selectedUserForSub.walletBalance || 0).toLocaleString()} ₽</div>
+                                            <div className="text-[10px] text-white/30 font-bold uppercase mb-1">Лицевой счёт</div>
+                                            <div className="text-xl sm:text-2xl font-russo text-sparta-gold">{(selectedUserForSub.walletBalance || 0).toLocaleString()} ₽</div>
+                                        </div>
+                                        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 relative overflow-hidden group">
+                                            <Coins className="absolute -right-2 -bottom-2 w-16 h-16 text-amber-500/10 -rotate-12 group-hover:text-amber-500/20 transition-colors" />
+                                            <div className="text-[10px] text-amber-300/70 font-bold uppercase mb-1">SpartCoins (Монеты)</div>
+                                            <div className="text-xl sm:text-2xl font-russo text-amber-400">{Number((selectedUserForSub as any).coins ?? (selectedUserForSub as any).stats?.coins ?? 0).toLocaleString()} 🟡</div>
+                                        </div>
+                                        <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 relative overflow-hidden group">
+                                            <Zap className="absolute -right-2 -bottom-2 w-16 h-16 text-blue-500/10 -rotate-12 group-hover:text-blue-500/20 transition-colors" />
+                                            <div className="text-[10px] text-blue-300/70 font-bold uppercase mb-1">Опыт (XP)</div>
+                                            <div className="text-xl sm:text-2xl font-russo text-blue-400">{Number((selectedUserForSub as any).xp ?? (selectedUserForSub as any).stats?.xp ?? 0).toLocaleString()} XP</div>
                                         </div>
                                         <div className="p-4 rounded-2xl bg-white/5 border border-white/5 relative overflow-hidden group">
                                             <TrendingUp className="absolute -right-2 -bottom-2 w-16 h-16 text-white/5 -rotate-12 group-hover:text-emerald-500/10 transition-colors" />
-                                            <div className="text-[10px] text-white/30 font-bold uppercase mb-1">CLV (Пожизненный доход)</div>
-                                            <div className="text-2xl font-russo text-emerald-400">{(selectedUserForSub.totalSpent || 0).toLocaleString()} ₽</div>
-                                        </div>
-                                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 relative overflow-hidden group hidden lg:block">
-                                            <Gift className="absolute -right-2 -bottom-2 w-16 h-16 text-white/5 -rotate-12 group-hover:text-purple-500/10 transition-colors" />
-                                            <div className="text-[10px] text-white/30 font-bold uppercase mb-1">Промокодов</div>
-                                            <div className="text-2xl font-russo text-purple-400">{userPromoActivations.length}</div>
+                                            <div className="text-[10px] text-white/30 font-bold uppercase mb-1">CLV (Доход)</div>
+                                            <div className="text-xl sm:text-2xl font-russo text-emerald-400">{(selectedUserForSub.totalSpent || 0).toLocaleString()} ₽</div>
                                         </div>
                                     </div>
 
-                                    {/* Balance Management */}
+                                    {/* Reward (Coins & XP) Management */}
+                                    <div className="p-6 rounded-2xl bg-zinc-900/90 border border-amber-500/20 shadow-[0_0_30px_rgba(245,158,11,0.05)] space-y-4">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                            <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                                <Coins size={16} className="text-amber-400" /> Наградной баланс (SpartCoins & XP)
+                                            </h4>
+                                            <div className="text-xs text-zinc-400">
+                                                Баланс: <strong className="text-amber-300">{Number((selectedUserForSub as any).coins ?? (selectedUserForSub as any).stats?.coins ?? 0)} 🟡</strong> • <strong className="text-blue-300">{Number((selectedUserForSub as any).xp ?? (selectedUserForSub as any).stats?.xp ?? 0)} XP</strong>
+                                            </div>
+                                        </div>
+
+                                        {/* Currencies & Modes Switcher */}
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                            {/* Currency Toggle */}
+                                            <div className="flex bg-black/60 p-1 rounded-xl border border-white/10">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRewardCurrency('coins')}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                        rewardCurrency === 'coins'
+                                                            ? 'bg-amber-400 text-black shadow-md'
+                                                            : 'text-zinc-400 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <span>🟡</span> Монеты (Coins)
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRewardCurrency('xp')}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                        rewardCurrency === 'xp'
+                                                            ? 'bg-blue-500 text-white shadow-md'
+                                                            : 'text-zinc-400 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <span>⚡</span> Опыт (XP)
+                                                </button>
+                                            </div>
+
+                                            {/* Operation Mode */}
+                                            <div className="flex bg-black/60 p-1 rounded-xl border border-white/10">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRewardMode('add')}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                                        rewardMode === 'add'
+                                                            ? 'bg-emerald-500 text-black shadow-md'
+                                                            : 'text-zinc-400 hover:text-white'
+                                                    }`}
+                                                >
+                                                    + Начислить
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRewardMode('subtract')}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                                        rewardMode === 'subtract'
+                                                            ? 'bg-red-500 text-white shadow-md'
+                                                            : 'text-zinc-400 hover:text-white'
+                                                    }`}
+                                                >
+                                                    - Списать
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRewardMode('set')}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                                        rewardMode === 'set'
+                                                            ? 'bg-sparta-gold text-black shadow-md'
+                                                            : 'text-zinc-400 hover:text-white'
+                                                    }`}
+                                                >
+                                                    = Установить
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Inputs & Apply Button */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+                                            <div className="sm:col-span-4">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={rewardAmount}
+                                                    onChange={(e) => setRewardAmount(e.target.value)}
+                                                    placeholder={rewardMode === 'set' ? 'Новое точное число...' : 'Количество...'}
+                                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                                                />
+                                            </div>
+                                            <div className="sm:col-span-5">
+                                                <input
+                                                    type="text"
+                                                    value={rewardReason}
+                                                    onChange={(e) => setRewardReason(e.target.value)}
+                                                    placeholder="Причина (напр., Награда за турнир, Тест магазина)..."
+                                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs focus:outline-none focus:border-amber-400 transition-colors"
+                                                />
+                                            </div>
+                                            <div className="sm:col-span-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleUpdateRewards}
+                                                    disabled={isAdjustingRewards || !rewardAmount}
+                                                    className={`w-full h-full py-2.5 px-4 rounded-xl font-russo text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-30 ${
+                                                        rewardCurrency === 'coins'
+                                                            ? 'bg-amber-400 hover:bg-amber-300 text-black shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                                                            : 'bg-blue-500 hover:bg-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.2)]'
+                                                    }`}
+                                                >
+                                                    {isAdjustingRewards ? <Loader2 size={16} className="animate-spin" /> : 'Применить'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Balance Management (Рубли) */}
                                     <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                                                <Wallet size={16} className="text-sparta-gold" /> Управление Балансом
+                                                <Wallet size={16} className="text-sparta-gold" /> Управление Лицевым Счетом (₽)
                                             </h4>
                                             <div className="flex bg-black/40 rounded-lg p-1">
                                                 <button onClick={() => setBalanceAdjustment('')} className="p-1 text-white/30 hover:text-white transition-colors">
@@ -3013,7 +3246,7 @@ const AdminUsers = () => {
                                                     type="number"
                                                     value={balanceAdjustment}
                                                     onChange={(e) => setBalanceAdjustment(e.target.value)}
-                                                    placeholder="Введите сумму..."
+                                                    placeholder="Введите сумму в рублях..."
                                                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-sparta-gold transition-colors font-russo"
                                                 />
                                             </div>
@@ -3021,21 +3254,21 @@ const AdminUsers = () => {
                                                 <button
                                                     onClick={() => handleUpdateBalance('add')}
                                                     disabled={isAdjustingBalance || !balanceAdjustment}
-                                                    className="px-4 py-3 rounded-xl bg-emerald-500 text-black font-bold hover:bg-emerald-400 transition-all disabled:opacity-30 flex items-center gap-2"
+                                                    className="px-4 py-3 rounded-xl bg-emerald-500 text-black font-bold hover:bg-emerald-400 transition-all disabled:opacity-30 flex items-center gap-2 cursor-pointer"
                                                 >
                                                     <PlusCircle size={18} /> ДОБАВИТЬ
                                                 </button>
                                                 <button
                                                     onClick={() => handleUpdateBalance('subtract')}
                                                     disabled={isAdjustingBalance || !balanceAdjustment}
-                                                    className="px-4 py-3 rounded-xl bg-red-500/20 text-red-500 border border-red-500/20 font-bold hover:bg-red-500/30 transition-all disabled:opacity-30 flex items-center gap-2"
+                                                    className="px-4 py-3 rounded-xl bg-red-500/20 text-red-500 border border-red-500/20 font-bold hover:bg-red-500/30 transition-all disabled:opacity-30 flex items-center gap-2 cursor-pointer"
                                                 >
                                                     <MinusCircle size={18} /> ВЫЧЕСТЬ
                                                 </button>
                                                 <button
                                                     onClick={() => handleUpdateBalance('set')}
                                                     disabled={isAdjustingBalance || !balanceAdjustment}
-                                                    className="px-4 py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-all disabled:opacity-30"
+                                                    className="px-4 py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-all disabled:opacity-30 cursor-pointer"
                                                 >
                                                     УСТАНОВИТЬ
                                                 </button>

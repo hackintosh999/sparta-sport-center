@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfi
 import { auth, db } from '../firebase';
 import { doc, setDoc, serverTimestamp, getDoc, updateDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { linkStudentToGroup, findExistingSpartaStudent, ExistingStudentResult, normalizePhoneNumber } from '../utils/studentLinking';
+import { checkAndLinkCoachAccount } from '../utils/coachLinking';
 import { safeLocalStorage } from '../utils/storage';
 
 interface AuthModalProps {
@@ -430,6 +431,37 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                     : (childFullName || name.trim());
 
                 await updateProfile(user, { displayName: registeredDisplayName });
+
+                // Check if this new user is a Coach registering by phone or email
+                let coachLink: any = { isCoach: false };
+                try {
+                    coachLink = await checkAndLinkCoachAccount(user.uid, phone, email, registeredDisplayName);
+                } catch (cErr) {
+                    console.warn("Coach auto-link error in AuthModal:", cErr);
+                }
+
+                if (coachLink.isCoach) {
+                    const coachProfileData: any = {
+                        email: user.email,
+                        role: 'coach',
+                        status: 'active',
+                        isStaff: true,
+                        isAdmin: false,
+                        displayName: coachLink.coachName || registeredDisplayName,
+                        name: coachLink.coachName || registeredDisplayName,
+                        coachId: user.uid,
+                        phone: phone || '',
+                        createdAt: serverTimestamp()
+                    };
+                    await setDoc(doc(db, 'users', user.uid), coachProfileData, { merge: true });
+                    setSuccessMessage(`Добро пожаловать в тренерский штаб, ${coachLink.coachName || registeredDisplayName}! Входим в кабинет...`);
+                    setTimeout(() => {
+                        if (onSuccess) onSuccess();
+                        onClose();
+                        window.location.href = '/dashboard';
+                    }, 1000);
+                    return;
+                }
 
                 if (safeRole === 'parent') {
                     // ═══════════════════════════════════════════

@@ -963,7 +963,7 @@ const AdminShop: React.FC = () => {
                                 ) : (
                                     <ImageIcon className="text-white/20" size={48} />
                                 )}
-                                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="absolute top-4 right-4 flex gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                                     <button
                                         onClick={() => {
                                             setCurrentSizeChart(chart);
@@ -1112,10 +1112,11 @@ const AdminShop: React.FC = () => {
                                                 {product.isMadeToOrder ? '🧵 Под заказ' : `Склад: ${totalStock} шт`}
                                             </div>
 
-                                            {/* Action Buttons Overlay */}
-                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 z-30">
+                                            {/* Action Buttons Bar */}
+                                            <div className="absolute top-3 right-3 flex items-center gap-1.5 z-30 opacity-75 group-hover:opacity-100 transition-opacity">
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         setCurrentProduct(product);
                                                         const initialSpecs = Object.entries(product.specifications || {}).map(([k, v]) => ({
                                                             id: Math.random().toString(36).substring(2, 9),
@@ -1129,34 +1130,40 @@ const AdminShop: React.FC = () => {
                                                         setActiveTab('info');
                                                         setIsEditing(true);
                                                     }}
-                                                    className="p-3 bg-yellow-500 text-black rounded-xl hover:scale-110 transition-transform shadow-lg"
+                                                    className="p-2 bg-black/75 hover:bg-sparta-gold text-white hover:text-black border border-white/10 rounded-xl transition-all shadow-md cursor-pointer hover:scale-105"
                                                     title="Редактировать"
                                                 >
-                                                    <Edit2 size={20} />
+                                                    <Edit2 size={13} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleClone(product)}
-                                                    className="p-3 bg-blue-500 text-white rounded-xl hover:scale-110 transition-transform shadow-lg"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleClone(product);
+                                                    }}
+                                                    className="p-2 bg-black/75 hover:bg-blue-500 text-white border border-white/10 rounded-xl transition-all shadow-md cursor-pointer hover:scale-105"
                                                     title="Дублировать"
                                                 >
-                                                    <Copy size={20} />
+                                                    <Copy size={13} />
                                                 </button>
                                                 <button
-                                                    onClick={() => toggleProductVisibility(product)}
-                                                    className={`p-3 rounded-xl hover:scale-110 transition-transform shadow-lg ${product.isHidden ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-300'}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleProductVisibility(product);
+                                                    }}
+                                                    className={`p-2 rounded-xl transition-all shadow-md cursor-pointer border border-white/10 hover:scale-105 ${product.isHidden ? 'bg-green-500/80 hover:bg-green-500 text-white' : 'bg-black/75 text-gray-300 hover:text-white'}`}
                                                     title={product.isHidden ? "Показать" : "Скрыть"}
                                                 >
-                                                    {product.isHidden ? <Eye size={20} /> : <EyeOff size={20} />}
+                                                    {product.isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
                                                 </button>
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleDelete(product.id);
                                                     }}
-                                                    className="p-3 bg-red-500/80 hover:bg-red-500 text-white rounded-xl hover:scale-110 transition-transform shadow-lg z-50"
+                                                    className="p-2 bg-black/75 hover:bg-red-500 text-white border border-white/10 rounded-xl transition-all shadow-md cursor-pointer hover:scale-105"
                                                     title="Удалить"
                                                 >
-                                                    <Trash2 size={20} />
+                                                    <Trash2 size={13} />
                                                 </button>
                                             </div>
                                         </div>
@@ -1859,7 +1866,8 @@ const AdminShop: React.FC = () => {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => removeExistingGalleryImage(url)}
-                                                                        className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-lg scale-90 group-hover:scale-100"
+                                                                        className="absolute top-2 right-2 bg-black/70 hover:bg-red-500 text-white p-1.5 rounded-lg opacity-75 hover:opacity-100 group-hover:opacity-100 transition-all shadow-lg cursor-pointer"
+                                                                        title="Удалить фото"
                                                                     >
                                                                         <X size={14} />
                                                                     </button>
@@ -1871,7 +1879,8 @@ const AdminShop: React.FC = () => {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => removeGalleryImage(idx)}
-                                                                        className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-lg"
+                                                                        className="absolute top-2 right-2 bg-black/70 hover:bg-red-500 text-white p-1.5 rounded-lg opacity-75 hover:opacity-100 group-hover:opacity-100 transition-all shadow-lg cursor-pointer"
+                                                                        title="Удалить фото"
                                                                     >
                                                                         <X size={14} />
                                                                     </button>

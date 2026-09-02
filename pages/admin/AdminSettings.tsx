@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { Shield, Plus, X, Loader, Wrench, Snowflake, Save, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Shield, Plus, X, Loader, Wrench, Snowflake, Save, AlertTriangle, CheckCircle, Coins } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminSettings = () => {
@@ -17,6 +17,10 @@ const AdminSettings = () => {
     const [freezeDays, setFreezeDays] = useState(7);
     const [maxFreezePerYear, setMaxFreezePerYear] = useState(2);
 
+    // --- SpartCoins Economy Settings ---
+    const [coinExchangeRateRub, setCoinExchangeRateRub] = useState(10);
+    const [maxDiscountPercent, setMaxDiscountPercent] = useState(100);
+
     // --- UI State ---
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState<string | null>(null); // which section is saving
@@ -25,9 +29,10 @@ const AdminSettings = () => {
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const [modDoc, sysDoc] = await Promise.all([
+                const [modDoc, sysDoc, ecoDoc] = await Promise.all([
                     getDoc(doc(db, 'settings', 'moderation')),
                     getDoc(doc(db, 'settings', 'system')),
+                    getDoc(doc(db, 'settings', 'economy')),
                 ]);
 
                 if (modDoc.exists()) {
@@ -39,6 +44,11 @@ const AdminSettings = () => {
                     if (data.maintenanceMessage) setMaintenanceMessage(data.maintenanceMessage);
                     if (data.freezeDays !== undefined) setFreezeDays(data.freezeDays);
                     if (data.maxFreezePerYear !== undefined) setMaxFreezePerYear(data.maxFreezePerYear);
+                }
+                if (ecoDoc.exists()) {
+                    const ecoData = ecoDoc.data();
+                    if (ecoData.coinExchangeRateRub !== undefined) setCoinExchangeRateRub(ecoData.coinExchangeRateRub);
+                    if (ecoData.maxDiscountPercent !== undefined) setMaxDiscountPercent(ecoData.maxDiscountPercent);
                 }
             } catch (error) {
                 console.error('Error fetching settings', error);
@@ -52,6 +62,24 @@ const AdminSettings = () => {
     const showSaved = (section: string) => {
         setSavedSection(section);
         setTimeout(() => setSavedSection(null), 2500);
+    };
+
+    // --- SpartCoins Economy Settings ---
+    const saveEconomySettings = async () => {
+        setSaving('economy');
+        try {
+            await setDoc(doc(db, 'settings', 'economy'), {
+                coinExchangeRateRub: Number(coinExchangeRateRub) || 10,
+                maxDiscountPercent: Number(maxDiscountPercent) || 100,
+                updatedAt: new Date()
+            }, { merge: true });
+            showSaved('economy');
+        } catch (error) {
+            console.error('Error saving economy settings', error);
+            alert('Ошибка при сохранении настроек экономики.');
+        } finally {
+            setSaving(null);
+        }
     };
 
     // --- Stop Words ---
@@ -254,6 +282,69 @@ const AdminSettings = () => {
                 />
             </div>
 
+            {/* ─── SpartCoins Economy ─── */}
+            <div className="bg-[#1a1a1a] border border-amber-500/20 rounded-2xl p-8 shadow-[0_0_30px_rgba(245,158,11,0.05)]">
+                <div className="flex items-center gap-3 mb-4">
+                    <Coins className="text-sparta-gold" size={24} />
+                    <h2 className="text-xl font-russo text-white">🪙 Экономика SpartCoins (Клубная валюта)</h2>
+                </div>
+                <p className="text-white/50 text-sm mb-6 max-w-2xl">
+                    Управление курсом обмена клубных монет на рубли и предельными скидками при оформлении экипировки и мерча в магазине.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-xl mb-6">
+                    <div>
+                        <label className="block text-white/70 text-xs font-bold uppercase tracking-wider mb-2">
+                            Стоимость 1 монеты в рублях (₽)
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="1"
+                                max="1000"
+                                value={coinExchangeRateRub}
+                                onChange={e => setCoinExchangeRateRub(Math.max(1, Number(e.target.value)))}
+                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white font-mono text-base focus:border-sparta-gold outline-none transition-colors pr-24"
+                            />
+                            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-400">
+                                1 🟡 = {coinExchangeRateRub} ₽
+                            </span>
+                        </div>
+                        <p className="text-white/40 text-[11px] mt-1.5">
+                            По умолчанию 10 ₽. При списании 30 монет скидка составит {30 * coinExchangeRateRub} ₽.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className="block text-white/70 text-xs font-bold uppercase tracking-wider mb-2">
+                            Макс. % оплаты заказа монетами
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                value={maxDiscountPercent}
+                                onChange={e => setMaxDiscountPercent(Math.max(1, Math.min(100, Number(e.target.value))))}
+                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white font-mono text-base focus:border-sparta-gold outline-none transition-colors pr-10"
+                            />
+                            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-400">
+                                %
+                            </span>
+                        </div>
+                        <p className="text-white/40 text-[11px] mt-1.5">
+                            100% — разрешить полную оплату монетами (0 ₽ к оплате).
+                        </p>
+                    </div>
+                </div>
+
+                <SaveButton
+                    onClick={saveEconomySettings}
+                    saving={saving === 'economy'}
+                    saved={savedSection === 'economy'}
+                />
+            </div>
+
             {/* ─── Moderation / Stop Words ─── */}
             <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl p-8">
                 <div className="flex items-center gap-3 mb-6">
@@ -291,7 +382,8 @@ const AdminSettings = () => {
                                 <span className="text-white text-sm">{word}</span>
                                 <button
                                     onClick={() => handleRemoveWord(word)}
-                                    className="text-white/30 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                    className="text-white/40 hover:text-red-400 transition-colors opacity-60 hover:opacity-100 cursor-pointer"
+                                    title="Удалить слово"
                                 >
                                     <X size={14} />
                                 </button>

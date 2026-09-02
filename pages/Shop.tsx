@@ -26,6 +26,8 @@ import { useFavorites } from '../context/FavoritesContext';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
+import SpartaCoinIcon from '../components/SpartaCoinIcon';
+import { rublesToCoins, formatCoins } from '../utils/spartaCoins';
 
 const Shop = () => {
     const navigate = useNavigate();
@@ -734,13 +736,20 @@ const Shop = () => {
                                                                         -{Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}%
                                                                     </span>
                                                                 </div>
-                                                                <span className="font-mono text-[10px] text-gray-500 line-through tracking-tight leading-none mt-0.5 truncate">
-                                                                    {product.oldPrice.toLocaleString()} ₽
-                                                                </span>
+                                                                <div className="flex items-center gap-1 text-[10px] font-bold text-amber-400 mt-1">
+                                                                    <SpartaCoinIcon size={11} animate={false} />
+                                                                    <span>{formatCoins(rublesToCoins(product.price))} SpartCoins</span>
+                                                                </div>
                                                             </div>
                                                         ) : (
-                                                            <div className="font-mono text-xs sm:text-sm md:text-base font-bold text-yellow-400 tracking-tight truncate">
-                                                                {product.price.toLocaleString()} ₽
+                                                            <div className="flex flex-col min-w-0">
+                                                                <div className="font-mono text-xs sm:text-sm md:text-base font-bold text-yellow-400 tracking-tight truncate">
+                                                                    {product.price.toLocaleString()} ₽
+                                                                </div>
+                                                                <div className="flex items-center gap-1 text-[10px] font-bold text-amber-400 mt-1">
+                                                                    <SpartaCoinIcon size={11} animate={false} />
+                                                                    <span>{formatCoins(rublesToCoins(product.price))} SpartCoins</span>
+                                                                </div>
                                                             </div>
                                                         )}
 

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
     X,
     CheckCircle2,
     Clock,
     Search,
-    ChevronRight,
     Trophy,
     Calendar,
     UserCheck,
@@ -14,6 +13,7 @@ import {
 import { collection, query, where, onSnapshot, getDoc, doc, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { SpartaCoinIcon } from '../SpartaCoinIcon';
+import { BaseModal } from '../ui/BaseModal';
 
 export interface TaskHistoryItem {
     id: string;
@@ -378,280 +378,273 @@ export const TaskHistoryModal: React.FC<TaskHistoryModalProps> = ({
         return `${day}.${month}.${date.getFullYear()}`;
     };
 
-    if (!isOpen) return null;
-
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                    transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="relative w-full max-w-2xl bg-zinc-950/95 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-                >
-                    {/* Background glow */}
-                    <div className="absolute top-0 right-1/4 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-                    <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-                    {/* 1. HEADER WITH SUMMARY STATS */}
-                    <div className="p-5 sm:p-6 border-b border-white/10 relative z-10 bg-zinc-900/50 flex flex-col gap-4">
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                                        <span>🏆 Мои выполненные задания</span>
-                                    </h2>
-                                </div>
-                                <p className="text-xs sm:text-sm text-zinc-400">
-                                    История тренировочных челленджей, похвалы тренера и наград {userName}
-                                </p>
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-2xl"
+            showCloseButton={false}
+            noPadding
+            glowColor="amber"
+        >
+            <div className="relative w-full bg-zinc-950/95 rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                {/* 1. HEADER WITH SUMMARY STATS */}
+                <div className="p-5 sm:p-6 border-b border-white/10 relative z-10 bg-zinc-900/50 flex flex-col gap-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                                    <span>🏆 Мои выполненные задания</span>
+                                </h2>
                             </div>
-
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="p-2 text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all cursor-pointer shrink-0 active:scale-95"
-                                title="Закрыть"
-                            >
-                                <X size={20} />
-                            </button>
+                            <p className="text-xs sm:text-sm text-zinc-400">
+                                История тренировочных челленджей, похвалы тренера и наград {userName}
+                            </p>
                         </div>
-
-                        {/* Summary Badges: Clean stats */}
-                        <div className="grid grid-cols-2 gap-3 pt-1">
-                            {/* Card A: Completed Tasks */}
-                            <div className="bg-gradient-to-br from-emerald-500/15 to-emerald-950/30 border border-emerald-500/30 rounded-2xl p-3 flex items-center justify-between">
-                                <div className="space-y-0.5">
-                                    <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">
-                                        Всего выполнено
-                                    </span>
-                                    <div className="text-xl sm:text-2xl font-black text-white flex items-baseline gap-1">
-                                        <span>{completedCount}</span>
-                                        <span className="text-xs font-bold text-emerald-400">заданий</span>
-                                    </div>
-                                </div>
-                                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-500/30">
-                                    <CheckCircle2 size={20} />
-                                </div>
-                            </div>
-
-                            {/* Card B: Earned Coins */}
-                            <div className="bg-gradient-to-br from-amber-500/15 to-amber-950/30 border border-amber-500/30 rounded-2xl p-3 flex items-center justify-between">
-                                <div className="space-y-0.5">
-                                    <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">
-                                        Заработано монет
-                                    </span>
-                                    <div className="text-xl sm:text-2xl font-black text-amber-300 flex items-baseline gap-1.5">
-                                        <span>+{totalEarnedCoins}</span>
-                                        <SpartaCoinIcon size={16} animate />
-                                    </div>
-                                </div>
-                                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-500/30">
-                                    <Trophy size={20} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Search Bar & Filters */}
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
-                            {/* Filter Chips */}
-                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveFilter('all')}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                                        activeFilter === 'all'
-                                            ? 'bg-white text-black shadow-md'
-                                            : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
-                                    }`}
-                                >
-                                    Все ({allTasks.length})
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveFilter('completed')}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                                        activeFilter === 'completed'
-                                            ? 'bg-emerald-500 text-black shadow-md font-black'
-                                            : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
-                                    }`}
-                                >
-                                    <span>✅ Выполненные ({completedCount})</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveFilter('pending')}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                                        activeFilter === 'pending'
-                                            ? 'bg-amber-500 text-black shadow-md font-black'
-                                            : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
-                                    }`}
-                                >
-                                    <span>⏳ На проверке ({pendingCount})</span>
-                                </button>
-                            </div>
-
-                            {/* Search Input */}
-                            <div className="relative min-w-[180px]">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-                                <input
-                                    type="text"
-                                    placeholder="Поиск по названию..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none transition-all"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 2. TASK LIST BODY */}
-                    <div className="p-4 sm:p-6 overflow-y-auto space-y-3.5 flex-1 relative z-10">
-                        {filteredTasks.length === 0 ? (
-                            <div className="py-16 text-center space-y-3">
-                                <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 mx-auto flex items-center justify-center text-3xl">
-                                    📜
-                                </div>
-                                <div className="space-y-1 max-w-sm mx-auto">
-                                    <h4 className="text-sm font-bold text-white">
-                                        {searchQuery ? 'Ничего не найдено' : 'Заданий пока нет'}
-                                    </h4>
-                                    <p className="text-xs text-zinc-400">
-                                        {searchQuery
-                                            ? 'Попробуйте изменить поисковый запрос.'
-                                            : 'Выполняйте упражнения от тренера, чтобы получать монеты и прокачивать уровень!'}
-                                    </p>
-                                </div>
-                            </div>
-                        ) : (
-                            filteredTasks.map((task) => {
-                                const isCompleted = task.status === 'completed';
-                                const isPending = task.status === 'pending_review';
-
-                                return (
-                                    <motion.div
-                                        key={task.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className={`p-4 sm:p-5 rounded-2xl border transition-all relative overflow-hidden ${
-                                            isCompleted
-                                                ? 'bg-white/[0.02] border-emerald-500/20 hover:border-emerald-500/40'
-                                                : isPending
-                                                ? 'bg-amber-500/[0.03] border-amber-500/30 hover:border-amber-500/50'
-                                                : 'bg-white/[0.02] border-white/10'
-                                        }`}
-                                    >
-                                        <div className="flex flex-col gap-3">
-                                            {/* Row 1: Header + Badges */}
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="space-y-1 min-w-0">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <h3 className="font-bold text-sm sm:text-base text-white">
-                                                            {task.title}
-                                                        </h3>
-
-                                                        {/* Status Badge */}
-                                                        {isCompleted ? (
-                                                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center gap-1">
-                                                                <CheckCircle2 size={12} />
-                                                                <span>Выполнено</span>
-                                                            </span>
-                                                        ) : isPending ? (
-                                                            <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold flex items-center gap-1 animate-pulse">
-                                                                <Clock size={12} />
-                                                                <span>На проверке</span>
-                                                            </span>
-                                                        ) : (
-                                                            <span className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[10px] font-bold flex items-center gap-1">
-                                                                <span>⚡ В процессе</span>
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Task Description */}
-                                                    {task.description && (
-                                                        <p className="text-xs text-zinc-400 leading-relaxed">
-                                                            {task.description}
-                                                        </p>
-                                                    )}
-                                                </div>
-
-                                                {/* Coin Reward Badge */}
-                                                <div className="shrink-0 flex flex-col items-end">
-                                                    <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs px-2.5 py-1 rounded-xl flex items-center gap-1.5 font-bold shadow-sm">
-                                                        <SpartaCoinIcon size={14} animate={false} />
-                                                        <span>+{task.rewardCoins || 30}</span>
-                                                    </span>
-                                                    {task.rewardXp ? (
-                                                        <span className="text-[10px] text-zinc-400 font-semibold mt-1">
-                                                            +{task.rewardXp} XP
-                                                        </span>
-                                                    ) : null}
-                                                </div>
-                                            </div>
-
-                                            {/* Row 2: Coach Comment / Feedback Card */}
-                                            {task.coachComment && (
-                                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-300 flex items-start gap-2.5">
-                                                    <MessageSquareQuote size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                                                    <div className="space-y-0.5 leading-relaxed">
-                                                        <p className="font-semibold text-emerald-200">
-                                                            Тренер {task.coachName || 'Тренер'}:
-                                                        </p>
-                                                        <p className="italic text-emerald-300/90">
-                                                            «{task.coachComment}»
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Row 3: Metadata Footer (Date & Coach Name) */}
-                                            <div className="flex flex-wrap items-center justify-between text-[11px] text-zinc-400 pt-2 border-t border-white/5 gap-2">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="flex items-center gap-1">
-                                                        <Calendar size={12} />
-                                                        <span>{formatDate(task.approvedAt || task.submittedAt || task.assignedAt)}</span>
-                                                    </span>
-                                                    {task.coachName && (
-                                                        <span className="flex items-center gap-1 text-zinc-400">
-                                                            <UserCheck size={12} />
-                                                            <span>Тренер: {task.coachName}</span>
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                {isCompleted && (
-                                                    <span className="text-emerald-400 font-bold flex items-center gap-1">
-                                                        <span>Награда начислена</span>
-                                                        <span>✓</span>
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })
-                        )}
-                    </div>
-
-                    {/* 3. FOOTER ACTION */}
-                    <div className="p-4 sm:p-5 border-t border-white/10 bg-zinc-900/60 flex items-center justify-between gap-3 relative z-10">
-                        <p className="text-xs text-zinc-400">
-                            Всего выполнено: <strong className="text-white">{completedCount}</strong> челленджей
-                        </p>
 
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all cursor-pointer active:scale-95"
+                            className="p-2 text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all cursor-pointer shrink-0 active:scale-95"
+                            title="Закрыть"
                         >
-                            Закрыть
+                            <X size={20} />
                         </button>
                     </div>
-                </motion.div>
+
+                    {/* Summary Badges */}
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                        {/* Card A: Completed Tasks */}
+                        <div className="bg-gradient-to-br from-emerald-500/15 to-emerald-950/30 border border-emerald-500/30 rounded-2xl p-3 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">
+                                    Всего выполнено
+                                </span>
+                                <div className="text-xl sm:text-2xl font-black text-white flex items-baseline gap-1">
+                                    <span>{completedCount}</span>
+                                    <span className="text-xs font-bold text-emerald-400">заданий</span>
+                                </div>
+                            </div>
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                                <CheckCircle2 size={20} />
+                            </div>
+                        </div>
+
+                        {/* Card B: Earned Coins */}
+                        <div className="bg-gradient-to-br from-amber-500/15 to-amber-950/30 border border-amber-500/30 rounded-2xl p-3 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">
+                                    Заработано монет
+                                </span>
+                                <div className="text-xl sm:text-2xl font-black text-amber-300 flex items-baseline gap-1.5">
+                                    <span>+{totalEarnedCoins}</span>
+                                    <SpartaCoinIcon size={16} animate />
+                                </div>
+                            </div>
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-500/30">
+                                <Trophy size={20} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Search Bar & Filters */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+                        {/* Filter Chips */}
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                            <button
+                                type="button"
+                                onClick={() => setActiveFilter('all')}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                                    activeFilter === 'all'
+                                        ? 'bg-white text-black shadow-md'
+                                        : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
+                                }`}
+                            >
+                                Все ({allTasks.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveFilter('completed')}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                                    activeFilter === 'completed'
+                                        ? 'bg-emerald-500 text-black shadow-md font-black'
+                                        : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
+                                }`}
+                            >
+                                <span>✅ Выполненные ({completedCount})</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveFilter('pending')}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                                    activeFilter === 'pending'
+                                        ? 'bg-amber-500 text-black shadow-md font-black'
+                                        : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
+                                }`}
+                            >
+                                <span>⏳ На проверке ({pendingCount})</span>
+                            </button>
+                        </div>
+
+                        {/* Search Input */}
+                        <div className="relative min-w-[180px]">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                            <input
+                                type="text"
+                                placeholder="Поиск по названию..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 focus:border-white/30 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none transition-all"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. TASK LIST BODY */}
+                <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar space-y-3.5 flex-1 relative z-10">
+                    {filteredTasks.length === 0 ? (
+                        <div className="py-16 text-center space-y-3">
+                            <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 mx-auto flex items-center justify-center text-3xl">
+                                📜
+                            </div>
+                            <div className="space-y-1 max-w-sm mx-auto">
+                                <h4 className="text-sm font-bold text-white">
+                                    {searchQuery ? 'Ничего не найдено' : 'Заданий пока нет'}
+                                </h4>
+                                <p className="text-xs text-zinc-400">
+                                    {searchQuery
+                                        ? 'Попробуйте изменить поисковый запрос.'
+                                        : 'Выполняйте упражнения от тренера, чтобы получать монеты и прокачивать уровень!'}
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        filteredTasks.map((task) => {
+                            const isCompleted = task.status === 'completed';
+                            const isPending = task.status === 'pending_review';
+
+                            return (
+                                <motion.div
+                                    key={task.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`p-4 sm:p-5 rounded-2xl border transition-all relative overflow-hidden ${
+                                        isCompleted
+                                            ? 'bg-white/[0.02] border-emerald-500/20 hover:border-emerald-500/40'
+                                            : isPending
+                                            ? 'bg-amber-500/[0.03] border-amber-500/30 hover:border-amber-500/50'
+                                            : 'bg-white/[0.02] border-white/10'
+                                    }`}
+                                >
+                                    <div className="flex flex-col gap-3">
+                                        {/* Row 1: Header + Badges */}
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="space-y-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h3 className="font-bold text-sm sm:text-base text-white">
+                                                        {task.title}
+                                                    </h3>
+
+                                                    {/* Status Badge */}
+                                                    {isCompleted ? (
+                                                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center gap-1">
+                                                            <CheckCircle2 size={12} />
+                                                            <span>Выполнено</span>
+                                                        </span>
+                                                    ) : isPending ? (
+                                                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold flex items-center gap-1 animate-pulse">
+                                                            <Clock size={12} />
+                                                            <span>На проверке</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[10px] font-bold flex items-center gap-1">
+                                                            <span>⚡ В процессе</span>
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Task Description */}
+                                                {task.description && (
+                                                    <p className="text-xs text-zinc-400 leading-relaxed">
+                                                        {task.description}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            {/* Coin Reward Badge */}
+                                            <div className="shrink-0 flex flex-col items-end">
+                                                <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs px-2.5 py-1 rounded-xl flex items-center gap-1.5 font-bold shadow-sm">
+                                                    <SpartaCoinIcon size={14} animate={false} />
+                                                    <span>+{task.rewardCoins || 30}</span>
+                                                </span>
+                                                {task.rewardXp ? (
+                                                    <span className="text-[10px] text-zinc-400 font-semibold mt-1">
+                                                        +{task.rewardXp} XP
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                        </div>
+
+                                        {/* Row 2: Coach Comment / Feedback Card */}
+                                        {task.coachComment && (
+                                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-300 flex items-start gap-2.5">
+                                                <MessageSquareQuote size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                                                <div className="space-y-0.5 leading-relaxed">
+                                                    <p className="font-semibold text-emerald-200">
+                                                        Тренер {task.coachName || 'Тренер'}:
+                                                    </p>
+                                                    <p className="italic text-emerald-300/90">
+                                                        «{task.coachComment}»
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Row 3: Metadata Footer (Date & Coach Name) */}
+                                        <div className="flex flex-wrap items-center justify-between text-[11px] text-zinc-400 pt-2 border-t border-white/5 gap-2">
+                                            <div className="flex items-center gap-3">
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar size={12} />
+                                                    <span>{formatDate(task.approvedAt || task.submittedAt || task.assignedAt)}</span>
+                                                </span>
+                                                {task.coachName && (
+                                                    <span className="flex items-center gap-1 text-zinc-400">
+                                                        <UserCheck size={12} />
+                                                        <span>Тренер: {task.coachName}</span>
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {isCompleted && (
+                                                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                                                    <span>Награда начислена</span>
+                                                    <span>✓</span>
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        })
+                    )}
+                </div>
+
+                {/* 3. FOOTER ACTION */}
+                <div className="p-4 sm:p-5 border-t border-white/10 bg-zinc-900/60 flex items-center justify-between gap-3 relative z-10">
+                    <p className="text-xs text-zinc-400">
+                        Всего выполнено: <strong className="text-white">{completedCount}</strong> челленджей
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all cursor-pointer active:scale-95"
+                    >
+                        Закрыть
+                    </button>
+                </div>
             </div>
-        </AnimatePresence>
+        </BaseModal>
     );
 };
 

@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { uploadReviewMedia } from '../utils/supabaseStorage';
+import { BaseModal } from './ui/BaseModal';
 
 interface ReviewMediaModalProps {
     isOpen: boolean;
@@ -443,29 +444,18 @@ const ReviewMediaModal: React.FC<ReviewMediaModalProps> = ({ isOpen, onClose, re
     };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
-                >
-                    {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/95 backdrop-blur-xl"
-                        onClick={onClose}
-                    />
-
-                    {/* Modal Content */}
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        className="relative w-full max-w-6xl h-full max-h-[88vh] bg-[#0a0a0a] rounded-3xl overflow-hidden border border-white/10 flex flex-col md:flex-row shadow-[0_0_100px_rgba(0,0,0,0.8)]"
-                    >
-                        {/* Media Section */}
-                        <div className="flex-1 bg-black flex items-center justify-center relative group min-h-[320px]">
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-6xl"
+            customCard
+            showCloseButton={false}
+            glowColor="amber"
+            zIndex="z-[100]"
+        >
+            <div className="relative w-full h-[88vh] bg-[#0a0a0a] rounded-3xl overflow-hidden border border-white/10 flex flex-col md:flex-row shadow-[0_0_100px_rgba(0,0,0,0.8)] font-manrope text-left">
+                {/* Media Section */}
+                <div className="flex-1 bg-black flex items-center justify-center relative group min-h-[320px]">
                             {currentMedia?.type === 'video' ? (
                                 <div className="w-full h-full p-2 md:p-4 flex items-center justify-center overflow-hidden">
                                     <VideoPlayer
@@ -487,13 +477,15 @@ const ReviewMediaModal: React.FC<ReviewMediaModalProps> = ({ isOpen, onClose, re
                                 <>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-                                        className="absolute left-4 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                        className="absolute left-4 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-all opacity-60 hover:opacity-100 group-hover:opacity-100 cursor-pointer"
+                                        title="Предыдущее"
                                     >
                                         <ChevronLeft size={22} />
                                     </button>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleNext(); }}
-                                        className="absolute right-4 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                        className="absolute right-4 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-all opacity-60 hover:opacity-100 group-hover:opacity-100 cursor-pointer"
+                                        title="Следующее"
                                     >
                                         <ChevronRight size={22} />
                                     </button>
@@ -972,10 +964,8 @@ const ReviewMediaModal: React.FC<ReviewMediaModalProps> = ({ isOpen, onClose, re
                                 </button>
                             </form>
                         </div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+            </div>
+        </BaseModal>
     );
 };
 

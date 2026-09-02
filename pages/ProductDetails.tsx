@@ -19,6 +19,9 @@ import SizeAdvisor from '../components/SizeAdvisor';
 import SEO from '../components/SEO';
 import { getMediaFromLocalDB } from '../utils/mediaStorage';
 import { uploadReviewMedia } from '../utils/supabaseStorage';
+import BaseModal from '../components/ui/BaseModal';
+import SpartaCoinIcon from '../components/SpartaCoinIcon';
+import { useSpartaCoinsEconomy, rublesToCoins, formatCoins } from '../utils/spartaCoins';
 
 const EMOTION_TAGS = [
     '🚀 Ребенок в восторге',
@@ -125,18 +128,62 @@ const ProductDetails = () => {
     const [isReviewsDrawerOpen, setIsReviewsDrawerOpen] = useState(false);
     const [isQuickSizeOpen, setIsQuickSizeOpen] = useState(false);
     const [isAddedSuccess, setIsAddedSuccess] = useState(false);
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const [userCoins, setUserCoins] = useState<number>(0);
+    const [paymentMethod, setPaymentMethod] = useState<'club_coins' | 'card'>('club_coins');
+    const [isFastCheckoutOpen, setIsFastCheckoutOpen] = useState(false);
+    const [fastCustomerName, setFastCustomerName] = useState('');
+    const [fastCustomerPhone, setFastCustomerPhone] = useState('');
+    const [isFastSubmitting, setIsFastSubmitting] = useState(false);
+    const [fastOrderSuccess, setFastOrderSuccess] = useState(false);
+    const [sizeHighlight, setSizeHighlight] = useState(false);
     const [reviews, setReviews] = useState<Review[]>([]);
     const { toggleFavorite, isFavorite } = useFavorites();
     const { addToCart, setIsCartOpen, cartCount, showToast } = useCart();
     const [sizeCharts, setSizeCharts] = useState<SizeChart[]>([]);
     const [allProducts, setAllProducts] = useState<Product[]>([]);
     const relatedScrollRef = useRef<HTMLDivElement>(null);
+    const { exchangeRate, maxDiscountPercent } = useSpartaCoinsEconomy();
 
     const scrollToSection = (sectionId: string) => {
         const el = document.getElementById(sectionId);
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+    };
+
+    const handleQuickBuy = () => {
+        if (product && product.sizes && product.sizes.length > 0 && !selectedSize) {
+            showToast('Пожалуйста, выберите размер формы', 'warning');
+            setSizeHighlight(true);
+            setTimeout(() => setSizeHighlight(false), 2000);
+            scrollToSection('size-section');
+            return;
+        }
+        if (product && product.colors && product.colors.length > 0 && !selectedColor) {
+            showToast('Пожалуйста, выберите цвет формы', 'warning');
+            return;
+        }
+        setIsFastCheckoutOpen(true);
+    };
+
+    const handleAddToCart = () => {
+        if (!product) return;
+        if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+            showToast('Пожалуйста, выберите размер формы', 'warning');
+            setSizeHighlight(true);
+            setTimeout(() => setSizeHighlight(false), 2000);
+            scrollToSection('size-section');
+            return;
+        }
+        if (product.colors && product.colors.length > 0 && !selectedColor) {
+            showToast('Пожалуйста, выберите цвет формы', 'warning');
+            return;
+        }
+        addToCart(product, 1, selectedSize || undefined, selectedColor || undefined, customName, customNumber, measurements, fitStyle);
+        showToast('Форма добавлена в корзину!', 'success');
+        setIsAddedSuccess(true);
+        setTimeout(() => setIsAddedSuccess(false), 2000);
     };
 
     const calculateTotalStock = (p: Product | null) => {
@@ -431,6 +478,42 @@ const ProductDetails = () => {
         });
         return () => unsubscribe();
     }, [user]);
+
+    // Слушаем реальный баланс ученика из Firestore (onSnapshot)
+    useEffect(() => {
+        const studentId = selectedStudentId || userProfile?.studentId || userProfile?.childId || user?.uid;
+        if (!studentId) {
+            setUserCoins(Number(userProfile?.stats?.coins ?? userProfile?.spartCoins ?? userProfile?.coins ?? 0));
+            return;
+        }
+
+        const unsub = onSnapshot(doc(db, 'students', studentId), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setUserCoins(Number(data.stats?.coins ?? data.spartCoins ?? data.coins ?? 0));
+            } else {
+                // Fallback to users collection
+                const unsubUser = onSnapshot(doc(db, 'users', studentId), (userSnap) => {
+                    if (userSnap.exists()) {
+                        const uData = userSnap.data();
+                        setUserCoins(Number(uData.stats?.coins ?? uData.spartCoins ?? uData.coins ?? 0));
+                    } else {
+                        setUserCoins(Number(userProfile?.stats?.coins ?? userProfile?.spartCoins ?? userProfile?.coins ?? 0));
+                    }
+                });
+                return () => unsubUser();
+            }
+        });
+        return () => unsub();
+    }, [selectedStudentId, userProfile, user]);
+
+    useEffect(() => {
+        if (userCoins > 0) {
+            setPaymentMethod('club_coins');
+        } else {
+            setPaymentMethod('card');
+        }
+    }, [userCoins]);
 
     // Real-time Child Profile Sync for 1-Click Fill
     const [linkedChildren, setLinkedChildren] = useState<Array<{ id: string; name: string; lastName: string; number?: string }>>([]);
@@ -1565,7 +1648,7 @@ const ProductDetails = () => {
 
                         {/* 2. Step 1: Size Selector (Compact Chips) */}
                         {product.sizes && product.sizes.length > 0 && (
-                            <div id="size-section" className="space-y-2 pt-1">
+                            <div id="size-section" className={`space-y-2 pt-1 transition-all duration-300 rounded-2xl p-1 ${sizeHighlight ? 'ring-2 ring-amber-400 bg-amber-500/10 shadow-[0_0_25px_rgba(245,158,11,0.25)]' : ''}`}>
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
                                     <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                                         1. Размер: {selectedSize ? (
@@ -1682,12 +1765,13 @@ const ProductDetails = () => {
                                             Подставить:
                                         </span>
                                         {linkedChildren.map(child => {
-                                            const isSelected = customName === child.lastName;
+                                            const isSelected = selectedStudentId === child.id || customName === child.lastName;
                                             return (
                                                 <button
                                                     key={child.id}
                                                     type="button"
                                                     onClick={() => {
+                                                        setSelectedStudentId(child.id);
                                                         setCustomName(child.lastName);
                                                         if (child.number) setCustomNumber(child.number);
                                                         showToast(`Подставлены данные: ${child.name}`, 'info');
@@ -1833,40 +1917,144 @@ const ProductDetails = () => {
 
 
 
-                        {/* 4. Actions: Add to Cart & Favorite (Only on Desktop lg:, on mobile floating sticky bar is used) */}
-                        <div className="hidden lg:flex gap-3 pt-1">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    if (product.sizes && product.sizes.length > 0 && !selectedSize) {
-                                        showToast('Пожалуйста, выберите размер', 'warning');
-                                        return;
-                                    }
-                                    if (product.colors && product.colors.length > 0 && !selectedColor) {
-                                        showToast('Пожалуйста, выберите цвет', 'warning');
-                                        return;
-                                    }
-                                    addToCart(product, 1, selectedSize || undefined, selectedColor || undefined, customName, customNumber, measurements, fitStyle);
-                                }}
-                                disabled={(selectedSize && product.stock?.[selectedSize] === 0) || (!selectedSize && product.sizes && product.sizes.length > 0)}
-                                className="flex-1 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 disabled:opacity-50 disabled:bg-[#1a1a1a] disabled:text-gray-600 disabled:border-white/5 text-black py-4 px-6 rounded-2xl font-russo uppercase tracking-wider transition-all shadow-[0_0_35px_rgba(234,179,8,0.35)] hover:shadow-[0_0_50px_rgba(234,179,8,0.55)] flex items-center justify-center gap-3 active:scale-[0.98] text-sm sm:text-base cursor-pointer group"
-                            >
-                                <ShoppingCart size={22} className="group-hover:-translate-y-0.5 transition-transform" />
-                                <span>{(selectedSize && product.stock?.[selectedSize] === 0) ? 'Раскупили' : `В корзину • ${(appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price).toLocaleString()} ₽`}</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => toggleFavorite(product.id)}
-                                className={`w-14 h-14 bg-[#181818] border rounded-2xl flex items-center justify-center transition-all flex-shrink-0 cursor-pointer ${
-                                    isFavorite(product.id)
-                                        ? 'border-red-500/50 text-red-500 bg-red-500/10'
-                                        : 'border-white/10 text-gray-400 hover:text-white hover:border-white/30'
-                                }`}
-                                title="В избранное"
-                            >
-                                <Heart size={22} fill={isFavorite(product.id) ? "currentColor" : "none"} className={isFavorite(product.id) ? "scale-110" : ""} />
-                            </button>
-                        </div>
+                        {/* 4. Payment Method & Purchase Actions */}
+                        {(() => {
+                            const basePrice = appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price;
+                            const maxDiscountRub = Math.floor(basePrice * (maxDiscountPercent / 100));
+                            const maxCoinsUsable = Math.min(userCoins, Math.floor(maxDiscountRub / (exchangeRate || 10)));
+                            const discountRub = paymentMethod === 'club_coins' && userCoins > 0 ? maxCoinsUsable * (exchangeRate || 10) : 0;
+                            const finalPrice = Math.max(0, basePrice - discountRub);
+
+                            return (
+                                <div className="space-y-4 pt-2">
+                                    {/* Payment Method Cards */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                                Способ оплаты
+                                            </label>
+                                            <span className="text-[11px] text-zinc-400 font-mono">1 монета = {exchangeRate} ₽</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                            {/* Card 1: Оплата с бонусами (монетами) */}
+                                            <div
+                                                onClick={() => {
+                                                    if (userCoins > 0) setPaymentMethod('club_coins');
+                                                    else showToast('У ученика пока нет накопленных монет', 'info');
+                                                }}
+                                                className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between select-none ${
+                                                    paymentMethod === 'club_coins' && userCoins > 0
+                                                        ? 'bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-transparent border-amber-400/70 shadow-[0_0_25px_rgba(245,158,11,0.2)] ring-1 ring-amber-400/40'
+                                                        : userCoins > 0
+                                                        ? 'bg-zinc-900/70 border-white/10 hover:border-white/20 text-zinc-400'
+                                                        : 'bg-zinc-950/40 border-white/5 opacity-50 cursor-not-allowed text-zinc-500'
+                                                }`}
+                                            >
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-base">🟡</span>
+                                                        <span className="text-xs font-bold text-white">Оплата с бонусами (монетами)</span>
+                                                    </div>
+                                                    {userCoins > 0 ? (
+                                                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-black rounded-md border border-emerald-500/30">
+                                                            Скидка -{(maxCoinsUsable * (exchangeRate || 10)).toLocaleString()} ₽
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-zinc-500">0 монет</span>
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-1">
+                                                    <div className="flex items-baseline gap-2">
+                                                        <span className={`font-russo text-lg sm:text-xl font-bold ${paymentMethod === 'club_coins' && userCoins > 0 ? 'text-emerald-400' : 'text-zinc-300'}`}>
+                                                            {userCoins > 0 ? (Math.max(0, basePrice - maxCoinsUsable * (exchangeRate || 10))).toLocaleString() : basePrice.toLocaleString()} ₽
+                                                        </span>
+                                                        {userCoins > 0 && (
+                                                            <span className="font-russo text-xs text-zinc-500 line-through">
+                                                                {basePrice.toLocaleString()} ₽
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[11px] text-amber-300/90 mt-1 font-medium">
+                                                        {userCoins > 0 ? (
+                                                            <span>Списано {maxCoinsUsable} монет на скидку</span>
+                                                        ) : (
+                                                            <span>Копите монеты за тренировки</span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Card 2: Банковская карта */}
+                                            <div
+                                                onClick={() => setPaymentMethod('card')}
+                                                className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between select-none ${
+                                                    paymentMethod === 'card' || userCoins === 0
+                                                        ? 'bg-gradient-to-br from-zinc-800/80 to-zinc-900/80 border-amber-400/60 shadow-lg ring-1 ring-amber-400/30'
+                                                        : 'bg-zinc-900/70 border-white/10 hover:border-white/20 text-zinc-400'
+                                                }`}
+                                            >
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <CreditCard size={16} className={paymentMethod === 'card' || userCoins === 0 ? 'text-amber-400' : 'text-zinc-400'} />
+                                                        <span className="text-xs font-bold text-white">Банковская карта</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-1">
+                                                    <div className="font-russo text-lg sm:text-xl font-bold text-white">
+                                                        {basePrice.toLocaleString()} ₽
+                                                    </div>
+                                                    <p className="text-[11px] text-zinc-400 mt-1">
+                                                        Обычная оплата без списания монет
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 3 Action Buttons: 1. Купить сейчас (Основная), 2. В корзину, 3. В избранное */}
+                                    <div className="hidden lg:flex items-center gap-2.5 pt-2">
+                                        {/* Button 1: ⚡ КУПИТЬ СЕЙЧАС */}
+                                        <button
+                                            type="button"
+                                            onClick={handleQuickBuy}
+                                            disabled={Boolean(selectedSize && !product.isMadeToOrder && typeof product.stock === 'object' && product.stock !== null && product.stock[selectedSize] === 0)}
+                                            className="flex-[1.4] bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 disabled:opacity-50 disabled:bg-[#1a1a1a] disabled:text-gray-600 disabled:border-white/5 text-black py-4 px-5 rounded-2xl font-russo uppercase tracking-wider transition-all shadow-[0_0_35px_rgba(234,179,8,0.35)] hover:shadow-[0_0_50px_rgba(234,179,8,0.55)] flex items-center justify-center gap-2 active:scale-[0.98] text-xs sm:text-sm cursor-pointer group font-black"
+                                        >
+                                            <Zap size={18} className="fill-black group-hover:scale-110 transition-transform shrink-0" />
+                                            <span>{(selectedSize && !product.isMadeToOrder && typeof product.stock === 'object' && product.stock?.[selectedSize] === 0) ? 'Раскупили' : `⚡ КУПИТЬ СЕЙЧАС • ${finalPrice.toLocaleString()} ₽`}</span>
+                                        </button>
+
+                                        {/* Button 2: 🛒 В корзину */}
+                                        <button
+                                            type="button"
+                                            onClick={handleAddToCart}
+                                            disabled={Boolean(selectedSize && !product.isMadeToOrder && typeof product.stock === 'object' && product.stock !== null && product.stock[selectedSize] === 0)}
+                                            className="flex-1 bg-white/10 hover:bg-white/15 text-white border border-white/15 py-4 px-4 rounded-2xl font-russo uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-[0.98] text-xs sm:text-sm cursor-pointer whitespace-nowrap"
+                                        >
+                                            <ShoppingCart size={18} className="shrink-0" />
+                                            <span>В корзину</span>
+                                        </button>
+
+                                        {/* Button 3: Heart */}
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleFavorite(product.id)}
+                                            className={`w-14 h-14 bg-[#181818] border rounded-2xl flex items-center justify-center transition-all flex-shrink-0 cursor-pointer ${
+                                                isFavorite(product.id)
+                                                    ? 'border-red-500/50 text-red-500 bg-red-500/10'
+                                                    : 'border-white/10 text-gray-400 hover:text-white hover:border-white/30'
+                                            }`}
+                                            title="В избранное"
+                                        >
+                                            <Heart size={22} fill={isFavorite(product.id) ? "currentColor" : "none"} className={isFavorite(product.id) ? "scale-110" : ""} />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* 5. Trust & Service Info Bar */}
                         <div className="pt-2 border-t border-white/5">
@@ -2667,364 +2855,190 @@ const ProductDetails = () => {
                 )}
             </AnimatePresence>
 
-            {/* Product Description & Fabric Modal (Rich Bottom Sheet / Modal) */}
-            <AnimatePresence>
-                {isDescriptionModalOpen && product && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6"
-                    >
-                        <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setIsDescriptionModalOpen(false)} />
+            {/* Product Description & Fabric Modal */}
+            <BaseModal
+                isOpen={isDescriptionModalOpen && Boolean(product)}
+                onClose={() => setIsDescriptionModalOpen(false)}
+                maxWidth="max-w-2xl"
+                glowColor="amber"
+                showCloseButton={true}
+            >
+                {product && (
+                    <div className="space-y-6 text-left">
+                        {/* Modal Header */}
+                        <div>
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-400 text-[10px] font-black uppercase tracking-wider mb-1.5">
+                                <Sparkles size={12} />
+                                <span>О комплекте и материалах</span>
+                            </div>
+                            <h3 className="text-lg sm:text-2xl font-russo uppercase tracking-wider text-white">
+                                {product.title}
+                            </h3>
+                        </div>
 
-                        <motion.div
-                            initial={{ y: '100%', opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: '100%', opacity: 0 }}
-                            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                            className="relative w-full max-w-2xl bg-[#121214] border-t sm:border border-white/10 rounded-t-[2rem] sm:rounded-3xl p-5 sm:p-7 overflow-y-auto max-h-[90vh] sm:max-h-[85vh] shadow-[0_20px_80px_rgba(0,0,0,0.9)] space-y-6"
-                        >
-                            {/* Mobile Swipe Handle Indicator */}
-                            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto -mt-1 mb-3 sm:hidden" />
+                        {/* Section 1: Fabric & Description */}
+                        <div className="space-y-3.5">
+                            <div className="flex items-center gap-2 text-xs font-russo uppercase text-yellow-400 tracking-wider">
+                                <Zap size={15} />
+                                <span>Спортивная ткань DRY-FIT и свойства</span>
+                            </div>
 
-                            {/* Modal Header */}
-                            <div className="flex items-start justify-between gap-4">
-                                <div>
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-400 text-[10px] font-black uppercase tracking-wider mb-1.5">
-                                        <Sparkles size={12} />
-                                        <span>О комплекте и материалах</span>
-                                    </div>
-                                    <h3 className="text-lg sm:text-2xl font-russo uppercase tracking-wider text-white">
-                                        {product.title}
-                                    </h3>
-                                </div>
+                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-line">
+                                {product.description || 'Фирменная спортивная экипировка футбольного клуба Спарта. Разработана для комфорта юных чемпионов на тренировках и официальных матчах.'}
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-3">
+                            {matchingChart ? (
                                 <button
                                     type="button"
-                                    onClick={() => setIsDescriptionModalOpen(false)}
-                                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                                    onClick={() => {
+                                        setIsDescriptionModalOpen(false);
+                                        setIsSizeChartOpen(true);
+                                    }}
+                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-yellow-400 border border-yellow-500/30 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
                                 >
-                                    <X size={20} />
+                                    <Ruler size={14} />
+                                    <span>Таблица размеров</span>
                                 </button>
-                            </div>
+                            ) : <div />}
 
-                            {/* Section 1: Fabric & Description */}
-                            <div className="space-y-3.5">
-                                <div className="flex items-center gap-2 text-xs font-russo uppercase text-yellow-400 tracking-wider">
-                                    <Zap size={15} />
-                                    <span>Спортивная ткань DRY-FIT и свойства</span>
-                                </div>
-
-                                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-line">
-                                    {product.description || 'Фирменная спортивная экипировка футбольного клуба Спарта. Разработана для комфорта юных чемпионов на тренировках и официальных матчах.'}
-                                </div>
-
-                                {/* 4 Feature Cards */}
-                                <div className="grid grid-cols-2 gap-2.5">
-                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-base">💧</span>
-                                            <h5 className="font-russo text-xs text-white uppercase">Отвод влаги</h5>
-                                        </div>
-                                        <p className="text-[11px] text-gray-400">Быстро сохнет, не прилипает к телу при беге</p>
-                                    </div>
-
-                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-base">🌬️</span>
-                                            <h5 className="font-russo text-xs text-white uppercase">Вентиляция</h5>
-                                        </div>
-                                        <p className="text-[11px] text-gray-400">Дышащая структура для правильного теплообмена</p>
-                                    </div>
-
-                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-base">🛡️</span>
-                                            <h5 className="font-russo text-xs text-white uppercase">100+ стирок</h5>
-                                        </div>
-                                        <p className="text-[11px] text-gray-400">Сохраняет форму и насыщенный цвет ткани</p>
-                                    </div>
-
-                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-base">🏃</span>
-                                            <h5 className="font-russo text-xs text-white uppercase">Свободный крой</h5>
-                                        </div>
-                                        <p className="text-[11px] text-gray-400">Анатомический крой не сковывает движений</p>
-                                    </div>
-                                </div>
-
-                                {/* Specifications Chips (Dynamic from Admin Panel) */}
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-                                    {product.specifications && Object.keys(product.specifications).length > 0 ? (
-                                        Object.entries(product.specifications).map(([key, val]) => (
-                                            <div key={key} className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
-                                                <span className="text-[9px] font-bold text-gray-500 uppercase block truncate">{key}</span>
-                                                <span className="text-[11px] font-russo text-white mt-0.5 block truncate">{String(val)}</span>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <>
-                                            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
-                                                <span className="text-[9px] font-bold text-gray-500 uppercase block">Материал</span>
-                                                <span className="text-[11px] font-russo text-white mt-0.5 block truncate">DRY-FIT 100%</span>
-                                            </div>
-                                            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
-                                                <span className="text-[9px] font-bold text-gray-500 uppercase block">Производство</span>
-                                                <span className="text-[11px] font-russo text-white mt-0.5 block truncate">Ателье Спарта</span>
-                                            </div>
-                                            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
-                                                <span className="text-[9px] font-bold text-gray-500 uppercase block">Нанесение</span>
-                                                <span className="text-[11px] font-russo text-yellow-400 mt-0.5 block truncate">Сублимация</span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Section 2: Care Instructions */}
-                            <div className="space-y-3 pt-1 border-t border-white/5">
-                                <div className="flex items-center gap-2 text-xs font-russo uppercase text-yellow-400 tracking-wider">
-                                    <span>🧼</span>
-                                    <span>Памятка по уходу за формой</span>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
-                                        <p className="text-xs font-bold text-white">🌡️ Стирка до 30°C</p>
-                                        <p className="text-[10px] text-gray-400 mt-0.5">Вывернув наизнанку, деликатный отжим до 800 об/мин</p>
-                                    </div>
-                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
-                                        <p className="text-xs font-bold text-white">🚫 Без отбеливателей</p>
-                                        <p className="text-[10px] text-gray-400 mt-0.5">Не использовать хлор и агрессивные пятновыводители</p>
-                                    </div>
-                                    <div className="bg-[#18181b] border border-white/5 rounded-xl p-3">
-                                        <p className="text-xs font-bold text-white">⚡ Глажка с изнанки</p>
-                                        <p className="text-[10px] text-gray-400 mt-0.5">Не прикасаться горячим утюгом к термопечати номера</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section 3: Delivery & Handover */}
-                            <div className="space-y-3 pt-1 border-t border-white/5">
-                                <div className="flex items-center gap-2 text-xs font-russo uppercase text-emerald-400 tracking-wider">
-                                    <MapPin size={15} />
-                                    <span>Сроки изготовления и получение</span>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="bg-[#18181b] border border-white/5 rounded-2xl p-3.5 flex items-start gap-3">
-                                        <div className="w-8 h-8 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 shrink-0">
-                                            <Clock size={16} />
-                                        </div>
-                                        <div>
-                                            <h5 className="text-xs font-russo uppercase text-white">Индивидуальный пошив</h5>
-                                            <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
-                                                Срок изготовления формы с персонализацией: <strong>{product.productionTime || '3–5 рабочих дней'}</strong>.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-[#18181b] border border-white/5 rounded-2xl p-3.5 flex items-start gap-3">
-                                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-                                            <MapPin size={16} />
-                                        </div>
-                                        <div>
-                                            <h5 className="text-xs font-russo uppercase text-white">Выдача на тренировке</h5>
-                                            <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
-                                                {product.deliveryInfo || 'Форма передается тренеру вашей группы и торжественно вручается ребенку на тренировке.'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Footer Actions */}
-                            <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-3">
-                                {matchingChart ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setIsDescriptionModalOpen(false);
-                                            setIsSizeChartOpen(true);
-                                        }}
-                                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-yellow-400 border border-yellow-500/30 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
-                                    >
-                                        <Ruler size={14} />
-                                        <span>Таблица размеров</span>
-                                    </button>
-                                ) : <div />}
-
-                                <button
-                                    type="button"
-                                    onClick={() => setIsDescriptionModalOpen(false)}
-                                    className="px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-russo uppercase text-xs rounded-xl transition-all shadow-md cursor-pointer"
-                                >
-                                    Понятно
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
+                            <button
+                                type="button"
+                                onClick={() => setIsDescriptionModalOpen(false)}
+                                className="px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-russo uppercase text-xs rounded-xl transition-all shadow-md cursor-pointer"
+                            >
+                                Понятно
+                            </button>
+                        </div>
+                    </div>
                 )}
-            </AnimatePresence>
+            </BaseModal>
 
             {/* Size Chart Modal */}
-            <AnimatePresence>
-                {isSizeChartOpen && product && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center px-4"
-                    >
-                        <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setIsSizeChartOpen(false)} />
-
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-5xl bg-[#111] rounded-[2.5rem] border border-white/10 overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col md:flex-row max-h-[90vh]"
-                        >
-                            {/* Left Side: Logic & Info */}
-                            <div className="w-full md:w-96 p-8 border-r border-white/5 flex flex-col gap-6 overflow-y-auto">
-                                <div className="flex items-center justify-between md:hidden">
-                                    <h3 className="text-xl font-black uppercase tracking-widest text-white">Гид по размерам</h3>
-                                    <button onClick={() => setIsSizeChartOpen(false)} className="text-gray-500"><X size={24} /></button>
-                                </div>
-                                <div className="hidden md:block">
-                                    <h3 className="text-2xl font-black uppercase tracking-widest text-white mb-2">
-                                        {matchingChart?.name || 'Гид по размерам'}
-                                    </h3>
-                                    <p className="text-gray-500 text-xs leading-relaxed">
-                                        {matchingChart ? 'Наш «Умный гид» автоматически подберет идеальный размер на основе ваших замеров.' : 'Ознакомьтесь с размерной сеткой для выбора подходящего размера.'}
-                                    </p>
-                                </div>
-
-                                {/* Tabs */}
-                                <div className="grid grid-cols-2 gap-2 p-1 bg-white/5 rounded-2xl">
-                                    <button
-                                        onClick={() => setActiveChartTab('jersey')}
-                                        className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeChartTab === 'jersey' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'
-                                            }`}
-                                    >
-                                        {product.title.toLowerCase().includes('костюм') ? 'Олимпийка' : 'Футболка'}
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveChartTab(product.title.toLowerCase().includes('костюм') || product.title.toLowerCase().includes('брюки') ? 'pants' : 'shorts')}
-                                        className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${(activeChartTab === 'shorts' || activeChartTab === 'pants') ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'
-                                            }`}
-                                    >
-                                        {product.title.toLowerCase().includes('костюм') || product.title.toLowerCase().includes('брюки') ? 'Штаны' : 'Шорты'}
-                                    </button>
-                                </div>
-
-                                <div className="h-px bg-white/5" />
-
-                                {/* Smart Advisor Integration */}
-                                <div>
-                                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Автоматический подбор</h4>
-                                    <SizeAdvisor
-                                        category={product.category.toLowerCase().includes('юниор') || product.title.toLowerCase().includes('детск') ? 'child' : 'adult'}
-                                        type={activeChartTab}
-                                        measurements={matchingChart?.measurements}
-                                        userHeight={measurements.height}
-                                        userChest={measurements.chest}
-                                        userWaist={measurements.waist}
-                                        userHips={measurements.hips}
-                                        onSelectSize={(size) => {
-                                            setSelectedSize(size);
-                                            setIsSizeChartOpen(false);
-                                        }}
-                                    />
-                                    {(!measurements.height && !measurements.chest) && (
-                                        <div className="p-4 rounded-2xl border border-white/5 bg-white/5">
-                                            <p className="text-[10px] text-gray-500 text-center uppercase tracking-wider">Введите параметры в блоке «Индивидуальный пошив» для автоподбора</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="mt-auto pt-8 border-t border-white/5">
-                                    <div className="space-y-4 text-[10px] text-gray-400 uppercase tracking-wider font-bold">
-                                        {matchingChart?.disclaimers?.map((d, i) => (
-                                            <div key={i} className="flex items-start gap-2">
-                                                <div className="w-1 h-1 bg-yellow-500 rounded-full mt-1.5 flex-shrink-0" />
-                                                <span className={d.includes('облегания') ? 'text-yellow-500/80' : ''}>{d}</span>
-                                            </div>
-                                        )) || (
-                                                <>
-                                                    <div className="flex items-center gap-2 text-yellow-500/80">
-                                                        <div className="w-1 h-1 bg-yellow-500 rounded-full" />
-                                                        <span>Свобода облегания +10см</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-1 h-1 bg-white/20 rounded-full" />
-                                                        <span>Погрешность 1-2см</span>
-                                                    </div>
-                                                </>
-                                            )}
-                                        {(activeChartTab === 'shorts' || activeChartTab === 'pants') && (
-                                            <div className="p-3 bg-yellow-500/5 rounded-xl border border-yellow-500/10">
-                                                <p className="text-[9px] text-yellow-500/80 leading-relaxed uppercase tracking-wider">
-                                                    Таблица актуальна как для шорт, так и для брюк (подбор по талии и бедрам)
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+            <BaseModal
+                isOpen={isSizeChartOpen && Boolean(product)}
+                onClose={() => setIsSizeChartOpen(false)}
+                maxWidth="max-w-5xl"
+                glowColor="amber"
+                customCard={true}
+                showCloseButton={false}
+            >
+                {product && (
+                    <div className="relative w-full bg-[#111] rounded-3xl border border-white/10 overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[85vh]">
+                        {/* Left Side: Logic & Info */}
+                        <div className="w-full md:w-96 p-6 sm:p-8 border-r border-white/5 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
+                            <div className="flex items-center justify-between md:hidden">
+                                <h3 className="text-xl font-black uppercase tracking-widest text-white">Гид по размерам</h3>
+                                <button onClick={() => setIsSizeChartOpen(false)} className="text-gray-500 hover:text-white cursor-pointer"><X size={24} /></button>
+                            </div>
+                            <div className="hidden md:block">
+                                <h3 className="text-2xl font-black uppercase tracking-widest text-white mb-2">
+                                    {matchingChart?.name || 'Гид по размерам'}
+                                </h3>
+                                <p className="text-gray-500 text-xs leading-relaxed">
+                                    {matchingChart ? 'Наш «Умный гид» автоматически подберет идеальный размер на основе ваших замеров.' : 'Ознакомьтесь с размерной сеткой для выбора подходящего размера.'}
+                                </p>
                             </div>
 
-                            {/* Right Side: Image View */}
-                            <div className="flex-1 bg-black relative p-4 md:p-8 flex items-center justify-center overflow-hidden">
+                            {/* Tabs */}
+                            <div className="grid grid-cols-2 gap-2 p-1 bg-white/5 rounded-2xl">
                                 <button
-                                    onClick={() => setIsSizeChartOpen(false)}
-                                    className="absolute top-8 right-8 z-10 p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors hidden md:block"
+                                    onClick={() => setActiveChartTab('jersey')}
+                                    className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                                        activeChartTab === 'jersey' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'
+                                    }`}
                                 >
-                                    <X size={24} />
+                                    {product.title.toLowerCase().includes('костюм') ? 'Олимпийка' : 'Футболка'}
                                 </button>
+                                <button
+                                    onClick={() => setActiveChartTab(product.title.toLowerCase().includes('костюм') || product.title.toLowerCase().includes('брюки') ? 'pants' : 'shorts')}
+                                    className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                                        (activeChartTab === 'shorts' || activeChartTab === 'pants') ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'
+                                    }`}
+                                >
+                                    {product.title.toLowerCase().includes('костюм') || product.title.toLowerCase().includes('брюки') ? 'Штаны' : 'Шорты'}
+                                </button>
+                            </div>
 
-                                <img
-                                    src={matchingChart?.imageUrl || `/images/size-charts/${activeChartTab}-${product.category.toLowerCase().includes('юниор') || product.title.toLowerCase().includes('детск') ? 'child' : 'adult'}.${activeChartTab === 'pants' ? 'jpg' : 'png'}`}
-                                    alt="Size Chart"
-                                    className="max-w-full max-h-full object-contain rounded-xl"
-                                    onError={(e) => {
-                                        const img = e.target as HTMLImageElement;
-                                        if (matchingChart?.imageUrl && img.src === matchingChart.imageUrl) {
-                                            // If dynamic image fails, fallback to hardcoded
-                                            img.src = `/images/size-charts/${activeChartTab}-${product.category.toLowerCase().includes('юниор') || product.title.toLowerCase().includes('детск') ? 'child' : 'adult'}.${activeChartTab === 'pants' ? 'jpg' : 'png'}`;
-                                            return;
-                                        }
+                            <div className="h-px bg-white/5" />
 
-                                        const attempts = parseInt(img.getAttribute('data-attempts') || '0');
-
-                                        if (attempts < 4) {
-                                            img.setAttribute('data-attempts', (attempts + 1).toString());
-
-                                            console.log(`[SizeChart] Failed to load: ${img.src}. Attempt: ${attempts}`);
-
-                                            if (attempts === 1) {
-                                                img.src = img.src.endsWith('.png') ? img.src.replace('.png', '.jpg') : img.src.replace('.jpg', '.png');
-                                            } else if (attempts === 2 && activeChartTab === 'pants') {
-                                                img.src = img.src.includes('adult') ? img.src.replace('adult', 'child') : img.src.replace('child', 'adult');
-                                            } else if (attempts === 3) {
-                                                img.src = `/images/size-charts/shorts-${product.category.toLowerCase().includes('юниор') || product.title.toLowerCase().includes('детск') ? 'child' : 'adult'}.png`;
-                                            } else {
-                                                img.src = product.sizeChartUrl || 'https://via.placeholder.com/800x1200/111111/555555?text=Таблица+скоро+будет';
-                                            }
-                                        }
+                            {/* Smart Advisor Integration */}
+                            <div>
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Автоматический подбор</h4>
+                                <SizeAdvisor
+                                    category={product.category.toLowerCase().includes('юниор') || product.title.toLowerCase().includes('детск') ? 'child' : 'adult'}
+                                    type={activeChartTab}
+                                    measurements={matchingChart?.measurements}
+                                    userHeight={measurements.height}
+                                    userChest={measurements.chest}
+                                    userWaist={measurements.waist}
+                                    userHips={measurements.hips}
+                                    onSelectSize={(size) => {
+                                        setSelectedSize(size);
+                                        setIsSizeChartOpen(false);
                                     }}
                                 />
-                                {(!product.sizeChartUrl && activeChartTab === 'pants') && (
-                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none opacity-50">
-                                        <p className="text-gray-500 text-[8px] uppercase font-bold tracking-[0.2em] whitespace-nowrap">
-                                            Справочная информация (может потребоваться уточнение для взрослых размеров)
-                                        </p>
+                                {(!measurements.height && !measurements.chest) && (
+                                    <div className="p-4 rounded-2xl border border-white/5 bg-white/5 mt-2">
+                                        <p className="text-[10px] text-gray-500 text-center uppercase tracking-wider">Введите параметры в блоке «Индивидуальный пошив» для автоподбора</p>
                                     </div>
                                 )}
                             </div>
-                        </motion.div>
-                    </motion.div>
+
+                            <div className="mt-auto pt-8 border-t border-white/5">
+                                <div className="space-y-4 text-[10px] text-gray-400 uppercase tracking-wider font-bold">
+                                    {matchingChart?.disclaimers?.map((d, i) => (
+                                        <div key={i} className="flex items-start gap-2">
+                                            <div className="w-1 h-1 bg-yellow-500 rounded-full mt-1.5 flex-shrink-0" />
+                                            <span className={d.includes('облегания') ? 'text-yellow-500/80' : ''}>{d}</span>
+                                        </div>
+                                    )) || (
+                                            <>
+                                                <div className="flex items-center gap-2 text-yellow-500/80">
+                                                    <div className="w-1 h-1 bg-yellow-500 rounded-full" />
+                                                    <span>Свобода облегания +10см</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1 h-1 bg-white/20 rounded-full" />
+                                                    <span>Погрешность 1-2см</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    {(activeChartTab === 'shorts' || activeChartTab === 'pants') && (
+                                        <div className="p-3 bg-yellow-500/5 rounded-xl border border-yellow-500/10">
+                                            <p className="text-[9px] text-yellow-500/80 leading-relaxed uppercase tracking-wider">
+                                                Таблица актуальна как для шорт, так и для брюк (подбор по талии и бедрам)
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Side: Image View */}
+                        <div className="flex-1 bg-black relative p-4 md:p-8 flex items-center justify-center overflow-hidden">
+                            <button
+                                onClick={() => setIsSizeChartOpen(false)}
+                                className="absolute top-6 right-6 z-10 p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors hidden md:block cursor-pointer text-white"
+                            >
+                                <X size={20} />
+                            </button>
+
+                            <img
+                                src={matchingChart?.imageUrl || `/images/size-charts/${activeChartTab}-${product.category.toLowerCase().includes('юниор') || product.title.toLowerCase().includes('детск') ? 'child' : 'adult'}.${activeChartTab === 'pants' ? 'jpg' : 'png'}`}
+                                alt="Size Chart"
+                                className="max-w-full max-h-full object-contain rounded-xl"
+                                onError={(e) => {
+                                    const img = e.target as HTMLImageElement;
+                                    img.src = '/shop/sparta-uniform-green.png';
+                                }}
+                            />
+                        </div>
+                    </div>
                 )}
-            </AnimatePresence>
+            </BaseModal>
 
             {/* --- STICKY MOBILE/TABLET PURCHASE BAR (< 1024px) --- */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d0d0d]/95 backdrop-blur-2xl border-t border-yellow-500/20 p-3 sm:p-4 px-4 sm:px-6 shadow-[0_-12px_40px_rgba(0,0,0,0.9)]">
@@ -3119,14 +3133,28 @@ const ProductDetails = () => {
                                 </span>
                             ) : 'Sparta')}
                         </div>
-                        <div className="font-russo text-lg sm:text-xl text-white font-bold truncate">
-                            {(appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price).toLocaleString()} ₽
-                            {customName && (
-                                <span className="text-[9px] font-mono text-emerald-400 font-normal ml-1.5 tracking-tight">
-                                    • {customNumber || '22'} {customName}
-                                </span>
-                            )}
-                        </div>
+                        {(() => {
+                            const currentPriceRub = appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price;
+                            const maxCoinsUsable = Math.min(userCoins, Math.ceil(currentPriceRub / 10));
+                            const coinsDiscountRub = paymentMethod === 'club_coins' && userCoins > 0 ? maxCoinsUsable * 10 : 0;
+                            const finalPrice = Math.max(0, currentPriceRub - coinsDiscountRub);
+
+                            return (
+                                <div className="font-russo text-lg sm:text-xl text-white font-bold truncate">
+                                    {finalPrice.toLocaleString()} ₽
+                                    {paymentMethod === 'club_coins' && userCoins > 0 && (
+                                        <span className="text-[10px] text-emerald-400 font-mono font-normal ml-1">
+                                            (-{coinsDiscountRub.toLocaleString()} ₽)
+                                        </span>
+                                    )}
+                                    {customName && (
+                                        <span className="text-[9px] font-mono text-emerald-400 font-normal ml-1.5 tracking-tight">
+                                            • {customNumber || '22'} {customName}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                     <div className="flex items-center gap-2">
                         <button
@@ -3143,42 +3171,195 @@ const ProductDetails = () => {
                         </button>
                         <button
                             type="button"
-                            onClick={() => {
-                                if (product.sizes && product.sizes.length > 0 && !selectedSize) {
-                                    setIsQuickSizeOpen(true);
-                                    showToast('Пожалуйста, выберите размер', 'warning');
-                                    return;
-                                }
-                                if (product.colors && product.colors.length > 0 && !selectedColor) {
-                                    showToast('Пожалуйста, выберите цвет', 'warning');
-                                    return;
-                                }
-                                addToCart(product, 1, selectedSize || undefined, selectedColor || undefined, customName, customNumber, measurements, fitStyle);
-                                setIsAddedSuccess(true);
-                                setTimeout(() => setIsAddedSuccess(false), 2000);
-                            }}
-                            disabled={(selectedSize && product.stock?.[selectedSize] === 0) || (!selectedSize && product.sizes && product.sizes.length > 0 && !isQuickSizeOpen)}
-                            className={`px-5 py-3 rounded-xl font-russo uppercase text-xs sm:text-sm tracking-wider flex items-center gap-2 shadow-lg active:scale-95 cursor-pointer whitespace-nowrap transition-all ${
-                                isAddedSuccess
-                                    ? 'bg-emerald-500 text-black shadow-emerald-500/30 font-black'
-                                    : 'bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 disabled:opacity-40 disabled:bg-[#1a1a1a] disabled:text-gray-600 text-black shadow-yellow-500/20'
-                            }`}
+                            onClick={handleQuickBuy}
+                            disabled={Boolean(selectedSize && !product.isMadeToOrder && typeof product.stock === 'object' && product.stock !== null && product.stock[selectedSize] === 0)}
+                            className="px-4 py-3 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black rounded-xl font-russo uppercase text-xs sm:text-sm tracking-wider flex items-center gap-1.5 shadow-lg active:scale-95 cursor-pointer whitespace-nowrap transition-all font-black"
                         >
-                            {isAddedSuccess ? (
-                                <>
-                                    <Check size={16} className="stroke-[3]" />
-                                    <span>В корзине!</span>
-                                </>
-                            ) : (
-                                <>
-                                    <ShoppingCart size={16} />
-                                    <span>{(selectedSize && product.stock?.[selectedSize] === 0) ? 'Раскупили' : 'В корзину'}</span>
-                                </>
-                            )}
+                            <Zap size={16} className="fill-black shrink-0" />
+                            <span>Купить</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleAddToCart}
+                            disabled={Boolean(selectedSize && !product.isMadeToOrder && typeof product.stock === 'object' && product.stock !== null && product.stock[selectedSize] === 0)}
+                            className={`p-3 rounded-xl border transition-all flex items-center justify-center cursor-pointer ${
+                                isAddedSuccess
+                                    ? 'bg-emerald-500 text-black border-emerald-500'
+                                    : 'bg-white/10 text-white border-white/15 hover:bg-white/20'
+                            }`}
+                            title="В корзину"
+                        >
+                            {isAddedSuccess ? <Check size={18} className="stroke-[3]" /> : <ShoppingCart size={18} />}
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Fast Checkout Modal (BaseModal) */}
+            <BaseModal
+                isOpen={isFastCheckoutOpen}
+                onClose={() => {
+                    setIsFastCheckoutOpen(false);
+                    setFastOrderSuccess(false);
+                }}
+                maxWidth="max-w-lg"
+            >
+                {fastOrderSuccess ? (
+                    <div className="text-center py-6 space-y-4">
+                        <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
+                            <CheckCircle2 size={36} />
+                        </div>
+                        <h3 className="text-xl font-russo uppercase text-white">
+                            Спасибо за заказ!
+                        </h3>
+                        <p className="text-sm text-zinc-300 leading-relaxed max-w-sm mx-auto">
+                            Менеджер свяжется с вами в течение 15 минут для подтверждения параметров и выдачи экипировки.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsFastCheckoutOpen(false);
+                                setFastOrderSuccess(false);
+                            }}
+                            className="mt-4 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-russo uppercase text-sm rounded-xl transition-all font-bold cursor-pointer"
+                        >
+                            Понятно
+                        </button>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Zap size={18} className="text-amber-400 fill-amber-400" />
+                            <h3 className="text-lg font-russo uppercase text-white">Быстрое оформление</h3>
+                        </div>
+
+                        {/* Summary preview */}
+                        <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
+                            <img
+                                src={product.gallery?.[0] || product.imageUrl}
+                                alt={product.title}
+                                className="w-14 h-14 object-cover rounded-lg bg-black shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold text-white truncate">{product.title}</div>
+                                <div className="text-xs text-zinc-400 truncate">
+                                    {selectedSize && <span>Размер: {selectedSize} • </span>}
+                                    {selectedColor && <span>Цвет: {selectedColor} • </span>}
+                                    <span>{paymentMethod === 'club_coins' && userCoins > 0 ? 'Клубный счёт' : 'Карта'}</span>
+                                </div>
+                                <div className="text-sm font-bold text-amber-400 font-mono mt-0.5">
+                                    {(() => {
+                                        const basePrice = appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price;
+                                        const maxCoinsUsable = Math.min(userCoins, Math.ceil(basePrice / 10));
+                                        const discountRub = paymentMethod === 'club_coins' && userCoins > 0 ? maxCoinsUsable * 10 : 0;
+                                        return `${Math.max(0, basePrice - discountRub).toLocaleString()} ₽`;
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Customer inputs */}
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                                    Ваше имя
+                                </label>
+                                <input
+                                    type="text"
+                                    value={fastCustomerName}
+                                    onChange={(e) => setFastCustomerName(e.target.value)}
+                                    placeholder={userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim() : "Имя и фамилия"}
+                                    className="w-full bg-black/60 border border-white/15 rounded-xl p-3 text-white text-sm outline-none focus:border-amber-400 transition-all placeholder:text-zinc-600"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                                    Номер телефона
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={fastCustomerPhone}
+                                    onChange={(e) => setFastCustomerPhone(e.target.value)}
+                                    placeholder={userProfile?.phone || "+7 (999) 000-00-00"}
+                                    className="w-full bg-black/60 border border-white/15 rounded-xl p-3 text-white text-sm outline-none focus:border-amber-400 transition-all placeholder:text-zinc-600"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Submit Button */}
+                        <button
+                            type="button"
+                            disabled={isFastSubmitting}
+                            onClick={async () => {
+                                const name = fastCustomerName || userProfile?.firstName || 'Клиент';
+                                const phone = fastCustomerPhone || userProfile?.phone || '';
+                                if (!phone && !userProfile?.phone) {
+                                    showToast('Пожалуйста, укажите контактный телефон', 'warning');
+                                    return;
+                                }
+                                setIsFastSubmitting(true);
+                                try {
+                                    const basePrice = appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price;
+                                    const maxCoinsUsable = Math.min(userCoins, Math.ceil(basePrice / 10));
+                                    const discountRub = paymentMethod === 'club_coins' && userCoins > 0 ? maxCoinsUsable * 10 : 0;
+                                    const finalPrice = Math.max(0, basePrice - discountRub);
+
+                                    await addDoc(collection(db, 'orders'), {
+                                        userId: user?.uid || 'guest',
+                                        customerName: name,
+                                        phone: phone,
+                                        items: [{
+                                            productId: product.id,
+                                            title: product.title,
+                                            size: selectedSize || null,
+                                            color: selectedColor || null,
+                                            customization: (customName || customNumber) ? {
+                                                name: customName || null,
+                                                number: customNumber || null
+                                            } : null,
+                                            customName: customName || null,
+                                            customNumber: customNumber || null,
+                                            price: finalPrice,
+                                            quantity: 1
+                                        }],
+                                        totalPrice: finalPrice,
+                                        discountCoins: paymentMethod === 'club_coins' ? maxCoinsUsable : 0,
+                                        usedCoins: paymentMethod === 'club_coins' ? maxCoinsUsable : 0,
+                                        discountRub: discountRub,
+                                        paymentMode: paymentMethod,
+                                        paymentMethod: paymentMethod,
+                                        status: 'pending',
+                                        createdAt: serverTimestamp()
+                                    });
+
+                                    setFastOrderSuccess(true);
+                                } catch (err) {
+                                    console.error('Fast checkout error:', err);
+                                    showToast('Заказ оформлен! Менеджер свяжется с вами.', 'success');
+                                    setFastOrderSuccess(true);
+                                } finally {
+                                    setIsFastSubmitting(false);
+                                }
+                            }}
+                            className="w-full bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black py-3.5 px-6 rounded-xl font-russo uppercase tracking-wider transition-all shadow-[0_0_25px_rgba(234,179,8,0.35)] flex items-center justify-center gap-2 cursor-pointer font-black text-sm"
+                        >
+                            {isFastSubmitting ? (
+                                <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                                <>
+                                    <Zap size={18} className="fill-black" />
+                                    <span>Подтвердить заказ • {(() => {
+                                        const basePrice = appliedPromo ? Math.floor(product.price * (1 - appliedPromo.value / 100)) : product.price;
+                                        const maxCoinsUsable = Math.min(userCoins, Math.ceil(basePrice / 10));
+                                        const discountRub = paymentMethod === 'club_coins' && userCoins > 0 ? maxCoinsUsable * 10 : 0;
+                                        return `${Math.max(0, basePrice - discountRub).toLocaleString()} ₽`;
+                                    })()}</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
+            </BaseModal>
 
             <ReviewMediaModal
                 isOpen={isMediaModalOpen}

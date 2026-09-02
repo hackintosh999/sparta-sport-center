@@ -9,27 +9,27 @@ import { SPARTA_SCHEDULE, ScheduleSlot } from '../constants/spartaSchedule';
 const GroupsSection = ({ onJoinClick }: { onJoinClick?: (group?: any) => void }) => {
     const { user, userProfile } = useAuth();
     const [filter, setFilter] = useState<'all' | 'kids' | 'teens'>('all');
-    const [childrenCounts, setChildrenCounts] = useState<Record<string, number>>({});
+    const [liveGroupCounts, setLiveGroupCounts] = useState<Record<string, number>>({});
 
-    // Live subscription to Firestore `orders` collection to count enrolled CHILDREN only
+    // Live subscription to Firestore `students` collection to count actual enrolled athletes per group
     useEffect(() => {
         try {
-            const q = query(collection(db, 'orders'), where('type', '==', 'subscription'));
-            const unsubscribe = onSnapshot(q, (snapshot) => {
+            const unsubscribe = onSnapshot(collection(db, 'students'), (snapshot) => {
                 const counts: Record<string, number> = {};
                 snapshot.docs.forEach(doc => {
                     const data = doc.data();
-                    if (data.selectedScheduleId) {
-                        counts[data.selectedScheduleId] = (counts[data.selectedScheduleId] || 0) + 1;
+                    const gId = data.groupId;
+                    if (gId) {
+                        counts[gId] = (counts[gId] || 0) + 1;
                     }
                 });
-                setChildrenCounts(counts);
+                setLiveGroupCounts(counts);
             }, (err) => {
-                console.warn('Orders realtime listener warning:', err);
+                console.warn('Students realtime listener warning:', err);
             });
             return () => unsubscribe();
         } catch (e) {
-            console.error('Error setting up orders listener:', e);
+            console.error('Error setting up students listener:', e);
         }
     }, []);
 
@@ -83,8 +83,11 @@ const GroupsSection = ({ onJoinClick }: { onJoinClick?: (group?: any) => void })
                 {/* Grid of Groups */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredSlots.map((slot, idx) => {
-                        const dynamicOccupied = slot.initialOccupied + (childrenCounts[slot.id] || 0);
-                        const currentOccupied = Math.min(slot.maxCapacity, dynamicOccupied);
+                        const firestoreCount = (slot.firestoreGroupId && liveGroupCounts[slot.firestoreGroupId]) ?? liveGroupCounts[slot.id];
+                        const currentOccupied = Math.min(
+                            slot.maxCapacity,
+                            firestoreCount !== undefined ? firestoreCount : slot.initialOccupied
+                        );
                         const availableSeats = Math.max(0, slot.maxCapacity - currentOccupied);
                         const isFull = availableSeats <= 0;
                         const isLowSeats = availableSeats > 0 && availableSeats <= 3;

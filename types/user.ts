@@ -59,6 +59,23 @@ export interface UserItem {
     kidPin?: string;
     parentId?: string;
     childrenIds?: string[];
+    coachNotes?: string;
+    coachNotesList?: CoachNote[];
+    medicalDoc?: {
+        status: 'valid' | 'expiring' | 'expired' | 'missing';
+        validUntil?: string;       // Дата окончания допуска (YYYY-MM-DD)
+        photoUrl?: string;         // Ссылка на скан/фото справки в Supabase Storage
+        notes?: string;            // Ограничения: группа здоровья, противопоказания
+        updatedAt?: any;
+    };
+}
+
+export interface CoachNote {
+    id: string;
+    text: string;
+    createdAt: string;
+    authorName: string;
+    authorId: string;
 }
 
 export type User = UserItem;

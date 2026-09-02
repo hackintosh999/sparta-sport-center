@@ -550,7 +550,7 @@ const AdminDirections = () => {
                                                 <button
                                                     onClick={(e) => handleDelete(prog.id, e)}
                                                     title="Удалить направление"
-                                                    className="absolute top-4 left-4 p-2.5 bg-black/70 hover:bg-red-500 rounded-full text-white/70 hover:text-white transition-all z-20 opacity-0 group-hover:opacity-100 shadow-lg"
+                                                    className="absolute top-4 left-4 p-2.5 bg-black/70 hover:bg-red-500 rounded-full text-white/70 hover:text-white transition-all z-20 opacity-60 hover:opacity-100 group-hover:opacity-100 shadow-lg cursor-pointer"
                                                 >
                                                     <Trash2 size={15} />
                                                 </button>
@@ -680,8 +680,8 @@ const AdminDirections = () => {
                                     <Loader className="animate-spin text-amber-400" />
                                 </div>
                             )}
-                            <label className="absolute inset-0 cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-xs">
-                                <span className="bg-amber-400 text-black px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xl">
+                            <label className="absolute inset-0 cursor-pointer flex items-center justify-center opacity-60 hover:opacity-100 group-hover:opacity-100 transition-opacity bg-black/40 hover:bg-black/60 backdrop-blur-xs">
+                                <span className="bg-amber-400 text-black px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xl hover:scale-105 transition-transform">
                                     <UploadCloud size={16} /> Загрузить файл
                                 </span>
                                 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />

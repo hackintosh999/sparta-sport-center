@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Group } from '../../types/shop';
 import { getShortDay } from '../profile/SpartaScheduleChatCard';
+import { BaseModal } from '../ui/BaseModal';
 
 interface ScheduleMessengerPublishModalProps {
     isOpen: boolean;
@@ -235,14 +236,15 @@ export const ScheduleMessengerPublishModal: React.FC<ScheduleMessengerPublishMod
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
-            onClick={onClose}
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-4xl"
+            showCloseButton={false}
+            noPadding
+            glowColor="amber"
         >
-            <div
-                className="bg-[#121215] border border-white/10 rounded-3xl w-full max-w-4xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
-                onClick={e => e.stopPropagation()}
-            >
+            <div className="bg-[#121215] rounded-2xl w-full max-h-[88vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="p-5 border-b border-white/10 bg-[#16161a] flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
@@ -567,6 +569,6 @@ export const ScheduleMessengerPublishModal: React.FC<ScheduleMessengerPublishMod
                     </div>
                 </div>
             </div>
-        </div>
+        </BaseModal>
     );
 };

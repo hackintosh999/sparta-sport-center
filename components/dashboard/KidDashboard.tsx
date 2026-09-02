@@ -578,7 +578,7 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, studentName 
                                 style={{ width: `${progressPercent}%` }}
                                 className="h-full rounded-full bg-gradient-to-r from-sparta-gold via-yellow-400 to-amber-400 relative shadow-[0_0_12px_rgba(212,175,55,0.9)]"
                             >
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-sparta-gold shadow-[0_0_8px_rgba(255,255,255,1)] opacity-0 group-hover/bar:opacity-100 transition-opacity" />
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-sparta-gold shadow-[0_0_8px_rgba(255,255,255,0.8)] opacity-60 group-hover/bar:opacity-100 group-hover/bar:scale-125 transition-all" />
                             </div>
                         </div>
 
@@ -778,7 +778,7 @@ const SpartaMediaCollage: React.FC<SpartaMediaCollageProps> = ({ items, onItemCl
                             className="w-full h-full object-cover group-hover/cell:scale-105 transition-transform duration-300"
                             loading="lazy"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover/cell:opacity-100 transition-opacity flex items-end p-2">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60 group-hover/cell:opacity-100 transition-opacity flex items-end p-2">
                             <span className="text-[10px] font-bold text-white flex items-center gap-1 bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-xs">
                                 <Maximize2 size={11} /> Открыть
                             </span>

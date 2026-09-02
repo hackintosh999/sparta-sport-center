@@ -34,14 +34,34 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, poster, clas
     const [isWaiting, setIsWaiting] = useState(false);
 
 
+    const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     // Auto-hide controls
-    useEffect(() => {
-        let timeout: NodeJS.Timeout;
-        if (isPlaying && showControls && !showSettings) {
-            timeout = setTimeout(() => setShowControls(false), 3000);
+    const resetControlsTimeout = () => {
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        if (isPlaying && !showSettings) {
+            controlsTimeoutRef.current = setTimeout(() => {
+                setShowControls(false);
+            }, 3000);
         }
-        return () => clearTimeout(timeout);
-    }, [isPlaying, showControls, showSettings]);
+    };
+
+    useEffect(() => {
+        if (!isPlaying) {
+            setShowControls(true);
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        } else {
+            resetControlsTimeout();
+        }
+        return () => {
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        };
+    }, [isPlaying, showSettings]);
+
+    const handleMouseMove = () => {
+        setShowControls(true);
+        resetControlsTimeout();
+    };
 
     // Native Video Sync Effects
     useEffect(() => {
@@ -67,7 +87,10 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, poster, clas
     }, [volume, isMuted, playbackRate, isLooping, isNativeVideo]);
 
     const handleMouseLeave = () => {
-        if (isPlaying) setShowControls(false);
+        if (isPlaying) {
+            setShowControls(false);
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        }
         setShowSettings(false);
     };
 
@@ -75,6 +98,25 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, poster, clas
     const togglePlay = (e?: React.MouseEvent) => {
         e?.stopPropagation();
         setIsPlaying(!isPlaying);
+    };
+
+    // Video Area Tap (for mobile/tablet toggle vs desktop click)
+    const handleVideoTap = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isPlaying) {
+            togglePlay();
+            return;
+        }
+        // If playing, single tap toggles controls visibility
+        setShowControls(prev => {
+            const nextState = !prev;
+            if (nextState) {
+                resetControlsTimeout();
+            } else if (controlsTimeoutRef.current) {
+                clearTimeout(controlsTimeoutRef.current);
+            }
+            return nextState;
+        });
     };
 
     // Fullscreen
@@ -207,7 +249,7 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, poster, clas
         <div
             ref={containerRef}
             className={`relative group bg-black rounded-xl overflow-hidden shadow-2xl ${className}`}
-            onMouseMove={() => setShowControls(true)}
+            onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
         >
             {/* Branded Border */}
@@ -282,10 +324,10 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, poster, clas
                 )}
             </AnimatePresence>
 
-            {/* Click Overlay (To toggle play/pause) */}
+            {/* Click Overlay (To toggle play/pause or controls on tap) */}
             <div
-                className="absolute inset-0 z-10"
-                onClick={togglePlay}
+                className="absolute inset-0 z-10 cursor-pointer"
+                onClick={handleVideoTap}
                 onDoubleClick={toggleFullscreen}
             />
 
@@ -297,7 +339,7 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, poster, clas
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 1.5, opacity: 0 }}
                         onClick={togglePlay}
-                        className="absolute inset-0 m-auto w-24 h-24 flex items-center justify-center bg-sparta-gold/90 text-black rounded-full shadow-[0_0_30px_rgba(212,175,55,0.6)] backdrop-blur-sm hover:scale-110 transition-transform z-30 group/play"
+                        className="absolute inset-0 m-auto w-24 h-24 flex items-center justify-center bg-sparta-gold/90 text-black rounded-full shadow-[0_0_30px_rgba(212,175,55,0.6)] backdrop-blur-sm hover:scale-110 transition-transform z-30 group/play cursor-pointer"
                     >
                         <Play size={40} fill="currentColor" className="ml-2 group-hover/play:scale-110 transition-transform" />
                         <div className="absolute inset-0 rounded-full border-2 border-sparta-gold animate-ping opacity-50" />
@@ -308,7 +350,8 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, poster, clas
             {/* Controls Bar */}
             <motion.div
                 animate={{ opacity: showControls ? 1 : 0, y: showControls ? 0 : 20 }}
-                className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-30"
+                transition={{ duration: 0.3 }}
+                className={`absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-30 ${showControls ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 onClick={(e) => e.stopPropagation()} // Prevent accidental click on video when clicking controls bg
             >
                 {/* Progress Bar */}
@@ -332,21 +375,21 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, poster, clas
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         {/* Play/Pause */}
-                        <button onClick={togglePlay} className="text-white hover:text-sparta-gold transition-colors p-1" title={isPlaying ? "Пауза (Space)" : "Воспроизвести (Space)"}>
+                        <button onClick={togglePlay} className="text-white hover:text-sparta-gold transition-colors p-1 cursor-pointer" title={isPlaying ? "Пауза (Space)" : "Воспроизвести (Space)"}>
                             {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
                         </button>
 
                         {/* Skip Buttons */}
-                        <button onClick={skipBackward} className="text-white/80 hover:text-white transition-colors hidden sm:block" title="-10 сек (←)">
+                        <button onClick={skipBackward} className="text-white/80 hover:text-white transition-colors hidden sm:block cursor-pointer" title="-10 сек (←)">
                             <SkipBack size={20} />
                         </button>
-                        <button onClick={skipForward} className="text-white/80 hover:text-white transition-colors hidden sm:block" title="+10 сек (→)">
+                        <button onClick={skipForward} className="text-white/80 hover:text-white transition-colors hidden sm:block cursor-pointer" title="+10 сек (→)">
                             <SkipForward size={20} />
                         </button>
 
-                        {/* Volume */}
+                        {/* Volume - Collapsed by default, expands smoothly on hover */}
                         <div className="flex items-center gap-2 group/vol">
-                            <button onClick={toggleMute} className="text-white hover:text-sparta-gold transition-colors p-1" title={isMuted ? "Включить звук (M)" : "Без звука (M)"}>
+                            <button onClick={toggleMute} className="text-white hover:text-sparta-gold transition-colors p-1 cursor-pointer" title={isMuted ? "Включить звук (M)" : "Без звука (M)"}>
                                 {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                             </button>
                             <div className="w-0 overflow-hidden group-hover/vol:w-20 transition-all duration-300">
@@ -361,7 +404,7 @@ const SpartaVideoPlayer: React.FC<SpartaVideoPlayerProps> = ({ src, poster, clas
                                         setVolume(vol);
                                         setIsMuted(vol === 0);
                                     }}
-                                    className="w-full h-1 bg-white/20 rounded-lg accent-sparta-gold"
+                                    className="w-full h-1 bg-white/20 rounded-lg accent-sparta-gold cursor-pointer"
                                 />
                             </div>
                         </div>

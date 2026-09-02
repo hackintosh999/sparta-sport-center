@@ -1,27 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X,
     User,
     Phone,
     MessageSquare,
-    Heart,
     ShieldCheck,
     AlertTriangle,
-    Zap,
-    Award,
-    Activity,
-    TrendingUp,
     CheckCircle2,
     Clock,
     Save,
     Loader2,
-    Calendar,
     Sparkles
 } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { getSmartSubscriptionStatus, checkProfileCompleteness } from '../../../utils/subscriptionStatusEngine';
+import { BaseModal } from '../../ui/BaseModal';
 
 interface StudentProfileModalProps {
     isOpen: boolean;
@@ -135,7 +129,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
         };
     }, [student, isOpen]);
 
-    if (!isOpen || !liveStudent) return null;
+    if (!liveStudent) return null;
 
     // Computed values
     const subBadge = getSmartSubscriptionStatus(liveStudent);
@@ -188,15 +182,6 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
             { id: '2', name: 'Снайпер', icon: '🎯' },
             { id: '3', name: 'Дисциплина', icon: '🛡️' }
         ];
-
-    // Skills
-    const skills = liveStudent.skills || {
-        technique: 75,
-        speed: 80,
-        strength: 70,
-        endurance: 75,
-        discipline: 85
-    };
 
     // Medical certificate status
     const hasMed = profileCompleteness.hasMedCertificate;
@@ -317,340 +302,329 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
     };
 
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[250] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto custom-scrollbar">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="bg-[#121214] border border-white/15 rounded-[2.5rem] p-6 sm:p-8 max-w-2xl w-full shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar space-y-6"
-                >
-                    {/* Close Button */}
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors cursor-pointer p-1.5 rounded-xl hover:bg-white/10"
-                        title="Закрыть"
-                    >
-                        <X size={20} />
-                    </button>
-
-                    {/* HEADER: Left (Athlete) + Right (Parent Contacts) */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 border-b border-white/10">
-                        {/* Athlete Info */}
-                        <div className="flex items-center gap-4 min-w-0">
-                            <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-3xl bg-gradient-to-br from-amber-500/20 via-sparta-gold/20 to-amber-500/20 border-2 border-sparta-gold/40 text-sparta-gold font-russo text-xl sm:text-2xl font-bold flex items-center justify-center shrink-0 shadow-lg shadow-sparta-gold/10">
-                                {liveStudent.name ? liveStudent.name.slice(0, 2).toUpperCase() : 'СП'}
-                            </div>
-                            <div className="min-w-0">
-                                <h3 className="text-xl sm:text-2xl font-russo text-white uppercase tracking-tight truncate">
-                                    {liveStudent.name}
-                                </h3>
-                                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                    <span className="text-xs font-bold text-white/60">
-                                        {birthInfo}
-                                    </span>
-                                    <span className="text-white/20">•</span>
-                                    <span className="px-2.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-sparta-gold uppercase tracking-wider">
-                                        {groupName}
-                                    </span>
-                                    <span className="text-[10px] text-white/40 font-medium">
-                                        {sportLabel}
-                                    </span>
-                                </div>
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-2xl"
+            glowColor="amber"
+            zIndex="z-[250]"
+        >
+            <div className="space-y-6 text-left">
+                {/* HEADER: Left (Athlete) + Right (Parent Contacts) */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 border-b border-white/10 pr-10">
+                    {/* Athlete Info */}
+                    <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-3xl bg-gradient-to-br from-amber-500/20 via-sparta-gold/20 to-amber-500/20 border-2 border-sparta-gold/40 text-sparta-gold font-russo text-xl sm:text-2xl font-bold flex items-center justify-center shrink-0 shadow-lg shadow-sparta-gold/10">
+                            {liveStudent.name ? liveStudent.name.slice(0, 2).toUpperCase() : 'СП'}
+                        </div>
+                        <div className="min-w-0">
+                            <h3 className="text-xl sm:text-2xl font-russo text-white uppercase tracking-tight truncate">
+                                {liveStudent.name}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="text-xs font-bold text-white/60">
+                                    {birthInfo}
+                                </span>
+                                <span className="text-white/20">•</span>
+                                <span className="px-2.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-sparta-gold uppercase tracking-wider">
+                                    {groupName}
+                                </span>
+                                <span className="text-[10px] text-white/40 font-medium">
+                                    {sportLabel}
+                                </span>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Parent Contact Card */}
-                        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex flex-col gap-2.5 shrink-0 min-w-[210px]">
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <User size={13} className="text-sparta-gold shrink-0" />
-                                    <span className="text-xs font-bold text-white truncate">{parentDisplayName}</span>
-                                </div>
-                                <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Родитель</span>
+                    {/* Parent Contact Card */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex flex-col gap-2.5 shrink-0 min-w-[210px]">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <User size={13} className="text-sparta-gold shrink-0" />
+                                <span className="text-xs font-bold text-white truncate">{parentDisplayName}</span>
                             </div>
+                            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Родитель</span>
+                        </div>
 
-                            {cleanParentPhone ? (
-                                <a
-                                    href={`tel:${cleanParentPhone}`}
-                                    className="flex items-center gap-2 text-xs font-bold text-white/70 hover:text-sparta-gold transition-colors"
-                                >
-                                    <Phone size={12} className="text-sparta-gold" />
-                                    <span>{rawParentPhone}</span>
-                                </a>
+                        {cleanParentPhone ? (
+                            <a
+                                href={`tel:${cleanParentPhone}`}
+                                className="flex items-center gap-2 text-xs font-bold text-white/70 hover:text-sparta-gold transition-colors"
+                            >
+                                <Phone size={12} className="text-sparta-gold" />
+                                <span>{rawParentPhone}</span>
+                            </a>
+                        ) : (
+                            <span className="text-xs text-amber-400/80 font-medium flex items-center gap-1.5">
+                                <AlertTriangle size={12} />
+                                <span>Телефон не указан</span>
+                            </span>
+                        )}
+
+                        {/* Contact Parent CTA Button */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                onClose();
+                                onContactParent(liveStudent);
+                            }}
+                            className="mt-1 w-full py-2.5 px-3 bg-sparta-gold hover:bg-yellow-400 active:scale-95 text-black rounded-xl text-[11px] font-russo uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-md shadow-sparta-gold/20 cursor-pointer"
+                        >
+                            <MessageSquare size={13} />
+                            <span>Чат с родителем</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* SECTION 1: STATUSES */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* Subscription Status Card */}
+                    <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Статус абонемента</span>
+                            <button
+                                type="button"
+                                onClick={() => onTogglePayment?.(liveStudent.id, liveStudent.paymentStatus || 'due')}
+                                className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border cursor-pointer ${subBadge.badgeClass}`}
+                                title="Нажмите для смены статуса"
+                            >
+                                {subBadge.label}
+                            </button>
+                        </div>
+                        <p className="text-xs text-white/70 font-medium">
+                            {subBadge.description}
+                        </p>
+                        {liveStudent.remainingSessions !== undefined && (
+                            <div className="text-[11px] text-white/50 font-bold flex items-center gap-1.5">
+                                <Clock size={11} className="text-sparta-gold" />
+                                <span>Остаток занятий: <strong className="text-white">{liveStudent.remainingSessions}</strong></span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Medical Certificate Card */}
+                    <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Медицинский допуск</span>
+                            {hasMed ? (
+                                <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                                    <ShieldCheck size={11} />
+                                    <span>Справка есть</span>
+                                </span>
                             ) : (
-                                <span className="text-xs text-amber-400/80 font-medium flex items-center gap-1.5">
-                                    <AlertTriangle size={12} />
-                                    <span>Телефон не указан</span>
+                                <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                                    <AlertTriangle size={11} />
+                                    <span>Нет справки</span>
                                 </span>
                             )}
+                        </div>
+                        <p className="text-xs text-white/70 font-medium">
+                            {hasMed
+                                ? 'Действующая медсправка загружена и подтверждена'
+                                : 'Требуется предоставить медицинскую справку о допуске'}
+                        </p>
+                    </div>
+                </div>
 
-                            {/* Contact Parent CTA Button */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    onClose();
-                                    onContactParent(liveStudent);
-                                }}
-                                className="mt-1 w-full py-2.5 px-3 bg-sparta-gold hover:bg-yellow-400 active:scale-95 text-black rounded-xl text-[11px] font-russo uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-md shadow-sparta-gold/20 cursor-pointer"
+                {/* SECTION 2: GAMING STATS */}
+                <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/5 via-sparta-gold/5 to-transparent border border-white/10 rounded-2xl space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-russo text-white uppercase tracking-wider flex items-center gap-2">
+                            <Sparkles size={14} className="text-sparta-gold" />
+                            <span>Игровой прогресс Sparta</span>
+                        </h4>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-sparta-gold/15 text-sparta-gold rounded-xl border border-sparta-gold/30">
+                                <span className="text-xs font-black">🪙 {spartaCoins}</span>
+                                <span className="text-[9px] font-bold uppercase">Coins</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 text-white/80 rounded-xl border border-white/10">
+                                <span className="text-xs font-black">⭐ {totalXp}</span>
+                                <span className="text-[9px] font-bold uppercase">XP</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Badges List */}
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        {badges.map((badge: any, idx: number) => (
+                            <div
+                                key={badge.id || idx}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/10"
                             >
-                                <MessageSquare size={13} />
-                                <span>Чат с родителем</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* SECTION 1: STATUSES (Subscription + Medical Clearance) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        {/* Subscription Status Card */}
-                        <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Статус абонемента</span>
-                                <button
-                                    type="button"
-                                    onClick={() => onTogglePayment?.(liveStudent.id, liveStudent.paymentStatus || 'due')}
-                                    className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border cursor-pointer ${subBadge.badgeClass}`}
-                                    title="Нажмите для смены статуса"
-                                >
-                                    {subBadge.label}
-                                </button>
+                                <span className="text-sm">{badge.icon || '🏆'}</span>
+                                <span className="text-xs font-bold text-white/80">{badge.name || badge.title}</span>
                             </div>
-                            <p className="text-xs text-white/70 font-medium">
-                                {subBadge.description}
-                            </p>
-                            {liveStudent.remainingSessions !== undefined && (
-                                <div className="text-[11px] text-white/50 font-bold flex items-center gap-1.5">
-                                    <Clock size={11} className="text-sparta-gold" />
-                                    <span>Остаток занятий: <strong className="text-white">{liveStudent.remainingSessions}</strong></span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Medical Certificate Card */}
-                        <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Медицинский допуск</span>
-                                {hasMed ? (
-                                    <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                                        <ShieldCheck size={11} />
-                                        <span>Справка есть</span>
-                                    </span>
-                                ) : (
-                                    <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                                        <AlertTriangle size={11} />
-                                        <span>Нет справки</span>
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-xs text-white/70 font-medium">
-                                {hasMed
-                                    ? 'Действующая медсправка загружена и подтверждена'
-                                    : 'Требуется предоставить медицинскую справку о допуске'}
-                            </p>
-                        </div>
+                        ))}
                     </div>
+                </div>
 
-                    {/* SECTION 2: GAMING STATS (Coins & Badges) */}
-                    <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/5 via-sparta-gold/5 to-transparent border border-white/10 rounded-2xl space-y-4">
+                {/* SECTION 3: SPORTS METRICS & ATTENDANCE */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Attendance Bar */}
+                    <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl space-y-3">
                         <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-russo text-white uppercase tracking-wider flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Посещаемость</span>
+                            <span className="text-sm font-russo text-emerald-400">{attendanceRate}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-sparta-gold to-emerald-400 rounded-full transition-all duration-500"
+                                style={{ width: `${Math.min(100, Math.max(0, attendanceRate))}%` }}
+                            />
+                        </div>
+                        <p className="text-[10px] text-white/40 font-bold">
+                            {totalSessions > 0
+                                ? `Посещено ${presentCount} из ${totalSessions} занятий`
+                                : 'Высокая регулярность тренировок'}
+                        </p>
+                    </div>
+
+                    {/* Interactive Skills Block */}
+                    <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                            <div className="flex items-center gap-2">
                                 <Sparkles size={14} className="text-sparta-gold" />
-                                <span>Игровой прогресс Sparta</span>
-                            </h4>
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-sparta-gold/15 text-sparta-gold rounded-xl border border-sparta-gold/30">
-                                    <span className="text-xs font-black">🪙 {spartaCoins}</span>
-                                    <span className="text-[9px] font-bold uppercase">Coins</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 text-white/80 rounded-xl border border-white/10">
-                                    <span className="text-xs font-black">⭐ {totalXp}</span>
-                                    <span className="text-[9px] font-bold uppercase">XP</span>
-                                </div>
+                                <h4 className="text-xs sm:text-sm font-russo text-white uppercase tracking-wide">
+                                    Оценка навыков
+                                </h4>
                             </div>
+                            <span className="text-[11px] font-bold text-sparta-gold">
+                                (нажимайте + для прокачки)
+                            </span>
                         </div>
 
-                        {/* Badges List */}
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                            {badges.map((badge: any, idx: number) => (
-                                <div
-                                    key={badge.id || idx}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/10"
-                                >
-                                    <span className="text-sm">{badge.icon || '🏆'}</span>
-                                    <span className="text-xs font-bold text-white/80">{badge.name || badge.title}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                        <div className="space-y-2.5">
+                            {[
+                                { key: 'technique', label: 'Техника', color: 'from-amber-400 to-sparta-gold', activeBorder: 'border-sparta-gold/60' },
+                                { key: 'speed', label: 'Скорость', color: 'from-blue-400 to-cyan-400', activeBorder: 'border-cyan-400/60' },
+                                { key: 'power', label: 'Сила / Мощь', color: 'from-red-400 to-amber-500', activeBorder: 'border-red-400/60' }
+                            ].map((sk) => {
+                                const val = skillsState[sk.key] ?? 60;
+                                const activeSegmentsCount = Math.round(val / 20);
+                                const feedback = floatingFeedback[sk.key];
 
-                    {/* SECTION 3: SPORTS METRICS & ATTENDANCE */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* Attendance Bar */}
-                        <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-white/40">Посещаемость</span>
-                                <span className="text-sm font-russo text-emerald-400">{attendanceRate}%</span>
-                            </div>
-                            <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-gradient-to-r from-sparta-gold to-emerald-400 rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, Math.max(0, attendanceRate))}%` }}
-                                />
-                            </div>
-                            <p className="text-[10px] text-white/40 font-bold">
-                                {totalSessions > 0
-                                    ? `Посещено ${presentCount} из ${totalSessions} занятий`
-                                    : 'Высокая регулярность тренировок'}
-                            </p>
-                        </div>
+                                return (
+                                    <div
+                                        key={sk.key}
+                                        className="relative flex items-center justify-between gap-2.5 p-2.5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all"
+                                    >
+                                        {/* Skill Name */}
+                                        <span className="text-xs font-bold text-white/90 w-24 truncate shrink-0">
+                                            {sk.label}
+                                        </span>
 
-                        {/* Interactive Skills Block */}
-                        <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl space-y-3">
-                            <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles size={14} className="text-sparta-gold" />
-                                    <h4 className="text-xs sm:text-sm font-russo text-white uppercase tracking-wide">
-                                        Оценка навыков
-                                    </h4>
-                                </div>
-                                <span className="text-[11px] font-bold text-sparta-gold">
-                                    (нажимайте + для прокачки)
-                                </span>
-                            </div>
-
-                            <div className="space-y-2.5">
-                                {[
-                                    { key: 'technique', label: 'Техника', color: 'from-amber-400 to-sparta-gold', activeBorder: 'border-sparta-gold/60' },
-                                    { key: 'speed', label: 'Скорость', color: 'from-blue-400 to-cyan-400', activeBorder: 'border-cyan-400/60' },
-                                    { key: 'power', label: 'Сила / Мощь', color: 'from-red-400 to-amber-500', activeBorder: 'border-red-400/60' }
-                                ].map((sk) => {
-                                    const val = skillsState[sk.key] ?? 60;
-                                    const activeSegmentsCount = Math.round(val / 20); // 0 to 5
-                                    const feedback = floatingFeedback[sk.key];
-
-                                    return (
-                                        <div
-                                            key={sk.key}
-                                            className="relative flex items-center justify-between gap-2.5 p-2.5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all"
+                                        {/* Minus Button */}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSkillChange(sk.key, -20)}
+                                            disabled={val <= 0}
+                                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:hover:bg-white/10 text-white border border-white/20 flex items-center justify-center text-sm font-black transition-all cursor-pointer select-none shrink-0 active:scale-95"
+                                            title="Уменьшить уровень (-20%)"
                                         >
-                                            {/* Skill Name */}
-                                            <span className="text-xs font-bold text-white/90 w-24 truncate shrink-0">
-                                                {sk.label}
-                                            </span>
+                                            —
+                                        </button>
 
-                                            {/* Minus Button */}
-                                            <button
-                                                type="button"
-                                                onClick={() => handleSkillChange(sk.key, -20)}
-                                                disabled={val <= 0}
-                                                className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:hover:bg-white/10 text-white border border-white/20 flex items-center justify-center text-sm font-black transition-all cursor-pointer select-none shrink-0 active:scale-95"
-                                                title="Уменьшить уровень (-20%)"
-                                            >
-                                                —
-                                            </button>
-
-                                            {/* 5-Segment Progress Bar with clear 1..5 numbers */}
-                                            <div className="flex-1 flex items-center gap-1.5 h-6">
-                                                {[1, 2, 3, 4, 5].map((seg) => {
-                                                    const isFilled = seg <= activeSegmentsCount;
-                                                    return (
-                                                        <button
-                                                            key={seg}
-                                                            type="button"
-                                                            onClick={() => handleSetSkillSegment(sk.key, seg)}
-                                                            title={`Уровень ${seg} из 5 (${seg * 20}%)`}
-                                                            className={`flex-1 h-5.5 rounded-lg transition-all duration-200 cursor-pointer border relative flex items-center justify-center font-russo text-[10px] select-none ${
-                                                                isFilled
-                                                                    ? `bg-gradient-to-r ${sk.color} ${sk.activeBorder} text-black font-black shadow-sm`
-                                                                    : 'bg-white/5 border-white/10 hover:bg-white/20 hover:border-white/30 text-white/30 hover:text-white/70'
-                                                            }`}
-                                                        >
-                                                            <span>{seg}</span>
-                                                            <span className="opacity-0 hover:opacity-100 absolute inset-0 rounded-lg bg-white/20 transition-opacity pointer-events-none" />
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-
-                                            {/* Plus Button: High-contrast Gold */}
-                                            <button
-                                                type="button"
-                                                onClick={() => handleSkillChange(sk.key, 20)}
-                                                disabled={val >= 100}
-                                                className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-r from-amber-400 via-sparta-gold to-yellow-400 hover:from-yellow-300 hover:to-amber-300 text-black font-black disabled:opacity-20 disabled:hover:from-sparta-gold border border-amber-300 flex items-center justify-center text-sm font-black transition-all cursor-pointer select-none shrink-0 shadow-md shadow-sparta-gold/30 hover:scale-105 active:scale-95"
-                                                title="Повысить уровень (+10 XP)"
-                                            >
-                                                +
-                                            </button>
-
-                                            {/* Value / Level Label */}
-                                            <div className="w-12 text-right shrink-0">
-                                                <div className="text-[11px] font-russo text-white leading-tight">
-                                                    {activeSegmentsCount}/5
-                                                </div>
-                                                <div className="text-[9px] font-bold text-white/40 leading-none">
-                                                    {val}%
-                                                </div>
-                                            </div>
-
-                                            {/* Floating Feedback Badge (+10 XP) */}
-                                            <AnimatePresence>
-                                                {feedback && (
-                                                    <motion.div
-                                                        key={feedback.id}
-                                                        initial={{ opacity: 0, y: 4, scale: 0.7 }}
-                                                        animate={{ opacity: 1, y: -22, scale: 1 }}
-                                                        exit={{ opacity: 0, y: -30, scale: 0.8 }}
-                                                        transition={{ duration: 0.35, ease: 'easeOut' }}
-                                                        className="absolute right-5 -top-1 pointer-events-none z-30 px-2 py-0.5 rounded-lg bg-emerald-500 text-black text-[9px] font-black uppercase tracking-wider shadow-lg shadow-emerald-500/40 border border-emerald-300 flex items-center gap-1"
+                                        {/* 5-Segment Progress Bar */}
+                                        <div className="flex-1 flex items-center gap-1.5 h-6">
+                                            {[1, 2, 3, 4, 5].map((seg) => {
+                                                const isFilled = seg <= activeSegmentsCount;
+                                                return (
+                                                    <button
+                                                        key={seg}
+                                                        type="button"
+                                                        onClick={() => handleSetSkillSegment(sk.key, seg)}
+                                                        title={`Уровень ${seg} из 5 (${seg * 20}%)`}
+                                                        className={`flex-1 h-5.5 rounded-lg transition-all duration-200 cursor-pointer border relative flex items-center justify-center font-russo text-[10px] select-none ${
+                                                            isFilled
+                                                                ? `bg-gradient-to-r ${sk.color} ${sk.activeBorder} text-black font-black shadow-sm`
+                                                                : 'bg-white/5 border-white/10 hover:bg-white/20 hover:border-white/30 text-white/30 hover:text-white/70'
+                                                        }`}
                                                     >
-                                                        <span>{feedback.text}</span>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
+                                                        <span>{seg}</span>
+                                                        <span className="opacity-0 hover:opacity-100 absolute inset-0 rounded-lg bg-white/20 transition-opacity pointer-events-none" />
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* SECTION 4: COACH NOTES */}
-                    <div className="space-y-2.5 pt-2">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-white/40">
-                                Заметки тренера / Индивидуальные особенности
-                            </label>
-                            {noteSaveStatus === 'saved' && (
-                                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
-                                    <CheckCircle2 size={12} />
-                                    <span>Сохранено</span>
-                                </span>
-                            )}
-                        </div>
-                        <textarea
-                            value={coachNotes}
-                            onChange={(e) => setCoachNotes(e.target.value)}
-                            rows={3}
-                            placeholder="Особенности техники, рекомендации, прогресс или индивидуальные задачи спортсмена..."
-                            className="w-full p-3.5 bg-black/50 border border-white/10 focus:border-sparta-gold rounded-2xl text-xs text-white placeholder-white/30 outline-none resize-none"
-                        />
-                        <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={handleSaveCoachNotes}
-                                disabled={isSavingNotes}
-                                className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                            >
-                                {isSavingNotes ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                                <span>{isSavingNotes ? 'Сохранение...' : 'Сохранить заметку'}</span>
-                            </button>
+                                        {/* Plus Button */}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSkillChange(sk.key, 20)}
+                                            disabled={val >= 100}
+                                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-r from-amber-400 via-sparta-gold to-yellow-400 hover:from-yellow-300 hover:to-amber-300 text-black font-black disabled:opacity-20 disabled:hover:from-sparta-gold border border-amber-300 flex items-center justify-center text-sm font-black transition-all cursor-pointer select-none shrink-0 shadow-md shadow-sparta-gold/30 hover:scale-105 active:scale-95"
+                                            title="Повысить уровень (+10 XP)"
+                                        >
+                                            +
+                                        </button>
+
+                                        {/* Value Label */}
+                                        <div className="w-12 text-right shrink-0">
+                                            <div className="text-[11px] font-russo text-white leading-tight">
+                                                {activeSegmentsCount}/5
+                                            </div>
+                                            <div className="text-[9px] font-bold text-white/40 leading-none">
+                                                {val}%
+                                            </div>
+                                        </div>
+
+                                        {/* Floating Feedback Badge */}
+                                        <AnimatePresence>
+                                            {feedback && (
+                                                <motion.div
+                                                    key={feedback.id}
+                                                    initial={{ opacity: 0, y: 4, scale: 0.7 }}
+                                                    animate={{ opacity: 1, y: -22, scale: 1 }}
+                                                    exit={{ opacity: 0, y: -30, scale: 0.8 }}
+                                                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                                                    className="absolute right-5 -top-1 pointer-events-none z-30 px-2 py-0.5 rounded-lg bg-emerald-500 text-black text-[9px] font-black uppercase tracking-wider shadow-lg shadow-emerald-500/40 border border-emerald-300 flex items-center gap-1"
+                                                >
+                                                    <span>{feedback.text}</span>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
-                </motion.div>
+                </div>
+
+                {/* SECTION 4: COACH NOTES */}
+                <div className="space-y-2.5 pt-2">
+                    <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                            Заметки тренера / Индивидуальные особенности
+                        </label>
+                        {noteSaveStatus === 'saved' && (
+                            <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                                <CheckCircle2 size={12} />
+                                <span>Сохранено</span>
+                            </span>
+                        )}
+                    </div>
+                    <textarea
+                        value={coachNotes}
+                        onChange={(e) => setCoachNotes(e.target.value)}
+                        rows={3}
+                        placeholder="Особенности техники, рекомендации, прогресс или индивидуальные задачи спортсмена..."
+                        className="w-full p-3.5 bg-black/50 border border-white/10 focus:border-sparta-gold rounded-2xl text-xs text-white placeholder-white/30 outline-none resize-none"
+                    />
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={handleSaveCoachNotes}
+                            disabled={isSavingNotes}
+                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                            {isSavingNotes ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                            <span>{isSavingNotes ? 'Сохранение...' : 'Сохранить заметку'}</span>
+                        </button>
+                    </div>
+                </div>
             </div>
-        </AnimatePresence>
+        </BaseModal>
     );
 };
 

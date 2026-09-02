@@ -355,7 +355,8 @@ const CoachCalendar: React.FC<CoachCalendarProps> = ({ userProfile, myGroups, ex
                                                     setEditingTopic({ title: '', description: '', type: 'technique', groupId: selectedGroupId === 'all' ? (myGroups[0]?.id || '') : selectedGroupId, videoUrl: '', time: '18:00' });
                                                     setIsTopicModalOpen(true);
                                                 }}
-                                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-sparta-gold hover:text-black rounded-lg text-sparta-gold transition-all"
+                                                className="opacity-50 group-hover:opacity-100 p-1 hover:bg-sparta-gold hover:text-black rounded-lg text-sparta-gold transition-all cursor-pointer"
+                                                title="Добавить занятие"
                                             >
                                                 <Plus size={14} />
                                             </button>
@@ -446,8 +447,8 @@ const CoachCalendar: React.FC<CoachCalendarProps> = ({ userProfile, myGroups, ex
                                         <div className="flex justify-between items-start mb-1">
                                             <h5 className="text-[10px] font-bold text-white group-hover:text-sparta-gold transition-colors truncate pr-6">{preset.title}</h5>
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); handleDeletePreset(preset.id); }}
-                                                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-red-500/40 hover:text-red-500 transition-all"
+                                                className="absolute top-2.5 right-2.5 opacity-40 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1 rounded-md hover:bg-red-500/10 transition-all cursor-pointer"
+                                                title="Удалить пресет"
                                             >
                                                 <Trash2 size={12} />
                                             </button>

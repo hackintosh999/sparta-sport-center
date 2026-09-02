@@ -1,5 +1,6 @@
 export interface ScheduleSlot {
     id: string;
+    firestoreGroupId?: string;
     coachName: string;
     coachTitle: string;
     coachPhoto: string;
@@ -17,6 +18,7 @@ export interface ScheduleSlot {
 export const SPARTA_SCHEDULE: ScheduleSlot[] = [
     {
         id: 'yakupov_1',
+        firestoreGroupId: 'group_yakupov_2016_2018',
         coachName: 'Якупов Павел Валерьевич',
         coachTitle: 'Главный тренер (Категория UEFA)',
         coachPhoto: '/pavel-yakupov-gold.png',
@@ -32,6 +34,7 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
     },
     {
         id: 'kubar_1',
+        firestoreGroupId: 'group_kubar_2014_2015',
         coachName: 'Кубарь Сергей Игоревич',
         coachTitle: 'Тренер по отработке техники',
         coachPhoto: '/sergey-kubar-gold.png',
@@ -47,6 +50,7 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
     },
     {
         id: 'ponomarev_1',
+        firestoreGroupId: 'group_ponomarev_2013',
         coachName: 'Пономарев Сергей Александрович',
         coachTitle: 'Старший тренер школы',
         coachPhoto: '/sergey-ponomarev.png',
@@ -62,6 +66,7 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
     },
     {
         id: 'ponomarev_2',
+        firestoreGroupId: 'group_ponomarev_2014_2012',
         coachName: 'Пономарев Сергей Александрович',
         coachTitle: 'Старший тренер школы',
         coachPhoto: '/sergey-ponomarev.png',
@@ -76,11 +81,12 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
     },
     {
         id: 'ponomarev_3',
+        firestoreGroupId: 'group_ponomarev_malyshi_2016_2018',
         coachName: 'Пономарев Сергей Александрович',
         coachTitle: 'Старший тренер школы',
         coachPhoto: '/sergey-ponomarev.png',
-        birthYears: [2016, 2017],
-        ageGroupLabel: '2016–2017 г.р. (7–8 лет)',
+        birthYears: [2016, 2017, 2018],
+        ageGroupLabel: '2016–2018 г.р. (6–8 лет)',
         days: 'Сб, Вс',
         time: '13:00 - 14:00',
         streamType: 'weekend',
@@ -90,11 +96,12 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
     },
     {
         id: 'ponomarev_4',
+        firestoreGroupId: 'group_ponomarev_2019_2021',
         coachName: 'Пономарев Сергей Александрович',
         coachTitle: 'Старший тренер школы',
         coachPhoto: '/sergey-ponomarev.png',
-        birthYears: [2018, 2019, 2020],
-        ageGroupLabel: '2018–2020 г.р. (4–6 лет)',
+        birthYears: [2018, 2019, 2020, 2021],
+        ageGroupLabel: '2018–2021 г.р. (4–6 лет)',
         days: 'Сб, Вс',
         time: '12:00 - 13:00',
         streamType: 'weekend',
@@ -105,6 +112,7 @@ export const SPARTA_SCHEDULE: ScheduleSlot[] = [
     },
     {
         id: 'ponomarev_5',
+        firestoreGroupId: 'group_ponomarev_2015_2012',
         coachName: 'Пономарев Сергей Александрович',
         coachTitle: 'Старший тренер школы',
         coachPhoto: '/sergey-ponomarev.png',

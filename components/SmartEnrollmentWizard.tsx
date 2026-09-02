@@ -26,6 +26,7 @@ import { SPARTA_SCHEDULE, ScheduleSlot } from '../constants/spartaSchedule';
 import { linkStudentToGroup } from '../utils/studentLinking';
 import { safeLocalStorage } from '../utils/storage';
 import confetti from 'canvas-confetti';
+import { BaseModal } from './ui/BaseModal';
 
 interface SmartEnrollmentWizardProps {
     user: any;
@@ -73,17 +74,17 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
             try {
                 const countByGroup: Record<string, number> = {};
 
-                // 1. Count registered students in groups
-                const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
-                usersSnap.docs.forEach(doc => {
+                // 1. Count actual enrolled students in groups from students collection
+                const studentsSnap = await getDocs(collection(db, 'students'));
+                studentsSnap.docs.forEach(doc => {
                     const data = doc.data();
-                    const gId = data.groupId || data.group;
+                    const gId = data.groupId;
                     if (gId) {
                         countByGroup[gId] = (countByGroup[gId] || 0) + 1;
                     }
                 });
 
-                // 2. Count active trial applications
+                // 2. Count active trial applications if any
                 const trialsSnap = await getDocs(collection(db, 'trials'));
                 trialsSnap.docs.forEach(doc => {
                     const data = doc.data();
@@ -96,10 +97,12 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                 // 3. Build live capacity map
                 const map: Record<string, { occupied: number; maxCapacity: number }> = {};
                 SPARTA_SCHEDULE.forEach(slot => {
-                    const additionalCount = countByGroup[slot.id] || 0;
-                    const baseOccupied = slot.initialOccupied || 16;
+                    const firestoreCount = (slot.firestoreGroupId && countByGroup[slot.firestoreGroupId]) ?? countByGroup[slot.id];
                     const maxCap = slot.maxCapacity || 20;
-                    const occupied = Math.min(maxCap - 1, baseOccupied + additionalCount);
+                    const occupied = Math.min(
+                        maxCap,
+                        firestoreCount !== undefined ? firestoreCount : (slot.initialOccupied || 16)
+                    );
                     map[slot.id] = {
                         occupied,
                         maxCapacity: maxCap
@@ -383,17 +386,16 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.96, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 15 }}
-                transition={{ duration: 0.25 }}
-                className="relative w-full max-w-lg bg-[#121212] border border-white/15 rounded-3xl shadow-[0_0_60px_rgba(212,175,55,0.15)] overflow-hidden my-auto max-h-[92vh] flex flex-col"
-            >
-                {/* Top Warm Ambient Glow */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-sparta-gold/10 blur-3xl pointer-events-none" />
-
+        <BaseModal
+            isOpen={true}
+            onClose={handleClose}
+            maxWidth="max-w-lg"
+            noPadding
+            showCloseButton={false}
+            glowColor="amber"
+            zIndex="z-50"
+        >
+            <div className="relative w-full bg-[#121212] overflow-hidden max-h-[88vh] flex flex-col font-manrope text-left rounded-3xl">
                 {/* Header (Compact) */}
                 <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-white/10 relative z-10 shrink-0 bg-[#121212]/90">
                     <div className="flex items-center gap-2.5">
@@ -960,8 +962,8 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                         </p>
                     )}
                 </div>
-            </motion.div>
-        </div>
+            </div>
+        </BaseModal>
     );
 };
 

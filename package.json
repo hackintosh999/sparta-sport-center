@@ -10,7 +10,7 @@
         "lint": "eslint \"{components,hooks,utils,types,context,scripts,.}/**/*.{ts,tsx}\"",
         "lint:fix": "eslint \"{components,hooks,utils,types,context,scripts,.}/**/*.{ts,tsx}\" --fix",
         "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
-        "seed": "node scripts/seed_students_from_lists.ts",
+        "seed": "tsx scripts/seed-real-data.ts",
         "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
         "electron:build": "npm run build && electron-builder",
         "android:add": "npx cap add android",

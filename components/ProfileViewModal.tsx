@@ -9,6 +9,7 @@ import { db, storage } from '../firebase';
 import { SpartaStoriesViewer, SpartaStoryGroup } from './profile/SpartaStoriesViewer';
 import { SpartaHighlightsModal, SpartaHighlightAlbum } from './profile/SpartaHighlightsModal';
 import { Sparta3DReactionIcon } from './profile/SpartaReactions';
+import { BaseModal } from './ui/BaseModal';
 
 interface ProfileViewModalProps {
     isOpen: boolean;
@@ -453,37 +454,36 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({ isOpen, onClose, us
     };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70]"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none"
-                    >
-                        <div className="bg-[#15171C] rounded-3xl w-full max-w-lg overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] pointer-events-auto relative max-h-[90vh] flex flex-col">
-                            {/* Top Header Actions */}
-                            <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
-                                {(!isEditing && userData?.id === user?.uid) && (
-                                    <button
-                                        onClick={() => setIsEditing(true)}
-                                        className="p-2 text-white/40 hover:text-sparta-gold transition-colors rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-white/10"
-                                    >
-                                        <Edit2 size={18} />
-                                    </button>
-                                )}
-                                <button onClick={onClose} className="p-2 text-white/40 hover:text-white transition-colors rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-white/10">
-                                    <X size={20} />
-                                </button>
-                            </div>
+        <>
+            <BaseModal
+                isOpen={isOpen}
+                onClose={onClose}
+                maxWidth="max-w-lg"
+                noPadding
+                showCloseButton={false}
+                glowColor="amber"
+                zIndex="z-[70]"
+            >
+                <div className="bg-[#15171C] rounded-3xl w-full overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] relative max-h-[85vh] flex flex-col font-manrope">
+                    {/* Top Header Actions */}
+                    <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
+                        {(!isEditing && userData?.id === user?.uid) && (
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                aria-label="Редактировать"
+                                className="p-2 text-white/40 hover:text-sparta-gold transition-colors rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-white/10 cursor-pointer"
+                            >
+                                <Edit2 size={18} />
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            aria-label="Закрыть"
+                            className="p-2 text-white/40 hover:text-white transition-colors rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-white/10 cursor-pointer"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
 
                             {userData ? (() => {
                                 const displayName = `${userData.childFirstName || ''} ${userData.childLastName || ''}`.trim() || userData.childName || userData.full_name || userData.displayName || userData.name || 'Атлет Спарта';
@@ -542,7 +542,8 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({ isOpen, onClose, us
                                                     <button
                                                         type="button"
                                                         onClick={() => fileInputRef.current?.click()}
-                                                        className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        className="absolute inset-0 bg-black/40 hover:bg-black/60 flex items-center justify-center rounded-full cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
+                                                        title="Загрузить фото"
                                                     >
                                                         <Upload size={20} className="text-white" />
                                                     </button>
@@ -928,72 +929,72 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({ isOpen, onClose, us
                                     <p>Данные профиля не найдены</p>
                                 </div>
                             )}
+                </div>
+            </BaseModal>
+
+            {/* Revoke Confirmation Modal */}
+            <BaseModal
+                isOpen={isRevokeModalOpen}
+                onClose={() => setIsRevokeModalOpen(false)}
+                maxWidth="max-w-sm"
+                glowColor="red"
+                zIndex="z-[80]"
+            >
+                <div className="text-left font-manrope">
+                    <h3 className="text-xl font-bold text-white font-russo mb-4">Отозвать награду?</h3>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-white/40 text-xs font-bold mb-1">Причина (опционально)</label>
+                            <textarea
+                                value={revokeReason}
+                                onChange={(e) => setRevokeReason(e.target.value)}
+                                className="w-full bg-black border border-white/10 rounded-xl p-3 text-white focus:border-red-500/50 outline-none h-20 resize-none text-xs"
+                                placeholder="Если пусто — уведомления не будет."
+                            />
                         </div>
-                    </motion.div>
 
-                    {/* Revoke Confirmation Modal */}
-                    {
-                        isRevokeModalOpen && (
-                            <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-                                <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-                                    <h3 className="text-xl font-bold text-white font-russo mb-4">Отозвать награду?</h3>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setIsRevokeModalOpen(false)}
+                                className="flex-1 bg-white/5 text-white font-bold py-3 rounded-xl hover:bg-white/10 transition-colors text-xs cursor-pointer"
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                onClick={handleRevokeAchievement}
+                                className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all flex items-center justify-center gap-2 text-xs cursor-pointer"
+                            >
+                                <Trash2 size={15} />
+                                Забрать
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </BaseModal>
 
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-white/40 text-xs font-bold mb-1">Причина (опционально)</label>
-                                            <textarea
-                                                value={revokeReason}
-                                                onChange={(e) => setRevokeReason(e.target.value)}
-                                                className="w-full bg-black border border-white/10 rounded-xl p-3 text-white focus:border-red-500/50 outline-none h-20 resize-none"
-                                                placeholder="Если пусто — уведомления не будет."
-                                            />
-                                        </div>
-
-                                        <div className="flex gap-3">
-                                            <button
-                                                onClick={() => setIsRevokeModalOpen(false)}
-                                                className="flex-1 bg-white/5 text-white font-bold py-3 rounded-xl hover:bg-white/10 transition-colors"
-                                            >
-                                                Отмена
-                                            </button>
-                                            <button
-                                                onClick={handleRevokeAchievement}
-                                                className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <Trash2 size={18} />
-                                                Забрать
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    }
-
-                    {/* Highlights Stories Viewer Modal */}
-                    {activeHighlightGroup && (
-                        <SpartaStoriesViewer
-                            isOpen={Boolean(activeHighlightGroup)}
-                            onClose={() => setActiveHighlightGroup(null)}
-                            initialGroupIndex={0}
-                            storyGroups={[activeHighlightGroup]}
-                            currentUserId={user?.uid}
-                            currentUserProfile={userData}
-                        />
-                    )}
-
-                    {/* Highlights Management Modal */}
-                    {isManageHighlightsOpen && (
-                        <SpartaHighlightsModal
-                            isOpen={isManageHighlightsOpen}
-                            onClose={() => setIsManageHighlightsOpen(false)}
-                            user={user}
-                            userProfile={userData}
-                        />
-                    )}
-                </>
+            {/* Highlights Stories Viewer Modal */}
+            {activeHighlightGroup && (
+                <SpartaStoriesViewer
+                    isOpen={Boolean(activeHighlightGroup)}
+                    onClose={() => setActiveHighlightGroup(null)}
+                    initialGroupIndex={0}
+                    storyGroups={[activeHighlightGroup]}
+                    currentUserId={user?.uid}
+                    currentUserProfile={userData}
+                />
             )}
-        </AnimatePresence >
+
+            {/* Highlights Management Modal */}
+            {isManageHighlightsOpen && (
+                <SpartaHighlightsModal
+                    isOpen={isManageHighlightsOpen}
+                    onClose={() => setIsManageHighlightsOpen(false)}
+                    user={user}
+                    userProfile={userData}
+                />
+            )}
+        </>
     );
 };
 

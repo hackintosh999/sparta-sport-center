@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Mail, User, MessageSquare, AlertCircle, CheckCircle, Paperclip, Smile, Image as ImageIcon, Clock } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { addDoc, collection, serverTimestamp, query, where, orderBy, onSnapshot, doc, updateDoc, arrayUnion, Timestamp, limit, or } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { QUICK_SUBJECTS, SUPPORT_FAQ } from '../constants/SupportFAQ';
+import { BaseModal } from './ui/BaseModal';
 
 interface MessageHistory {
     text: string;
@@ -175,32 +175,25 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
     };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                        onClick={onClose}
-                    />
-
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="bg-[#121212] w-full max-w-2xl rounded-3xl border border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
-                    >
-                        {/* Header */}
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5 shrink-0">
-                            <div>
-                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <MessageSquare className="text-sparta-gold" size={20} />
-                                    {auth.currentUser && activeTicket
-                                        ? (activeTicket.subject || (activeTicket.message?.length > 30 ? activeTicket.message.slice(0, 30) + '...' : activeTicket.message) || 'Моё обращение')
-                                        : 'Написать нам'}
-                                </h3>
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-2xl"
+            showCloseButton={false}
+            noPadding
+            glowColor="amber"
+            zIndex="z-[100]"
+        >
+            <div className="bg-[#121212] w-full rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                {/* Header */}
+                <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5 shrink-0">
+                    <div>
+                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                            <MessageSquare className="text-sparta-gold" size={20} />
+                            {auth.currentUser && activeTicket
+                                ? (activeTicket.subject || (activeTicket.message?.length > 30 ? activeTicket.message.slice(0, 30) + '...' : activeTicket.message) || 'Моё обращение')
+                                : 'Написать нам'}
+                        </h3>
                                 <p className="text-white/40 text-xs mt-1 flex items-center gap-2">
                                     {auth.currentUser && activeTicket
                                         ? `ID: #${activeTicket.id.slice(-6)} • Статус: ${activeTicket.status === 'resolved' ? 'Решено' : 'В работе'}`
@@ -433,11 +426,9 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
                                     )}
                                 </div>
                             )}
-                        </div>
-                    </motion.div>
                 </div>
-            )}
-        </AnimatePresence>
+            </div>
+        </BaseModal>
     );
 };
 

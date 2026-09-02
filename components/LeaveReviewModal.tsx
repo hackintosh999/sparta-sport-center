@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Star, X, Upload, ImageIcon, CheckCircle2, Loader2, Trash2, PartyPopper, Video } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Star, X, Upload, ImageIcon, Loader2, Trash2, PartyPopper, Video } from 'lucide-react';
 import { db } from '../firebase';
-import { supabase } from '../supabase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { BaseModal } from './ui/BaseModal';
 
 interface LeaveReviewModalProps {
     isOpen: boolean;
@@ -62,8 +62,6 @@ const LeaveReviewModal: React.FC<LeaveReviewModalProps> = ({ isOpen, onClose }) 
 
         return publicUrl;
     };
-
-    if (!isOpen) return null;
 
     const resizeImage = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -201,247 +199,231 @@ const LeaveReviewModal: React.FC<LeaveReviewModalProps> = ({ isOpen, onClose }) 
     };
 
     return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-                onClick={onClose}
-            >
-                <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.95, opacity: 0 }}
-                    className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden relative"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <button
-                        onClick={onClose}
-                        className="absolute right-4 top-4 text-white/50 hover:text-white transition-colors z-10"
-                    >
-                        <X size={24} />
-                    </button>
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-md"
+            glowColor="amber"
+            zIndex="z-[100]"
+        >
+            <div className="text-left font-manrope">
+                {success ? (
+                    <div className="text-center py-8">
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="w-16 h-16 bg-sparta-gold/20 text-sparta-gold rounded-full flex items-center justify-center mx-auto mb-4"
+                        >
+                            <Star size={32} fill="currentColor" />
+                        </motion.div>
+                        <h2 className="text-2xl font-russo uppercase text-white mb-2">Отправлено!</h2>
+                        <p className="text-white/70 font-manrope">
+                            Ваш отзыв успешно отправлен.<br />Он появится на сайте после модерации.
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        <h2 className="text-2xl font-russo uppercase text-sparta-gold mb-2">Оставить Отзыв</h2>
+                        <p className="text-white/50 text-sm font-manrope mb-6">
+                            Поделитесь своими впечатлениями о нашем клубе.
+                        </p>
 
-                    <div className="p-8">
-                        {success ? (
-                            <div className="text-center py-8">
-                                <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="w-16 h-16 bg-sparta-gold/20 text-sparta-gold rounded-full flex items-center justify-center mx-auto mb-4"
-                                >
-                                    <Star size={32} fill="currentColor" />
-                                </motion.div>
-                                <h2 className="text-2xl font-russo uppercase text-white mb-2">Отправлено!</h2>
-                                <p className="text-white/70 font-manrope">
-                                    Ваш отзыв успешно отправлен.<br />Он появится на сайте после модерации.
-                                </p>
-                            </div>
-                        ) : (
-                            <>
-                                <h2 className="text-2xl font-russo uppercase text-sparta-gold mb-2">Оставить Отзыв</h2>
-                                <p className="text-white/50 text-sm font-manrope mb-6">
-                                    Поделитесь своими впечатлениями о нашем клубе.
-                                </p>
-
-                                <form onSubmit={handleSubmit} className="space-y-6">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="flex gap-2">
-                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                <button
-                                                    key={star}
-                                                    type="button"
-                                                    disabled={isSubmitting}
-                                                    onMouseEnter={() => setHoverRating(star)}
-                                                    onMouseLeave={() => setHoverRating(0)}
-                                                    onClick={() => setRating(star)}
-                                                    className="focus:outline-none transition-transform hover:scale-110"
-                                                >
-                                                    <Star
-                                                        size={36}
-                                                        fill={(hoverRating || rating) >= star ? "currentColor" : "none"}
-                                                        className={(hoverRating || rating) >= star ? "text-sparta-gold" : "text-white/20"}
-                                                    />
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <span className="text-white/50 text-sm font-manrope h-5">
-                                            {rating === 0 ? "Выберите оценку" :
-                                                rating === 1 ? "Очень плохо" :
-                                                    rating === 2 ? "Плохо" :
-                                                        rating === 3 ? "Нормально" :
-                                                            rating === 4 ? "Хорошо" : "Отлично!"}
-                                        </span>
-                                    </div>
-
-                                    <div>
-                                        <textarea
-                                            value={text}
-                                            onChange={(e) => setText(e.target.value)}
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
                                             disabled={isSubmitting}
-                                            placeholder="Напишите ваш отзыв здесь..."
-                                            className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-white font-manrope placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-colors resize-none mb-2"
-                                        />
-                                        <div className="flex justify-between items-center mb-4">
-                                            <span className={`text-xs ${text.length < 10 && text.length > 0 ? 'text-red-400' : 'text-white/30'}`}>
-                                                Минимум 10 символов
-                                            </span>
-                                            <span className="text-xs text-white/30">{text.length} / 500</span>
-                                        </div>
-                                    </div>
+                                            onMouseEnter={() => setHoverRating(star)}
+                                            onMouseLeave={() => setHoverRating(0)}
+                                            onClick={() => setRating(star)}
+                                            className="focus:outline-none transition-transform hover:scale-110 cursor-pointer"
+                                        >
+                                            <Star
+                                                size={36}
+                                                fill={(hoverRating || rating) >= star ? "currentColor" : "none"}
+                                                className={(hoverRating || rating) >= star ? "text-sparta-gold" : "text-white/20"}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                                <span className="text-white/50 text-sm font-manrope h-5">
+                                    {rating === 0 ? "Выберите оценку" :
+                                        rating === 1 ? "Очень плохо" :
+                                            rating === 2 ? "Плохо" :
+                                                rating === 3 ? "Нормально" :
+                                                    rating === 4 ? "Хорошо" : "Отлично!"}
+                                </span>
+                            </div>
 
-                                    {/* Image Upload */}
-                                    <div className="space-y-3">
-                                        <label className="block text-white/50 text-[10px] font-bold uppercase tracking-wider">Прикрепить фото (необязательно)</label>
-                                        <div className="flex gap-4">
-                                            {image ? (
-                                                <div className="relative w-24 h-20 rounded-xl overflow-hidden border border-white/10 group">
-                                                    <img src={image} className="w-full h-full object-cover" alt="Review" />
+                            <div>
+                                <textarea
+                                    value={text}
+                                    onChange={(e) => setText(e.target.value)}
+                                    disabled={isSubmitting}
+                                    placeholder="Напишите ваш отзыв здесь..."
+                                    className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-white font-manrope placeholder-white/30 focus:outline-none focus:border-sparta-gold/50 transition-colors resize-none mb-2"
+                                />
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className={`text-xs ${text.length < 10 && text.length > 0 ? 'text-red-400' : 'text-white/30'}`}>
+                                        Минимум 10 символов
+                                    </span>
+                                    <span className="text-xs text-white/30">{text.length} / 500</span>
+                                </div>
+                            </div>
+
+                            {/* Image Upload */}
+                            <div className="space-y-3">
+                                <label className="block text-white/50 text-[10px] font-bold uppercase tracking-wider">Прикрепить фото (необязательно)</label>
+                                <div className="flex gap-4">
+                                    {image ? (
+                                        <div className="relative w-24 h-20 rounded-xl overflow-hidden border border-white/10 group">
+                                            <img src={image} className="w-full h-full object-cover" alt="Review" />
+                                            <button
+                                                type="button"
+                                                onClick={() => setImage(null)}
+                                                className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-red-500 rounded-lg text-white/70 hover:text-white transition-all opacity-70 hover:opacity-100 cursor-pointer shadow-md"
+                                                title="Удалить фото"
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="w-24 h-20 rounded-xl bg-white/5 border-2 border-dashed border-white/10 hover:border-sparta-gold/50 transition-all flex flex-col items-center justify-center cursor-pointer group">
+                                            {isUploading ? (
+                                                <Loader2 size={16} className="text-sparta-gold animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <ImageIcon size={16} className="text-white/20 group-hover:text-sparta-gold transition-colors" />
+                                                    <span className="text-[10px] text-white/20 mt-1 uppercase">ФОТО</span>
+                                                </>
+                                            )}
+                                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isUploading || isSubmitting} />
+                                        </label>
+                                    )}
+                                    <div className="flex-1 text-[10px] text-white/30 italic flex items-center">
+                                        Фотография сделает ваш отзыв более убедительным
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Video Upload/Link */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <label className="block text-white/50 text-[10px] font-bold uppercase tracking-wider">Видео-отзыв (необязательно)</label>
+                                    {!videoFile && !videoUrl && (
+                                        <div className="text-[9px] text-sparta-gold/60 italic">Загрузите или вставьте ссылку</div>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-3">
+                                    {/* File Upload Button */}
+                                    {!videoUrl && (
+                                        <div className="relative">
+                                            {videoFile ? (
+                                                <div className="bg-white/5 border border-sparta-gold/30 rounded-xl p-3 flex items-center justify-between group">
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className="w-10 h-10 rounded-lg bg-sparta-gold/10 flex items-center justify-center shrink-0">
+                                                            <Video size={16} className="text-sparta-gold" />
+                                                        </div>
+                                                        <div className="overflow-hidden">
+                                                            <p className="text-[10px] text-white font-bold truncate">{videoFile.name}</p>
+                                                            <p className="text-[9px] text-white/40">{(videoFile.size / (1024 * 1024)).toFixed(1)} MB</p>
+                                                        </div>
+                                                    </div>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setImage(null)}
-                                                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-red-400"
+                                                        onClick={() => {
+                                                            setVideoFile(null);
+                                                            setUploadProgress(0);
+                                                        }}
+                                                        className="p-2 text-white/30 hover:text-red-400 transition-colors cursor-pointer"
                                                     >
-                                                        <Trash2 size={20} />
+                                                        <X size={16} />
                                                     </button>
+
+                                                    {isSubmitting && (
+                                                        <div className="absolute bottom-0 left-0 h-0.5 bg-sparta-gold transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                                    )}
                                                 </div>
                                             ) : (
-                                                <label className="w-24 h-20 rounded-xl bg-white/5 border-2 border-dashed border-white/10 hover:border-sparta-gold/50 transition-all flex flex-col items-center justify-center cursor-pointer group">
-                                                    {isUploading ? (
-                                                        <Loader2 size={16} className="text-sparta-gold animate-spin" />
-                                                    ) : (
-                                                        <>
-                                                            <ImageIcon size={16} className="text-white/20 group-hover:text-sparta-gold transition-colors" />
-                                                            <span className="text-[10px] text-white/20 mt-1 uppercase">ФОТО</span>
-                                                        </>
-                                                    )}
-                                                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isUploading || isSubmitting} />
+                                                <label className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:border-sparta-gold/30 transition-all group">
+                                                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-sparta-gold/10 transition-colors">
+                                                        <Upload size={16} className="text-white/40 group-hover:text-sparta-gold transition-colors" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] text-white font-bold">Загрузить видео</p>
+                                                        <p className="text-[9px] text-white/30 truncate max-w-[200px]">MP4, MOV до 50MB</p>
+                                                    </div>
+                                                    <input type="file" accept="video/*" onChange={handleVideoSelect} className="hidden" />
                                                 </label>
                                             )}
-                                            <div className="flex-1 text-[10px] text-white/30 italic flex items-center">
-                                                Фотография сделает ваш отзыв более убедительным
+                                        </div>
+                                    )}
+
+                                    {/* Link Input (as alternative) */}
+                                    {!videoFile && (
+                                        <div className="space-y-2">
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    value={videoUrl}
+                                                    onChange={(e) => setVideoUrl(e.target.value)}
+                                                    placeholder="Или вставьте ссылку на YouTube/VK"
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/30 transition-all"
+                                                />
+                                                {videoUrl && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setVideoUrl('')}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-red-400 transition-colors cursor-pointer"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Video Upload/Link */}
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <label className="block text-white/50 text-[10px] font-bold uppercase tracking-wider">Видео-отзыв (необязательно)</label>
-                                            {!videoFile && !videoUrl && (
-                                                <div className="text-[9px] text-sparta-gold/60 italic">Загрузите или вставьте ссылку</div>
-                                            )}
-                                        </div>
-
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {/* File Upload Button */}
-                                            {!videoUrl && (
-                                                <div className="relative">
-                                                    {videoFile ? (
-                                                        <div className="bg-white/5 border border-sparta-gold/30 rounded-xl p-3 flex items-center justify-between group">
-                                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                                <div className="w-10 h-10 rounded-lg bg-sparta-gold/10 flex items-center justify-center shrink-0">
-                                                                    <Video size={16} className="text-sparta-gold" />
-                                                                </div>
-                                                                <div className="overflow-hidden">
-                                                                    <p className="text-[10px] text-white font-bold truncate">{videoFile.name}</p>
-                                                                    <p className="text-[9px] text-white/40">{(videoFile.size / (1024 * 1024)).toFixed(1)} MB</p>
-                                                                </div>
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setVideoFile(null);
-                                                                    setUploadProgress(0);
-                                                                }}
-                                                                className="p-2 text-white/30 hover:text-red-400 transition-colors"
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-
-                                                            {isSubmitting && (
-                                                                <div className="absolute bottom-0 left-0 h-0.5 bg-sparta-gold transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <label className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:border-sparta-gold/30 transition-all group">
-                                                            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-sparta-gold/10 transition-colors">
-                                                                <Upload size={16} className="text-white/40 group-hover:text-sparta-gold transition-colors" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-[11px] text-white font-bold">Загрузить видео</p>
-                                                                <p className="text-[9px] text-white/30 truncate max-w-[200px]">MP4, MOV до 50MB</p>
-                                                            </div>
-                                                            <input type="file" accept="video/*" onChange={handleVideoSelect} className="hidden" />
-                                                        </label>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Link Input (as alternative) */}
-                                            {!videoFile && (
-                                                <div className="space-y-2">
-                                                    <div className="relative">
-                                                        <input
-                                                            type="text"
-                                                            value={videoUrl}
-                                                            onChange={(e) => setVideoUrl(e.target.value)}
-                                                            placeholder="Или вставьте ссылку на YouTube/VK"
-                                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/30 transition-all"
-                                                        />
-                                                        {videoUrl && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setVideoUrl('')}
-                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-red-400 transition-colors"
-                                                            >
-                                                                <X size={14} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    {videoUrl && getVideoEmbedUrl(videoUrl) && (
-                                                        <div className="aspect-video rounded-xl overflow-hidden border border-white/10 bg-black animate-in fade-in duration-500">
-                                                            <iframe
-                                                                src={getVideoEmbedUrl(videoUrl)}
-                                                                className="w-full h-full"
-                                                                frameBorder="0"
-                                                                allowFullScreen
-                                                            />
-                                                        </div>
-                                                    )}
+                                            {videoUrl && getVideoEmbedUrl(videoUrl) && (
+                                                <div className="aspect-video rounded-xl overflow-hidden border border-white/10 bg-black animate-in fade-in duration-500">
+                                                    <iframe
+                                                        src={getVideoEmbedUrl(videoUrl)}
+                                                        className="w-full h-full"
+                                                        frameBorder="0"
+                                                        allowFullScreen
+                                                    />
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
+                                    )}
+                                </div>
+                            </div>
 
-                                    {/* Reward Notice */}
-                                    <div className="bg-sparta-gold/5 border border-sparta-gold/20 p-4 rounded-xl flex items-start gap-4 shadow-[0_0_20px_rgba(212,175,55,0.05)]">
-                                        <div className="w-10 h-10 rounded-full bg-sparta-gold/20 flex items-center justify-center shrink-0">
-                                            <PartyPopper size={20} className="text-sparta-gold" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-xs font-bold text-sparta-gold uppercase mb-1">Sparta Rewards</h4>
-                                            <p className="text-[10px] text-white/60 font-manrope leading-relaxed">
-                                                Получите <span className="text-white font-bold">+50 бонусов</span> за отзыв, <span className="text-white font-bold">+100</span> за фото или <span className="text-sparta-gold font-bold">+150 бонусов</span> за видео на ваш баланс!
-                                            </p>
-                                        </div>
-                                    </div>
+                            {/* Reward Notice */}
+                            <div className="bg-sparta-gold/5 border border-sparta-gold/20 p-4 rounded-xl flex items-start gap-4 shadow-[0_0_20px_rgba(212,175,55,0.05)]">
+                                <div className="w-10 h-10 rounded-full bg-sparta-gold/20 flex items-center justify-center shrink-0">
+                                    <PartyPopper size={20} className="text-sparta-gold" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-bold text-sparta-gold uppercase mb-1">Sparta Rewards</h4>
+                                    <p className="text-[10px] text-white/60 font-manrope leading-relaxed">
+                                        Получите <span className="text-white font-bold">+50 бонусов</span> за отзыв, <span className="text-white font-bold">+100</span> за фото или <span className="text-sparta-gold font-bold">+150 бонусов</span> за видео на ваш баланс!
+                                    </p>
+                                </div>
+                            </div>
 
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting || rating === 0 || text.length < 10}
-                                        className="w-full bg-sparta-gold text-black font-russo uppercase py-4 rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {isSubmitting ? 'Отправка...' : 'Отправить Отзыв'}
-                                    </button>
-                                </form>
-                            </>
-                        )}
-                    </div>
-                </motion.div>
-            </motion.div>
-        </AnimatePresence>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting || rating === 0 || text.length < 10}
+                                className="w-full bg-sparta-gold text-black font-russo uppercase py-4 rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                {isSubmitting ? 'Отправка...' : 'Отправить Отзыв'}
+                            </button>
+                        </form>
+                    </>
+                )}
+            </div>
+        </BaseModal>
     );
 };
 

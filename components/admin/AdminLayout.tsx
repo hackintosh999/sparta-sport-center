@@ -30,7 +30,7 @@ const AdminLayout = () => {
             items: [
                 { path: '/admin', icon: Home, label: 'Обзор' },
                 { path: '/admin/director', icon: TrendingUp, label: 'Панель Директора' },
-                { path: '/admin/scanner', icon: QrCode, label: 'QR-Сканер' },
+                // { path: '/admin/scanner', icon: QrCode, label: 'QR-Сканер' }, // Скрыто из сайдбара для разгрузки меню (маршрут /admin/scanner сохранен)
                 { path: '/admin/requests', icon: FileText, label: 'Заявки' },
                 { path: '/admin/groups', icon: Calendar, label: 'Группы' },
                 { path: '/admin/users', icon: Users, label: 'Пользователи' },

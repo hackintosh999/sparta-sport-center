@@ -430,7 +430,7 @@ const AdminComments = () => {
                                                 className="flex items-center gap-2 text-sparta-gold/70 text-xs hover:text-sparta-gold cursor-pointer group/link"
                                             >
                                                 <span className="truncate max-w-[150px]">{newsMap[comment.newsId] || 'Удаленная новость'}</span>
-                                                <ExternalLink size={12} className="opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                                                <ExternalLink size={12} className="opacity-50 group-hover/link:opacity-100 transition-opacity shrink-0" />
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-white/30 text-xs">

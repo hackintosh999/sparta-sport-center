@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +19,7 @@ import {
     Award,
     ChevronDown,
     Save as SaveIcon,
+    Calendar as CalendarIcon,
     Info,
     PlusCircle,
     X,
@@ -44,7 +45,9 @@ import {
     Brain,
     User,
     Phone,
+    Activity,
     Activity as ActivityIcon,
+    MoreVertical,
     Share,
     ArrowRightLeft,
     UserPlus,
@@ -68,7 +71,11 @@ import {
     Link as LinkIcon,
     Maximize2,
     Check,
-    CheckSquare
+    CheckSquare,
+    Tag,
+    Eye,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react';
 import { db } from '../../firebase';
 import { supabase } from '../../supabase';
@@ -103,6 +110,11 @@ import CoachCalendar from './CoachCalendar';
 import DailyHub from './coach/DailyHub';
 import RosterJournalTab from './coach/RosterJournalTab';
 import CoachReviewDashboard from './coach/CoachReviewDashboard';
+import ExerciseMediaGrid from './coach/ExerciseMediaGrid';
+import ExerciseDetailModal from './coach/ExerciseDetailModal';
+import CreateExerciseModal from './coach/CreateExerciseModal';
+import CreateTrainingPlanModal from './coach/CreateTrainingPlanModal';
+import TrainingPlanConspectModal from './coach/TrainingPlanConspectModal';
 import TrialsTab from './coach/TrialsTab';
 import MessagesTab from './coach/MessagesTab';
 import StatsLab from './coach/StatsLab';
@@ -126,15 +138,68 @@ const MUSCLE_GROUPS = [
     { id: 'fullbody', label: 'Все тело', icon: '🔥' }
 ];
 
-const EXERCISE_CATEGORIES = [
+export interface ExerciseTopic {
+    id: string;
+    label: string;
+    icon: string;
+    coachId?: string;
+    order?: number;
+    isCustom?: boolean;
+    createdAt?: any;
+    updatedAt?: any;
+}
+
+const DEFAULT_EXERCISE_CATEGORIES = [
     { id: 'all', label: 'Все', icon: Layers },
-    { id: 'technique', label: 'Техника', icon: Zap },
-    { id: 'strength', label: 'Сила', icon: Dumbbell },
-    { id: 'speed', label: 'Скорость', icon: Zap },
-    { id: 'endurance', label: 'Выносливость', icon: Clock },
-    { id: 'flexibility', label: 'Гибкость', icon: Star },
-    { id: 'recovery', label: 'Восстановление', icon: Sparkles }
+    { id: 'dribbling', label: '⚽ Дриблинг и ведение', icon: Zap },
+    { id: 'shooting', label: '🎯 Удары', icon: Target },
+    { id: 'passing', label: '🔄 Передачи и пас', icon: RefreshCw },
+    { id: 'warmup', label: '⚡ Разминка и координация', icon: Activity },
+    { id: 'tactics', label: '🛡️ Тактика', icon: Shield },
+    { id: 'goalkeeping', label: '🧤 Вратари', icon: Sparkles }
 ];
+
+const EXERCISE_CATEGORIES = DEFAULT_EXERCISE_CATEGORIES;
+
+const AGE_FILTER_OPTIONS = [
+    { id: 'all', label: 'Все возраста' },
+    { id: '6-8', label: '6–8 лет' },
+    { id: '9-11', label: '9–11 лет' },
+    { id: '12-15', label: '12–15 лет' }
+];
+
+const DURATION_FILTER_OPTIONS = [
+    { id: 'all', label: 'Любая длительность' },
+    { id: 'under10', label: '⚡ до 10 мин' },
+    { id: '10-20', label: '⏱ 10–20 мин' },
+    { id: '20plus', label: '⏳ 20+ мин' }
+];
+
+const getExerciseCategoryLabel = (cat: string, customList: any[] = []) => {
+    const foundCustom = customList.find(c => c.id === cat || c.label === cat);
+    if (foundCustom) return foundCustom.label;
+    switch (cat) {
+        case 'dribbling':
+        case 'technique':
+            return '⚽ Дриблинг и ведение';
+        case 'shooting':
+            return '🎯 Удары';
+        case 'passing':
+            return '🔄 Передачи и пас';
+        case 'warmup':
+        case 'recovery':
+        case 'flexibility':
+        case 'strength':
+            return '⚡ Разминка и координация';
+        case 'tactics':
+        case 'endurance':
+            return '🛡️ Тактика';
+        case 'goalkeeping':
+            return '🧤 Вратари';
+        default:
+            return cat || '⚽ Упражнение';
+    }
+};
 
 const DEFAULT_EXERCISES = [
     {
@@ -293,15 +358,88 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
     const [editingExercise, setEditingExercise] = useState<any>(null);
     const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
     const [selectedExerciseCategory, setSelectedExerciseCategory] = useState('all');
+    const [selectedExerciseAge, setSelectedExerciseAge] = useState<'all' | '6-8' | '9-11' | '12-15'>('all');
+    const [selectedExerciseDuration, setSelectedExerciseDuration] = useState<'all' | 'under10' | '10-20' | '20plus'>('all');
+    const [viewingExerciseDetail, setViewingExerciseDetail] = useState<any | null>(null);
+    const [exerciseMenuOpenId, setExerciseMenuOpenId] = useState<string | null>(null);
     const [exerciseCollections, setExerciseCollections] = useState<any[]>([]);
     const [selectedCollectionId, setSelectedCollectionId] = useState<string | 'all'>('all');
     const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
     const [editingCollection, setEditingCollection] = useState<any>(null);
     const [movingExerciseId, setMovingExerciseId] = useState<string | null>(null);
+    const [changingTopicExerciseId, setChangingTopicExerciseId] = useState<string | null>(null);
     const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
     const [clipboardIds, setClipboardIds] = useState<string[]>([]);
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
+    const [customExerciseTopics, setCustomExerciseTopics] = useState<any[]>([]);
+    const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
+    const [editingTopic, setEditingTopic] = useState<any | null>(null);
+    const [newTopicData, setNewTopicData] = useState({ label: '', icon: '⚽' });
     const [newCollectionData, setNewCollectionData] = useState({ title: '', color: '#D4AF37' });
+
+    // Drag-and-Drop States
+    const [isDraggingExercise, setIsDraggingExercise] = useState(false);
+    const [draggedExerciseId, setDraggedExerciseId] = useState<string | null>(null);
+    const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+    const [dragNotification, setDragNotification] = useState<string | null>(null);
+
+    // Training Plan Draft Builder States
+    const [trainingPlanDraft, setTrainingPlanDraft] = useState<any[]>([]);
+    const [isPlanDrawerOpen, setIsPlanDrawerOpen] = useState(false);
+    const [planAssignmentData, setPlanAssignmentData] = useState({
+        groupId: '',
+        date: new Date().toISOString().split('T')[0],
+        time: '18:00',
+        title: '',
+        description: '',
+        intensity: 'medium' as 'low' | 'medium' | 'high'
+    });
+
+    const allExerciseCategories = useMemo(() => {
+        const customMap = new Map<string, any>();
+        customExerciseTopics.forEach(t => {
+            customMap.set(t.id, t);
+        });
+
+        const baseList = DEFAULT_EXERCISE_CATEGORIES.map(c => {
+            if (customMap.has(c.id)) {
+                const custom = customMap.get(c.id);
+                if (custom.deleted) return null;
+                return {
+                    id: custom.id,
+                    label: custom.icon ? `${custom.icon} ${custom.label}` : custom.label,
+                    icon: custom.icon || '⚽',
+                    rawLabel: custom.label,
+                    isCustom: true,
+                    order: custom.order ?? 0
+                };
+            }
+            const parts = c.label.split(' ');
+            const icon = parts[0];
+            const rawLabel = parts.slice(1).join(' ');
+            return {
+                id: c.id,
+                label: c.label,
+                icon: icon,
+                rawLabel: rawLabel || c.label,
+                isCustom: false,
+                order: 0
+            };
+        }).filter(Boolean) as any[];
+
+        const extraCustomList = customExerciseTopics
+            .filter(t => !DEFAULT_EXERCISE_CATEGORIES.some(c => c.id === t.id) && !t.deleted)
+            .map(t => ({
+                id: t.id,
+                label: t.icon ? `${t.icon} ${t.label}` : t.label,
+                icon: t.icon || '⚽',
+                rawLabel: t.label,
+                isCustom: true,
+                order: t.order ?? 99
+            }));
+
+        return [...baseList, ...extraCustomList];
+    }, [customExerciseTopics]);
     const [newExerciseData, setNewExerciseData] = useState({
         title: '',
         description: '',
@@ -323,11 +461,11 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
     const [isExerciseGuideOpen, setIsExerciseGuideOpen] = useState(false);
 
     const [trainingTemplates, setTrainingTemplates] = useState<any[]>([]);
+    const [trainingPlanAgeFilter, setTrainingPlanAgeFilter] = useState<string>('all');
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<any>(null);
+    const [selectedPlanForConspect, setSelectedPlanForConspect] = useState<any>(null);
     const [isSavingTemplate, setIsSavingTemplate] = useState(false);
-    const [isUploadingCover, setIsUploadingCover] = useState(false);
-    const [isDraggingToTemplate, setIsDraggingToTemplate] = useState(false);
 
     const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
     const [editingAssignmentTask, setEditingAssignmentTask] = useState<any | null>(null);
@@ -851,6 +989,9 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         const unsubCollections = onSnapshot(collection(db, "exercise_collections"), (snap) => {
             setExerciseCollections(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
+        const unsubTopics = onSnapshot(collection(db, "exercise_topics"), (snap) => {
+            setCustomExerciseTopics(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
 
         // Listen for pending submissions requiring review
         const qPendingSub = query(collection(db, "homework_submissions"), where("status", "==", "pending_review"));
@@ -915,7 +1056,7 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
             });
         }
 
-        return () => { unsubExercises(); unsubTemplates(); unsubCollections(); unsubPendingSub(); unsubTrainingPlan(); unsubHomework(); };
+        return () => { unsubExercises(); unsubTemplates(); unsubCollections(); unsubTopics(); unsubPendingSub(); unsubTrainingPlan(); unsubHomework(); };
     }, [selectedGroupId, myGroups]);
 
     // AI Match Utilities (Hoisted using function declaration)
@@ -1484,48 +1625,196 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         }
     };
 
-    const handleContactParent = (person: any) => {
+    const handleContactParent = async (person: any) => {
         if (!person) return;
 
-        // 1. Identify parent account UID
-        const parentUid = person.parentId ||
-            person.parentUid ||
-            person.originalUser?.parentId ||
-            person.originalUser?.parentUid ||
-            (person.role === 'parent' ? (person.uid || person.id) : null);
+        try {
+            const rawPhone = person.parentPhone || person.phone || person.originalUser?.parentPhone || person.originalUser?.phone || '';
+            const cleanPhone = String(rawPhone).replace(/\D/g, '');
+            let parentUid = person.parentId ||
+                person.parentUid ||
+                person.userId ||
+                person.assignedUid ||
+                person.originalUser?.parentId ||
+                person.originalUser?.parentUid ||
+                (person.role === 'parent' ? (person.uid || person.id) : null);
+            let parentUser: any = null;
 
-        // 2. Identify parent display name
-        const parentName = person.parentName ||
-            person.parentDisplayName ||
-            person.originalUser?.parentName ||
-            person.originalUser?.displayName ||
-            'Родитель';
+            // 1. Check parentId if present
+            if (parentUid && parentUid.length > 3) {
+                try {
+                    const snap = await getDoc(doc(db, "users", parentUid));
+                    if (snap.exists()) {
+                        parentUser = { id: snap.id, ...snap.data() };
+                    } else {
+                        parentUid = null;
+                    }
+                } catch {
+                    parentUid = null;
+                }
+            }
 
-        // 3. Identify student name
-        const studentName = person.childName ||
-            person.childFirstName ||
-            person.name ||
-            'Спортсмен';
+            // 2. Lookup in users collection by phone
+            if (!parentUid && cleanPhone.length >= 10) {
+                const phoneVariants = [
+                    cleanPhone,
+                    `+7${cleanPhone.slice(-10)}`,
+                    `8${cleanPhone.slice(-10)}`,
+                    `7${cleanPhone.slice(-10)}`
+                ];
 
-        // 4. Identify parent phone for WhatsApp fallback
-        const phone = person.parentPhone ||
-            person.phone ||
-            person.originalUser?.parentPhone ||
-            person.originalUser?.phone ||
-            '';
-        const cleanPhone = String(phone).replace(/\D/g, '');
+                const q1 = query(
+                    collection(db, "users"),
+                    where("phone", "in", phoneVariants),
+                    limit(1)
+                );
+                const snap1 = await getDocs(q1);
 
-        if (parentUid && parentUid.length > 5) {
-            // Valid parent account in system: redirect to unified messenger with parent
-            navigate(`?tab=messages_unified&targetUid=${parentUid}&targetName=${encodeURIComponent(parentName)}&studentName=${encodeURIComponent(studentName)}`);
-        } else if (cleanPhone && cleanPhone.length >= 10) {
-            // No parent account in system: open WhatsApp
-            const formattedPhone = cleanPhone.startsWith('8') && cleanPhone.length === 11
-                ? '7' + cleanPhone.slice(1)
-                : cleanPhone;
-            window.open(`https://wa.me/${formattedPhone}`, '_blank');
-        } else {
-            // Fallback to unified messenger
+                if (!snap1.empty) {
+                    parentUser = { id: snap1.docs[0].id, ...snap1.docs[0].data() };
+                    parentUid = parentUser.id;
+                } else {
+                    const q2 = query(
+                        collection(db, "users"),
+                        where("parentPhone", "in", phoneVariants),
+                        limit(1)
+                    );
+                    const snap2 = await getDocs(q2);
+                    if (!snap2.empty) {
+                        parentUser = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
+                        parentUid = parentUser.id;
+                    }
+                }
+            }
+
+            // Scenario A: Parent account exists
+            if (parentUid && parentUser) {
+                const currentCoachId = user?.uid || userProfile?.coachId || 'coach';
+                const coachName = userProfile?.name || userProfile?.full_name || 'Тренер';
+                const parentName =
+                    parentUser.full_name ||
+                    parentUser.name ||
+                    parentUser.displayName ||
+                    person.parentName ||
+                    person.parentDisplayName ||
+                    'Родитель';
+                const studentName =
+                    person.childName ||
+                    person.childFirstName ||
+                    person.name ||
+                    'Спортсмен';
+
+                // 1. Idempotent check: query existing chat where coach and parent are both participants
+                let targetChatId: string | null = null;
+                try {
+                    const qChats = query(
+                        collection(db, 'chats'),
+                        where('participants', 'array-contains', currentCoachId)
+                    );
+                    const snapChats = await getDocs(qChats);
+                    const existingDoc = snapChats.docs.find(d => {
+                        const data = d.data();
+                        return data.participants?.includes(parentUid) || data.parentId === parentUid;
+                    });
+                    if (existingDoc) {
+                        targetChatId = existingDoc.id;
+                    }
+                } catch (e) {
+                    console.warn("Could not query existing chat:", e);
+                }
+
+                // 2. Check deterministic ID as fallback
+                if (!targetChatId) {
+                    const deterministicId = [currentCoachId, parentUid].sort().join('_');
+                    try {
+                        const directSnap = await getDoc(doc(db, 'chats', deterministicId));
+                        if (directSnap.exists()) {
+                            targetChatId = deterministicId;
+                        }
+                    } catch (e) {}
+                }
+
+                // 3. If chat exists, reuse it and update metadata; otherwise, create a single new document
+                if (targetChatId) {
+                    const chatRef = doc(db, 'chats', targetChatId);
+                    await setDoc(chatRef, {
+                        childName: studentName,
+                        studentName: studentName,
+                        parentName: parentName,
+                        parentId: parentUid,
+                        coachId: currentCoachId,
+                        participantDetails: {
+                            [currentCoachId]: { name: coachName, role: 'coach' },
+                            [parentUid]: { name: parentName, role: 'parent' }
+                        },
+                        participantNames: {
+                            [currentCoachId]: coachName,
+                            [parentUid]: parentName
+                        },
+                        participantRoles: {
+                            [currentCoachId]: 'coach',
+                            [parentUid]: 'parent'
+                        },
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                } else {
+                    const newChatRef = await addDoc(collection(db, 'chats'), {
+                        name: `Чат с родителем (${studentName})`,
+                        type: 'parent',
+                        childName: studentName,
+                        studentName: studentName,
+                        parentName: parentName,
+                        parentId: parentUid,
+                        coachId: currentCoachId,
+                        participants: [currentCoachId, parentUid],
+                        participantDetails: {
+                            [currentCoachId]: { name: coachName, role: 'coach' },
+                            [parentUid]: { name: parentName, role: 'parent' }
+                        },
+                        participantNames: {
+                            [currentCoachId]: coachName,
+                            [parentUid]: parentName
+                        },
+                        participantRoles: {
+                            [currentCoachId]: 'coach',
+                            [parentUid]: 'parent'
+                        },
+                        lastMessage: "Заявка на пробное занятие принята",
+                        lastMessageAt: serverTimestamp(),
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                        createdBy: currentCoachId,
+                        isPrivate: true
+                    });
+                    targetChatId = newChatRef.id;
+                }
+
+                window.dispatchEvent(
+                    new CustomEvent('sparta_navigate_tab', {
+                        detail: {
+                            tab: 'messages_unified',
+                            chatId: targetChatId,
+                            targetUid: parentUid,
+                            targetName: parentName,
+                            studentName: studentName
+                        }
+                    })
+                );
+
+                navigate(`/dashboard?tab=messages_unified&chatId=${targetChatId}&targetUid=${parentUid}&targetName=${encodeURIComponent(parentName)}&studentName=${encodeURIComponent(studentName)}`);
+            } else {
+                // Scenario B: Parent not registered yet -> show prompt with tel
+                if (cleanPhone) {
+                    const formatted = cleanPhone.startsWith('8') && cleanPhone.length === 11
+                        ? '+7 ' + cleanPhone.slice(1)
+                        : `+${cleanPhone}`;
+                    alert(`Родитель еще не зарегистрировался на платформе.\nСвяжитесь по телефону: ${formatted}`);
+                } else {
+                    alert('Родитель еще не зарегистрировался на платформе. Телефон не указан в заявке.');
+                }
+            }
+        } catch (err) {
+            console.error("Error in handleContactParent:", err);
             navigate('?tab=messages_unified');
         }
     };
@@ -1684,8 +1973,52 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         }
     };
 
+    const handleSaveNewExercise = async (payload: any) => {
+        setIsSavingExercise(true);
+        try {
+            if (editingExercise) {
+                await updateDoc(doc(db, 'exercises', editingExercise.id), {
+                    ...payload,
+                    updatedAt: serverTimestamp()
+                });
+            } else {
+                await addDoc(collection(db, 'exercises'), {
+                    ...payload,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
+            }
+            setIsExerciseModalOpen(false);
+            setEditingExercise(null);
+        } catch (err: any) {
+            console.error("Error saving exercise:", err);
+            throw err;
+        } finally {
+            setIsSavingExercise(false);
+        }
+    };
+
+    const handleDuplicateExercise = async (ex: any) => {
+        try {
+            const { id, createdAt, updatedAt, ...rest } = ex;
+            await addDoc(collection(db, 'exercises'), {
+                ...rest,
+                title: `${ex.title} (Копия)`,
+                coachId: userProfile?.coachId || 'coach',
+                coachName: userProfile?.name || 'Тренер',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+            setExerciseMenuOpenId(null);
+            alert(`✅ Создана копия упражнения «${ex.title}»`);
+        } catch (err) {
+            console.error("Error duplicating exercise:", err);
+            alert("Ошибка при создании копии упражнения.");
+        }
+    };
+
     const handleDeleteExercise = async (id: string, mediaItems: any[]) => {
-        if (!window.confirm("Вы уверены, что хотите удалить это упражнение? Это автономном режиме.")) return;
+        if (!window.confirm("Вы уверены, что хотите удалить это упражнение?")) return;
 
         try {
             await deleteDoc(doc(db, "exercises", id));
@@ -1720,138 +2053,25 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
 
     const handleOpenEditTemplateModal = (template: any) => {
         setEditingTemplate(template);
-        setNewTemplateData({
-            title: template.title,
-            description: template.description || '',
-            intensity: template.intensity || 'medium',
-            duration: template.duration || '4',
-            category: template.category || 'technique',
-            stages: template.stages || {
-                warmup: [],
-                main: template.exercises || [],
-                skills: [],
-                cooldown: []
-            },
-            coverImage: template.coverImage || '',
-            gallery: template.gallery || [],
-            intensityCurve: template.intensityCurve || [30, 50, 80, 45]
-        });
-        setSelectedExercisesForTemplate(template.exercises || []);
         setIsTemplateModalOpen(true);
     };
 
-    const handleDuplicateTemplate = (template: any) => {
-        setEditingTemplate(null); // Important: reset to null so it saves as new
-        setNewTemplateData({
-            title: `Копия - ${template.title}`,
-            description: template.description || '',
-            intensity: template.intensity || 'medium',
-            duration: template.duration || '4',
-            category: template.category || 'technique',
-            stages: JSON.parse(JSON.stringify(template.stages)) || {
-                warmup: [],
-                main: template.exercises || [],
-                skills: [],
-                cooldown: []
-            },
-            coverImage: template.coverImage || '',
-            gallery: template.gallery ? [...template.gallery] : [],
-            intensityCurve: template.intensityCurve || [30, 50, 80, 45]
-        });
-        setSelectedExercisesForTemplate(template.exercises || []);
-        setIsTemplateModalOpen(true);
-    };
-
-    const handleOpenTemplateLightbox = (initialUrl: string) => {
-        const allMedia: Array<{ url: string, type: 'video' | 'photo' | 'url' }> = [];
-
-        // Add cover if it exists
-        if (newTemplateData.coverImage) {
-            allMedia.push({ url: newTemplateData.coverImage, type: 'photo' });
-        }
-
-        // Add gallery items
-        newTemplateData.gallery.forEach(url => {
-            // Check if it's already added (if cover is from gallery)
-            if (!allMedia.some(m => m.url === url)) {
-                allMedia.push({ url, type: 'photo' });
-            }
-        });
-
-        if (allMedia.length === 0) return;
-
-        const currentIndex = allMedia.findIndex(m => m.url === initialUrl);
-        setSelectedMediaForLightbox({
-            items: allMedia,
-            currentIndex: currentIndex >= 0 ? currentIndex : 0,
-            title: newTemplateData.title || 'Предпросмотр'
-        });
-    };
-
-
-    const handleTemplateMediaFiles = async (files: FileList | File[]) => {
-        if (!files || files.length === 0) return;
-
-        setIsUploadingCover(true);
-        const uploadedUrls: string[] = [];
-
+    const handleDuplicateTemplate = async (template: any) => {
         try {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}_${i}.${fileExt}`;
-                const filePath = `program_covers/${user?.uid || 'temp'}/${fileName}`;
-
-                const { data, error } = await supabase.storage
-                    .from('exercises-media')
-                    .upload(filePath, file, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
-
-                if (error) throw error;
-
-                const { data: { publicUrl } } = supabase.storage
-                    .from('exercises-media')
-                    .getPublicUrl(filePath);
-
-                uploadedUrls.push(publicUrl);
-            }
-
-            setNewTemplateData(prev => {
-                const newGallery = [...prev.gallery, ...uploadedUrls];
-                let newCover = prev.coverImage;
-
-                // If there's no cover image yet or if it was a manual URL that might be replaced, 
-                // we set the new uploaded one as cover if it's the first one
-                if ((!newCover || !newCover.includes('supabase')) && uploadedUrls.length > 0) {
-                    newCover = uploadedUrls[0];
-                }
-
-                return {
-                    ...prev,
-                    coverImage: newCover,
-                    gallery: newGallery
-                };
-            });
-
-            // Hide URL input after device upload to keep UI clean
-            setShowTemplateUrlInput(false);
-            setIsUploadingCover(false);
-            setIsDraggingToTemplate(false);
-        } catch (error) {
-            console.error('Upload failed:', error);
-            setIsUploadingCover(false);
-            setIsDraggingToTemplate(false);
+            const copyPayload = {
+                ...template,
+                title: `Копия — ${template.title}`,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            };
+            delete copyPayload.id;
+            await addDoc(collection(db, "training_templates"), copyPayload);
+            setDragNotification(`План «${template.title}» продублирован`);
+            setTimeout(() => setDragNotification(null), 3000);
+        } catch (err) {
+            console.error("Error duplicating template:", err);
+            alert("Ошибка при копировании плана тренировки.");
         }
-    };
-
-    const handleRemoveGalleryImage = (url: string) => {
-        setNewTemplateData(prev => ({
-            ...prev,
-            gallery: prev.gallery.filter(item => item !== url),
-            coverImage: prev.coverImage === url ? (prev.gallery.filter(item => item !== url)[0] || '') : prev.coverImage
-        }));
     };
 
     const handleOpenEditModal = (ex: any) => {
@@ -1958,6 +2178,117 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         setIsSavingExercise(false);
     };
 
+    const handleAddToPlanDraft = (exercise: any) => {
+        const draftItem = {
+            ...exercise,
+            draftId: `draft-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            durationMinutes: Number(exercise.durationMinutes) || 15
+        };
+        setTrainingPlanDraft(prev => [...prev, draftItem]);
+    };
+
+    const handleRemoveFromPlanDraft = (draftId: string) => {
+        setTrainingPlanDraft(prev => prev.filter(item => item.draftId !== draftId));
+    };
+
+    const handleReorderPlanDraft = (index: number, direction: 'up' | 'down') => {
+        setTrainingPlanDraft(prev => {
+            const copy = [...prev];
+            const targetIndex = direction === 'up' ? index - 1 : index + 1;
+            if (targetIndex < 0 || targetIndex >= copy.length) return prev;
+            const temp = copy[index];
+            copy[index] = copy[targetIndex];
+            copy[targetIndex] = temp;
+            return copy;
+        });
+    };
+
+    const handleUpdateDraftItemDuration = (draftId: string, duration: number) => {
+        setTrainingPlanDraft(prev => prev.map(item =>
+            item.draftId === draftId ? { ...item, durationMinutes: Math.max(1, duration) } : item
+        ));
+    };
+
+    const handleSavePlanToGroup = async () => {
+        if (trainingPlanDraft.length === 0) return;
+        const targetGId = planAssignmentData.groupId || selectedGroupId || myGroups[0]?.id;
+        if (!targetGId) {
+            alert('Пожалуйста, выберите группу для назначения плана.');
+            return;
+        }
+
+        const totalMins = trainingPlanDraft.reduce((acc, curr) => acc + (Number(curr.durationMinutes) || 15), 0);
+        const planTitle = planAssignmentData.title.trim() || `Тренировка (${trainingPlanDraft.length} упр.)`;
+
+        try {
+            await addDoc(collection(db, "trainingPlan"), {
+                groupId: targetGId,
+                title: planTitle,
+                description: planAssignmentData.description || '',
+                date: planAssignmentData.date,
+                time: planAssignmentData.time,
+                intensity: planAssignmentData.intensity,
+                totalMinutes: totalMins,
+                exercises: trainingPlanDraft.map(({ draftId, ...rest }) => rest),
+                coachId: userProfile?.coachId || 'coach',
+                coachName: userProfile?.name || 'Тренер',
+                status: 'assigned',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+
+            alert(`✅ Тренировка «${planTitle}» успешно сохранена и назначена группе!`);
+            setTrainingPlanDraft([]);
+            setIsPlanDrawerOpen(false);
+        } catch (err) {
+            console.error("Error saving training plan to group:", err);
+            alert("Ошибка при сохранении плана тренировки");
+        }
+    };
+
+    const handleSavePlanAsTemplate = async () => {
+        if (trainingPlanDraft.length === 0) return;
+        const templateTitle = prompt('Введите название готовой тренировки (шаблона):', planAssignmentData.title.trim() || 'Футбольный тренировочный комплекс');
+        if (!templateTitle) return;
+
+        const totalMins = trainingPlanDraft.reduce((acc, curr) => acc + (Number(curr.durationMinutes) || 15), 0);
+
+        try {
+            await addDoc(collection(db, "training_templates"), {
+                title: templateTitle.trim(),
+                description: planAssignmentData.description || '',
+                category: 'Общая',
+                intensity: planAssignmentData.intensity,
+                durationMinutes: totalMins,
+                exercises: trainingPlanDraft.map(({ draftId, ...rest }) => rest),
+                coachId: userProfile?.coachId || 'coach',
+                coachName: userProfile?.name || 'Тренер',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+
+            alert(`✅ Шаблон «${templateTitle}» успешно сохранён в раздел «Готовые тренировки»!`);
+        } catch (err) {
+            console.error("Error saving template:", err);
+            alert("Ошибка при сохранении шаблона");
+        }
+    };
+
+    const handleChangeCategory = async (exId: string, categoryId: string, categoryLabel: string) => {
+        try {
+            await updateDoc(doc(db, "exercises", exId), {
+                category: categoryId,
+                categoryLabel: categoryLabel,
+                updatedAt: serverTimestamp()
+            });
+            setChangingTopicExerciseId(null);
+            setExerciseMenuOpenId(null);
+        } catch (err) {
+            console.error("Error changing topic:", err);
+            alert("Ошибка при смене темы");
+        }
+    };
+
     const handleMoveExercise = async (exId: string, colId: string) => {
         try {
             await updateDoc(doc(db, "exercises", exId), {
@@ -1970,6 +2301,26 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
         } catch (err) {
             console.error("Error moving exercise:", err);
             alert("Ошибка при перемещении");
+        }
+    };
+
+    const handleDropExerciseToFolder = async (targetColId: string, folderTitle: string) => {
+        const exId = draggedExerciseId;
+        if (!exId) return;
+        setIsDraggingExercise(false);
+        setDraggedExerciseId(null);
+        setDragOverFolderId(null);
+        
+        try {
+            await updateDoc(doc(db, "exercises", exId), {
+                collectionId: targetColId,
+                updatedAt: serverTimestamp()
+            });
+            setDragNotification(`Упражнение перемещено в папку «${folderTitle}»`);
+            setTimeout(() => setDragNotification(null), 3500);
+        } catch (err) {
+            console.error("Error moving exercise via drag-and-drop:", err);
+            alert("Ошибка при перемещении упражнения");
         }
     };
 
@@ -2019,7 +2370,7 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
             } else {
                 await addDoc(collection(db, "exercise_collections"), {
                     ...newCollectionData,
-                    coachId: userProfile.coachId,
+                    coachId: userProfile?.coachId || 'coach',
                     createdAt: serverTimestamp()
                 });
             }
@@ -2028,15 +2379,78 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
             setIsCollectionModalOpen(false);
         } catch (err) {
             console.error("Error saving collection:", err);
+            alert("Ошибка при сохранении папки");
         }
     };
 
     const handleDeleteCollection = async (id: string) => {
-        if (!window.confirm('Удалить коллекцию? Упражнения останутся в общем доступе.')) return;
+        if (!window.confirm('Удалить папку? Все упражнения сохранятся в общем каталоге.')) return;
         try {
+            const affected = exercises.filter(ex => ex.collectionId === id);
+            if (affected.length > 0) {
+                const batch = writeBatch(db);
+                affected.forEach(ex => {
+                    batch.update(doc(db, "exercises", ex.id), { collectionId: 'all' });
+                });
+                await batch.commit();
+            }
             await deleteDoc(doc(db, "exercise_collections", id));
+            if (selectedCollectionId === id) {
+                setSelectedCollectionId('all');
+            }
         } catch (err) {
             console.error("Error deleting collection:", err);
+            alert("Ошибка при удалении папки");
+        }
+    };
+
+    const handleSaveTopic = async () => {
+        if (!newTopicData.label.trim()) return;
+        try {
+            if (editingTopic) {
+                await setDoc(doc(db, "exercise_topics", editingTopic.id), {
+                    label: newTopicData.label.trim(),
+                    icon: newTopicData.icon || '⚽',
+                    coachId: userProfile?.coachId || 'system',
+                    order: editingTopic.order ?? 0,
+                    isCustom: true,
+                    deleted: false,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+            } else {
+                await addDoc(collection(db, "exercise_topics"), {
+                    label: newTopicData.label.trim(),
+                    icon: newTopicData.icon || '⚽',
+                    coachId: userProfile?.coachId || 'system',
+                    order: customExerciseTopics.length + 1,
+                    isCustom: true,
+                    deleted: false,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
+            }
+            setNewTopicData({ label: '', icon: '⚽' });
+            setEditingTopic(null);
+            setIsTopicModalOpen(false);
+        } catch (err) {
+            console.error("Error saving topic:", err);
+            alert("Ошибка при сохранении темы");
+        }
+    };
+
+    const handleDeleteTopic = async (topicId: string) => {
+        if (!window.confirm('Удалить эту футбольную тему? Все упражнения сохранятся в базе.')) return;
+        try {
+            await setDoc(doc(db, "exercise_topics", topicId), {
+                deleted: true,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+            if (selectedExerciseCategory === topicId) {
+                setSelectedExerciseCategory('all');
+            }
+        } catch (err) {
+            console.error("Error deleting topic:", err);
+            alert("Ошибка при удалении темы");
         }
     };
 
@@ -2551,18 +2965,22 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                             <TrialsTab
                                 trialRequests={trialRequests}
                                 myTrialRequests={myTrialRequests}
-                                trialEvaluations={trialEvaluations}
-                                calculateGroupFit={calculateGroupFit}
-                                handleStartComparison={handleStartComparison}
-                                handleContactParent={handleContactParent}
-                                setSelectedTrialForEval={setSelectedTrialForEval}
-                                setIsEvaluationModalOpen={setIsEvaluationModalOpen}
-                                setCurrentEvalSkills={setCurrentEvalSkills}
                                 myGroups={myGroups}
+                                allGroups={allGroups}
+                                user={user}
+                                userProfile={userProfile}
+                                onEnrollStudent={async (trial, groupId) => {
+                                    setSelectedTrialRequest(trial);
+                                    await handleEnrollTrial(groupId);
+                                }}
+                                onArchiveRequest={async (trialId) => {
+                                    await updateDoc(doc(db, "requests", trialId), {
+                                        status: 'archived',
+                                        archivedAt: serverTimestamp()
+                                    });
+                                }}
                                 onDeleteRequest={handleDeleteTrialRequest}
-                                onViewDetails={handleViewTrialRequest}
-                                setSelectedEvalTags={setSelectedEvalTags}
-                                setCoachEvalComment={setCoachEvalComment}
+                                onContactParent={handleContactParent}
                             />
                         </motion.div>
                     )}
@@ -2605,32 +3023,43 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                             transition={{ duration: 0.5 }}
                             className="space-y-6"
                         >
-                            {/* Materials SubTab Switcher */}
-                            <div className="flex flex-wrap items-center gap-2 p-1.5 bg-card glass-panel border border-white/10 rounded-2xl w-fit shadow-xl">
-                                {[
-                                    { id: 'exercises', label: 'База упражнений', icon: Dumbbell },
-                                    { id: 'programs', label: 'Программы', icon: Layers },
-                                    { id: 'calendar', label: 'Календарь', icon: Calendar }
-                                ].map(sub => {
-                                    const active = (mainTab === sub.id) || (mainTab === 'materials' && materialsSubTab === sub.id);
-                                    return (
-                                        <button
-                                            key={sub.id}
-                                            onClick={() => {
-                                                setMainTab('materials');
-                                                setMaterialsSubTab(sub.id as any);
-                                            }}
-                                            className={`px-5 py-2.5 rounded-xl text-xs font-russo uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
-                                                active
-                                                    ? 'bg-sparta-gold text-black shadow-md shadow-sparta-gold/20'
-                                                    : 'text-white/40 hover:text-white hover:bg-white/5'
-                                            }`}
-                                        >
-                                            <sub.icon size={15} />
-                                            <span>{sub.label}</span>
-                                        </button>
-                                    );
-                                })}
+                            {/* Materials SubTab Switcher & Header */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-2xl sm:text-3xl font-russo text-white uppercase tracking-tight">
+                                        Библиотека упражнений и тренировок
+                                    </h2>
+                                    <p className="text-xs text-zinc-400 mt-1">
+                                        База практических упражнений, готовые тренировочные планы и календарь занятий
+                                    </p>
+                                </div>
+
+                                {/* 3 Upper-level Tabs */}
+                                <div className="flex items-center gap-1.5 p-1.5 bg-black/60 glass-panel border border-white/10 rounded-2xl w-fit shadow-xl">
+                                    {[
+                                        { id: 'exercises', label: '⚽ База упражнений' },
+                                        { id: 'programs', label: '📋 Готовые тренировки' },
+                                        { id: 'calendar', label: '📅 Календарь' }
+                                    ].map(sub => {
+                                        const active = (mainTab === sub.id) || (mainTab === 'materials' && materialsSubTab === sub.id);
+                                        return (
+                                            <button
+                                                key={sub.id}
+                                                onClick={() => {
+                                                    setMainTab('materials');
+                                                    setMaterialsSubTab(sub.id as any);
+                                                }}
+                                                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs font-russo uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                                    active
+                                                        ? 'bg-sparta-gold text-black shadow-md shadow-sparta-gold/20 font-black'
+                                                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                                                }`}
+                                            >
+                                                <span>{sub.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {/* View 1: Calendar */}
@@ -2652,795 +3081,1082 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                                 </div>
                             )}
 
-                            {/* View 2: Exercises */}
+                            {/* View 2: Exercises (Two-Column Football Explorer) */}
                             {((mainTab === 'materials' && materialsSubTab === 'exercises') || mainTab === 'exercises') && (
-                                <div className="dashboard-theme min-h-[800px] p-4 lg:p-10 rounded-[3.5rem] relative overflow-hidden">
-                                    {/* Header Section v3.0 */}
-                                    <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-12">
-                                    <div>
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <div className="p-2.5 bg-sparta-gold/10 rounded-xl text-sparta-gold">
-                                                <Dumbbell size={24} />
+                                <div className="flex flex-col lg:flex-row gap-6 items-start">
+                                    {/* LEFT COLUMN: Folders & Football Topics Explorer (~280px) */}
+                                    <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-4">
+                                        {/* Catalog Root & All Exercises */}
+                                        <div className="bg-[#141416]/95 border border-white/10 rounded-[2rem] p-4 shadow-xl space-y-2">
+                                            <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-3 pt-1">
+                                                Каталог
                                             </div>
-                                            <h3 className="text-3xl font-russo text-white uppercase tracking-tight flex items-center gap-4">
-                                                База мероприятий
-                                                <button
-                                                    onClick={() => setIsExerciseGuideOpen(true)}
-                                                    className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/20 hover:text-sparta-gold transition-all"
-                                                    title="Как это работает?"
-                                                >
-                                                    <Info size={16} />
-                                                </button>
-                                            </h3>
-                                        </div>
-                                        <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] ml-1">
-                                            Библиотека обучающих материалов • {exercises.length} видео • Мой архив
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() => setIsExerciseGuideOpen(true)}
-                                            className="hidden md:flex items-center gap-2 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white/40 hover:text-white transition-all uppercase"
-                                        >
-                                            <HelpCircle size={16} className="text-sparta-gold" />
-                                            Гайд по базе
-                                        </button>
-                                        <button
-                                            onClick={handleSmartAutoSort}
-                                            disabled={isSmartSorted || exercises.length === 0}
-                                            className={`hidden md:flex items-center gap-2 px-6 py-4 rounded-2xl text-[10px] font-black transition-all uppercase border group relative overflow-hidden ${isSmartSorted
-                                                    ? 'bg-purple-500/10 border-purple-500/30 text-purple-400'
-                                                    : 'bg-white/5 border-white/10 text-white/40 hover:text-sparta-gold hover:border-sparta-gold/30'
-                                                }`}
-                                        >
-                                            {isSmartSorted ? (
-                                                <>
-                                                    <Loader2 size={16} className="animate-spin" />
-                                                    <span>
-                                                        {sortingStatus === 'scanning' ? 'Сканирование...' :
-                                                            sortingStatus === 'linking' ? 'Связывание...' :
-                                                                sortingStatus === 'cleaning' ? 'Очистка...' :
-                                                                    sortingStatus === 'done' ? 'Готово!' : 'Сортировка...'}
-                                                    </span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Brain size={16} className="group-hover:scale-110 transition-transform" />
-                                                    Умная сортировка
-                                                </>
-                                            )}
-                                            {isSmartSorted && (
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: '100%' }}
-                                                    className="absolute bottom-0 left-0 h-0.5 bg-purple-500"
-                                                    transition={{ duration: 7.5, ease: "linear" }}
-                                                />
-                                            )}
-                                        </button>
-                                        <button
-                                            onClick={() => setIsExerciseModalOpen(true)}
-                                            className="group relative px-8 py-4 bg-sparta-gold text-black rounded-2xl hover:bg-white transition-all shadow-2xl shadow-sparta-gold/20 flex items-center gap-3 active:scale-95"
-                                        >
-                                            <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
-                                            <PlusCircle size={20} className="relative z-10" />
-                                            <span className="relative z-10 text-[11px] font-black uppercase tracking-widest">+ НОВОЕ УПРАЖНЕНИЕ</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Search & Tactical Control Center v4.0 */}
-                                <div className="relative z-10 space-y-8 mb-16">
-                                    {/* Enhanced Search Intelligence */}
-                                    <div className="max-w-4xl relative group">
-                                        <div className="absolute -inset-1 bg-gradient-to-r from-sparta-gold/20 to-transparent rounded-[2.2rem] blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700" />
-                                        <Search className={`absolute left-7 top-1/2 -translate-y-1/2 transition-all duration-500 scale-110 ${theme === 'light' ? 'text-black/20 group-focus-within:text-sparta-gold' : 'text-white/20 group-focus-within:text-sparta-gold'}`} size={22} />
-                                        <input
-                                            type="text"
-                                            placeholder="Найти по названию, мышцечной группе или технике..."
-                                            value={exerciseSearchQuery}
-                                            onChange={(e) => setExerciseSearchQuery(e.target.value)}
-                                            className={`w-full backdrop-blur-3xl border rounded-[2rem] pl-18 pr-40 py-6 text-[11px] font-black uppercase tracking-widest transition-all shadow-3xl outline-none relative z-10 ${theme === 'light'
-                                                    ? 'bg-white border-black/[0.05] text-black placeholder:text-black/30'
-                                                    : 'bg-field/40 border-white/[0.05] text-white placeholder:text-white/20'}`}
-                                        />
-                                        <div className={`absolute right-8 top-1/2 -translate-y-1/2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] border z-20 backdrop-blur-md ${theme === 'light' ? 'bg-black/5 text-black/40 border-black/5' : 'bg-white/5 text-white/20 border-white/5'}`}>
-                                            {exercises.filter(ex => ex.title.toLowerCase().includes(exerciseSearchQuery.toLowerCase())).length} Results Found
-                                        </div>
-                                    </div>
-
-                                    {/* Quick Command Tags */}
-                                    <div className="flex flex-wrap items-center gap-4">
-                                        <div className={`flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-dashed transition-all ${theme === 'light' ? 'text-black/30 border-black/10' : 'text-white/20 border-white/10'}`}>
-                                            <Zap size={14} className="text-sparta-gold" />
-                                            <span className="text-[9px] font-black uppercase tracking-[0.2em]">Quick Filter:</span>
-                                        </div>
-                                        {[
-                                            { label: 'Разминка', query: 'Разминка' },
-                                            { label: 'Дриблинг', query: 'Дриблинг' },
-                                            { label: 'Junior (U10)', query: 'U10' },
-                                            { label: 'Elite (U16)', query: 'U16' },
-                                            { label: 'Power', query: 'Силовая' },
-                                            { label: 'Clear', query: '', ghost: true, icon: XCircle }
-                                        ].map((tag) => (
                                             <button
-                                                key={tag.label}
-                                                onClick={() => setExerciseSearchQuery(tag.query)}
-                                                className={`px-5 py-2.5 rounded-full text-[9px] font-black uppercase transition-all border flex items-center gap-2 shadow-sm ${exerciseSearchQuery === tag.query
-                                                        ? 'bg-sparta-gold text-black border-sparta-gold shadow-lg shadow-sparta-gold/30'
-                                                        : tag.ghost
-                                                            ? theme === 'light' ? 'text-black/40 border-black/5 hover:bg-red-500/10 hover:text-red-500' : 'text-white/20 border-white/5 hover:bg-red-500/10 hover:text-red-500'
-                                                            : theme === 'light' ? 'bg-white text-black/60 border-black/[0.05] hover:border-black/20 hover:scale-105' : 'bg-white/5 text-white/40 border-white/5 hover:border-white/20 hover:scale-105'
-                                                    }`}
-                                            >
-                                                {tag.icon && <tag.icon size={12} />}
-                                                {tag.label}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {/* Premium Category Navigator */}
-                                    <div className="flex flex-wrap items-center gap-4 py-4 border-y border-white/[0.03]">
-                                        {EXERCISE_CATEGORIES.map((cat) => {
-                                            const count = cat.id === 'all'
-                                                ? exercises.length
-                                                : exercises.filter(ex => ex.category === cat.id).length;
-
-                                            return (
-                                                <button
-                                                    key={cat.id}
-                                                    onClick={() => setSelectedExerciseCategory(cat.id)}
-                                                    className={`px-8 py-5 rounded-[2.2rem] flex items-center gap-5 transition-all duration-700 min-w-[200px] group border relative overflow-hidden backdrop-blur-xl ${selectedExerciseCategory === cat.id
-                                                            ? 'bg-sparta-gold text-black border-sparta-gold shadow-[0_20px_40px_rgba(212,175,55,0.2)] scale-105 z-10'
-                                                            : theme === 'light'
-                                                                ? 'bg-white text-black/50 border-black/[0.05] hover:border-black/20 hover:bg-black/[0.01]'
-                                                                : 'bg-white/[0.03] text-white/40 border-white/[0.05] hover:border-white/20 hover:bg-white/[0.06]'
-                                                        }`}
-                                                >
-                                                    <div className={`p-3 rounded-2xl transition-all duration-500 shadow-inner ${selectedExerciseCategory === cat.id ? 'bg-black/10' : 'bg-sparta-gold/10'}`}>
-                                                        <cat.icon size={20} className={`transition-transform duration-700 group-hover:scale-125 group-hover:rotate-6 ${selectedExerciseCategory === cat.id ? 'text-black' : 'text-sparta-gold'}`}
-                                                        />
-                                                    </div>
-                                                    <div className="flex flex-col items-start gap-1">
-                                                        <span className="text-[11px] font-black uppercase tracking-[0.2em]">{cat.label}</span>
-                                                        <span className={`text-[9px] font-bold uppercase tracking-tight ${selectedExerciseCategory === cat.id ? 'text-black/50' : 'text-white/20'}`}>
-                                                            {count} Items Active
-                                                        </span>
-                                                    </div>
-
-                                                    {selectedExerciseCategory === cat.id && (
-                                                        <motion.div
-                                                            layoutId="catGlow"
-                                                            className="absolute -right-8 -top-8 w-24 h-24 bg-white/20 blur-3xl rounded-full"
-                                                        />
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* Tactical Collections Switcher */}
-                                    <div className="flex flex-wrap items-center gap-3 pt-6 border-t border-white/5">
-                                        <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.22em] mr-2">Мои коллекции:</span>
-                                        <button
-                                            onClick={() => setSelectedCollectionId('all')}
-                                            className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${selectedCollectionId === 'all'
-                                                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
-                                                    : 'bg-white/5 text-white/20 border border-white/5 hover:border-white/20 hover:text-white'
+                                                onDragOver={(e) => {
+                                                    e.preventDefault();
+                                                    e.dataTransfer.dropEffect = 'move';
+                                                }}
+                                                onDragEnter={() => setDragOverFolderId('all')}
+                                                onDragLeave={() => setDragOverFolderId(null)}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    handleDropExerciseToFolder('all', 'Все упражнения (Без папки)');
+                                                }}
+                                                onClick={() => {
+                                                    setSelectedCollectionId('all');
+                                                    setSelectedExerciseCategory('all');
+                                                }}
+                                                className={`w-full px-4 py-3 rounded-2xl text-xs font-russo uppercase tracking-wider flex items-center justify-between transition-all cursor-pointer ${
+                                                    dragOverFolderId === 'all'
+                                                        ? 'bg-amber-400 text-black ring-4 ring-amber-400/50 scale-[1.03] shadow-xl'
+                                                        : selectedCollectionId === 'all' && selectedExerciseCategory === 'all'
+                                                            ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/25 font-black'
+                                                            : 'bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
                                                 }`}
-                                        >
-                                            ВСЕ ПАПКИ</button>
-                                        {exerciseCollections.map((col) => (
-                                            <button
-                                                key={col.id}
-                                                onClick={() => setSelectedCollectionId(col.id)}
-                                                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 group flex items-center gap-3 ${selectedCollectionId === col.id
-                                                        ? 'bg-purple-500/20 text-purple-400 border shadow-[0_0_20px_rgba(168,85,247,0.15)]'
-                                                        : 'bg-white/5 text-white/20 border border-white/5 hover:border-white/20 hover:text-white'
-                                                    }`}
-                                                style={{ borderColor: selectedCollectionId === col.id ? col.color : 'rgba(255,255,255,0.05)' }}
                                             >
-                                                <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" style={{ backgroundColor: col.color || '#D4AF37' }} />
-                                                {col.title}
-                                                <div className="flex items-center gap-2 ml-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                    <Pencil
-                                                        size={12}
-                                                        className="hover:text-sparta-gold transition-all cursor-pointer"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setEditingCollection(col);
-                                                            setNewCollectionData({ title: col.title, color: col.color || '#D4AF37' });
-                                                            setIsCollectionModalOpen(true);
-                                                        }}
-                                                    />
-                                                    <TrashIcon
-                                                        size={12}
-                                                        className="hover:text-red-500 transition-all cursor-pointer"
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteCollection(col.id); }}
-                                                    />
+                                                <div className="flex items-center gap-2.5">
+                                                    <FolderOpen size={16} className={dragOverFolderId === 'all' || (selectedCollectionId === 'all' && selectedExerciseCategory === 'all') ? 'text-black' : 'text-amber-400'} />
+                                                    <span>Все упражнения</span>
                                                 </div>
+                                                <span className={`text-xs font-mono font-bold ${
+                                                    dragOverFolderId === 'all' || (selectedCollectionId === 'all' && selectedExerciseCategory === 'all')
+                                                        ? 'text-black'
+                                                        : 'text-amber-400/90'
+                                                }`}>
+                                                    ({exercises.length})
+                                                </span>
                                             </button>
-                                        ))}
-                                        <button
-                                            onClick={() => setIsCollectionModalOpen(true)}
-                                            className="p-3 bg-white/5 border border-dashed border-white/10 rounded-2xl text-white/20 hover:text-sparta-gold hover:border-sparta-gold/30 transition-all flex items-center gap-3 group px-5"
-                                            title="Создать коллекцию"
-                                        >
-                                            <Plus size={16} className="group-hover:rotate-90 transition-transform" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">СОЗДАТЬ ПАПКУ</span>
-                                        </button>
-                                        <button
-                                            onClick={handleSmartAutoSort}
-                                            disabled={isSmartSorted}
-                                            className={`p-3 border border-dashed rounded-2xl transition-all flex items-center gap-3 px-5 group relative overflow-hidden ${isSmartSorted
-                                                    ? 'bg-sparta-gold/10 border-sparta-gold/30 text-sparta-gold'
-                                                    : 'bg-white/5 border-white/10 text-white/20 hover:text-sparta-gold hover:border-sparta-gold/30'
-                                                }`}
-                                            title="Умная сортировка по папкам"
-                                        >
-                                            {isSmartSorted ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-700" />}
-                                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">УМНАЯ СОРТИРОВКА</span>
-                                            {isSmartSorted && (
-                                                <motion.div
-                                                    className="absolute bottom-0 left-0 h-0.5 bg-sparta-gold"
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: '100%' }}
-                                                    transition={{ duration: 2 }}
-                                                />
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
+                                        </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 relative z-10">
-                                    {exercises
-                                        .filter(ex => (selectedExerciseCategory === 'all' || ex.category === selectedExerciseCategory) &&
-                                            (selectedCollectionId === 'all' || ex.collectionId === selectedCollectionId) &&
-                                            (ex.title.toLowerCase().includes(exerciseSearchQuery.toLowerCase()) || ex.description.toLowerCase().includes(exerciseSearchQuery.toLowerCase())))
-                                        .map(ex => {
-                                            const isHovered = hoveredExerciseId === ex.id;
-                                            const mainMedia = ex.mediaItems?.[0] || { url: ex.mediaUrl, type: ex.mediaType };
-
-                                            const level = ex.level;
-                                            const equipment = ex.equipment || [];
-
-                                            return (
-                                                <motion.div
-                                                    key={ex.id}
-                                                    layout
-                                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                    onMouseEnter={() => setHoveredExerciseId(ex.id)}
-                                                    onMouseLeave={() => setHoveredExerciseId(null)}
-                                                    onClick={(e) => {
-                                                        const isSelected = selectedExerciseIds.includes(ex.id);
-
-                                                        // Selection logic
-                                                        if (e.ctrlKey || e.metaKey || selectedExerciseIds.length > 0) {
-                                                            e.stopPropagation();
-                                                            if (e.shiftKey && lastSelectedId) {
-                                                                const allVisibleIds = exercises
-                                                                    .filter(ex => (selectedExerciseCategory === 'all' || ex.category === selectedExerciseCategory) &&
-                                                                        (selectedCollectionId === 'all' || ex.collectionId === selectedCollectionId))
-                                                                    .map(e => e.id);
-                                                                const startIdx = allVisibleIds.indexOf(lastSelectedId);
-                                                                const endIdx = allVisibleIds.indexOf(ex.id);
-                                                                const rangeIds = allVisibleIds.slice(Math.min(startIdx, endIdx), Math.max(startIdx, endIdx) + 1);
-
-                                                                setSelectedExerciseIds(prev => Array.from(new Set([...prev, ...rangeIds])));
-                                                            } else {
-                                                                if (isSelected) {
-                                                                    setSelectedExerciseIds(prev => prev.filter(id => id !== ex.id));
-                                                                } else {
-                                                                    setSelectedExerciseIds(prev => [...prev, ex.id]);
-                                                                    setLastSelectedId(ex.id);
-                                                                }
-                                                            }
-                                                        } else {
-                                                            // Normal lightbox logic
-                                                            const items = ex.mediaItems || [{ url: ex.mediaUrl, type: ex.mediaType }];
-                                                            setSelectedMediaForLightbox({
-                                                                items: items,
-                                                                currentIndex: 0,
-                                                                title: ex.title
-                                                            });
-                                                        }
+                                        {/* Coach Folders (exercise_collections) */}
+                                        <div className="bg-[#141416]/95 border border-white/10 rounded-[2rem] p-4 shadow-xl space-y-3">
+                                            <div className="flex items-center justify-between px-3 pt-1">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                                                    Мои папки
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingCollection(null);
+                                                        setNewCollectionData({ title: '', color: '#D4AF37' });
+                                                        setIsCollectionModalOpen(true);
                                                     }}
-                                                    className={`group relative rounded-[2.8rem] transition-all duration-700 cursor-pointer shadow-3xl flex flex-col h-full active:scale-[0.99] group/card-exercise border min-w-[300px] max-w-full ${selectedExerciseIds.includes(ex.id)
-                                                            ? 'border-purple-500 ring-4 ring-purple-500/20 bg-purple-500/5'
-                                                            : clipboardIds.includes(ex.id)
-                                                                ? 'border-sparta-gold/50 shadow-sparta-gold/10'
-                                                                : theme === 'light'
-                                                                    ? 'bg-white border-black/[0.08] hover:border-sparta-gold/40'
-                                                                    : 'bg-[#1a1a1a] border-white/5 hover:border-sparta-gold/40'}`}
+                                                    className="text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer transition-all"
+                                                    title="Создать новую папку"
                                                 >
-                                                    {/* Selection Indicator Overlay */}
-                                                    {(isHovered || selectedExerciseIds.includes(ex.id)) && (
-                                                        <motion.button
-                                                            initial={{ opacity: 0, scale: 0.8 }}
-                                                            animate={{ opacity: 1, scale: 1 }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const isSelected = selectedExerciseIds.includes(ex.id);
-                                                                if (isSelected) {
-                                                                    setSelectedExerciseIds(prev => prev.filter(id => id !== ex.id));
-                                                                } else {
-                                                                    setSelectedExerciseIds(prev => [...prev, ex.id]);
-                                                                    setLastSelectedId(ex.id);
-                                                                }
-                                                            }}
-                                                            className={`absolute top-4 right-4 z-[40] w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-xl backdrop-blur-xl border ${selectedExerciseIds.includes(ex.id)
-                                                                    ? 'bg-purple-500 text-white border-purple-400'
-                                                                    : 'bg-black/40 text-white/40 border-white/10 hover:bg-black/60 hover:text-white'
-                                                                }`}
-                                                        >
-                                                            {selectedExerciseIds.includes(ex.id) ? (
-                                                                <Check size={20} strokeWidth={3} />
-                                                            ) : (
-                                                                <div className="w-5 h-5 rounded-full border-2 border-current opacity-40" />
-                                                            )}
-                                                        </motion.button>
-                                                    )}
-                                                    {/* Card Media v4.5 - Theme-Aware Visuals */}
-                                                    <div className="h-56 relative overflow-hidden bg-black/60">
-                                                        <AnimatePresence mode="wait">
-                                                            {isHovered && (mainMedia.type === 'video' || mainMedia.type === 'url') ? (
-                                                                <motion.div
-                                                                    key="preview"
-                                                                    initial={{ opacity: 0 }}
-                                                                    animate={{ opacity: 1 }}
-                                                                    exit={{ opacity: 0 }}
-                                                                    className="absolute inset-0 z-10"
-                                                                >
-                                                                    {mainMedia.type === 'video' ? (
-                                                                        <video
-                                                                            src={mainMedia.url}
-                                                                            autoPlay
-                                                                            muted
-                                                                            loop
-                                                                            playsInline
-                                                                            className="w-full h-full object-cover scale-105"
-                                                                        />
-                                                                    ) : (
-                                                                        <iframe
-                                                                            src={`https://www.youtube.com/embed/${mainMedia.url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([^& \n<]+)/)?.[1]}?autoplay=1&mute=1&controls=0&modestbranding=1&loop=1&playlist=${mainMedia.url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([^& \n<]+)/)?.[1]}`}
-                                                                            className="w-full h-full object-cover scale-[1.7] pointer-events-none"
-                                                                            allow="autoplay"
-                                                                        />
-                                                                    )}
-                                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60" />
-                                                                </motion.div>
-                                                            ) : (
-                                                                <motion.div
-                                                                    key="thumbnail"
-                                                                    initial={{ opacity: 0 }}
-                                                                    animate={{ opacity: 1 }}
-                                                                    exit={{ opacity: 0 }}
-                                                                    className="absolute inset-0"
-                                                                >
-                                                                    {mainMedia.type === 'photo' ? (
-                                                                        <img
-                                                                            src={mainMedia.url}
-                                                                            alt={ex.title}
-                                                                            className="w-full h-full object-cover group-hover/card-exercise:scale-110 transition-transform duration-1000"
-                                                                        />
-                                                                    ) : (mainMedia.type === 'url' || mainMedia.type === 'video') ? (
-                                                                        <img
-                                                                            src={mainMedia.type === 'url'
-                                                                                ? `https://img.youtube.com/vi/${mainMedia.url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([^& \n<]+)/)?.[1]}/maxresdefault.jpg`
-                                                                                : mainMedia.url
-                                                                            }
-                                                                            alt={ex.title}
-                                                                            className="w-full h-full object-cover opacity-70 group-hover/card-exercise:opacity-100 group-hover/card-exercise:scale-110 transition-all duration-1000"
-                                                                        />
-                                                                    ) : (
-                                                                        <div className="w-full h-full bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center">
-                                                                            <Dumbbell size={48} className={`transition-colors ${theme === 'light' ? 'text-black/10' : 'text-white/5'}`} />
-                                                                        </div>
-                                                                    )}
-                                                                </motion.div>
-                                                            )}
-                                                        </AnimatePresence>
+                                                    <Plus size={14} className="stroke-[3]" /> Создать
+                                                </button>
+                                            </div>
 
-                                                        {/* Badges Overlay v4.5 - Universal Contrast */}
-                                                        <div className="absolute top-6 left-6 right-6 flex justify-between items-start z-20">
-                                                            <div className="flex flex-col gap-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="px-3.5 py-1.5 bg-black/80 backdrop-blur-xl rounded-xl text-[9px] font-black uppercase text-sparta-gold border border-sparta-gold/30 tracking-[0.15em] shadow-2xl">
-                                                                        {EXERCISE_CATEGORIES.find(c => c.id === ex.category)?.label || 'Упр.'}
-                                                                    </span>
-                                                                    {level && (
-                                                                        <span className={`px-2.5 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border backdrop-blur-xl shadow-2xl ${level === 'advanced' ? 'bg-red-500 text-white border-red-400/50' :
-                                                                                level === 'intermediate' ? 'bg-sparta-gold text-black border-sparta-gold/50' :
-                                                                                    'bg-green-600 text-white border-green-400/50'
-                                                                            }`}>
-                                                                            {level === 'advanced' ? 'PRO' : level === 'intermediate' ? 'MED' : 'EASY'}
-                                                                        </span>
-                                                                    )}
+                                            {/* Drag Indicator Prompt */}
+                                            {isDraggingExercise && (
+                                                <div className="p-2.5 bg-amber-500/20 border-2 border-dashed border-amber-400/80 rounded-2xl text-center text-[10px] font-black text-amber-300 uppercase tracking-widest animate-pulse shadow-md">
+                                                    ⬇ Перетащите для быстрого перемещения
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                                                {exerciseCollections.map((col) => {
+                                                    const count = exercises.filter(ex => ex.collectionId === col.id).length;
+                                                    const isSelected = selectedCollectionId === col.id;
+                                                    const isDragOver = dragOverFolderId === col.id;
+
+                                                    return (
+                                                        <div
+                                                            key={col.id}
+                                                            onDragOver={(e) => {
+                                                                e.preventDefault();
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                            }}
+                                                            onDragEnter={() => setDragOverFolderId(col.id)}
+                                                            onDragLeave={() => setDragOverFolderId(null)}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                handleDropExerciseToFolder(col.id, col.title);
+                                                            }}
+                                                            className={`group/folder flex items-center justify-between p-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer border ${
+                                                                isDragOver
+                                                                    ? 'bg-amber-500/30 text-white border-amber-400 ring-2 ring-amber-400/70 scale-[1.04] shadow-[0_0_20px_rgba(245,158,11,0.4)]'
+                                                                    : isSelected
+                                                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
+                                                                        : 'bg-white/5 border-transparent text-zinc-300 hover:bg-white/10 hover:text-white'
+                                                            }`}
+                                                            onClick={() => {
+                                                                setSelectedCollectionId(col.id);
+                                                                setSelectedExerciseCategory('all');
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                                                <div
+                                                                    className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
+                                                                    style={{ backgroundColor: col.color || '#D4AF37' }}
+                                                                />
+                                                                <span className="truncate">{col.title}</span>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                                                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                                    isSelected ? 'bg-black/20 text-black font-bold' : 'bg-white/5 text-zinc-400'
+                                                                }`}>
+                                                                    {count}
+                                                                </span>
+
+                                                                {/* Action buttons (Edit & Delete) */}
+                                                                <div className="opacity-60 group-hover/folder:opacity-100 flex items-center gap-1 transition-opacity">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setEditingCollection(col);
+                                                                            setNewCollectionData({ title: col.title, color: col.color || '#D4AF37' });
+                                                                            setIsCollectionModalOpen(true);
+                                                                        }}
+                                                                        className={`p-1.5 rounded-lg hover:bg-white/20 transition-colors ${isSelected ? 'text-amber-300 hover:text-white' : 'text-zinc-400 hover:text-white'}`}
+                                                                        title="Редактировать папку"
+                                                                    >
+                                                                        <Pencil size={13} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDeleteCollection(col.id);
+                                                                        }}
+                                                                        className={`p-1.5 rounded-lg hover:bg-red-500/20 transition-colors ${isSelected ? 'text-amber-300 hover:text-red-400' : 'text-zinc-400 hover:text-red-400'}`}
+                                                                        title="Удалить папку"
+                                                                    >
+                                                                        <TrashIcon size={13} />
+                                                                    </button>
                                                                 </div>
                                                             </div>
-                                                            <div className="flex flex-col items-end gap-2">
+                                                        </div>
+                                                    );
+                                                })}
 
-                                                                {(ex.mediaItems?.length > 1) && (
-                                                                    <div className="px-3 py-1.5 bg-black/60 backdrop-blur-md text-white/60 rounded-xl text-[9px] font-black flex items-center gap-2 border border-white/5 shadow-2xl">
-                                                                        <Layers size={14} className="text-sparta-gold/60" /> {ex.mediaItems.length}
-                                                                    </div>
-                                                                )}
+                                                {exerciseCollections.length === 0 && (
+                                                    <div className="p-3 text-center text-xs text-zinc-500">
+                                                        Папок пока нет. Нажмите «+ Создать», чтобы сгруппировать упражнения.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Football Topics / Направления */}
+                                        <div className="bg-[#141416]/95 border border-white/10 rounded-[2rem] p-4 shadow-xl space-y-2">
+                                            <div className="flex items-center justify-between px-3 pt-1">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                                                    Футбольные темы
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingTopic(null);
+                                                        setNewTopicData({ label: '', icon: '⚽' });
+                                                        setIsTopicModalOpen(true);
+                                                    }}
+                                                    className="text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer transition-all"
+                                                    title="Создать новую футбольную тему"
+                                                >
+                                                    <Plus size={14} className="stroke-[3]" /> Создать
+                                                </button>
+                                            </div>
+
+                                            <div className="space-y-1 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                                                {allExerciseCategories.filter(c => c.id !== 'all').map((cat) => {
+                                                    const count = exercises.filter(ex => {
+                                                        if (cat.id === 'dribbling') return ex.category === 'dribbling' || ex.category === 'technique';
+                                                        if (cat.id === 'shooting') return ex.category === 'shooting';
+                                                        if (cat.id === 'passing') return ex.category === 'passing';
+                                                        if (cat.id === 'warmup') return ex.category === 'warmup' || ex.category === 'recovery' || ex.category === 'flexibility' || ex.category === 'strength';
+                                                        if (cat.id === 'tactics') return ex.category === 'tactics' || ex.category === 'endurance';
+                                                        if (cat.id === 'goalkeeping') return ex.category === 'goalkeeping';
+                                                        return ex.category === cat.id || ex.categoryLabel === cat.label || ex.categoryLabel === (cat as any).rawLabel;
+                                                    }).length;
+
+                                                    const isSelected = selectedExerciseCategory === cat.id && selectedCollectionId === 'all';
+
+                                                    return (
+                                                        <div
+                                                            key={cat.id}
+                                                            className={`group/topic flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                                                                isSelected
+                                                                    ? 'bg-amber-400 text-black shadow-md font-bold'
+                                                                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                                                            }`}
+                                                            onClick={() => {
+                                                                setSelectedExerciseCategory(cat.id);
+                                                                setSelectedCollectionId('all');
+                                                            }}
+                                                        >
+                                                            <span className="truncate flex-1 pr-2">{cat.label}</span>
+                                                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                                    isSelected ? 'bg-black/20 text-black font-bold' : 'bg-white/5 text-zinc-400'
+                                                                }`}>
+                                                                    {count}
+                                                                </span>
+
+                                                                {/* Action buttons (Edit & Delete) for ALL topics */}
+                                                                <div className="opacity-60 group-hover/topic:opacity-100 flex items-center gap-1 transition-opacity">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setEditingTopic(cat);
+                                                                            setNewTopicData({
+                                                                                label: (cat as any).rawLabel || cat.label.replace(/^[^\s]+\s*/, ''),
+                                                                                icon: (cat as any).icon || '⚽'
+                                                                            });
+                                                                            setIsTopicModalOpen(true);
+                                                                        }}
+                                                                        className={`p-1.5 rounded-lg hover:bg-white/20 transition-colors ${isSelected ? 'text-black hover:text-zinc-800' : 'text-zinc-400 hover:text-white'}`}
+                                                                        title="Редактировать тему"
+                                                                    >
+                                                                        <Pencil size={13} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDeleteTopic(cat.id);
+                                                                        }}
+                                                                        className={`p-1.5 rounded-lg hover:bg-red-500/20 transition-colors ${isSelected ? 'text-red-900 hover:text-red-950' : 'text-zinc-400 hover:text-red-400'}`}
+                                                                        title="Удалить тему"
+                                                                    >
+                                                                        <TrashIcon size={13} />
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                                        {/* Glass Play Indicator */}
-                                                        <motion.div
-                                                            animate={{ opacity: isHovered ? 1 : 0, scale: isHovered ? 1 : 0.8 }}
-                                                            className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none"
+                                    {/* RIGHT COLUMN: Search, Selectors & Exercise Grid */}
+                                    <div className="flex-1 min-w-0 space-y-6">
+                                        {/* Upper Action Bar: Search + Yellow Button */}
+                                        <div className="p-4 sm:p-5 rounded-[2rem] bg-[#141416]/95 border border-white/10 shadow-xl space-y-4">
+                                            <div className="flex flex-col sm:flex-row items-center gap-3">
+                                                <div className="relative flex-1 w-full">
+                                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Поиск по названию или описанию..."
+                                                        value={exerciseSearchQuery}
+                                                        onChange={(e) => setExerciseSearchQuery(e.target.value)}
+                                                        className="w-full bg-black/50 border border-white/15 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-2xl pl-11 pr-10 py-3 text-white text-sm outline-none transition-all placeholder:text-zinc-500"
+                                                    />
+                                                    {exerciseSearchQuery && (
+                                                        <button
+                                                            onClick={() => setExerciseSearchQuery('')}
+                                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 cursor-pointer"
                                                         >
-                                                            <div className="w-16 h-16 rounded-full bg-sparta-gold text-black shadow-[0_0_30px_rgba(212,175,55,0.4)] flex items-center justify-center border-4 border-black/20">
-                                                                <Play size={28} className="ml-1" />
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingExercise(null);
+                                                        setIsExerciseModalOpen(true);
+                                                    }}
+                                                    className="w-full sm:w-auto px-6 py-3.5 bg-sparta-gold hover:bg-amber-300 text-black rounded-2xl font-russo text-xs uppercase tracking-wider transition-all shadow-[0_0_25px_rgba(212,175,55,0.25)] flex items-center justify-center gap-2 cursor-pointer flex-shrink-0 active:scale-95"
+                                                >
+                                                    <PlusCircle size={18} />
+                                                    <span>+ Новое упражнение</span>
+                                                </button>
+                                            </div>
+
+                                            {/* Filter Selectors: Active Context, Age & Duration */}
+                                            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/5">
+                                                {/* Left: Active Folder/Topic Badge (Only visible when filter is active) */}
+                                                <div className="flex items-center gap-2">
+                                                    {(selectedCollectionId !== 'all' || selectedExerciseCategory !== 'all') && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-zinc-400 font-medium">Фильтр:</span>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedCollectionId('all');
+                                                                    setSelectedExerciseCategory('all');
+                                                                }}
+                                                                className="px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer group"
+                                                                title="Нажмите, чтобы сбросить фильтр"
+                                                            >
+                                                                {selectedCollectionId !== 'all' ? (
+                                                                    <>
+                                                                        <div
+                                                                            className="w-2.5 h-2.5 rounded-full shadow-sm"
+                                                                            style={{ backgroundColor: exerciseCollections.find(c => c.id === selectedCollectionId)?.color || '#D4AF37' }}
+                                                                        />
+                                                                        <span>Папка: {exerciseCollections.find(c => c.id === selectedCollectionId)?.title || 'Папка'}</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span>Тема: {allExerciseCategories.find(c => c.id === selectedExerciseCategory)?.label || 'Категория'}</span>
+                                                                )}
+                                                                <span className="text-amber-400/80 group-hover:text-white font-bold ml-0.5">✕</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Right: Dropdown Selectors */}
+                                                <div className="flex items-center gap-3 flex-wrap">
+                                                    {/* Age dropdown */}
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-xs font-bold text-zinc-400">Возраст:</span>
+                                                        <div className="relative">
+                                                            <select
+                                                                value={selectedExerciseAge}
+                                                                onChange={(e) => setSelectedExerciseAge(e.target.value as any)}
+                                                                className="appearance-none bg-zinc-900 border border-white/20 focus:border-amber-400 rounded-xl pl-3.5 pr-8 py-2 text-xs font-semibold text-zinc-100 outline-none cursor-pointer shadow-md hover:border-white/40 transition-colors"
+                                                            >
+                                                                {AGE_FILTER_OPTIONS.map(opt => (
+                                                                    <option key={opt.id} value={opt.id} className="bg-zinc-900 text-white">
+                                                                        {opt.label}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-xs">
+                                                                ▾
                                                             </div>
-                                                        </motion.div>
+                                                        </div>
                                                     </div>
 
-                                                    {/* Card Content v4.6 - Optimized Visibility */}
-                                                    <div className={`p-6 flex-1 flex flex-col relative transition-colors ${theme === 'light' ? 'bg-white' : 'bg-gradient-to-b from-transparent to-black/20'}`}>
-                                                        <div className="mb-4">
-                                                            <h4 className={`font-russo text-lg mb-1 line-clamp-1 transition-colors tracking-tight uppercase ${theme === 'light' ? 'text-black group-hover/card-exercise:text-sparta-gold' : 'text-white group-hover/card-exercise:text-sparta-gold'}`}>
-                                                                {ex.title}
-                                                            </h4>
-                                                            <p className={`text-[11px] font-medium leading-relaxed line-clamp-2 italic ${theme === 'light' ? 'text-black/60' : 'text-white/40'}`}>
-                                                                "{ex.description || 'Нет описания'}"
-                                                            </p>
-                                                        </div>
-
-                                                        {/* Tactical Tag Cloud */}
-                                                        <div className="flex flex-wrap gap-2 mb-6">
-                                                            {equipment.map((eq: string, i: number) => (
-                                                                <span key={i} className={`px-2.5 py-1 rounded-xl text-[8px] font-black uppercase border tracking-widest flex items-center gap-1.5 transition-colors ${theme === 'light'
-                                                                        ? 'bg-black/[0.03] text-black/60 border-black/5'
-                                                                        : 'bg-white/5 text-white/60 border-white/10'
-                                                                    }`}>
-                                                                    <Dumbbell size={10} className="text-sparta-gold/40" />
-                                                                    {eq}
-                                                                </span>
-                                                            ))}
-                                                            {ex.muscles?.map((mId: string, i: number) => {
-                                                                const m = MUSCLE_GROUPS.find(mg => mg.id === mId);
-                                                                return m ? (
-                                                                    <span key={`m-${i}`} className={`px-2.5 py-1 rounded-xl text-[8px] font-black uppercase border tracking-widest flex items-center gap-1.5 transition-colors ${theme === 'light'
-                                                                            ? 'bg-sparta-gold/10 text-sparta-gold-dark border-sparta-gold/30'
-                                                                            : 'bg-sparta-gold/10 text-sparta-gold border-sparta-gold/20'
-                                                                        }`}>
-                                                                        <span className="text-[12px]">{m.icon}</span>
-                                                                        {m.label}
-                                                                    </span>
-                                                                ) : null;
-                                                            })}
-                                                        </div>
-
-                                                        {/* Refined Actions Footer v4.6 */}
-                                                        <div className={`mt-auto pt-4 border-t flex items-center justify-between gap-3 transition-colors ${theme === 'light' ? 'border-black/5' : 'border-white/5'}`}>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-sparta-gold text-[9px] font-black border transition-all ${theme === 'light'
-                                                                        ? 'bg-black/5 border-black/5'
-                                                                        : 'bg-white/5 border-white/10'}`}>
-                                                                    {ex.coachName?.charAt(0) || 'S'}
-                                                                </div>
-                                                                <div className="flex flex-col">
-                                                                    <span className={`text-[7px] font-black uppercase tracking-widest ${theme === 'light' ? 'text-black/30' : 'text-white/20'}`}>Sync</span>
-                                                                    <span className={`text-[8.5px] font-black uppercase tracking-widest transition-colors truncate max-w-[60px] ${theme === 'light' ? 'text-black/50' : 'text-white/40'}`}>
-                                                                        {ex.coachName || 'System'}
-                                                                    </span>
-                                                                </div>
+                                                    {/* Duration dropdown */}
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-xs font-bold text-zinc-400">Время:</span>
+                                                        <div className="relative">
+                                                            <select
+                                                                value={selectedExerciseDuration}
+                                                                onChange={(e) => setSelectedExerciseDuration(e.target.value as any)}
+                                                                className="appearance-none bg-zinc-900 border border-white/20 focus:border-amber-400 rounded-xl pl-3.5 pr-8 py-2 text-xs font-semibold text-zinc-100 outline-none cursor-pointer shadow-md hover:border-white/40 transition-colors"
+                                                            >
+                                                                {DURATION_FILTER_OPTIONS.map(opt => (
+                                                                    <option key={opt.id} value={opt.id} className="bg-zinc-900 text-white">
+                                                                        {opt.label}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-xs">
+                                                                ▾
                                                             </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`flex items-center p-0.5 rounded-xl border backdrop-blur-xl transition-colors ${theme === 'light' ? 'bg-black/5 border-black/5' : 'bg-white/5 border-white/10'}`}>
-                                                                    {[
-                                                                        { icon: Pencil, onClick: () => handleOpenEditModal(ex), title: 'Правка', color: 'hover:text-sparta-gold' },
-                                                                        { icon: Copy, onClick: () => handleOpenCopyModal(ex), title: 'Копия', color: 'hover:text-sparta-gold' },
-                                                                        { icon: FolderOpen, onClick: () => setMovingExerciseId(movingExerciseId === ex.id ? null : ex.id), title: 'В папку', color: 'hover:text-purple-400' },
-                                                                        { icon: TrashIcon, onClick: () => handleDeleteExercise(ex.id, ex.mediaItems || []), title: 'Удалить', color: 'hover:text-red-500' }
-                                                                    ].map((btn, i) => (
-                                                                        <button
-                                                                            key={i}
-                                                                            onClick={(e) => { e.stopPropagation(); btn.onClick(); }}
-                                                                            className={`p-1.5 rounded-lg transition-all hover:bg-white/10 active:scale-90 ${theme === 'light' ? 'text-black/30' : 'text-white/20'} ${btn.color}`}
-                                                                            title={btn.title}
-                                                                        >
-                                                                            <btn.icon size={12} />
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
+                                        {/* Exercises Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                            {exercises
+                                                .filter(ex => {
+                                                    // Collection / Folder Filter
+                                                    if (selectedCollectionId !== 'all' && ex.collectionId !== selectedCollectionId) {
+                                                        return false;
+                                                    }
+
+                                                    // Search
+                                                    if (exerciseSearchQuery) {
+                                                        const q = exerciseSearchQuery.toLowerCase();
+                                                        const matchTitle = ex.title?.toLowerCase().includes(q);
+                                                        const matchDesc = ex.description?.toLowerCase().includes(q);
+                                                        const matchCat = ex.categoryLabel?.toLowerCase().includes(q) || ex.category?.toLowerCase().includes(q);
+                                                        if (!matchTitle && !matchDesc && !matchCat) return false;
+                                                    }
+
+                                                    // Category
+                                                    if (selectedExerciseCategory !== 'all') {
+                                                        if (selectedExerciseCategory === 'dribbling' && ex.category !== 'dribbling' && ex.category !== 'technique') return false;
+                                                        else if (selectedExerciseCategory === 'shooting' && ex.category !== 'shooting') return false;
+                                                        else if (selectedExerciseCategory === 'passing' && ex.category !== 'passing') return false;
+                                                        else if (selectedExerciseCategory === 'warmup' && ex.category !== 'warmup' && ex.category !== 'recovery' && ex.category !== 'flexibility' && ex.category !== 'strength') return false;
+                                                        else if (selectedExerciseCategory === 'tactics' && ex.category !== 'tactics' && ex.category !== 'endurance') return false;
+                                                        else if (selectedExerciseCategory === 'goalkeeping' && ex.category !== 'goalkeeping') return false;
+                                                        else if (!['dribbling', 'shooting', 'passing', 'warmup', 'tactics', 'goalkeeping'].includes(selectedExerciseCategory)) {
+                                                            const topic = allExerciseCategories.find(c => c.id === selectedExerciseCategory);
+                                                            if (ex.category !== selectedExerciseCategory && ex.categoryLabel !== topic?.label && ex.categoryLabel !== (topic as any)?.rawLabel) return false;
+                                                        }
+                                                    }
+
+                                                    // Age
+                                                    if (selectedExerciseAge !== 'all') {
+                                                        const ageStr = (ex.ageRange || '').toLowerCase();
+                                                        if (selectedExerciseAge === '6-8' && !(ageStr.includes('6') || ageStr.includes('7') || ageStr.includes('8') || ageStr.includes('u8') || ageStr.includes('u10') || !ex.ageRange)) return false;
+                                                        if (selectedExerciseAge === '9-11' && !(ageStr.includes('9') || ageStr.includes('10') || ageStr.includes('11') || ageStr.includes('u12') || !ex.ageRange)) return false;
+                                                        if (selectedExerciseAge === '12-15' && !(ageStr.includes('12') || ageStr.includes('13') || ageStr.includes('14') || ageStr.includes('15') || ageStr.includes('u16') || !ex.ageRange)) return false;
+                                                    }
+
+                                                    // Duration
+                                                    if (selectedExerciseDuration !== 'all') {
+                                                        const mins = Number(ex.durationMinutes) || 15;
+                                                        if (selectedExerciseDuration === 'under10' && mins >= 10) return false;
+                                                        if (selectedExerciseDuration === '10-20' && (mins < 10 || mins > 20)) return false;
+                                                        if (selectedExerciseDuration === '20plus' && mins <= 20) return false;
+                                                    }
+
+                                                    return true;
+                                                })
+                                                .map((ex) => {
+                                                    const isMenuOpen = exerciseMenuOpenId === ex.id;
+                                                    const folder = exerciseCollections.find(c => c.id === ex.collectionId);
+
+                                                    return (
+                                                        <div
+                                                            key={ex.id}
+                                                            draggable={true}
+                                                            onDragStart={(e) => {
+                                                                e.dataTransfer.setData('text/plain', ex.id);
+                                                                setIsDraggingExercise(true);
+                                                                setDraggedExerciseId(ex.id);
+                                                            }}
+                                                            onDragEnd={() => {
+                                                                setIsDraggingExercise(false);
+                                                                setDraggedExerciseId(null);
+                                                                setDragOverFolderId(null);
+                                                            }}
+                                                            onClick={() => setViewingExerciseDetail(ex)}
+                                                            className={`group relative rounded-[2rem] bg-[#141416] border transition-all duration-300 shadow-xl overflow-hidden flex flex-col justify-between cursor-pointer ${
+                                                                draggedExerciseId === ex.id
+                                                                    ? 'opacity-40 border-dashed border-amber-400 scale-[0.98]'
+                                                                    : 'border-white/10 hover:border-amber-500/50 hover:shadow-[0_10px_30px_rgba(245,158,11,0.08)]'
+                                                            }`}
+                                                        >
+                                                            {/* Quick Actions Floating Toolbar */}
+                                                            <div
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="absolute top-5 right-5 z-20 flex items-center gap-1 p-1 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/20 shadow-2xl opacity-95 sm:opacity-50 sm:hover:opacity-100 sm:group-hover:opacity-100 transition-all duration-200"
+                                                            >
+                                                                {/* Edit */}
                                                                 <button
-                                                                    onClick={(e) => { e.stopPropagation(); handleOpenAssignmentModal(ex, 'exercise'); }}
-                                                                    className="w-9 h-9 bg-sparta-gold text-black rounded-xl hover:bg-white transition-all active:scale-90 shadow-[0_0_15px_rgba(212,175,55,0.2)] flex items-center justify-center"
-                                                                    title="Назначить"
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setEditingExercise(ex);
+                                                                        handleOpenEditModal(ex);
+                                                                    }}
+                                                                    className="p-1.5 rounded-xl hover:bg-white/20 text-zinc-300 hover:text-amber-400 transition-colors cursor-pointer"
+                                                                    title="✏️ Редактировать упражнение"
                                                                 >
-                                                                    <PlusCircle size={16} />
+                                                                    <Pencil size={13} />
                                                                 </button>
-                                                            </div>
-                                                            {/* Quick Folder Move Overlay */}
-                                                            <AnimatePresence>
-                                                                {movingExerciseId === ex.id && (
-                                                                    <motion.div
-                                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                                        className="absolute bottom-16 right-6 z-50 bg-black/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-2 w-48 shadow-2xl overflow-hidden"
+
+                                                                {/* Duplicate */}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDuplicateExercise(ex)}
+                                                                    className="p-1.5 rounded-xl hover:bg-white/20 text-zinc-300 hover:text-blue-400 transition-colors cursor-pointer"
+                                                                    title="📑 Создать копию (Дублировать)"
+                                                                >
+                                                                    <Copy size={13} />
+                                                                </button>
+
+                                                                {/* Quick Move to Folder */}
+                                                                <div className="relative">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setMovingExerciseId(movingExerciseId === ex.id ? null : ex.id);
+                                                                            setChangingTopicExerciseId(null);
+                                                                        }}
+                                                                        className={`p-1.5 rounded-xl hover:bg-white/20 transition-colors cursor-pointer ${
+                                                                            movingExerciseId === ex.id ? 'bg-purple-500/30 text-purple-300' : 'text-zinc-300 hover:text-purple-400'
+                                                                        }`}
+                                                                        title="📁 Переместить в папку"
                                                                     >
-                                                                        <div className="text-[8px] font-black uppercase text-white/30 p-2 border-b border-white/5 mb-1">Переместить в:</div>
-                                                                        <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                                                        <FolderOpen size={13} />
+                                                                    </button>
+
+                                                                    {movingExerciseId === ex.id && (
+                                                                        <div
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                            className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-[#1a1a1c] border border-white/15 shadow-2xl p-2 z-40 space-y-1 max-h-48 overflow-y-auto custom-scrollbar"
+                                                                        >
+                                                                            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 px-2 py-1">
+                                                                                Выберите папку:
+                                                                            </div>
                                                                             <button
-                                                                                onClick={(e) => { e.stopPropagation(); handleMoveExercise(ex.id, 'all'); }}
-                                                                                className={`w-full text-left px-3 py-2.5 rounded-xl text-[9px] font-black uppercase flex items-center gap-3 transition-colors ${ex.collectionId === 'all' ? 'bg-white/10 text-white' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    handleMoveExercise(ex.id, 'all');
+                                                                                    setMovingExerciseId(null);
+                                                                                }}
+                                                                                className="w-full text-left text-xs py-1.5 px-2.5 text-zinc-300 hover:text-white rounded-xl hover:bg-white/10 flex items-center gap-2 cursor-pointer"
                                                                             >
-                                                                                <div className="w-2 h-2 rounded-full bg-white/20" />
-                                                                                Общий список
+                                                                                <span>📁</span>
+                                                                                <span>Без папки (Общий)</span>
                                                                             </button>
                                                                             {exerciseCollections.map(col => (
                                                                                 <button
                                                                                     key={col.id}
-                                                                                    onClick={(e) => { e.stopPropagation(); handleMoveExercise(ex.id, col.id); }}
-                                                                                    className={`w-full text-left px-3 py-2.5 rounded-xl text-[9px] font-black uppercase flex items-center gap-3 transition-colors ${ex.collectionId === col.id ? 'bg-white/10 text-white' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        handleMoveExercise(ex.id, col.id);
+                                                                                        setMovingExerciseId(null);
+                                                                                    }}
+                                                                                    className={`w-full text-left text-xs py-1.5 px-2.5 rounded-xl hover:bg-white/10 flex items-center gap-2 cursor-pointer truncate ${
+                                                                                        ex.collectionId === col.id ? 'bg-purple-500/20 text-purple-300 font-bold' : 'text-zinc-300 hover:text-white'
+                                                                                    }`}
                                                                                 >
-                                                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
-                                                                                    {col.title}
+                                                                                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: col.color || '#D4AF37' }} />
+                                                                                    <span className="truncate">{col.title}</span>
                                                                                 </button>
                                                                             ))}
                                                                         </div>
-                                                                    </motion.div>
-                                                                )}
-                                                            </AnimatePresence>
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        })}
+                                                                    )}
+                                                                </div>
 
-                                    {exercises.length === 0 && (
-                                        <div className="col-span-full py-24 text-center bg-white/[0.02] rounded-[4rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center group overflow-hidden relative">
-                                            <div className="absolute inset-0 bg-gradient-to-b from-sparta-gold/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-
-                                            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-8 relative z-10 group-hover:scale-110 transition-transform duration-500">
-                                                <Dumbbell size={48} className="text-white/10 group-hover:text-sparta-gold/40 transition-colors" />
-                                            </div>
-
-                                            <h4 className="text-2xl font-russo uppercase tracking-widest text-white/20 mb-3 relative z-10">Архив пока пуст</h4>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/10 max-w-sm leading-relaxed mb-10 relative z-10">
-                                                Добавьте свое первое упражнение или используйте наш базовый набор для быстрого старта
-                                            </p>
-
-                                            <div className="flex flex-col sm:flex-row gap-4 relative z-10">
-                                                <button
-                                                    onClick={() => setIsExerciseModalOpen(true)}
-                                                    className="px-8 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-sparta-gold transition-all shadow-xl shadow-black/20"
-                                                >
-                                                    Создать упражнение
-                                                </button>
-                                                <button
-                                                    onClick={handleAddDefaultExercises}
-                                                    disabled={isSavingExercise}
-                                                    className="px-8 py-4 bg-sparta-gold/10 text-sparta-gold border border-sparta-gold/20 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-sparta-gold hover:text-black transition-all disabled:opacity-50"
-                                                >
-                                                    {isSavingExercise ? 'Р—агрузка...' : 'Добавить базовый набор'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Floating Selection Tray v1.0 */}
-                        <AnimatePresence>
-                            {selectedExerciseIds.length > 0 && (
-                                <motion.div
-                                    initial={{ y: 100, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    exit={{ y: 100, opacity: 0 }}
-                                    className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 bg-[#0a0a0a]/90 backdrop-blur-3xl border border-purple-500/30 rounded-[2.5rem] p-3 pl-8 shadow-[0_30px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(168,85,247,0.1)] ring-1 ring-white/10"
-                                >
-                                    <div className="flex flex-col">
-                                        <span className="text-[14px] font-russo text-white uppercase tracking-widest leading-none">
-                                            {selectedExerciseIds.length} ВЫБРАНО
-                                        </span>
-                                        <span className="text-[8px] font-black text-purple-400 uppercase tracking-tight mt-1">
-                                            МТ-Управление Библиотекой
-                                        </span>
-                                    </div>
-
-                                    <div className="h-10 w-px bg-white/10 mx-4" />
-
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => {
-                                                setClipboardIds(selectedExerciseIds);
-                                                // Optional: visual pulse
-                                            }}
-                                            className="h-12 px-6 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 border border-white/5"
-                                        >
-                                            <Copy size={14} className="text-sparta-gold" />
-                                            Копировать
-                                        </button>
-
-                                        <button
-                                            onClick={() => {
-                                                if (selectedCollectionId !== 'all') {
-                                                    handleBulkMove(selectedExerciseIds, selectedCollectionId);
-                                                } else {
-                                                    alert("Выберите папку для перемещения в меню слева");
-                                                }
-                                            }}
-                                            className="h-12 px-6 rounded-2xl bg-purple-500 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 shadow-lg shadow-purple-500/20"
-                                        >
-                                            <FolderOpen size={14} />
-                                            В эту папку
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleBulkDelete(selectedExerciseIds)}
-                                            className="w-12 h-12 rounded-2xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all flex items-center justify-center border border-red-500/20"
-                                            title="Удалить выбранные"
-                                        >
-                                            <TrashIcon size={18} />
-                                        </button>
-
-                                        <div className="w-px h-6 bg-white/10 mx-2" />
-
-                                        <button
-                                            onClick={() => setSelectedExerciseIds([])}
-                                            className="h-12 w-12 rounded-2xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all flex items-center justify-center"
-                                            title="Сбросить выделение"
-                                        >
-                                            <X size={20} />
-                                        </button>
-                                    </div>
-
-                                    {/* Shortcut Hints */}
-                                    <div className="hidden lg:flex items-center gap-4 ml-8 pr-4">
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[7px] font-black text-white/20 uppercase mb-1">Copy</span>
-                                            <kbd className="px-2 py-1 bg-white/5 rounded-md text-[8px] font-black text-white/40 border border-white/10">CTRL+C</kbd>
-                                        </div>
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[7px] font-black text-white/20 uppercase mb-1">Paste</span>
-                                            <kbd className="px-2 py-1 bg-white/5 rounded-md text-[8px] font-black text-white/40 border border-white/10">CTRL+V</kbd>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* View 3: Programs */}
-                        {((mainTab === 'materials' && materialsSubTab === 'programs') || mainTab === 'programs') && (
-                            <div className="space-y-8">
-                                {/* Pro Header & Onboarding */}
-                                <div className="bg-card glass-panel border border-purple-500/20 rounded-[2.5rem] p-10 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform"><FileText size={160} /></div>
-                                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                                        <div className="max-w-xl">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-400 shadow-lg shadow-purple-500/10">
-                                                    <Layers size={32} />
-                                                </div>
-                                                <h3 className="text-3xl font-russo text-white uppercase tracking-tight">Библиотека программ</h3>
-                                            </div>
-                                            <p className="text-white/40 text-[11px] font-bold uppercase tracking-[0.15em] leading-relaxed mb-2">
-                                                Создавайте универсальные циклы тренировок для быстрого планирования сезона
-                                            </p>
-                                        </div>
-                                        <Button
-                                            onClick={() => setIsTemplateModalOpen(true)}
-                                            className="h-fit bg-purple-500 text-white hover:bg-white hover:text-black font-black uppercase tracking-widest text-[11px] px-8 py-4 rounded-2xl transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] flex items-center gap-3"
-                                        >
-                                            <PlusCircle size={20} />
-                                            СОЗДАТЬ ПРОГРАММУ
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                    {trainingTemplates.map(template => (
-                                        <div key={template.id} className="p-0 bg-card glass-panel border border-white/5 rounded-[3rem] hover:border-purple-500/40 transition-all group relative flex flex-col min-h-[380px] overflow-hidden">
-                                            {/* Cover Image Background */}
-                                            {template.coverImage ? (
-                                                <div className="absolute inset-0 z-0">
-                                                    <img
-                                                        src={template.coverImage}
-                                                        className="w-full h-full object-cover opacity-20 group-hover:opacity-30 group-hover:scale-110 transition-all duration-700"
-                                                        alt=""
-                                                    />
-                                                    <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-[#0a0a0a]" />
-                                                </div>
-                                            ) : (
-                                                <div className="absolute inset-0 z-0 bg-gradient-to-br from-purple-900/10 to-transparent" />
-                                            )}
-
-                                            <div className="relative z-10 p-8 flex-1 flex flex-col">
-                                                <div
-                                                    className="flex-1 cursor-pointer"
-                                                    onClick={() => setSelectedProgramForPreview(template)}
-                                                >
-                                                    <div className="flex justify-between items-start mb-6">
-                                                        <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-purple-500/10">
-                                                            {template.category || 'Техника'}
-                                                        </span>
-                                                        <div className="flex flex-col items-end gap-3">
-                                                            <div className="flex gap-2">
+                                                                {/* Delete */}
                                                                 <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleDuplicateTemplate(template);
-                                                                    }}
-                                                                    className="p-2 bg-white/5 hover:bg-sparta-gold/20 text-white/20 hover:text-sparta-gold rounded-lg transition-all border border-white/5"
-                                                                    title="Дублировать"
-                                                                >
-                                                                    <Copy size={12} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleOpenEditTemplateModal(template);
-                                                                    }}
-                                                                    className="p-2 bg-white/5 hover:bg-purple-500/20 text-white/20 hover:text-purple-400 rounded-lg transition-all border border-white/5"
-                                                                    title="Редактировать"
-                                                                >
-                                                                    <Edit2 size={12} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (window.confirm('Вы уверены, что хотите удалить эту программу?')) {
-                                                                            handleDeleteTemplate(template.id);
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        if (window.confirm('Удалить это упражнение?')) {
+                                                                            handleDeleteExercise(ex.id, ex.mediaItems || []);
                                                                         }
                                                                     }}
-                                                                    className="p-2 bg-white/5 hover:bg-red-500/20 text-white/20 hover:text-red-400 rounded-lg transition-all border border-white/5"
-                                                                    title="Удалить"
+                                                                    className="p-1.5 rounded-xl hover:bg-red-500/20 text-zinc-300 hover:text-red-400 transition-colors cursor-pointer"
+                                                                    title="🗑️ Удалить упражнение"
                                                                 >
-                                                                    <TrashIcon size={12} />
+                                                                    <TrashIcon size={13} />
                                                                 </button>
                                                             </div>
-                                                            <div className="flex flex-col items-end gap-1">
-                                                                <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Состав программы</span>
-                                                                <div className="flex gap-1.5">
-                                                                    {(['warmup', 'main', 'skills', 'cooldown'] as const).map(s => {
-                                                                        const count = template.stages?.[s]?.length || 0;
-                                                                        return (
+
+                                                            {/* Card Media Header */}
+                                                            <div className="p-3 pb-0">
+                                                                <ExerciseMediaGrid
+                                                                    mediaItems={ex.mediaItems}
+                                                                    mediaUrl={ex.mediaUrl}
+                                                                    mediaType={ex.mediaType}
+                                                                    title={ex.title}
+                                                                    durationMinutes={ex.durationMinutes}
+                                                                    onOpenLightbox={(idx) => {
+                                                                        const items = ex.mediaItems && ex.mediaItems.length > 0
+                                                                            ? ex.mediaItems
+                                                                            : [{ url: ex.mediaUrl || ex.videoUrl, type: ex.mediaType || 'url' }];
+                                                                        setSelectedMediaForLightbox({
+                                                                            items,
+                                                                            currentIndex: idx,
+                                                                            title: ex.title
+                                                                        });
+                                                                    }}
+                                                                />
+                                                            </div>
+
+                                                            {/* Card Body */}
+                                                            <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                                                                <div>
+                                                                    {/* Meta Pills (Category, Age, Duration, Folder) */}
+                                                                    <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+                                                                        <span className="px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-[11px] font-bold text-amber-300">
+                                                                            {getExerciseCategoryLabel(ex.category, allExerciseCategories)}
+                                                                        </span>
+
+                                                                        <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-[11px] font-bold text-blue-300">
+                                                                            👦 {ex.ageRange || '6–10 лет'}
+                                                                        </span>
+
+                                                                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[11px] font-bold text-emerald-300">
+                                                                            ⏱ {ex.durationMinutes || 15} мин
+                                                                        </span>
+
+                                                                        {folder && (
+                                                                            <span className="px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-[11px] font-bold text-purple-300 inline-flex items-center gap-1.5">
+                                                                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: folder.color || '#A855F7' }} />
+                                                                                {folder.title}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Title */}
+                                                                    <h4 className="font-russo text-base sm:text-lg text-white uppercase tracking-tight line-clamp-1 group-hover:text-amber-400 transition-colors">
+                                                                        {ex.title}
+                                                                    </h4>
+
+                                                                    {/* Description */}
+                                                                    <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed mt-1">
+                                                                        {ex.description || 'Инструкция по технике выполнения упражнения...'}
+                                                                    </p>
+
+                                                                    {/* Equipment chips */}
+                                                                    {ex.equipment && ex.equipment.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1.5 pt-2">
+                                                                            {ex.equipment.slice(0, 3).map((eq: string, i: number) => (
+                                                                                <span
+                                                                                    key={i}
+                                                                                    className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-zinc-300 font-medium"
+                                                                                >
+                                                                                    {eq}
+                                                                                </span>
+                                                                            ))}
+                                                                            {ex.equipment.length > 3 && (
+                                                                                <span className="text-[10px] text-zinc-500 font-medium self-center">
+                                                                                    +{ex.equipment.length - 3}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Action Buttons */}
+                                                                <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 relative">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setViewingExerciseDetail(ex);
+                                                                        }}
+                                                                        className="flex-1 py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                                                                    >
+                                                                        <span>👀 Открыть</span>
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleAddToPlanDraft(ex);
+                                                                        }}
+                                                                        className="py-2.5 px-4 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                                                                        title="Добавить в черновик плана тренировки"
+                                                                    >
+                                                                        <PlusCircle size={14} />
+                                                                        <span>В план</span>
+                                                                    </button>
+
+                                                                    {/* ••• Menu */}
+                                                                    <div className="relative">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setExerciseMenuOpenId(isMenuOpen ? null : ex.id);
+                                                                                setMovingExerciseId(null);
+                                                                                setChangingTopicExerciseId(null);
+                                                                            }}
+                                                                            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all cursor-pointer"
+                                                                        >
+                                                                            <MoreVertical size={16} />
+                                                                        </button>
+
+                                                                        {isMenuOpen && (
                                                                             <div
-                                                                                key={s}
-                                                                                className={`w-4 h-4 rounded-md flex items-center justify-center text-[7px] font-black transition-all
-                                                                                    ${count > 0 ? 'bg-purple-500 text-white' : 'bg-white/5 text-white/10'}`}
-                                                                                title={s}
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                className="absolute right-0 bottom-full mb-2 w-52 rounded-2xl bg-[#1a1a1c] border border-white/15 shadow-2xl p-1.5 z-30 space-y-1"
                                                                             >
-                                                                                {count}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setExerciseMenuOpenId(null);
+                                                                                        setEditingExercise(ex);
+                                                                                        setIsExerciseModalOpen(true);
+                                                                                    }}
+                                                                                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-zinc-200 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                                                                                >
+                                                                                    <Pencil size={14} className="text-amber-400" /> Редактировать
+                                                                                </button>
+                                                                                
+                                                                                {/* Move to folder */}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setMovingExerciseId(movingExerciseId === ex.id ? null : ex.id);
+                                                                                        setChangingTopicExerciseId(null);
+                                                                                    }}
+                                                                                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-zinc-200 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                                                                                >
+                                                                                    <FolderOpen size={14} className="text-purple-400" /> Переместить в папку...
+                                                                                </button>
+
+                                                                                {movingExerciseId === ex.id && (
+                                                                                    <div className="pl-3 py-1 space-y-1 max-h-36 overflow-y-auto border-t border-white/10 custom-scrollbar">
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => {
+                                                                                                handleMoveExercise(ex.id, 'all');
+                                                                                                setExerciseMenuOpenId(null);
+                                                                                            }}
+                                                                                            className="w-full text-left text-[11px] py-1 px-2 text-zinc-400 hover:text-white rounded hover:bg-white/5"
+                                                                                        >
+                                                                                            Без папки (Общий)
+                                                                                        </button>
+                                                                                        {exerciseCollections.map(col => (
+                                                                                            <button
+                                                                                                key={col.id}
+                                                                                                type="button"
+                                                                                                onClick={() => {
+                                                                                                    handleMoveExercise(ex.id, col.id);
+                                                                                                    setExerciseMenuOpenId(null);
+                                                                                                }}
+                                                                                                className="w-full text-left text-[11px] py-1 px-2 text-zinc-300 hover:text-white rounded hover:bg-white/5 flex items-center gap-1.5 truncate"
+                                                                                            >
+                                                                                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: col.color || '#D4AF37' }} />
+                                                                                                <span className="truncate">{col.title}</span>
+                                                                                            </button>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* Change Topic */}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setChangingTopicExerciseId(changingTopicExerciseId === ex.id ? null : ex.id);
+                                                                                        setMovingExerciseId(null);
+                                                                                    }}
+                                                                                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-zinc-200 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                                                                                >
+                                                                                    <Tag size={14} className="text-amber-400" /> Изменить тему...
+                                                                                </button>
+
+                                                                                {changingTopicExerciseId === ex.id && (
+                                                                                    <div className="pl-3 py-1 space-y-1 max-h-36 overflow-y-auto border-t border-white/10 custom-scrollbar">
+                                                                                        {allExerciseCategories.filter(c => c.id !== 'all').map(cat => (
+                                                                                            <button
+                                                                                                key={cat.id}
+                                                                                                type="button"
+                                                                                                onClick={() => {
+                                                                                                    handleChangeCategory(ex.id, cat.id, cat.label);
+                                                                                                }}
+                                                                                                className={`w-full text-left text-[11px] py-1 px-2 rounded hover:bg-white/5 flex items-center gap-1.5 truncate ${
+                                                                                                    ex.category === cat.id ? 'text-amber-400 font-bold bg-amber-400/10' : 'text-zinc-300 hover:text-white'
+                                                                                                }`}
+                                                                                            >
+                                                                                                <span className="truncate">{cat.label}</span>
+                                                                                            </button>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                )}
+
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setExerciseMenuOpenId(null);
+                                                                                        handleDuplicateExercise(ex);
+                                                                                    }}
+                                                                                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-zinc-200 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                                                                                >
+                                                                                    <Copy size={14} className="text-blue-400" /> Создать копию
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setExerciseMenuOpenId(null);
+                                                                                        if (window.confirm('Удалить это упражнение?')) {
+                                                                                            handleDeleteExercise(ex.id, ex.mediaItems || []);
+                                                                                        }
+                                                                                    }}
+                                                                                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 flex items-center gap-2 cursor-pointer"
+                                                                                >
+                                                                                    <TrashIcon size={14} /> Удалить
+                                                                                </button>
                                                                             </div>
-                                                                        );
-                                                                    })}
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    <h4 className="text-2xl font-bold text-white mb-4 uppercase tracking-tight line-clamp-2 group-hover:text-purple-400 transition-colors">{template.title}</h4>
-                                                    <p className="text-[11px] text-white/30 uppercase font-black leading-relaxed line-clamp-4 mb-4">
-                                                        {template.description || 'Индивидуальный тренировочный цикл, разделенный на блоки для максимальной эффективности подготовки.'}
-                                                    </p>
-                                                </div>
+                                                    );
+                                                })}
 
-                                                <div className="pt-6 border-t border-white/5 flex items-center justify-between">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[10px] font-black text-white uppercase">{template.duration || 4} Недели</span>
-                                                        <span className="text-[8px] font-bold text-white/20 uppercase">Длительность</span>
+                                            {exercises.length === 0 && (
+                                                <div className="col-span-full py-20 text-center bg-white/[0.02] rounded-[3rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center p-6">
+                                                    <div className="w-20 h-20 bg-amber-500/10 text-amber-400 rounded-full flex items-center justify-center mb-4">
+                                                        <Dumbbell size={36} />
                                                     </div>
-                                                    <button
-                                                        onClick={() => handleOpenAssignmentModal(template, 'program')}
-                                                        className="px-6 py-4 bg-purple-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-purple-500/20 hover:bg-white hover:text-black transition-all active:scale-95"
-                                                    >
-                                                        В РАСПИСАНИЕ
-                                                    </button>
+                                                    <h4 className="text-xl font-russo text-white uppercase mb-2">База упражнений пуста</h4>
+                                                    <p className="text-xs text-zinc-400 max-w-md mb-6">
+                                                        Добавьте первое авторское упражнение или загрузите базовый набор упражнений футбольного клуба Sparta.
+                                                    </p>
+                                                    <div className="flex gap-3 flex-wrap justify-center">
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingExercise(null);
+                                                                setIsExerciseModalOpen(true);
+                                                            }}
+                                                            className="px-6 py-3 bg-sparta-gold text-black rounded-xl font-russo text-xs uppercase cursor-pointer"
+                                                        >
+                                                            + Создать упражнение
+                                                        </button>
+                                                        <button
+                                                            onClick={handleAddDefaultExercises}
+                                                            disabled={isSavingExercise}
+                                                            className="px-6 py-3 bg-white/10 text-white rounded-xl text-xs font-bold uppercase hover:bg-white/20 cursor-pointer"
+                                                        >
+                                                            {isSavingExercise ? 'Загрузка...' : 'Добавить базовый набор'}
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
+                            )}
+                        {/* View 3: Ready-Made Training Plans (training_templates) */}
+                        {((mainTab === 'materials' && materialsSubTab === 'programs') || mainTab === 'programs') && (
+                            <div className="space-y-6">
+                                {/* Upper Header & Filters Bar */}
+                                <div className="p-6 sm:p-8 rounded-[2.5rem] bg-[#141416]/95 border border-white/10 shadow-2xl relative overflow-hidden">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xl shadow-inner">
+                                                    📋
+                                                </div>
+                                                <h3 className="text-2xl sm:text-3xl font-russo text-white uppercase tracking-tight">
+                                                    Готовые планы тренировок
+                                                </h3>
+                                            </div>
+                                            <p className="text-zinc-400 text-xs sm:text-sm font-medium pl-1">
+                                                Сборники упражнений для проведения занятий
+                                            </p>
+                                        </div>
+
+                                        {/* Main CTA Button: + Собрать тренировку */}
+                                        <button
+                                            onClick={() => {
+                                                setEditingTemplate(null);
+                                                setIsTemplateModalOpen(true);
+                                            }}
+                                            className="px-7 py-3.5 bg-sparta-gold hover:bg-amber-300 text-black font-russo text-xs uppercase tracking-wider rounded-2xl transition-all shadow-[0_0_25px_rgba(212,175,55,0.3)] flex items-center justify-center gap-2 cursor-pointer shrink-0 active:scale-95"
+                                        >
+                                            <Plus size={16} />
+                                            <span>+ Собрать тренировку</span>
+                                        </button>
+                                    </div>
+
+                                    {/* Age Filter Bar */}
+                                    <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center gap-2">
+                                        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 mr-2 flex items-center gap-1.5">
+                                            <Users size={13} className="text-amber-400" /> Возраст:
+                                        </span>
+                                        {[
+                                            { id: 'all', label: 'Все' },
+                                            { id: '6-8', label: '6–8 лет' },
+                                            { id: '9-11', label: '9–11 лет' },
+                                            { id: '12-15', label: '12–15 лет' }
+                                        ].map((filter) => (
+                                            <button
+                                                key={filter.id}
+                                                onClick={() => setTrainingPlanAgeFilter(filter.id)}
+                                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                                                    trainingPlanAgeFilter === filter.id
+                                                        ? 'bg-sparta-gold text-black border-sparta-gold shadow-md font-russo'
+                                                        : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white hover:bg-white/10'
+                                                }`}
+                                            >
+                                                {filter.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Plans Grid */}
+                                {trainingTemplates.length === 0 ? (
+                                    <div className="py-20 rounded-[2.5rem] bg-[#141416]/50 border border-white/5 flex flex-col items-center justify-center text-center p-6 space-y-4">
+                                        <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl text-amber-400">
+                                            📋
+                                        </div>
+                                        <div>
+                                            <h4 className="text-lg font-russo text-white uppercase mb-1">
+                                                У вас пока нет готовых планов тренировок
+                                            </h4>
+                                            <p className="text-xs text-zinc-400 max-w-md">
+                                                Нажмите кнопку «+ Собрать тренировку», чтобы быстро составить структурированный план занятия из упражнений
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setEditingTemplate(null);
+                                                setIsTemplateModalOpen(true);
+                                            }}
+                                            className="px-6 py-3 bg-sparta-gold text-black font-russo text-xs uppercase tracking-wider rounded-2xl shadow-lg hover:bg-amber-300 transition-all cursor-pointer"
+                                        >
+                                            + Собрать первую тренировку
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                        {trainingTemplates
+                                            .filter((template) => {
+                                                if (trainingPlanAgeFilter === 'all') return true;
+                                                const ageStr = (template.ageRange || template.age || '').toLowerCase();
+                                                if (trainingPlanAgeFilter === '6-8') return ageStr.includes('6') || ageStr.includes('7') || ageStr.includes('8');
+                                                if (trainingPlanAgeFilter === '9-11') return ageStr.includes('9') || ageStr.includes('10') || ageStr.includes('11');
+                                                if (trainingPlanAgeFilter === '12-15') return ageStr.includes('12') || ageStr.includes('13') || ageStr.includes('14') || ageStr.includes('15');
+                                                return true;
+                                            })
+                                            .map((template) => {
+                                                const warmupExercises = template.stages?.warmup || [];
+                                                const mainExercises = template.stages?.main || (Array.isArray(template.exercises) ? template.exercises : []);
+                                                const cooldownExercises = template.stages?.cooldown || template.stages?.skills || [];
+
+                                                const warmupMin = warmupExercises.reduce((acc: number, item: any) => acc + (Number(item?.durationMinutes) || 15), 0) || (warmupExercises.length > 0 ? warmupExercises.length * 15 : 0);
+                                                const mainMin = mainExercises.reduce((acc: number, item: any) => acc + (Number(item?.durationMinutes) || 15), 0) || (mainExercises.length > 0 ? mainExercises.length * 15 : 0);
+                                                const cooldownMin = cooldownExercises.reduce((acc: number, item: any) => acc + (Number(item?.durationMinutes) || 15), 0) || (cooldownExercises.length > 0 ? cooldownExercises.length * 15 : 0);
+
+                                                const totalExercisesCount = warmupExercises.length + mainExercises.length + cooldownExercises.length;
+                                                const totalTimeMin = (warmupMin + mainMin + cooldownMin) || Number(template.totalMinutes) || 60;
+
+                                                return (
+                                                    <div
+                                                        key={template.id}
+                                                        className="p-6 bg-[#141416] border border-white/10 hover:border-amber-500/40 rounded-[2.5rem] transition-all group flex flex-col justify-between space-y-4 shadow-xl hover:shadow-[0_0_30px_rgba(245,158,11,0.08)] relative"
+                                                    >
+                                                        {/* Top Header of Card */}
+                                                        <div className="space-y-3">
+                                                            {/* Actions toolbar */}
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className="px-2.5 py-1 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[10px] font-bold flex items-center gap-1">
+                                                                    <Users size={11} /> {template.ageRange || template.age || 'Все возрасты'}
+                                                                </span>
+
+                                                                <div className="flex items-center gap-1">
+                                                                    <button
+                                                                        onClick={() => handleOpenEditTemplateModal(template)}
+                                                                        className="p-1.5 rounded-lg bg-white/5 hover:bg-amber-500/20 text-zinc-400 hover:text-amber-300 transition-colors cursor-pointer"
+                                                                        title="Редактировать план"
+                                                                    >
+                                                                        <Edit2 size={13} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDuplicateTemplate(template)}
+                                                                        className="p-1.5 rounded-lg bg-white/5 hover:bg-sparta-gold/20 text-zinc-400 hover:text-sparta-gold transition-colors cursor-pointer"
+                                                                        title="Копировать план"
+                                                                    >
+                                                                        <Copy size={13} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteTemplate(template.id)}
+                                                                        className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer"
+                                                                        title="Удалить план"
+                                                                    >
+                                                                        <TrashIcon size={13} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Title */}
+                                                            <div>
+                                                                <h4 className="text-lg font-russo text-white uppercase tracking-tight line-clamp-2 group-hover:text-amber-300 transition-colors">
+                                                                    {template.title}
+                                                                </h4>
+                                                            </div>
+
+                                                            {/* Badges Bar: Duration & Exercises count */}
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="px-2.5 py-0.5 rounded-lg bg-black/60 border border-white/10 text-amber-300 text-[11px] font-bold flex items-center gap-1">
+                                                                    <Clock size={11} /> {totalTimeMin} мин
+                                                                </span>
+                                                                <span className="px-2.5 py-0.5 rounded-lg bg-black/60 border border-white/10 text-emerald-400 text-[11px] font-bold flex items-center gap-1">
+                                                                    <Target size={11} /> {totalExercisesCount} упр.
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Body: 3 Visual Football Stages */}
+                                                        <div className="space-y-2 py-1 flex-1">
+                                                            {/* 1. Warmup */}
+                                                            <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                                                                <div className="flex items-center justify-between text-xs">
+                                                                    <span className="font-bold text-amber-300 flex items-center gap-1 text-[11px]">
+                                                                        ⚡ Разминка
+                                                                    </span>
+                                                                    <span className="text-[10px] font-semibold text-zinc-500">
+                                                                        {warmupMin > 0 ? `${warmupMin} мин` : '15 мин'} • {warmupExercises.length} упр.
+                                                                    </span>
+                                                                </div>
+                                                                {warmupExercises.length > 0 ? (
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {warmupExercises.slice(0, 2).map((item: any, i: number) => (
+                                                                            <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] text-zinc-300 truncate max-w-[150px]">
+                                                                                {typeof item === 'string' ? (exercises.find(e => e.id === item)?.title || 'Упражнение') : (item.title || 'Упражнение')}
+                                                                            </span>
+                                                                        ))}
+                                                                        {warmupExercises.length > 2 && (
+                                                                            <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-[8px] text-zinc-500 font-bold">
+                                                                                +{warmupExercises.length - 2}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-[9px] text-zinc-600 italic">Суставная гимнастика</p>
+                                                                )}
+                                                            </div>
+
+                                                            {/* 2. Main Block */}
+                                                            <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                                                                <div className="flex items-center justify-between text-xs">
+                                                                    <span className="font-bold text-emerald-400 flex items-center gap-1 text-[11px]">
+                                                                        ⚽ Основной блок
+                                                                    </span>
+                                                                    <span className="text-[10px] font-semibold text-zinc-500">
+                                                                        {mainMin > 0 ? `${mainMin} мин` : '35 мин'} • {mainExercises.length} упр.
+                                                                    </span>
+                                                                </div>
+                                                                {mainExercises.length > 0 ? (
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {mainExercises.slice(0, 2).map((item: any, i: number) => (
+                                                                            <span key={i} className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-[9px] text-emerald-300 font-medium truncate max-w-[150px]">
+                                                                                {typeof item === 'string' ? (exercises.find(e => e.id === item)?.title || 'Упражнение') : (item.title || 'Упражнение')}
+                                                                            </span>
+                                                                        ))}
+                                                                        {mainExercises.length > 2 && (
+                                                                            <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-[8px] text-emerald-400 font-bold">
+                                                                                +{mainExercises.length - 2}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-[9px] text-zinc-600 italic">Технические упражнения</p>
+                                                                )}
+                                                            </div>
+
+                                                            {/* 3. Game / Cooldown */}
+                                                            <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                                                                <div className="flex items-center justify-between text-xs">
+                                                                    <span className="font-bold text-blue-400 flex items-center gap-1 text-[11px]">
+                                                                        🥅 Игра и заминка
+                                                                    </span>
+                                                                    <span className="text-[10px] font-semibold text-zinc-500">
+                                                                        {cooldownMin > 0 ? `${cooldownMin} мин` : '20 мин'} • {cooldownExercises.length} упр.
+                                                                    </span>
+                                                                </div>
+                                                                {cooldownExercises.length > 0 ? (
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {cooldownExercises.slice(0, 2).map((item: any, i: number) => (
+                                                                            <span key={i} className="px-2 py-0.5 rounded-md bg-blue-500/10 text-[9px] text-blue-300 font-medium truncate max-w-[150px]">
+                                                                                {typeof item === 'string' ? (exercises.find(e => e.id === item)?.title || 'Упражнение') : (item.title || 'Упражнение')}
+                                                                            </span>
+                                                                        ))}
+                                                                        {cooldownExercises.length > 2 && (
+                                                                            <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-[8px] text-blue-400 font-bold">
+                                                                                +{cooldownExercises.length - 2}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-[9px] text-zinc-600 italic">Двусторонняя игра</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Footer Actions */}
+                                                        <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                                                            <button
+                                                                onClick={() => setSelectedPlanForConspect(template)}
+                                                                className="flex-1 py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-all border border-white/10 flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                                                            >
+                                                                <span>👀 Конспект</span>
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => handleOpenAssignmentModal(template, 'program')}
+                                                                className="flex-1 py-2.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-russo text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                                                            >
+                                                                <Calendar size={13} />
+                                                                <span>В график</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </motion.div>
@@ -3956,828 +4672,65 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                 )}
             </AnimatePresence>
 
-            <AnimatePresence>
-                {isExerciseModalOpen && (
-                    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-start p-4 md:p-8 bg-black/95 backdrop-blur-3xl overflow-y-auto custom-scrollbar">
-                        <motion.div
-                            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-                            className="bg-[#0a0a0a]/80 backdrop-blur-[50px] border border-white/10 rounded-[3rem] p-8 md:p-12 max-w-4xl w-full shadow-2xl relative my-8 md:my-16"
-                        >
-                            <div className="absolute -top-20 -right-20 w-80 h-80 bg-sparta-gold/10 rounded-full blur-3xl" />
+            {/* Create / Edit Exercise Modal */}
+            <CreateExerciseModal
+                isOpen={isExerciseModalOpen}
+                onClose={() => {
+                    setIsExerciseModalOpen(false);
+                    setEditingExercise(null);
+                }}
+                onSave={handleSaveNewExercise}
+                editingExercise={editingExercise}
+                coachId={userProfile?.coachId}
+                coachName={userProfile?.name}
+                collections={exerciseCollections}
+                initialCollectionId={selectedCollectionId}
+                categories={allExerciseCategories.filter(c => c.id !== 'all')}
+            />
 
-                            {/* Step Indicator */}
-                            <div className="flex items-center gap-4 mb-12 relative z-10 px-2">
-                                {[1, 2, 3].map((step) => (
-                                    <div key={step} className="flex items-center gap-4 flex-1">
-                                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-russo text-sm transition-all duration-500 ${currentExerciseStep === step
-                                                ? 'bg-sparta-gold text-black shadow-[0_0_20px_rgba(212,175,55,0.4)] scale-110'
-                                                : currentExerciseStep > step
-                                                    ? 'bg-green-500 text-white'
-                                                    : 'bg-white/5 text-white/20'
-                                            }`}>
-                                            {currentExerciseStep > step ? <CheckCircle size={20} /> : step}
-                                        </div>
-                                        {step < 3 && <div className={`h-1 flex-1 rounded-full transition-all duration-500 ${currentExerciseStep > step ? 'bg-green-500' : 'bg-white/5'}`} />}
-                                    </div>
-                                ))}
-                            </div>
+            {/* View Detailed Exercise Modal */}
+            <ExerciseDetailModal
+                isOpen={Boolean(viewingExerciseDetail)}
+                exercise={viewingExerciseDetail}
+                onClose={() => setViewingExerciseDetail(null)}
+                onAddToPlan={(ex) => {
+                    handleAddToPlanDraft(ex);
+                    setViewingExerciseDetail(null);
+                }}
+                onEdit={(ex) => {
+                    setViewingExerciseDetail(null);
+                    setEditingExercise(ex);
+                    setIsExerciseModalOpen(true);
+                }}
+            />
 
-                            <h3 className="text-3xl font-russo text-white uppercase mb-8 flex items-center gap-4 relative z-10">
-                                {editingExercise ? 'Редактирование' : 'Новое упражнение'}
-                                <span className="text-sparta-gold text-sm opacity-40 font-black">— Шаг {currentExerciseStep} из 3</span>
-                            </h3>
 
-                            <div className="space-y-8 relative z-10">
-                                {currentExerciseStep === 1 && (
-                                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between px-2">
-                                                <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Название упражнения</label>
-                                                <button
-                                                    onClick={handleAIGenerateExercise}
-                                                    disabled={!newExerciseData.title || isGeneratingAI}
-                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${!newExerciseData.title
-                                                            ? 'opacity-20 cursor-not-allowed'
-                                                            : isGeneratingAI
-                                                                ? 'bg-sparta-gold/20 text-sparta-gold animate-pulse'
-                                                                : 'bg-sparta-gold/10 text-sparta-gold hover:bg-sparta-gold hover:text-black cursor-magic'
-                                                        }`}
-                                                >
-                                                    {isGeneratingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                                    {isGeneratingAI ? 'Анализ...' : 'Magic Wand'}
-                                                </button>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                value={newExerciseData.title}
-                                                onChange={(e) => setNewExerciseData({ ...newExerciseData, title: e.target.value })}
-                                                placeholder="Напр: Дриблинг 'змейка'..."
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm text-white focus:border-sparta-gold/30 outline-none transition-all shadow-inner"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-2">Описание и техника выполнения</label>
-                                            <textarea
-                                                rows={4}
-                                                value={newExerciseData.description}
-                                                onChange={(e) => setNewExerciseData({ ...newExerciseData, description: e.target.value })}
-                                                placeholder="Опишите детали как выполнять упражнение..."
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm text-white focus:border-sparta-gold/30 outline-none transition-all resize-none shadow-inner"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-2">Категория</label>
-                                                <select
-                                                    value={newExerciseData.category}
-                                                    onChange={(e) => setNewExerciseData({ ...newExerciseData, category: e.target.value })}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm text-white focus:border-sparta-gold/30 outline-none transition-all appearance-none cursor-pointer"
-                                                >
-                                                    {EXERCISE_CATEGORIES.filter(c => c.id !== 'all').map(cat => (
-                                                        <option key={cat.id} value={cat.id} className="bg-[#0a0a0a]">{cat.label}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-2">Сложность</label>
-                                                <div className="grid grid-cols-3 gap-2 p-1 bg-white/5 border border-white/10 rounded-2xl">
-                                                    {[
-                                                        { id: 'beginner', label: 'EASY', color: 'text-green-400' },
-                                                        { id: 'intermediate', label: 'MED', color: 'text-sparta-gold' },
-                                                        { id: 'advanced', label: 'PRO', color: 'text-red-400' }
-                                                    ].map(l => (
-                                                        <button
-                                                            key={l.id}
-                                                            onClick={() => setNewExerciseData({ ...newExerciseData, level: l.id as any })}
-                                                            className={`py-3 rounded-xl text-[9px] font-black transition-all ${newExerciseData.level === l.id ? 'bg-white/10 text-white shadow-lg' : 'text-white/20 hover:text-white/40'}`}
-                                                        >
-                                                            {l.label}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
+            {/* Create / Edit Training Plan Modal */}
+            <CreateTrainingPlanModal
+                isOpen={isTemplateModalOpen}
+                onClose={() => {
+                    setIsTemplateModalOpen(false);
+                    setEditingTemplate(null);
+                }}
+                editingPlan={editingTemplate}
+                coachId={userProfile?.coachId}
+                coachName={userProfile?.name}
+                allExercises={exercises}
+            />
 
-                                {currentExerciseStep === 2 && (
-                                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                                        <div className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] text-center">
-                                            <h4 className="text-sm font-russo uppercase mb-4">Медиа-материалы</h4>
+            {/* Training Plan Conspect Modal */}
+            <TrainingPlanConspectModal
+                isOpen={Boolean(selectedPlanForConspect)}
+                plan={selectedPlanForConspect}
+                onClose={() => setSelectedPlanForConspect(null)}
+                onAssignToSchedule={(plan) => handleOpenAssignmentModal(plan, 'program')}
+                onEdit={(plan) => {
+                    handleOpenEditTemplateModal(plan);
+                    setSelectedPlanForConspect(null);
+                }}
+                allExercises={exercises}
+            />
 
-                                            <div className="flex gap-4 mb-8 p-1 bg-black/40 rounded-2xl border border-white/5">
-                                                <button
-                                                    onClick={() => setNewExerciseData({ ...newExerciseData, mediaType: 'url' })}
-                                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${newExerciseData.mediaType === 'url' ? 'bg-sparta-gold text-black' : 'text-white/20'}`}
-                                                >
-                                                    YouTube Ссылка
-                                                </button>
-                                                <button
-                                                    onClick={() => setNewExerciseData({ ...newExerciseData, mediaType: 'video' })}
-                                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${newExerciseData.mediaType === 'video' || newExerciseData.mediaType === 'photo' ? 'bg-sparta-gold text-black' : 'text-white/20'}`}
-                                                >
-                                                    Загрузить файл
-                                                </button>
-                                            </div>
-
-                                            {newExerciseData.mediaType === 'url' ? (
-                                                <input
-                                                    type="url"
-                                                    value={newExerciseData.videoUrl}
-                                                    onChange={(e) => setNewExerciseData({ ...newExerciseData, videoUrl: e.target.value })}
-                                                    placeholder="Вставьте ссылку на YouTube видео..."
-                                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-sm text-white focus:border-sparta-gold/30 outline-none transition-all shadow-inner"
-                                                />
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    <div className="grid grid-cols-4 gap-4">
-                                                        {newExerciseData.mediaItems.map((item) => (
-                                                            <div key={item.id} className="aspect-square rounded-2xl bg-white/5 border border-white/10 relative group overflow-hidden shadow-2xl">
-                                                                <img src={item.url} className="w-full h-full object-cover" />
-
-                                                                {/* Angle Overlays */}
-                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 gap-2">
-                                                                    <div className="grid grid-cols-2 gap-1 mb-6">
-                                                                        {['front', 'side', 'back', 'top'].map(angle => (
-                                                                            <button
-                                                                                key={angle}
-                                                                                onClick={(e) => {
-                                                                                    e.preventDefault();
-                                                                                    const updated = newExerciseData.mediaItems.map(mi =>
-                                                                                        mi.id === item.id ? { ...mi, angle } : mi
-                                                                                    );
-                                                                                    setNewExerciseData({ ...newExerciseData, mediaItems: updated });
-                                                                                }}
-                                                                                className={`py-1.5 rounded-lg text-[6px] font-black uppercase transition-all border ${item.angle === angle
-                                                                                        ? 'bg-sparta-gold text-black border-sparta-gold'
-                                                                                        : 'bg-black/80 text-white/40 border-white/10 hover:border-white/40 hover:text-white'
-                                                                                    }`}
-                                                                            >
-                                                                                {angle}
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Angle Tag Badge */}
-                                                                {item.angle && (
-                                                                    <div className="absolute top-2 left-2 px-2 py-1 bg-sparta-gold text-black rounded-lg text-[7px] font-black uppercase shadow-lg">
-                                                                        {item.angle}
-                                                                    </div>
-                                                                )}
-
-                                                                <button
-                                                                    onClick={() => handleRemoveMediaItem(item.id)}
-                                                                    className="absolute top-2 right-2 p-1.5 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-lg z-10"
-                                                                >
-                                                                    <X size={12} />
-                                                                </button>
-                                                            </div>
-                                                        ))}
-                                                        <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 hover:border-sparta-gold/30 hover:bg-sparta-gold/5 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group shadow-inner">
-                                                            <Plus size={24} className="text-white/10 group-hover:text-sparta-gold/50" />
-                                                            <span className="text-[8px] font-black text-white/20 uppercase">Добавить</span>
-                                                            <input type="file" multiple accept="image/*,video/*" className="hidden" onChange={(e) => {
-                                                                const files = Array.from(e.target.files || []);
-                                                                const newItems = files.map((f: any) => ({
-                                                                    id: `new-${Date.now()}-${Math.random()}`,
-                                                                    file: f,
-                                                                    url: URL.createObjectURL(f),
-                                                                    type: (f.type.startsWith('video/') ? 'video' : 'photo') as any,
-                                                                    angle: ''
-                                                                }));
-                                                                setNewExerciseData({
-                                                                    ...newExerciseData,
-                                                                    mediaItems: [...newExerciseData.mediaItems, ...newItems]
-                                                                });
-                                                            }} />
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                )}
-
-                                {currentExerciseStep === 3 && (
-                                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                                        <div className="space-y-6">
-                                            <div className="flex justify-between items-end">
-                                                <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-2">Анатомия упражнения</label>
-                                                <span className="text-[9px] font-black text-sparta-gold uppercase bg-sparta-gold/10 px-3 py-1 rounded-lg">
-                                                    {newExerciseData.muscles.length} групп выбрано
-                                                </span>
-                                            </div>
-
-                                            <div className="flex flex-col lg:flex-row gap-8 items-center bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
-                                                {/* Human Silhouette SVG Map */}
-                                                <div className="w-56 h-[320px] relative flex-shrink-0 bg-black/40 rounded-3xl p-4 border border-white/5 shadow-inner">
-                                                    <svg viewBox="0 0 100 200" className="w-full h-full drop-shadow-[0_0_10px_rgba(212,175,55,0.1)]">
-                                                        <defs>
-                                                            <filter id="glow">
-                                                                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                                                                <feMerge>
-                                                                    <feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" />
-                                                                </feMerge>
-                                                            </filter>
-                                                        </defs>
-                                                        {/* Silhouette background */}
-                                                        <path d="M50 10 c5 0 10 5 10 10 s-5 10 -10 10 s-10 -5 -10 -10 s5 -10 10 -10" fill="#222" />
-                                                        <rect x="35" y="30" width="30" height="50" rx="10" fill="#222" />
-                                                        <rect x="25" y="35" width="10" height="40" rx="5" fill="#222" />
-                                                        <rect x="65" y="35" width="10" height="40" rx="5" fill="#222" />
-                                                        <rect x="35" y="80" width="12" height="60" rx="6" fill="#222" />
-                                                        <rect x="53" y="80" width="12" height="60" rx="6" fill="#222" />
-
-                                                        {/* Interactive Zones */}
-                                                        {/* Chest */}
-                                                        <path
-                                                            d="M38 40 h24 a5 5 0 0 1 5 5 v10 a5 5 0 0 1 -5 5 h-24 a5 5 0 0 1 -5 -5 v-10 a5 5 0 0 1 5 -5"
-                                                            className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('chest') ? 'fill-sparta-gold filter-glow' : 'fill-white/10 hover:fill-white/20'}`}
-                                                            onClick={() => {
-                                                                const exists = newExerciseData.muscles.includes('chest');
-                                                                setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'chest') : [...newExerciseData.muscles, 'chest'] });
-                                                            }}
-                                                            filter={newExerciseData.muscles.includes('chest') ? 'url(#glow)' : ''}
-                                                        />
-                                                        {/* Core */}
-                                                        <rect
-                                                            x="40" y="58" width="20" height="18" rx="4"
-                                                            className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('core') ? 'fill-sparta-gold' : 'fill-white/10 hover:fill-white/20'}`}
-                                                            onClick={() => {
-                                                                const exists = newExerciseData.muscles.includes('core');
-                                                                setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'core') : [...newExerciseData.muscles, 'core'] });
-                                                            }}
-                                                        />
-                                                        {/* Shoulders */}
-                                                        <circle cx="28" cy="38" r="6" className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('shoulders') ? 'fill-sparta-gold' : 'fill-white/10 hover:fill-white/20'}`} onClick={() => {
-                                                            const exists = newExerciseData.muscles.includes('shoulders');
-                                                            setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'shoulders') : [...newExerciseData.muscles, 'shoulders'] });
-                                                        }} />
-                                                        <circle cx="72" cy="38" r="6" className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('shoulders') ? 'fill-sparta-gold' : 'fill-white/10 hover:fill-white/20'}`} onClick={() => {
-                                                            const exists = newExerciseData.muscles.includes('shoulders');
-                                                            setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'shoulders') : [...newExerciseData.muscles, 'shoulders'] });
-                                                        }} />
-                                                        {/* Arms (Bicep/Tricep) */}
-                                                        <rect x="23" y="47" width="8" height="20" rx="4" className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('biceps') ? 'fill-sparta-gold' : 'fill-white/10 hover:fill-white/20'}`} onClick={() => {
-                                                            const exists = newExerciseData.muscles.includes('biceps');
-                                                            setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'biceps') : [...newExerciseData.muscles, 'biceps'] });
-                                                        }} />
-                                                        <rect x="69" y="47" width="8" height="20" rx="4" className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('biceps') ? 'fill-sparta-gold' : 'fill-white/10 hover:fill-white/20'}`} onClick={() => {
-                                                            const exists = newExerciseData.muscles.includes('biceps');
-                                                            setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'biceps') : [...newExerciseData.muscles, 'biceps'] });
-                                                        }} />
-                                                        {/* Legs (Quads) */}
-                                                        <rect x="36" y="85" width="11" height="30" rx="4" className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('quads') ? 'fill-sparta-gold' : 'fill-white/10 hover:fill-white/20'}`} onClick={() => {
-                                                            const exists = newExerciseData.muscles.includes('quads');
-                                                            setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'quads') : [...newExerciseData.muscles, 'quads'] });
-                                                        }} />
-                                                        <rect x="53" y="85" width="11" height="30" rx="4" className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('quads') ? 'fill-sparta-gold' : 'fill-white/10 hover:fill-white/20'}`} onClick={() => {
-                                                            const exists = newExerciseData.muscles.includes('quads');
-                                                            setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'quads') : [...newExerciseData.muscles, 'quads'] });
-                                                        }} />
-                                                        {/* Calves */}
-                                                        <rect x="38" y="120" width="8" height="25" rx="4" className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('calves') ? 'fill-sparta-gold' : 'fill-white/10 hover:fill-white/20'}`} onClick={() => {
-                                                            const exists = newExerciseData.muscles.includes('calves');
-                                                            setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'calves') : [...newExerciseData.muscles, 'calves'] });
-                                                        }} />
-                                                        <rect x="54" y="120" width="8" height="25" rx="4" className={`cursor-pointer transition-all duration-300 ${newExerciseData.muscles.includes('calves') ? 'fill-sparta-gold' : 'fill-white/10 hover:fill-white/20'}`} onClick={() => {
-                                                            const exists = newExerciseData.muscles.includes('calves');
-                                                            setNewExerciseData({ ...newExerciseData, muscles: exists ? newExerciseData.muscles.filter(m => m !== 'calves') : [...newExerciseData.muscles, 'calves'] });
-                                                        }} />
-                                                    </svg>
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                                                </div>
-
-                                                {/* Textual Selector (Alternative/Details) */}
-                                                <div className="flex-1 space-y-4">
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        {MUSCLE_GROUPS.map(muscle => (
-                                                            <button
-                                                                key={muscle.id}
-                                                                onClick={() => {
-                                                                    const exists = newExerciseData.muscles.includes(muscle.id);
-                                                                    setNewExerciseData({
-                                                                        ...newExerciseData,
-                                                                        muscles: exists
-                                                                            ? newExerciseData.muscles.filter(m => m !== muscle.id)
-                                                                            : [...newExerciseData.muscles, muscle.id]
-                                                                    });
-                                                                }}
-                                                                className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${newExerciseData.muscles.includes(muscle.id)
-                                                                        ? 'bg-sparta-gold/10 border-sparta-gold text-sparta-gold'
-                                                                        : 'bg-white/5 border-white/5 text-white/20 hover:border-white/10 hover:text-white/40'
-                                                                    }`}
-                                                            >
-                                                                <span className="text-xl">{muscle.icon}</span>
-                                                                <div>
-                                                                    <div className="text-[10px] font-black uppercase tracking-widest">{muscle.label}</div>
-                                                                    <div className="text-[8px] font-bold opacity-40 uppercase">Группа мышц</div>
-                                                                </div>
-                                                                {newExerciseData.muscles.includes(muscle.id) && <CheckCircle size={14} className="ml-auto" />}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => setNewExerciseData({ ...newExerciseData, muscles: [] })}
-                                                        className="w-full py-4 text-[9px] font-black uppercase tracking-widest text-white/10 hover:text-red-400 transition-all border border-dashed border-white/5 hover:border-red-400/20 rounded-xl"
-                                                    >
-                                                        Сбросить выбор
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-end">
-                                                <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-2">Выбор коллекции</label>
-                                                {newExerciseData.collectionId !== 'all' && (
-                                                    <span className="text-[9px] font-black text-purple-400 uppercase">Закреплено в папке</span>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                <button
-                                                    onClick={() => setNewExerciseData({ ...newExerciseData, collectionId: 'all' })}
-                                                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${newExerciseData.collectionId === 'all' ? 'bg-white text-black' : 'bg-white/5 text-white/20'}`}
-                                                >
-                                                    Без папки
-                                                </button>
-                                                {exerciseCollections.map(col => (
-                                                    <button
-                                                        key={col.id}
-                                                        onClick={() => setNewExerciseData({ ...newExerciseData, collectionId: col.id })}
-                                                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all border ${newExerciseData.collectionId === col.id
-                                                                ? 'bg-white/10 text-white'
-                                                                : 'bg-white/5 text-white/20 border-transparent hover:border-white/10'
-                                                            }`}
-                                                        style={{ borderColor: newExerciseData.collectionId === col.id ? col.color : 'transparent', color: newExerciseData.collectionId === col.id ? col.color : 'inherit' }}
-                                                    >
-                                                        {col.title}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </div>
-
-                            {/* Bottom Navigation */}
-                            <div className="flex gap-4 pt-12 border-t border-white/5">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (currentExerciseStep > 1) {
-                                            setCurrentExerciseStep(currentExerciseStep - 1);
-                                        } else {
-                                            setIsExerciseModalOpen(false);
-                                            setEditingExercise(null);
-                                            setCurrentExerciseStep(1);
-                                            setNewExerciseData({
-                                                title: '', description: '', category: 'technique',
-                                                level: 'beginner', equipment: [], muscles: [], usageCount: 0, collectionId: 'all',
-                                                videoUrl: '', mediaType: 'url', mediaItems: []
-                                            });
-                                        }
-                                    }}
-                                    className="px-10 py-5 bg-white/5 text-white hover:bg-white/10 font-black uppercase text-[11px] rounded-2xl transition-all border border-white/10"
-                                >
-                                    {currentExerciseStep === 1 ? 'ОТМЕНА' : 'НАЗАД'}
-                                </button>
-
-                                {currentExerciseStep < 3 ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setCurrentExerciseStep(currentExerciseStep + 1)}
-                                        disabled={!newExerciseData.title.trim() && currentExerciseStep === 1}
-                                        className={`flex-1 py-5 font-black uppercase text-[11px] rounded-2xl transition-all shadow-xl shadow-sparta-gold/20 flex items-center justify-center gap-3
-                                            ${(!newExerciseData.title.trim() && currentExerciseStep === 1)
-                                                ? 'bg-white/5 text-white/20 cursor-not-allowed'
-                                                : 'bg-sparta-gold text-black hover:bg-white active:scale-95'}`}
-                                    >
-                                        ДАЛЕЕ
-                                        <ChevronRight size={18} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={handleSaveExercise}
-                                        disabled={isSavingExercise || !newExerciseData.title.trim()}
-                                        className={`flex-1 py-5 font-black uppercase text-[11px] rounded-2xl transition-all shadow-xl shadow-sparta-gold/20 flex items-center justify-center gap-3
-                                            ${(isSavingExercise || !newExerciseData.title.trim())
-                                                ? 'bg-white/5 text-white/20 cursor-not-allowed'
-                                                : 'bg-sparta-gold text-black hover:bg-white active:scale-95'}`}
-                                    >
-                                        {isSavingExercise && <Loader2 size={18} className="animate-spin" />}
-                                        {isSavingExercise ? 'СОХРАНЕНИЕ...' : editingExercise ? 'ОБНОВИТЬ EX' : 'СОЗДАТЬ EX'}
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {isTemplateModalOpen && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/95 backdrop-blur-3xl">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-[#0a0a0a]/80 backdrop-blur-[50px] border border-white/10 rounded-[4rem] p-12 max-w-2xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
-                        >
-                            <div className="absolute -top-20 -right-20 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl" />
-                            <h3 className="text-3xl font-russo text-white uppercase mb-8 flex items-center gap-4">
-                                <div className="p-3 bg-purple-500/20 rounded-2xl text-purple-400"><Layers size={24} /></div>
-                                <span>Конструктор Программы</span>
-                            </h3>
-                            <div className="space-y-6 relative z-10">
-                                <input
-                                    type="text"
-                                    value={newTemplateData.title}
-                                    onChange={(e) => setNewTemplateData({ ...newTemplateData, title: e.target.value })}
-                                    placeholder="Название программы (например: Базовая интенсивная)"
-                                    className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] p-5 text-sm text-white focus:border-purple-500/30 outline-none transition-all font-bold"
-                                />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Тип программы</label>
-                                        <select
-                                            value={newTemplateData.category}
-                                            onChange={(e) => setNewTemplateData({ ...newTemplateData, category: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-white outline-none focus:border-purple-500/30 transition-all font-bold"
-                                        >
-                                            <option value="technique">ТЕХНИКА</option>
-                                            <option value="strength">СИЛОВАЯ</option>
-                                            <option value="sparring">СПАРРИНГИ</option>
-                                            <option value="pro">ПРОФЕССИОНАЛЬНАЯ</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Инструкция (Интенсивность)</label>
-                                        <select
-                                            value={newTemplateData.intensity}
-                                            onChange={(e) => setNewTemplateData({ ...newTemplateData, intensity: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-white outline-none focus:border-purple-500/30 transition-all font-bold"
-                                        >
-                                            <option value="low">НИЗКАЯ (ВОССТАНОВЛЕНИЕ)</option>
-                                            <option value="medium">СРЕДНЯЯ (БАЛАНС)</option>
-                                            <option value="high">ВЫСОКАЯ (ХАРДКОР)</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between ml-1">
-                                        <div className="flex flex-col">
-                                            <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Медиа-хаб программы</label>
-                                            <span className="text-[7px] text-white/10 uppercase font-bold mt-1">Добавьте фото обложки и галерею</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => setShowTemplateUrlInput(!showTemplateUrlInput)}
-                                                className={`p-2 rounded-lg transition-all ${showTemplateUrlInput ? 'bg-purple-500 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
-                                                title="Вставить ссылку"
-                                            >
-                                                <LinkIcon size={14} />
-                                            </button>
-                                            <button
-                                                onClick={() => document.getElementById('template-media-input')?.click()}
-                                                disabled={isUploadingCover}
-                                                className="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-[8px] font-black text-purple-400 uppercase rounded-lg transition-all flex items-center gap-2 disabled:opacity-50"
-                                            >
-                                                {isUploadingCover ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
-                                                {isUploadingCover ? 'Загрузка...' : 'Добавить фото'}
-                                            </button>
-                                            <input
-                                                id="template-media-input"
-                                                type="file"
-                                                multiple
-                                                accept="image/*"
-                                                onChange={(e) => e.target.files && handleTemplateMediaFiles(e.target.files)}
-                                                className="hidden"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Smart URL Input */}
-                                    <AnimatePresence>
-                                        {showTemplateUrlInput && (
-                                            <motion.div
-                                                initial={{ opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: 'auto' }}
-                                                exit={{ opacity: 0, height: 0 }}
-                                                className="relative group/input overflow-hidden"
-                                            >
-                                                <input
-                                                    type="text"
-                                                    autoFocus
-                                                    value={newTemplateData.coverImage}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        setNewTemplateData({ ...newTemplateData, coverImage: val });
-                                                        // Smart auto-hide: if it looks like a full URL, hide it after a moment
-                                                        if (val.length > 10 && (val.startsWith('http') || val.includes('.'))) {
-                                                            setTimeout(() => setShowTemplateUrlInput(false), 1500);
-                                                        }
-                                                    }}
-                                                    placeholder="Вставьте ссылку на фото..."
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pl-10 pr-10 text-[9px] text-white focus:text-white focus:border-purple-500/30 outline-none transition-all font-bold"
-                                                />
-                                                <Paperclip className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={12} />
-                                                {newTemplateData.coverImage && (
-                                                    <button
-                                                        onClick={() => setNewTemplateData({ ...newTemplateData, coverImage: '' })}
-                                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-red-400 p-1"
-                                                    >
-                                                        <X size={12} />
-                                                    </button>
-                                                )}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-
-                                    {/* persistent Drop Zone (Invite state) */}
-                                    <div
-                                        onDragOver={(e) => {
-                                            e.preventDefault();
-                                            setIsDraggingToTemplate(true);
-                                        }}
-                                        onDragLeave={() => setIsDraggingToTemplate(false)}
-                                        onDrop={(e) => {
-                                            e.preventDefault();
-                                            if (e.dataTransfer.files) handleTemplateMediaFiles(e.dataTransfer.files);
-                                        }}
-                                        className={`relative h-[120px] rounded-[2rem] border-2 border-dashed transition-all overflow-hidden group/drop flex flex-col items-center justify-center gap-2
-                                            ${isDraggingToTemplate
-                                                ? 'bg-purple-500/20 border-purple-500 scale-[0.98] ring-4 ring-purple-500/10'
-                                                : 'bg-white/5 border-white/10 hover:border-white/20 text-white/20'}`}
-                                    >
-                                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/5 group-hover/drop:scale-110 group-hover/drop:bg-purple-500/10 group-hover/drop:border-purple-500/20 transition-all">
-                                            <ImageIcon size={20} />
-                                        </div>
-                                        <div className="flex flex-col items-center gap-0.5">
-                                            <span className="text-[9px] font-black uppercase tracking-widest">{isDraggingToTemplate ? 'Бросайте сюда!' : 'Закиньте фото сюда'}</span>
-                                            <span className="text-[7px] font-bold uppercase opacity-50">поддерживается drag & drop</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Active Preview & Gallery */}
-                                    <AnimatePresence>
-                                        {(newTemplateData.coverImage || newTemplateData.gallery.length > 0) && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, scale: 0.95 }}
-                                                className="space-y-4"
-                                            >
-                                                {newTemplateData.coverImage && (
-                                                    <div
-                                                        className="relative aspect-[21/9] rounded-[2rem] overflow-hidden group/main cursor-pointer border-2 border-transparent hover:border-purple-500/50 transition-all shadow-2xl"
-                                                    >
-                                                        <img
-                                                            src={newTemplateData.coverImage}
-                                                            onClick={() => handleOpenTemplateLightbox(newTemplateData.coverImage)}
-                                                            className="w-full h-full object-cover transition-transform duration-700 group-hover/main:scale-105"
-                                                        />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none p-6 flex flex-col justify-end">
-                                                            <div className="flex items-center justify-between pointer-events-auto">
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-[8px] font-black text-purple-400 uppercase tracking-widest">Основная обложка</span>
-                                                                    <span className="text-[10px] font-bold text-white uppercase">{newTemplateData.title || 'Программа'}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <button
-                                                                        onClick={() => handleOpenTemplateLightbox(newTemplateData.coverImage)}
-                                                                        className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl backdrop-blur-md transition-all border border-white/10 flex items-center gap-2 group/zoom"
-                                                                    >
-                                                                        <Maximize2 size={16} className="group-hover/zoom:scale-110 transition-transform" />
-                                                                        <span className="text-[8px] font-black uppercase">Просмотр</span>
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => setShowTemplateUrlInput(!showTemplateUrlInput)}
-                                                                        className={`p-3 rounded-2xl backdrop-blur-md transition-all border border-white/10 flex items-center gap-2 group/link ${showTemplateUrlInput ? 'bg-purple-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`}
-                                                                    >
-                                                                        <LinkIcon size={16} />
-                                                                        <span className="text-[8px] font-black uppercase">Ссылка</span>
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setNewTemplateData(prev => ({ ...prev, coverImage: '' }));
-                                                                        }}
-                                                                        className="p-3 bg-red-500/10 hover:bg-red-500 text-white rounded-2xl transition-all border border-red-500/20"
-                                                                    >
-                                                                        <TrashIcon size={16} />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {newTemplateData.gallery.length > 0 && (
-                                                    <div className="grid grid-cols-5 gap-2">
-                                                        {newTemplateData.gallery.map((url, idx) => (
-                                                            <div
-                                                                key={idx}
-                                                                className="relative aspect-square rounded-xl overflow-hidden group/thumb border border-white/5 hover:border-purple-500/30 transition-all cursor-pointer"
-                                                            >
-                                                                <img
-                                                                    src={url}
-                                                                    onClick={() => handleOpenTemplateLightbox(url)}
-                                                                    className="w-full h-full object-cover opacity-60 group-hover/thumb:opacity-100 transition-opacity"
-                                                                />
-                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                                                                    <div className="flex gap-1.5">
-                                                                        <button
-                                                                            onClick={() => handleOpenTemplateLightbox(url)}
-                                                                            className="p-1.5 bg-white/20 hover:bg-white text-black rounded-lg transition-all"
-                                                                        >
-                                                                            <Maximize2 size={10} />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => setShowTemplateUrlInput(!showTemplateUrlInput)}
-                                                                            className={`p-1.5 rounded-lg transition-all ${showTemplateUrlInput ? 'bg-purple-500 text-white' : 'bg-white/20 text-white hover:bg-purple-500'}`}
-                                                                        >
-                                                                            <LinkIcon size={10} />
-                                                                        </button>
-                                                                    </div>
-                                                                    <div className="flex gap-1.5">
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                setNewTemplateData(prev => ({ ...prev, coverImage: url }));
-                                                                            }}
-                                                                            className={`p-1.5 rounded-lg transition-all ${newTemplateData.coverImage === url ? 'bg-purple-500 text-white' : 'bg-white/10 text-white hover:bg-purple-500'}`}
-                                                                        >
-                                                                            <Star size={10} fill={newTemplateData.coverImage === url ? "currentColor" : "none"} />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleRemoveGalleryImage(url);
-                                                                            }}
-                                                                            className="p-1.5 bg-red-500/20 hover:bg-red-500 text-white rounded-lg transition-all"
-                                                                        >
-                                                                            <X size={10} />
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-
-                                <div className="space-y-4 pt-4 border-t border-white/5">
-                                    <div className="flex flex-col gap-4">
-                                        <div className="flex items-center justify-between">
-                                            <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">
-                                                Настройка блоков программы
-                                            </label>
-                                            <div className="flex items-center gap-2 text-[8px] font-bold text-purple-400 uppercase bg-purple-500/10 px-3 py-1 rounded-lg">
-                                                <Info size={10} />
-                                                <span>Выберите этап и добавьте упражнения</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Stage Selector Tabs */}
-                                        <div className="grid grid-cols-4 gap-2">
-                                            {(['warmup', 'main', 'skills', 'cooldown'] as const).map(stage => (
-                                                <button
-                                                    key={stage}
-                                                    onClick={() => setActiveConstructorStage(stage)}
-                                                    className={`py-3 rounded-xl text-[8px] font-black uppercase tracking-tighter transition-all border ${activeConstructorStage === stage
-                                                            ? 'bg-purple-500 border-purple-500 text-white shadow-lg shadow-purple-500/20'
-                                                            : 'bg-white/5 border-white/5 text-white/20 hover:border-white/10'
-                                                        }`}
-                                                >
-                                                    {stage === 'warmup' ? 'РАЗМИНКА' :
-                                                        stage === 'main' ? 'ОСНОВА' :
-                                                            stage === 'skills' ? 'НАВЫКИ' : 'ЗАМИНКА'}
-                                                    <div className="mt-1 opacity-40">({newTemplateData.stages[stage].length})</div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Search Field */}
-                                    <div className="relative mb-4">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                                        <input
-                                            type="text"
-                                            value={programExerciseSearch}
-                                            onChange={(e) => setProgramExerciseSearch(e.target.value)}
-                                            placeholder="Поиск упражнения..."
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 pl-10 text-[10px] text-white focus:border-purple-500/30 outline-none transition-all font-bold placeholder:text-white/10"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {exercises
-                                            .filter(ex => ex.title.toLowerCase().includes(programExerciseSearch.toLowerCase()))
-                                            .map(ex => {
-                                                const isSelected = newTemplateData.stages[activeConstructorStage].includes(ex.id);
-                                                return (
-                                                    <button
-                                                        key={ex.id}
-                                                        onClick={() => {
-                                                            setNewTemplateData(prev => {
-                                                                const currentStage = prev.stages[activeConstructorStage];
-                                                                const newStage = isSelected
-                                                                    ? currentStage.filter(id => id !== ex.id)
-                                                                    : [...currentStage, ex.id];
-
-                                                                return {
-                                                                    ...prev,
-                                                                    stages: {
-                                                                        ...prev.stages,
-                                                                        [activeConstructorStage]: newStage
-                                                                    }
-                                                                };
-                                                            });
-                                                        }}
-                                                        className={`p-4 rounded-2xl border text-left flex items-center justify-between transition-all group/item
-                                                            ${isSelected
-                                                                ? 'bg-purple-500/20 border-purple-500 text-white font-bold ring-1 ring-purple-500/50'
-                                                                : 'bg-white/5 border-white/5 text-white/40 hover:border-white/20'}`}
-                                                    >
-                                                        <div className="flex flex-col min-w-0">
-                                                            <span className="text-[10px] uppercase truncate pr-2">{ex.title}</span>
-                                                            <span className="text-[7px] text-white/20 font-black uppercase mt-1">
-                                                                {ex.category === 'technique' ? 'Тех' : 'Физ'}
-                                                            </span>
-                                                        </div>
-                                                        {isSelected ? (
-                                                            <CheckCircle size={14} className="text-purple-400 shrink-0" />
-                                                        ) : (
-                                                            <Plus size={14} className="text-white/10 group-hover/item:text-white/40 shrink-0" />
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                    </div>
-                                </div>
-                                <div className="flex gap-4 pt-6">
-                                    <Button onClick={() => setIsTemplateModalOpen(false)} className="flex-1 py-5 bg-white/5 text-white hover:bg-white/10 font-black uppercase text-xs">ОТМЕНА</Button>
-                                    <button
-                                        onClick={async () => {
-                                            if (!newTemplateData.title.trim()) return;
-                                            setIsSavingTemplate(true);
-                                            try {
-                                                const finalData = {
-                                                    ...newTemplateData,
-                                                    exercises: selectedExercisesForTemplate,
-                                                    coachId: userProfile.coachId,
-                                                    updatedAt: serverTimestamp()
-                                                };
-
-                                                if (editingTemplate) {
-                                                    await updateDoc(doc(db, "training_templates", editingTemplate.id), finalData);
-                                                } else {
-                                                    (finalData as any).createdAt = serverTimestamp();
-                                                    await addDoc(collection(db, "training_templates"), finalData);
-                                                }
-
-                                                setIsTemplateModalOpen(false);
-                                                setEditingTemplate(null);
-                                                setNewTemplateData({
-                                                    title: '',
-                                                    description: '',
-                                                    intensity: 'medium',
-                                                    duration: '4',
-                                                    category: 'technique',
-                                                    stages: { warmup: [], main: [], skills: [], cooldown: [] },
-                                                    coverImage: '',
-                                                    gallery: [],
-                                                    intensityCurve: [30, 50, 80, 45]
-                                                });
-                                                setSelectedExercisesForTemplate([]);
-                                            } catch (err) { console.error(err); }
-                                            setIsSavingTemplate(false);
-                                        }}
-                                        disabled={isSavingTemplate || !newTemplateData.title || (Object.values(newTemplateData.stages).flat().length === 0)}
-                                        className={`flex-1 py-5 font-black uppercase text-xs rounded-2xl transition-all shadow-xl shadow-purple-500/20 flex items-center justify-center gap-2
-                                            ${(isSavingTemplate || !newTemplateData.title || (Object.values(newTemplateData.stages).flat().length === 0))
-                                                ? 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5 shadow-none'
-                                                : 'bg-purple-500 text-white hover:bg-white hover:text-black active:scale-95'}`}
-                                    >
-                                        {isSavingTemplate && <Loader2 size={16} className="animate-spin" />}
-                                        {isSavingTemplate ? 'СОХРАНЕНИЕ...' : editingTemplate ? 'ОБНОВИТЬ ПРОГРАММУ' : 'СОЗДАТЬ ШАБЛОН'}
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
             {/* CLEAN DEDICATED ASSIGNMENT MODAL */}
             <AssignmentModal
                 isOpen={isAssignmentModalOpen}
@@ -4829,7 +4782,7 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                                 </div>
                             </div>
 
-                            <Button onClick={() => setIsExerciseGuideOpen(false)} className="w-full py-6 bg-sparta-gold text-black rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-sparta-gold/20">ВСЁ РЇРЎРќРћ, СПАСИБО!</Button>
+                            <Button onClick={() => setIsExerciseGuideOpen(false)} className="w-full py-6 bg-sparta-gold text-black rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-sparta-gold/20">ВСЁ РЇРЎРќРÓ, СПАСИБО!</Button>
                         </motion.div>
                     </div>
                 )}
@@ -4998,7 +4951,8 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                                                     currentIndex: (prev.currentIndex - 1 + prev.items.length) % prev.items.length
                                                 } : null);
                                             }}
-                                            className="absolute left-6 w-14 h-14 rounded-full bg-white/5 hover:bg-sparta-gold hover:text-black text-white flex items-center justify-center transition-all border border-white/5 opacity-0 group-hover/player:opacity-100"
+                                            className="absolute left-6 w-14 h-14 rounded-full bg-black/60 hover:bg-sparta-gold hover:text-black text-white flex items-center justify-center transition-all border border-white/10 opacity-60 hover:opacity-100 group-hover/player:opacity-100 backdrop-blur-md cursor-pointer"
+                                            title="Предыдущее"
                                         >
                                             <ChevronRight size={32} className="rotate-180" />
                                         </button>
@@ -5010,7 +4964,8 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                                                     currentIndex: (prev.currentIndex + 1) % prev.items.length
                                                 } : null);
                                             }}
-                                            className="absolute right-6 w-14 h-14 rounded-full bg-white/5 hover:bg-sparta-gold hover:text-black text-white flex items-center justify-center transition-all border border-white/5 opacity-0 group-hover/player:opacity-100"
+                                            className="absolute right-6 w-14 h-14 rounded-full bg-black/60 hover:bg-sparta-gold hover:text-black text-white flex items-center justify-center transition-all border border-white/10 opacity-60 hover:opacity-100 group-hover/player:opacity-100 backdrop-blur-md cursor-pointer"
+                                            title="Следующее"
                                         >
                                             <ChevronRight size={32} />
                                         </button>
@@ -5099,6 +5054,457 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                             </div>
                         </motion.div>
                     </div>
+                )}
+            </AnimatePresence>
+
+            {/* CREATE / EDIT TOPIC MODAL */}
+            <AnimatePresence>
+                {isTopicModalOpen && (
+                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/95 backdrop-blur-3xl">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden"
+                        >
+                            <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl" />
+                            <h3 className="text-2xl sm:text-3xl font-russo text-white uppercase mb-6 flex items-center gap-3">
+                                <div className="p-3 bg-amber-500/20 rounded-2xl text-amber-400">
+                                    <Sparkles size={24} />
+                                </div>
+                                <span>{editingTopic ? 'Редактировать тему' : 'Новая футбольная тема'}</span>
+                            </h3>
+
+                            <div className="space-y-6 relative z-10">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">
+                                        Иконка / Эмодзи
+                                    </label>
+                                    <div className="flex flex-wrap gap-2 p-3 bg-white/5 border border-white/10 rounded-2xl max-h-36 overflow-y-auto custom-scrollbar">
+                                        {['⚽', '🎯', '🔄', '⚡', '🛡️', '🧤', '🧠', '🏃', '🥅', '👟', '⏱', '🏆', '🔥', '💥', '🧩', '📈'].map(emoji => (
+                                            <button
+                                                key={emoji}
+                                                type="button"
+                                                onClick={() => setNewTopicData({ ...newTopicData, icon: emoji })}
+                                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-all cursor-pointer ${
+                                                    newTopicData.icon === emoji
+                                                        ? 'bg-amber-400 text-black scale-110 shadow-lg shadow-amber-400/20 font-bold'
+                                                        : 'bg-white/5 text-white hover:bg-white/15'
+                                                }`}
+                                            >
+                                                {emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">
+                                        Название темы <span className="text-amber-400">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Напр: Стандарты и угловые, Игра головой..."
+                                        value={newTopicData.label}
+                                        onChange={(e) => setNewTopicData({ ...newTopicData, label: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white focus:border-amber-400 outline-none transition-all font-bold placeholder:text-white/20"
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <Button
+                                        onClick={() => {
+                                            setIsTopicModalOpen(false);
+                                            setEditingTopic(null);
+                                        }}
+                                        className="flex-1 py-4 bg-white/5 text-white hover:bg-white/10 font-black uppercase text-xs rounded-xl"
+                                    >
+                                        ОТМЕНА
+                                    </Button>
+                                    <Button
+                                        onClick={handleSaveTopic}
+                                        disabled={!newTopicData.label.trim()}
+                                        className="flex-1 py-4 bg-amber-400 hover:bg-amber-300 text-black font-black uppercase text-xs rounded-xl shadow-lg shadow-amber-400/20"
+                                    >
+                                        {editingTopic ? 'СОХРАНИТЬ' : 'СОЗДАТЬ'}
+                                    </Button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* FLOATING TRAINING PLAN BUILDER BOTTOM BAR */}
+            <AnimatePresence>
+                {trainingPlanDraft.length > 0 && (
+                    <motion.div
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[190] w-[95%] max-w-2xl bg-[#141416]/95 backdrop-blur-2xl border-2 border-amber-500/40 rounded-full px-5 py-3.5 shadow-[0_10px_40px_rgba(0,0,0,0.9),0_0_30px_rgba(245,158,11,0.25)] flex items-center justify-between gap-4 text-white"
+                    >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-10 h-10 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold font-russo text-base flex-shrink-0 shadow-md shadow-amber-400/30">
+                                {trainingPlanDraft.length}
+                            </div>
+                            <div className="truncate">
+                                <div className="text-[11px] font-black uppercase tracking-wider text-amber-400">
+                                    В плане тренировки
+                                </div>
+                                <div className="text-xs text-zinc-300 font-semibold truncate">
+                                    {trainingPlanDraft.length} упр. • {trainingPlanDraft.reduce((acc, curr) => acc + (Number(curr.durationMinutes) || 15), 0)} мин
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                                onClick={() => setIsPlanDrawerOpen(true)}
+                                className="px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-sm"
+                            >
+                                <Eye size={14} className="text-amber-400" />
+                                <span>Посмотреть план</span>
+                            </button>
+
+                            <button
+                                onClick={() => setIsPlanDrawerOpen(true)}
+                                className="px-5 py-2.5 rounded-full bg-sparta-gold hover:bg-amber-300 text-black text-xs font-russo uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-amber-400/25 flex items-center gap-1.5 active:scale-95"
+                            >
+                                <SaveIcon size={14} />
+                                <span>Сохранить</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    if (window.confirm('Очистить черновик плана тренировки?')) {
+                                        setTrainingPlanDraft([]);
+                                    }
+                                }}
+                                className="p-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer"
+                                title="Очистить черновик"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* TRAINING PLAN DRAWER / MODAL */}
+            <AnimatePresence>
+                {isPlanDrawerOpen && (
+                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto custom-scrollbar">
+                        <div className="fixed inset-0" onClick={() => setIsPlanDrawerOpen(false)} />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-4xl bg-[#121214] border border-amber-500/30 rounded-[2.5rem] shadow-[0_0_60px_rgba(0,0,0,0.9),0_0_30px_rgba(245,158,11,0.15)] overflow-hidden flex flex-col my-auto z-10 max-h-[90vh]"
+                        >
+                            {/* Header */}
+                            <div className="p-6 sm:p-8 border-b border-white/10 flex items-center justify-between gap-4 bg-gradient-to-b from-white/5 to-transparent">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-[11px] font-bold uppercase tracking-wider">
+                                            Конструктор тренировки
+                                        </span>
+                                        <span className="px-3 py-1 bg-white/5 border border-white/10 text-zinc-300 rounded-full text-[11px] font-bold">
+                                            {trainingPlanDraft.length} упр. • {trainingPlanDraft.reduce((acc, curr) => acc + (Number(curr.durationMinutes) || 15), 0)} мин
+                                        </span>
+                                    </div>
+                                    <h2 className="text-2xl sm:text-3xl font-russo text-white uppercase tracking-tight">
+                                        План занятия
+                                    </h2>
+                                </div>
+
+                                <button
+                                    onClick={() => setIsPlanDrawerOpen(false)}
+                                    className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all border border-white/10 cursor-pointer"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Content Columns */}
+                            <div className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-y-auto custom-scrollbar flex-1">
+                                {/* Left Side: Exercise List (7 cols) */}
+                                <div className="lg:col-span-7 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                                            Упражнения в занятии ({trainingPlanDraft.length})
+                                        </h3>
+                                        <button
+                                            onClick={() => setTrainingPlanDraft([])}
+                                            className="text-xs text-red-400 hover:text-red-300 hover:underline font-semibold cursor-pointer"
+                                        >
+                                            Очистить всё
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2.5 max-h-[450px] overflow-y-auto pr-1 custom-scrollbar">
+                                        {trainingPlanDraft.map((item, idx) => (
+                                            <div
+                                                key={item.draftId}
+                                                className="p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-500/30 transition-all flex items-center justify-between gap-3 group"
+                                            >
+                                                {/* Left: Index & Thumb */}
+                                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                    <div className="w-6 text-center text-xs font-russo text-amber-400/80">
+                                                        #{idx + 1}
+                                                    </div>
+
+                                                    <div className="w-12 h-12 rounded-xl bg-zinc-900 overflow-hidden flex-shrink-0 border border-white/10 flex items-center justify-center">
+                                                        {item.mediaItems && item.mediaItems.length > 0 ? (
+                                                            item.mediaItems[0].type === 'video' || item.mediaItems[0].type === 'url' ? (
+                                                                <Play size={16} className="text-amber-400" />
+                                                            ) : (
+                                                                <img src={item.mediaItems[0].url} alt="" className="w-full h-full object-cover" />
+                                                            )
+                                                        ) : item.mediaUrl ? (
+                                                            <Play size={16} className="text-amber-400" />
+                                                        ) : (
+                                                            <span className="text-lg">⚽</span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="min-w-0 flex-1">
+                                                        <h4 className="font-bold text-white text-xs truncate uppercase tracking-tight">
+                                                            {item.title}
+                                                        </h4>
+                                                        <div className="flex items-center gap-1.5 mt-1">
+                                                            <span className="text-[10px] text-amber-400/90 font-semibold truncate">
+                                                                {item.categoryLabel || item.category || 'Упражнение'}
+                                                            </span>
+                                                            <span className="text-[10px] text-zinc-500">•</span>
+                                                            <span className="text-[10px] text-zinc-400 font-medium">
+                                                                {item.ageRange || 'Все возраста'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Right: Duration Stepper & Actions */}
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    {/* Duration Adjuster */}
+                                                    <div className="flex items-center bg-black/40 border border-white/10 rounded-xl px-2 py-1 gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleUpdateDraftItemDuration(item.draftId, (Number(item.durationMinutes) || 15) - 5)}
+                                                            className="w-5 h-5 rounded hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center font-bold text-xs"
+                                                            title="-5 минут"
+                                                        >
+                                                            -
+                                                        </button>
+                                                        <span className="text-xs font-bold text-amber-300 min-w-[32px] text-center">
+                                                            {item.durationMinutes || 15}м
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleUpdateDraftItemDuration(item.draftId, (Number(item.durationMinutes) || 15) + 5)}
+                                                            className="w-5 h-5 rounded hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center font-bold text-xs"
+                                                            title="+5 минут"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Move Up/Down */}
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <button
+                                                            type="button"
+                                                            disabled={idx === 0}
+                                                            onClick={() => handleReorderPlanDraft(idx, 'up')}
+                                                            className="p-1 rounded hover:bg-white/10 disabled:opacity-20 text-zinc-400 hover:text-white"
+                                                            title="Переместить выше"
+                                                        >
+                                                            <ArrowUp size={12} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            disabled={idx === trainingPlanDraft.length - 1}
+                                                            onClick={() => handleReorderPlanDraft(idx, 'down')}
+                                                            className="p-1 rounded hover:bg-white/10 disabled:opacity-20 text-zinc-400 hover:text-white"
+                                                            title="Переместить ниже"
+                                                        >
+                                                            <ArrowDown size={12} />
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Delete */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveFromPlanDraft(item.draftId)}
+                                                        className="p-1.5 rounded-lg hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors ml-1"
+                                                        title="Удалить из плана"
+                                                    >
+                                                        <TrashIcon size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {trainingPlanDraft.length === 0 && (
+                                            <div className="p-8 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl space-y-2">
+                                                <div className="text-3xl">📋</div>
+                                                <div className="text-sm font-bold text-zinc-300">План тренировки пуст</div>
+                                                <div className="text-xs text-zinc-500">
+                                                    Нажимайте «➕ В план» на карточках упражнений в каталоге, чтобы собрать структуру занятия.
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Right Side: Training Settings & Target Group (5 cols) */}
+                                <div className="lg:col-span-5 space-y-5 bg-white/[0.02] p-5 rounded-3xl border border-white/5 flex flex-col justify-between">
+                                    <div className="space-y-4">
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
+                                            <CalendarIcon size={14} className="text-amber-400" /> Параметры занятия
+                                        </h3>
+
+                                        {/* Title Input */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                                Название тренировки
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Напр: Интенсивное ведение мяча и удары..."
+                                                value={planAssignmentData.title}
+                                                onChange={(e) => setPlanAssignmentData({ ...planAssignmentData, title: e.target.value })}
+                                                className="w-full bg-black/60 border border-white/15 focus:border-amber-400 rounded-xl px-4 py-2.5 text-xs text-white outline-none font-bold"
+                                            />
+                                        </div>
+
+                                        {/* Target Group Selector */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                                Кому назначить (Группа)
+                                            </label>
+                                            <select
+                                                value={planAssignmentData.groupId || selectedGroupId || (myGroups[0]?.id || '')}
+                                                onChange={(e) => setPlanAssignmentData({ ...planAssignmentData, groupId: e.target.value })}
+                                                className="w-full bg-black/60 border border-white/15 focus:border-amber-400 rounded-xl px-4 py-2.5 text-xs text-white outline-none font-bold cursor-pointer"
+                                            >
+                                                {myGroups.map(g => (
+                                                    <option key={g.id} value={g.id} className="bg-zinc-900 text-white">
+                                                        {g.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Date and Time */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                                    Дата
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={planAssignmentData.date}
+                                                    onChange={(e) => setPlanAssignmentData({ ...planAssignmentData, date: e.target.value })}
+                                                    className="w-full bg-black/60 border border-white/15 focus:border-amber-400 rounded-xl px-3 py-2 text-xs text-white outline-none font-bold"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                                    Время
+                                                </label>
+                                                <input
+                                                    type="time"
+                                                    value={planAssignmentData.time}
+                                                    onChange={(e) => setPlanAssignmentData({ ...planAssignmentData, time: e.target.value })}
+                                                    className="w-full bg-black/60 border border-white/15 focus:border-amber-400 rounded-xl px-3 py-2 text-xs text-white outline-none font-bold"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Intensity Selector */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                                Интенсивность
+                                            </label>
+                                            <div className="grid grid-cols-3 gap-1.5">
+                                                {[
+                                                    { id: 'low', label: 'Низкая 🟢' },
+                                                    { id: 'medium', label: 'Средняя 🟡' },
+                                                    { id: 'high', label: 'Высокая 🔴' }
+                                                ].map(item => (
+                                                    <button
+                                                        key={item.id}
+                                                        type="button"
+                                                        onClick={() => setPlanAssignmentData({ ...planAssignmentData, intensity: item.id as any })}
+                                                        className={`py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer border ${
+                                                            planAssignmentData.intensity === item.id
+                                                                ? 'bg-amber-400 text-black border-amber-400 shadow-md font-black'
+                                                                : 'bg-black/40 border-white/10 text-zinc-400 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {item.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Aggregated Equipment preview */}
+                                        {trainingPlanDraft.some(item => item.equipment && item.equipment.length > 0) && (
+                                            <div className="space-y-1.5 pt-1">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                                                    <Dumbbell size={12} className="text-amber-400" /> Весь инвентарь к занятию:
+                                                </label>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Array.from(new Set(trainingPlanDraft.flatMap(item => item.equipment || []))).map((eq: string, i: number) => (
+                                                        <span key={i} className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-zinc-200">
+                                                            {eq}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="space-y-2 pt-4 border-t border-white/10">
+                                        <button
+                                            type="button"
+                                            onClick={handleSavePlanToGroup}
+                                            disabled={trainingPlanDraft.length === 0}
+                                            className="w-full py-3.5 rounded-2xl bg-sparta-gold hover:bg-amber-300 text-black font-russo text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+                                        >
+                                            <SaveIcon size={16} /> Назначить тренировку группе
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleSavePlanAsTemplate}
+                                            disabled={trainingPlanDraft.length === 0}
+                                            className="w-full py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                                        >
+                                            <Layers size={14} className="text-purple-400" /> Сохранить как шаблон
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* DRAG AND DROP TOAST NOTIFICATION */}
+            <AnimatePresence>
+                {dragNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                        className="fixed top-8 left-1/2 -translate-x-1/2 z-[350] px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-black font-russo text-xs uppercase tracking-wider shadow-[0_10px_35px_rgba(245,158,11,0.5)] flex items-center gap-2.5 pointer-events-none border border-black/10"
+                    >
+                        <span className="text-base">📁</span>
+                        <span>{dragNotification}</span>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

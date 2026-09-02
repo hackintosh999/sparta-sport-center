@@ -777,7 +777,7 @@ export const AdminLocations: React.FC = () => {
                                                         {item.url ? (
                                                             <div className="relative w-full h-24 rounded-xl overflow-hidden border border-white/20 group/img">
                                                                 <img src={item.url} alt="" className="w-full h-full object-cover" />
-                                                                <label className="absolute inset-0 bg-black/65 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold cursor-pointer backdrop-blur-xs">
+                                                                <label className="absolute inset-0 bg-black/40 hover:bg-black/70 opacity-60 hover:opacity-100 group-hover/img:opacity-100 transition-all flex items-center justify-center text-white text-[10px] font-bold cursor-pointer backdrop-blur-xs">
                                                                     <Edit2 size={13} className="mr-1" /> Заменить
                                                                     <input type="file" accept="image/*" onChange={(e) => handleFileInputChange(e, idx)} className="hidden" />
                                                                 </label>

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { BaseModal } from '../ui/BaseModal';
 
 interface SpartaCreateStoryModalProps {
     isOpen: boolean;
@@ -259,16 +260,16 @@ export const SpartaCreateStoryModal: React.FC<SpartaCreateStoryModalProps> = ({
     };
 
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-2xl select-none">
-                <div className="absolute inset-0" onClick={onClose} />
-
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.94, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.94, y: 20 }}
-                    className="relative z-10 w-full max-w-[420px] h-[92vh] max-h-[820px] bg-[#101015] border border-white/20 rounded-[36px] overflow-hidden shadow-2xl flex flex-col justify-between"
-                >
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-[420px]"
+            customCard
+            showCloseButton={false}
+            glowColor="amber"
+            zIndex="z-[9999]"
+        >
+            <div className="relative w-full max-w-[420px] h-[92vh] max-h-[820px] bg-[#101015] border border-white/20 rounded-[36px] overflow-hidden shadow-2xl flex flex-col justify-between select-none">
                     {/* TOP HEADER: Status & Close */}
                     <div className="absolute top-4 inset-x-4 z-40 flex items-center justify-between pointer-events-auto">
                         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white">
@@ -902,8 +903,7 @@ export const SpartaCreateStoryModal: React.FC<SpartaCreateStoryModalProps> = ({
                             <span>{isSubmitting ? 'Публикация...' : 'Опубликовать историю'}</span>
                         </button>
                     </div>
-                </motion.div>
             </div>
-        </AnimatePresence>
+        </BaseModal>
     );
 };

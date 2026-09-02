@@ -266,7 +266,7 @@ const WeatherModal = ({ isOpen, onClose, weatherData, locationName, onLocationCh
                                             <p className="text-xs text-white font-bold">{r.display_name.split(',')[0]}</p>
                                             <p className="text-[10px] text-muted truncate max-w-[300px]">{r.display_name}</p>
                                         </div>
-                                        <Plus size={14} className="text-sparta-gold opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <Plus size={14} className="text-sparta-gold/50 group-hover:text-sparta-gold transition-colors" />
                                     </button>
                                 ))}
                             </motion.div>
@@ -676,7 +676,7 @@ const ParticipantItem: React.FC<ParticipantItemProps> = ({ uid, currentUserId, o
                 {uid !== currentUserId && (
                     <button
                         onClick={() => onStartChat(uid, name)}
-                        className="p-2 bg-sparta-gold/10 text-sparta-gold rounded-lg opacity-0 group-hover/participant:opacity-100 transition-all hover:bg-sparta-gold hover:text-black"
+                        className="p-2 bg-sparta-gold/10 text-sparta-gold rounded-lg opacity-60 group-hover/participant:opacity-100 transition-all hover:bg-sparta-gold hover:text-black cursor-pointer"
                         title="Написать сообщение"
                     >
                         <MessageSquare size={12} />
@@ -3115,7 +3115,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
             {/* Pinned Message Banner */}
             {pinnedMessage && (
-                <div className="sticky top-0 z-20 bg-sparta-gold/15 border-b border-sparta-gold/30 backdrop-blur-md px-4 py-2.5 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300 shadow-md">
+                <div className="relative z-20 bg-sparta-gold/15 border-b border-sparta-gold/30 backdrop-blur-md px-4 py-2.5 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300 shadow-md">
                     <div
                         className="flex items-center gap-3 overflow-hidden cursor-pointer group/pin hover:opacity-85 transition-all flex-1"
                         onClick={() => scrollToMessage(pinnedMessage.id)}
@@ -3139,7 +3139,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
                 </div>
             )}
 
-            <div className={`h-14 sm:h-16 shrink-0 bg-[#0c0c0c] border-b border-white/5 flex items-center justify-between px-3 sm:px-6 sticky top-0 z-20 transition-all ${filterThreadId ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+            <div className={`h-16 shrink-0 bg-[#0c0c0c] border-b border-white/5 flex items-center justify-between px-3 sm:px-6 relative z-20 transition-all ${filterThreadId ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
                 <div
                     className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 cursor-pointer group/header hover:opacity-80 transition-all"
                     onClick={() => {
@@ -3255,7 +3255,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
 
                             return (
                                 <>
-                                    <h3 className="text-base sm:text-xl font-russo text-white uppercase tracking-tight group-hover/header:text-sparta-gold transition-colors truncate">
+                                    <h3 className="text-sm sm:text-base font-russo text-white uppercase tracking-tight group-hover/header:text-sparta-gold transition-colors truncate leading-tight">
                                         {title}
                                     </h3>
                                     <div className="flex items-center gap-1.5 sm:gap-2 truncate">
@@ -3816,7 +3816,7 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                                 <p className="text-white font-bold">{u.childName || `${u.childFirstName || ''} ${u.childLastName || ''}`.trim() || u.email}</p>
                                                                 <p className="text-muted text-xs">{u.email}</p>
                                                             </div>
-                                                            <Plus size={16} className="text-sparta-gold opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            <Plus size={16} className="text-sparta-gold/50 group-hover:text-sparta-gold transition-colors" />
                                                         </div>
                                                     </button>
                                                 ))}
@@ -5395,7 +5395,8 @@ const GroupChat: React.FC<GroupChatProps> = ({
                                                         setEditingSessionData(session);
                                                         setIsEditingSession(true);
                                                     }}
-                                                    className="absolute top-1/2 -translate-y-1/2 right-4 p-2 bg-white/10 text-white/20 rounded-xl opacity-0 group-hover/item:opacity-100 hover:text-sparta-gold hover:bg-sparta-gold/10 transition-all"
+                                                    className="absolute top-1/2 -translate-y-1/2 right-4 p-2 bg-white/5 border border-white/10 text-white/50 rounded-xl opacity-60 group-hover/item:opacity-100 hover:text-sparta-gold hover:border-sparta-gold/30 hover:bg-sparta-gold/10 transition-all cursor-pointer"
+                                                    title="Настройки сессии"
                                                 >
                                                     <Settings size={14} />
                                                 </button>

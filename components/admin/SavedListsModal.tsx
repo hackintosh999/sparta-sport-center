@@ -13,6 +13,7 @@ import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { Group, User } from '../../types/shop';
+import { BaseModal } from '../ui/BaseModal';
 
 export interface SavedStudentItem {
     id: string;
@@ -419,13 +420,15 @@ export const SavedListsModal: React.FC<SavedListsModalProps> = ({
     ])).filter(Boolean);
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in"
-            onClick={(e) => {
-                if (e.target === e.currentTarget) onClose();
-            }}
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-5xl"
+            showCloseButton={false}
+            noPadding
+            glowColor="amber"
         >
-            <div className="bg-[#121214] border border-white/10 rounded-3xl w-full max-w-5xl p-6 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#121214] rounded-2xl w-full p-6 overflow-hidden flex flex-col max-h-[88vh]">
                 
                 {/* Header */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10 mb-4 shrink-0">
@@ -800,7 +803,7 @@ export const SavedListsModal: React.FC<SavedListsModalProps> = ({
                                                 <button
                                                     type="button"
                                                     onClick={() => handleDeleteStudent(student.id)}
-                                                    className="text-white/30 hover:text-red-400 p-1 rounded-lg hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                                                    className="text-white/40 hover:text-red-400 p-1 rounded-lg hover:bg-red-500/10 transition-colors opacity-50 group-hover:opacity-100 cursor-pointer"
                                                     title="Удалить строку"
                                                 >
                                                     <Trash2 size={14} />
@@ -826,6 +829,6 @@ export const SavedListsModal: React.FC<SavedListsModalProps> = ({
                     </div>
                 )}
             </div>
-        </div>
+        </BaseModal>
     );
 };

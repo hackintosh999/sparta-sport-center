@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { db } from '../../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Group, User } from '../../types/shop';
+import { BaseModal } from '../ui/BaseModal';
 
 export type MergeStrategy = 'smart_upsert' | 'insert_only' | 'replace_group';
 
@@ -777,11 +778,13 @@ const findParentValue = (row: Record<string, any>) => {
     }
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
-            onClick={(e) => {
-                if (e.target === e.currentTarget) handleCloseModal();
-            }}
+        <BaseModal
+            isOpen={isOpen}
+            onClose={handleCloseModal}
+            maxWidth="max-w-5xl"
+            showCloseButton={false}
+            noPadding
+            glowColor="emerald"
         >
             <input
                 type="file"
@@ -789,11 +792,10 @@ const findParentValue = (row: Record<string, any>) => {
                 accept=".xlsx, .xls, .csv"
                 multiple
                 onChange={handleFileInputChange}
-                onClick={e => e.stopPropagation()}
                 className="hidden"
             />
 
-            <div className="bg-[#141414] border border-white/10 rounded-3xl w-full max-w-5xl p-6 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#141414] rounded-2xl w-full p-6 overflow-hidden flex flex-col max-h-[88vh]">
 
                 {/* SUCCESS VIEW */}
                 {isImportSuccess ? (
@@ -1369,7 +1371,7 @@ const findParentValue = (row: Record<string, any>) => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleDeleteRow(activePreviewFile.id, row.id)}
-                                                                className="text-white/30 hover:text-red-400 p-1 rounded-lg hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                                                                className="text-white/40 hover:text-red-400 p-1 rounded-lg hover:bg-red-500/10 transition-colors opacity-50 group-hover:opacity-100 cursor-pointer"
                                                                 title="Удалить строку"
                                                             >
                                                                 <Trash2 size={15} />
@@ -1471,6 +1473,6 @@ const findParentValue = (row: Record<string, any>) => {
                     </>
                 )}
             </div>
-        </div>
+        </BaseModal>
     );
 };

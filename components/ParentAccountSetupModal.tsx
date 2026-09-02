@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Mail, Lock, Eye, EyeOff, Sparkles, CheckCircle2, ArrowRight, Bell, Smartphone, Receipt, AlertCircle, TrendingUp, CreditCard } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, Eye, EyeOff, CheckCircle2, ArrowRight, Bell, Smartphone, AlertCircle, TrendingUp, CreditCard } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { safeLocalStorage } from '../utils/storage';
+import { BaseModal } from './ui/BaseModal';
 
 interface ParentAccountSetupModalProps {
     isOpen: boolean;
@@ -32,8 +33,6 @@ export const ParentAccountSetupModal: React.FC<ParentAccountSetupModalProps> = (
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSuccess, setIsSuccess] = useState(false);
-
-    if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -184,18 +183,17 @@ export const ParentAccountSetupModal: React.FC<ParentAccountSetupModalProps> = (
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                className="relative w-full max-w-lg bg-[#121212] border border-sparta-gold/30 rounded-3xl shadow-[0_0_60px_rgba(212,175,55,0.2)] overflow-hidden my-auto max-h-[92vh] flex flex-col"
-            >
-                {/* Ambient Top Glow */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-sparta-gold/15 blur-3xl pointer-events-none" />
-
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            showCloseButton={false}
+            glowColor="amber"
+            zIndex="z-50"
+        >
+            <div className="text-left font-manrope">
                 {/* Header */}
-                <div className="p-4 sm:p-5 border-b border-white/10 relative z-10 flex items-center gap-3 bg-[#121212]/90">
+                <div className="pb-4 border-b border-white/10 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-sparta-gold text-black flex items-center justify-center font-bold shadow-md shrink-0">
                         <ShieldCheck size={22} />
                     </div>
@@ -210,7 +208,7 @@ export const ParentAccountSetupModal: React.FC<ParentAccountSetupModalProps> = (
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-10 space-y-4">
+                <div className="pt-4 space-y-4">
                     <AnimatePresence mode="wait">
                         {isSuccess ? (
                             <motion.div
@@ -235,7 +233,7 @@ export const ParentAccountSetupModal: React.FC<ParentAccountSetupModalProps> = (
                                 onSubmit={handleSubmit}
                                 className="space-y-4"
                             >
-                                {/* Psychological Reassurance Grid: Why is this needed */}
+                                {/* Psychological Reassurance Grid */}
                                 <div className="space-y-2">
                                     <p className="text-[11px] font-bold text-white/70 uppercase tracking-wider">
                                         Зачем привязать почту и пароль:
@@ -303,7 +301,7 @@ export const ParentAccountSetupModal: React.FC<ParentAccountSetupModalProps> = (
                                         </div>
                                     </div>
 
-                                    {/* Password + Confirm Password in Grid */}
+                                    {/* Password + Confirm Password */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-[11px] font-bold text-white/80 mb-1">
@@ -322,7 +320,7 @@ export const ParentAccountSetupModal: React.FC<ParentAccountSetupModalProps> = (
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+                                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors cursor-pointer"
                                                 >
                                                     {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                                                 </button>
@@ -384,8 +382,8 @@ export const ParentAccountSetupModal: React.FC<ParentAccountSetupModalProps> = (
                         )}
                     </AnimatePresence>
                 </div>
-            </motion.div>
-        </div>
+            </div>
+        </BaseModal>
     );
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../firebase';
 import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp, getDocs, writeBatch, where, arrayUnion } from 'firebase/firestore';
-import { Plus, Trash2, Edit2, X, Save, Search, Users, RefreshCw, Upload, Calendar, Check, AlertTriangle, Download, Trophy, ChevronRight, Clock, LayoutGrid, List, FolderOpen, Settings, MapPin, Sparkles, SlidersHorizontal, Zap, ShieldAlert, ChevronDown, MoreHorizontal, MessageSquare, Send } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Save, Search, Users, RefreshCw, Upload, Calendar, Check, AlertTriangle, Download, Trophy, ChevronRight, Clock, LayoutGrid, List, FolderOpen, Settings, MapPin, Sparkles, SlidersHorizontal, Zap, ShieldAlert, ChevronDown, MoreHorizontal, MessageSquare, Send, UserCheck, ArrowRightLeft } from 'lucide-react';
 import { Group, User, AchievementDefinition, UserAchievement } from '../../types/shop';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
@@ -85,7 +85,26 @@ const AdminGroups = () => {
     const [isPublishMessengerModalOpen, setIsPublishMessengerModalOpen] = useState(false);
     const [publishMessengerTargetGroup, setPublishMessengerTargetGroup] = useState<Group | null>(null);
 
-    const activeCoaches = useMemo(() => coaches.filter(isActualCoach), [coaches]);
+    const activeCoaches = useMemo(() => {
+        const list = [...coaches.filter(isActualCoach)];
+        users.filter(u => u.role === 'coach' || u.role === 'trainer').forEach(u => {
+            const uName = (u.displayName || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '').toLowerCase();
+            const alreadyIn = list.some(c => 
+                c.id === u.id || 
+                (c.name && c.name.toLowerCase().includes(uName)) ||
+                (uName && c.name && uName.includes(c.name.toLowerCase()))
+            );
+            if (!alreadyIn) {
+                list.push({
+                    id: u.id,
+                    name: u.displayName || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Тренер',
+                    role: 'Тренер по футболу',
+                    image: u.photoURL || u.image || getCoachPhoto(u) || '/sergey-ponomarev.png'
+                });
+            }
+        });
+        return list;
+    }, [coaches, users]);
 
     // Editor State
     interface GroupFormData {
@@ -259,12 +278,18 @@ const AdminGroups = () => {
     const handleOpenEditor = (group?: Group, initialTab: 'settings' | 'students' = 'settings') => {
         setDrawerTab(initialTab);
         if (group) {
+            const matchedCoach = 
+                coaches.find(c => c.id === group.coachId) ||
+                users.find(u => u.id === group.coachId) ||
+                coaches.find(c => c.name?.trim().toLowerCase() === group.coachName?.trim().toLowerCase()) ||
+                users.find(u => (u.displayName || u.name)?.trim().toLowerCase() === group.coachName?.trim().toLowerCase());
+
             setEditingId(group.id);
             setFormData({
                 name: group.name || '',
                 minAge: (group.ageRange?.min ?? 3).toString(),
                 maxAge: (group.ageRange?.max ?? 18).toString(),
-                coachId: group.coachId || '',
+                coachId: matchedCoach?.id || group.coachId || '',
                 maxStudents: (group.maxStudents ?? 20).toString(),
                 currentStatus: group.currentStatus || 'normal',
                 schedule: (group.schedule || []).map((s: any) => ({
@@ -304,10 +329,13 @@ const AdminGroups = () => {
 
         setProcessing(true);
         try {
-            const coach = coaches.find(c => c.id === formData.coachId);
-            const coachName = coach?.name || (formData.coachId ? '' : 'Не назначен');
+            const coach = activeCoaches.find(c => c.id === formData.coachId) ||
+                          coaches.find(c => c.id === formData.coachId) ||
+                          users.find(u => u.id === formData.coachId);
+            const coachName = coach?.name || coach?.displayName || (formData.coachId ? '' : 'Не назначен');
+            const coachPhoto = getCoachPhoto(coach) || coach?.image || coach?.photoURL || '';
 
-            const groupData = {
+            const groupData: any = {
                 name: formData.name.trim(),
                 ageRange: {
                     min: parseInt(formData.minAge) || 0,
@@ -315,6 +343,7 @@ const AdminGroups = () => {
                 },
                 coachId: formData.coachId || 'pending',
                 coachName: coachName,
+                coachImage: coachPhoto,
                 maxStudents: parseInt(formData.maxStudents) || 20,
                 currentStatus: formData.currentStatus || 'normal',
                 schedule: formData.schedule.map(s => ({
@@ -329,6 +358,31 @@ const AdminGroups = () => {
 
             if (editingId) {
                 await updateDoc(doc(db, "groups", editingId), groupData);
+
+                // --- Sync Group Chats in `chats` collection upon coach change ---
+                if (formData.coachId) {
+                    try {
+                        const targetCoachUser = users.find(u => 
+                            u.id === formData.coachId || 
+                            (coachName && (u.displayName?.trim().toLowerCase() === coachName.toLowerCase() || u.name?.trim().toLowerCase() === coachName.toLowerCase()))
+                        );
+                        const newCoachUid = targetCoachUser ? targetCoachUser.id : formData.coachId;
+
+                        const qChats = query(collection(db, 'chats'), where('groupId', '==', editingId));
+                        const chatsSnap = await getDocs(qChats);
+                        for (const cDoc of chatsSnap.docs) {
+                            await updateDoc(doc(db, 'chats', cDoc.id), {
+                                coachId: newCoachUid,
+                                coachName: coachName,
+                                participants: arrayUnion(newCoachUid),
+                                updatedAt: serverTimestamp()
+                            });
+                        }
+                    } catch (chatSyncErr) {
+                        console.warn("Could not sync group chat on coach update:", chatSyncErr);
+                    }
+                }
+
                 setSuccessMessage("✓ Группа и расписание успешно обновлены!");
             } else {
                 await addDoc(collection(db, "groups"), {
@@ -704,6 +758,9 @@ const AdminGroups = () => {
 
     // Bulk Selection State
     const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+    const [isBulkCoachModalOpen, setIsBulkCoachModalOpen] = useState(false);
+    const [bulkSelectedCoachId, setBulkSelectedCoachId] = useState<string>('');
+    const [isBulkAssigning, setIsBulkAssigning] = useState(false);
 
     const handleToggleSelectGroup = (groupId: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -712,6 +769,158 @@ const AdminGroups = () => {
                 ? prev.filter(id => id !== groupId)
                 : [...prev, groupId]
         );
+    };
+
+    const handleBulkAssignCoach = async () => {
+        if (selectedGroupIds.length === 0 || !bulkSelectedCoachId) return;
+
+        const targetCoach = activeCoaches.find(c => c.id === bulkSelectedCoachId) ||
+                            coaches.find(c => c.id === bulkSelectedCoachId) ||
+                            users.find(u => u.id === bulkSelectedCoachId);
+
+        const coachName = targetCoach?.name || targetCoach?.displayName || 'Тренер';
+        const coachPhoto = getCoachPhoto(targetCoach) || targetCoach?.image || targetCoach?.photoURL || '';
+
+        setIsBulkAssigning(true);
+        try {
+            const batch = writeBatch(db);
+
+            for (const groupId of selectedGroupIds) {
+                const groupRef = doc(db, "groups", groupId);
+                batch.update(groupRef, {
+                    coachId: bulkSelectedCoachId,
+                    coachName: coachName,
+                    coachImage: coachPhoto,
+                    updatedAt: serverTimestamp()
+                });
+            }
+
+            await batch.commit();
+
+            // Synchronize group chats in `chats` collection
+            const targetCoachUser = users.find(u => 
+                u.id === bulkSelectedCoachId || 
+                (coachName && ((u.displayName || u.name || '').trim().toLowerCase() === coachName.toLowerCase()))
+            );
+            const newCoachUid = targetCoachUser ? targetCoachUser.id : bulkSelectedCoachId;
+
+            for (const groupId of selectedGroupIds) {
+                try {
+                    const qChats = query(collection(db, 'chats'), where('groupId', '==', groupId));
+                    const chatsSnap = await getDocs(qChats);
+                    for (const cDoc of chatsSnap.docs) {
+                        await updateDoc(doc(db, 'chats', cDoc.id), {
+                            coachId: newCoachUid,
+                            coachName: coachName,
+                            participants: arrayUnion(newCoachUid),
+                            updatedAt: serverTimestamp()
+                        });
+                    }
+                } catch (chatErr) {
+                    console.warn("Could not sync chat for group", groupId, chatErr);
+                }
+            }
+
+            // Sync website timetable
+            await triggerScheduleSync().catch(console.error);
+
+            setSuccessMessage(`✓ Тренер ${coachName} успешно назначен для ${selectedGroupIds.length} групп!`);
+            setSelectedGroupIds([]);
+            setIsBulkCoachModalOpen(false);
+            setTimeout(() => setSuccessMessage(null), 3500);
+        } catch (error: any) {
+            console.error("Bulk Assign Coach Error:", error);
+            setErrorMessage("Ошибка массового назначения: " + error.message);
+        } finally {
+            setIsBulkAssigning(false);
+        }
+    };
+
+    // Express Coach-to-Coach Transfer Modal State
+    const [isExpressTransferModalOpen, setIsExpressTransferModalOpen] = useState(false);
+    const [expressFromCoachId, setExpressFromCoachId] = useState<string>('');
+    const [expressToCoachId, setExpressToCoachId] = useState<string>('');
+    const [isExpressTransferring, setIsExpressTransferring] = useState(false);
+
+    // Filter transferable groups for express transfer
+    const expressTransferableGroups = useMemo(() => {
+        if (!expressFromCoachId) return [];
+        const fromCoach = activeCoaches.find(c => c.id === expressFromCoachId) ||
+                          coaches.find(c => c.id === expressFromCoachId) ||
+                          users.find(u => u.id === expressFromCoachId);
+        const fromName = (fromCoach?.name || fromCoach?.displayName || '').trim().toLowerCase();
+
+        return groups.filter(g => 
+            g.coachId === expressFromCoachId || 
+            (fromName && (g.coachName || '').trim().toLowerCase() === fromName)
+        );
+    }, [groups, expressFromCoachId, activeCoaches, coaches, users]);
+
+    const handleExpressTransfer = async () => {
+        if (!expressFromCoachId || !expressToCoachId || expressTransferableGroups.length === 0) return;
+        if (expressFromCoachId === expressToCoachId) {
+            alert("Пожалуйста, выберите разных тренеров для передачи");
+            return;
+        }
+
+        const targetCoach = activeCoaches.find(c => c.id === expressToCoachId) ||
+                            coaches.find(c => c.id === expressToCoachId) ||
+                            users.find(u => u.id === expressToCoachId);
+        const coachName = targetCoach?.name || targetCoach?.displayName || 'Тренер';
+        const coachPhoto = getCoachPhoto(targetCoach) || targetCoach?.image || targetCoach?.photoURL || '';
+
+        setIsExpressTransferring(true);
+        try {
+            const batch = writeBatch(db);
+
+            for (const g of expressTransferableGroups) {
+                const groupRef = doc(db, "groups", g.id);
+                batch.update(groupRef, {
+                    coachId: expressToCoachId,
+                    coachName: coachName,
+                    coachImage: coachPhoto,
+                    updatedAt: serverTimestamp()
+                });
+            }
+
+            await batch.commit();
+
+            // Synchronize group chats in `chats` collection
+            const targetCoachUser = users.find(u => 
+                u.id === expressToCoachId || 
+                (coachName && ((u.displayName || u.name || '').trim().toLowerCase() === coachName.toLowerCase()))
+            );
+            const newCoachUid = targetCoachUser ? targetCoachUser.id : expressToCoachId;
+
+            for (const g of expressTransferableGroups) {
+                try {
+                    const qChats = query(collection(db, 'chats'), where('groupId', '==', g.id));
+                    const chatsSnap = await getDocs(qChats);
+                    for (const cDoc of chatsSnap.docs) {
+                        await updateDoc(doc(db, 'chats', cDoc.id), {
+                            coachId: newCoachUid,
+                            coachName: coachName,
+                            participants: arrayUnion(newCoachUid),
+                            updatedAt: serverTimestamp()
+                        });
+                    }
+                } catch (chatErr) {
+                    console.warn("Could not sync chat for group", g.id, chatErr);
+                }
+            }
+
+            // Sync schedule
+            await triggerScheduleSync().catch(console.error);
+
+            setSuccessMessage(`✓ Все ${expressTransferableGroups.length} составов успешно переданы тренеру ${coachName}!`);
+            setIsExpressTransferModalOpen(false);
+            setTimeout(() => setSuccessMessage(null), 3500);
+        } catch (error: any) {
+            console.error("Express Transfer Error:", error);
+            setErrorMessage("Ошибка при передаче составов: " + error.message);
+        } finally {
+            setIsExpressTransferring(false);
+        }
     };
 
     const handleBulkDeleteGroups = async () => {
@@ -1509,150 +1718,180 @@ const AdminGroups = () => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2.5">
-                            {selectedGroupIds.length > 0 ? (
-                                <button
-                                    onClick={handleBulkDeleteGroups}
-                                    disabled={processing}
-                                    className="bg-red-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all flex items-center gap-2 animate-in fade-in cursor-pointer text-xs"
-                                >
-                                    {processing ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                                    Удалить ({selectedGroupIds.length})
-                                </button>
-                            ) : (
-                                <>
-                                    {/* Secondary Tools Dropdown */}
-                                    <div className="relative" onClick={e => e.stopPropagation()}>
-                                        <button
-                                            onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
-                                            className="bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 font-semibold py-2 px-3.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer text-xs shadow-sm"
-                                            title="Дополнительные служебные действия"
-                                        >
-                                            <Settings size={14} className="text-sparta-gold" />
-                                            <span>Инструменты</span>
-                                            {totalPendingRegistry > 0 && (
-                                                <span className="bg-purple-500/30 text-purple-200 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-                                                    {totalPendingRegistry}
-                                                </span>
-                                            )}
-                                            <ChevronDown size={13} className={`text-white/40 transition-transform duration-200 ${isToolsMenuOpen ? 'rotate-180' : ''}`} />
-                                        </button>
-
-                                        {isToolsMenuOpen && (
-                                            <div className="absolute right-0 top-full mt-2 w-72 bg-[#141417] border border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-white/5 text-left">
-                                                <div className="py-1 space-y-1">
-                                                    <button
-                                                        onClick={() => {
-                                                            setIsToolsMenuOpen(false);
-                                                            handleSyncOfficialSpartaSchedule();
-                                                        }}
-                                                        disabled={processing}
-                                                        className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-sparta-gold hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
-                                                    >
-                                                        <Zap size={16} className="text-sparta-gold shrink-0" />
-                                                        <div className="flex-1">
-                                                            <div className="font-bold text-white">Расписание Спарта</div>
-                                                            <div className="text-[10px] text-white/40">Синхронизировать официальные группы</div>
-                                                        </div>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            setIsToolsMenuOpen(false);
-                                                            handleSyncDatabase();
-                                                        }}
-                                                        disabled={processing}
-                                                        className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-purple-300 hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
-                                                    >
-                                                        <RefreshCw size={15} className={`text-purple-400 shrink-0 ${processing ? 'animate-spin' : ''}`} />
-                                                        <div className="flex-1">
-                                                            <div className="font-bold text-white flex items-center gap-1.5">
-                                                                <span>Синхронизация базы</span>
-                                                                {totalPendingRegistry > 0 && (
-                                                                    <span className="bg-purple-500/30 text-purple-200 text-[10px] px-1.5 rounded-full font-mono">
-                                                                        {totalPendingRegistry}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="text-[10px] text-white/40">Обновить связи с реестром учеников</div>
-                                                        </div>
-                                                    </button>
-                                                </div>
-
-                                                <div className="py-1 space-y-1">
-                                                    <button
-                                                        onClick={() => {
-                                                            setIsToolsMenuOpen(false);
-                                                            setRawExcelRows([]);
-                                                            setExcelColumns([]);
-                                                            setIsImportModalOpen(true);
-                                                        }}
-                                                        className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-emerald-300 hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
-                                                    >
-                                                        <Upload size={15} className="text-emerald-400 shrink-0" />
-                                                        <div className="flex-1">
-                                                            <div className="font-bold text-white">Импорт из Excel</div>
-                                                            <div className="text-[10px] text-white/40">Загрузить таблицу учеников и групп</div>
-                                                        </div>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            setIsToolsMenuOpen(false);
-                                                            setIsSavedListsModalOpen(true);
-                                                        }}
-                                                        className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-sparta-gold hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
-                                                    >
-                                                        <FolderOpen size={15} className="text-sparta-gold shrink-0" />
-                                                        <div className="flex-1">
-                                                            <div className="font-bold text-white">Списки и файлы</div>
-                                                            <div className="text-[10px] text-white/40">Сохраненные выгрузки и документы</div>
-                                                        </div>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            setIsToolsMenuOpen(false);
-                                                            setPublishMessengerTargetGroup(null);
-                                                            setIsPublishMessengerModalOpen(true);
-                                                        }}
-                                                        className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-sparta-gold hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
-                                                    >
-                                                        <MessageSquare size={15} className="text-sparta-gold shrink-0" />
-                                                        <div className="flex-1">
-                                                            <div className="font-bold text-white">Опубликовать в Мессенджер</div>
-                                                            <div className="text-[10px] text-white/40">Разослать расписание в чаты Спарта</div>
-                                                        </div>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            setIsToolsMenuOpen(false);
-                                                            handleAutoDistribute();
-                                                        }}
-                                                        disabled={processing}
-                                                        className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
-                                                    >
-                                                        <Users size={15} className="text-white/60 shrink-0" />
-                                                        <div className="flex-1">
-                                                            <div className="font-bold text-white">Авто-распределение</div>
-                                                            <div className="text-[10px] text-white/40">Распределить свободных по возрастам</div>
-                                                        </div>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Primary Action Button */}
+                            {/* Selected Groups Actions */}
+                            {selectedGroupIds.length > 0 && (
+                                <div className="flex items-center gap-2 animate-in fade-in">
                                     <button
-                                        onClick={() => handleOpenEditor()}
-                                        className="bg-sparta-gold hover:bg-[#ffd700] text-black font-bold py-2 px-4 rounded-xl shadow-lg shadow-sparta-gold/20 hover:shadow-sparta-gold/40 transition-all flex items-center gap-1.5 cursor-pointer text-xs"
+                                        onClick={() => setSelectedGroupIds([])}
+                                        className="text-white/50 hover:text-white text-xs px-2.5 py-1.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer"
                                     >
-                                        <Plus size={15} className="text-black stroke-[3]" />
-                                        <span>+ Создать группу</span>
+                                        Сбросить ({selectedGroupIds.length})
                                     </button>
-                                </>
+                                    <button
+                                        onClick={handleBulkDeleteGroups}
+                                        disabled={processing || isBulkAssigning}
+                                        className="bg-red-500/90 hover:bg-red-600 text-white font-bold py-2 px-3.5 rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all flex items-center gap-1.5 cursor-pointer text-xs"
+                                    >
+                                        {processing ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                        Удалить ({selectedGroupIds.length})
+                                    </button>
+                                </div>
                             )}
+
+                            {/* Secondary Tools Dropdown */}
+                            <div className="relative" onClick={e => e.stopPropagation()}>
+                                <button
+                                    onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
+                                    className="bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 font-semibold py-2 px-3.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer text-xs shadow-sm"
+                                    title="Дополнительные служебные действия"
+                                >
+                                    <Settings size={14} className="text-sparta-gold" />
+                                    <span>Инструменты</span>
+                                    {totalPendingRegistry > 0 && (
+                                        <span className="bg-purple-500/30 text-purple-200 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                                            {totalPendingRegistry}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={13} className={`text-white/40 transition-transform duration-200 ${isToolsMenuOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {isToolsMenuOpen && (
+                                    <div className="absolute right-0 top-full mt-2 w-72 bg-[#141417] border border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-white/5 text-left">
+                                        <div className="py-1 space-y-1">
+                                            <button
+                                                onClick={() => {
+                                                    setIsToolsMenuOpen(false);
+                                                    handleSyncOfficialSpartaSchedule();
+                                                }}
+                                                disabled={processing}
+                                                className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-sparta-gold hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
+                                            >
+                                                <Zap size={16} className="text-sparta-gold shrink-0" />
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-white">Расписание Спарта</div>
+                                                    <div className="text-[10px] text-white/40">Синхронизировать официальные группы</div>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    setIsToolsMenuOpen(false);
+                                                    handleSyncDatabase();
+                                                }}
+                                                disabled={processing}
+                                                className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-purple-300 hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
+                                            >
+                                                <RefreshCw size={15} className={`text-purple-400 shrink-0 ${processing ? 'animate-spin' : ''}`} />
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-white flex items-center gap-1.5">
+                                                        <span>Синхронизация базы</span>
+                                                        {totalPendingRegistry > 0 && (
+                                                            <span className="bg-purple-500/30 text-purple-200 text-[10px] px-1.5 rounded-full font-mono">
+                                                                {totalPendingRegistry}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-[10px] text-white/40">Обновить связи с реестром учеников</div>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    setIsToolsMenuOpen(false);
+                                                    setIsImportModalOpen(true);
+                                                }}
+                                                disabled={processing}
+                                                className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-emerald-300 hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
+                                            >
+                                                <Upload size={15} className="text-emerald-400 shrink-0" />
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-white">Импорт из Excel</div>
+                                                    <div className="text-[10px] text-white/40">Загрузить таблицу учеников и групп</div>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    setIsToolsMenuOpen(false);
+                                                    setIsSavedListsModalOpen(true);
+                                                }}
+                                                className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-sparta-gold hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
+                                            >
+                                                <FolderOpen size={15} className="text-sparta-gold shrink-0" />
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-white">Списки и файлы</div>
+                                                    <div className="text-[10px] text-white/40">Сохраненные выгрузки и документы</div>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    setIsToolsMenuOpen(false);
+                                                    setPublishMessengerTargetGroup(null);
+                                                    setIsPublishMessengerModalOpen(true);
+                                                }}
+                                                className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-sparta-gold hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
+                                            >
+                                                <MessageSquare size={15} className="text-sparta-gold shrink-0" />
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-white">Опубликовать в Мессенджер</div>
+                                                    <div className="text-[10px] text-white/40">Разослать расписание в чаты Спарта</div>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    setIsToolsMenuOpen(false);
+                                                    handleAutoDistribute();
+                                                }}
+                                                disabled={processing}
+                                                className="w-full px-3 py-2.5 text-left text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 rounded-xl transition-all flex items-center gap-3 cursor-pointer"
+                                            >
+                                                <Users size={15} className="text-white/60 shrink-0" />
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-white">Авто-распределение</div>
+                                                    <div className="text-[10px] text-white/40">Распределить свободных по возрастам</div>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Always Visible Transfer Groups Button */}
+                            <button
+                                onClick={() => {
+                                    if (selectedGroupIds.length > 0) {
+                                        setBulkSelectedCoachId(activeCoaches[0]?.id || '');
+                                        setIsBulkCoachModalOpen(true);
+                                    } else {
+                                        if (activeCoaches.length > 0) {
+                                            setExpressFromCoachId(activeCoaches[0].id);
+                                            setExpressToCoachId(activeCoaches[1]?.id || activeCoaches[0].id);
+                                        }
+                                        setIsExpressTransferModalOpen(true);
+                                    }
+                                }}
+                                disabled={processing || isBulkAssigning || isExpressTransferring}
+                                className={`font-bold py-2 px-3.5 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer text-xs shadow-sm font-russo ${
+                                    selectedGroupIds.length > 0
+                                        ? 'bg-gradient-to-r from-sparta-gold to-amber-500 hover:brightness-110 text-black border-transparent shadow-[0_0_20px_rgba(245,158,11,0.25)]'
+                                        : 'bg-white/10 hover:bg-white/20 text-white hover:text-sparta-gold border-white/15 hover:border-sparta-gold/40'
+                                }`}
+                                title={selectedGroupIds.length > 0 ? `Передать выбранные (${selectedGroupIds.length}) группы новому тренеру` : "Массовая передача составов от одного тренера другому"}
+                            >
+                                <ArrowRightLeft size={13} className={selectedGroupIds.length > 0 ? "text-black" : "text-sparta-gold"} />
+                                <span>🔄 Передать группы {selectedGroupIds.length > 0 ? `(${selectedGroupIds.length})` : ''}</span>
+                            </button>
+
+                            {/* Primary Action Button */}
+                            <button
+                                onClick={() => handleOpenEditor()}
+                                className="bg-sparta-gold hover:bg-[#ffd700] text-black font-bold py-2 px-4 rounded-xl shadow-lg shadow-sparta-gold/20 hover:shadow-sparta-gold/40 transition-all flex items-center gap-1.5 cursor-pointer text-xs font-russo"
+                            >
+                                <Plus size={15} className="text-black stroke-[3]" />
+                                <span>+ Создать группу</span>
+                            </button>
                         </div>
                     </div>
 
@@ -1853,9 +2092,24 @@ const AdminGroups = () => {
                                             );
                                             const totalStudents = groupUsers.length + pendingStudents.length;
                                             const maxCap = group.maxStudents || 20;
-                                            const coach = coaches.find(c => c.id === group.coachId);
-                                            const coachPhoto = getCoachPhoto(coach);
-                                            const coachName = coach?.name || "Не назначен";
+                                            const matchedCoach = 
+                                                coaches.find(c => c.id === group.coachId) ||
+                                                users.find(u => u.id === group.coachId) ||
+                                                coaches.find(c => c.name?.trim().toLowerCase() === group.coachName?.trim().toLowerCase()) ||
+                                                users.find(u => (u.displayName || u.name)?.trim().toLowerCase() === group.coachName?.trim().toLowerCase());
+
+                                            const coachName = 
+                                                matchedCoach?.name || 
+                                                matchedCoach?.displayName || 
+                                                group.coachName || 
+                                                "Не назначен";
+
+                                            const coachPhoto = 
+                                                getCoachPhoto(matchedCoach) || 
+                                                matchedCoach?.image || 
+                                                matchedCoach?.photoURL || 
+                                                group.coachImage || 
+                                                null;
                                             const isSelected = selectedGroupIds.includes(group.id);
                                             const isEditing = editingId === group.id;
 
@@ -1896,21 +2150,30 @@ const AdminGroups = () => {
                                                     </td>
 
                                                     {/* Coach */}
-                                                    <td className="py-3 px-4">
-                                                        <div className="flex items-center gap-2">
+                                                    <td className="py-3 px-4" onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedGroupIds([group.id]);
+                                                        setBulkSelectedCoachId(group.coachId || activeCoaches[0]?.id || '');
+                                                        setIsBulkCoachModalOpen(true);
+                                                    }}>
+                                                        <div 
+                                                            className="flex items-center gap-2 hover:bg-white/5 cursor-pointer rounded-lg px-2 py-1.5 transition-all group/coach border border-transparent hover:border-white/10 -ml-2 w-fit"
+                                                            title="Нажмите, чтобы сменить наставника для этой группы"
+                                                        >
                                                             {coachPhoto ? (
                                                                 <img
                                                                     src={coachPhoto}
                                                                     alt={coachName}
-                                                                    className="w-6 h-6 rounded-full object-cover border border-amber-500/30 shrink-0"
+                                                                    className="w-6 h-6 rounded-full object-cover border border-amber-500/30 shrink-0 group-hover/coach:border-sparta-gold transition-colors"
                                                                 />
                                                             ) : (
-                                                                <div className="w-6 h-6 rounded-full bg-white/10 text-white/60 flex items-center justify-center text-[10px] font-bold shrink-0">
+                                                                <div className="w-6 h-6 rounded-full bg-white/10 text-white/60 flex items-center justify-center text-[10px] font-bold shrink-0 group-hover/coach:text-sparta-gold transition-colors">
                                                                     {coachName !== 'Не назначен' ? coachName[0] : '?'}
                                                                 </div>
                                                             )}
-                                                            <div className="overflow-hidden">
-                                                                <p className="text-white text-xs font-semibold truncate max-w-[140px]">{coachName}</p>
+                                                            <div className="overflow-hidden flex items-center gap-1.5">
+                                                                <p className="text-white text-xs font-semibold truncate max-w-[130px] group-hover/coach:text-sparta-gold transition-colors">{coachName}</p>
+                                                                <RefreshCw className="w-3 h-3 text-amber-400/50 group-hover/coach:text-amber-400 shrink-0 transition-all" />
                                                             </div>
                                                         </div>
                                                     </td>
@@ -2028,6 +2291,19 @@ const AdminGroups = () => {
                                                                             <button
                                                                                 onClick={() => {
                                                                                     setActiveRowMenuId(null);
+                                                                                    setSelectedGroupIds([group.id]);
+                                                                                    setBulkSelectedCoachId(group.coachId || activeCoaches[0]?.id || '');
+                                                                                    setIsBulkCoachModalOpen(true);
+                                                                                }}
+                                                                                className="w-full px-3 py-2 text-left text-xs font-medium text-sparta-gold hover:bg-sparta-gold/10 rounded-xl transition-all flex items-center gap-2 cursor-pointer font-semibold"
+                                                                            >
+                                                                                <UserCheck size={13} className="text-sparta-gold" />
+                                                                                <span>👔 Сменить наставника</span>
+                                                                            </button>
+
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setActiveRowMenuId(null);
                                                                                     setOverrideTargetGroup(group);
                                                                                     setIsOverrideModalOpen(true);
                                                                                 }}
@@ -2084,9 +2360,24 @@ const AdminGroups = () => {
                                 );
                                 const totalStudents = groupUsers.length + pendingStudents.length;
                                 const maxCap = group.maxStudents || 20;
-                                const coach = coaches.find(c => c.id === group.coachId);
-                                const coachPhoto = getCoachPhoto(coach);
-                                const coachName = coach?.name || "Не назначен";
+                                const matchedCoach = 
+                                    coaches.find(c => c.id === group.coachId) ||
+                                    users.find(u => u.id === group.coachId) ||
+                                    coaches.find(c => c.name?.trim().toLowerCase() === group.coachName?.trim().toLowerCase()) ||
+                                    users.find(u => (u.displayName || u.name)?.trim().toLowerCase() === group.coachName?.trim().toLowerCase());
+
+                                const coachName = 
+                                    matchedCoach?.name || 
+                                    matchedCoach?.displayName || 
+                                    group.coachName || 
+                                    "Не назначен";
+
+                                const coachPhoto = 
+                                    getCoachPhoto(matchedCoach) || 
+                                    matchedCoach?.image || 
+                                    matchedCoach?.photoURL || 
+                                    group.coachImage || 
+                                    null;
                                 const isSelected = selectedGroupIds.includes(group.id);
 
                                 return (
@@ -2169,15 +2460,27 @@ const AdminGroups = () => {
 
                                         {/* Coach & Action footer */}
                                         <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                                            <div className="flex items-center gap-2">
+                                            <div 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedGroupIds([group.id]);
+                                                    setBulkSelectedCoachId(group.coachId || activeCoaches[0]?.id || '');
+                                                    setIsBulkCoachModalOpen(true);
+                                                }}
+                                                className="flex items-center gap-2 hover:bg-white/5 cursor-pointer rounded-lg px-2 py-1 transition-all group/coach border border-transparent hover:border-white/10 -ml-2"
+                                                title="Нажмите, чтобы сменить наставника"
+                                            >
                                                 {coachPhoto ? (
-                                                    <img src={coachPhoto} alt={coachName} className="w-6 h-6 rounded-full object-cover border border-amber-500/30" />
+                                                    <img src={coachPhoto} alt={coachName} className="w-6 h-6 rounded-full object-cover border border-amber-500/30 group-hover/coach:border-sparta-gold transition-colors" />
                                                 ) : (
-                                                    <div className="w-6 h-6 rounded-full bg-white/10 text-white/60 flex items-center justify-center text-[10px] font-bold">
+                                                    <div className="w-6 h-6 rounded-full bg-white/10 text-white/60 flex items-center justify-center text-[10px] font-bold group-hover/coach:text-sparta-gold transition-colors">
                                                         {coachName !== 'Не назначен' ? coachName[0] : '?'}
                                                     </div>
                                                 )}
-                                                <p className="text-white text-xs font-semibold truncate max-w-[130px]">{coachName}</p>
+                                                <div className="flex items-center gap-1.5">
+                                                    <p className="text-white text-xs font-semibold truncate max-w-[110px] group-hover/coach:text-sparta-gold transition-colors">{coachName}</p>
+                                                    <RefreshCw className="w-3 h-3 text-amber-400/50 group-hover/coach:text-amber-400 shrink-0 transition-all" />
+                                                </div>
                                             </div>
 
                                             <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
@@ -2217,6 +2520,18 @@ const AdminGroups = () => {
                                                                 >
                                                                     <Settings size={13} className="text-white/40" />
                                                                     <span>Настройки</span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setActiveRowMenuId(null);
+                                                                        setSelectedGroupIds([group.id]);
+                                                                        setBulkSelectedCoachId(group.coachId || activeCoaches[0]?.id || '');
+                                                                        setIsBulkCoachModalOpen(true);
+                                                                    }}
+                                                                    className="w-full px-3 py-2 text-left text-xs font-medium text-sparta-gold hover:bg-sparta-gold/10 rounded-xl transition-all flex items-center gap-2 cursor-pointer font-semibold"
+                                                                >
+                                                                    <UserCheck size={13} className="text-sparta-gold" />
+                                                                    <span>👔 Сменить наставника</span>
                                                                 </button>
                                                                 <button
                                                                     onClick={() => {
@@ -2299,9 +2614,14 @@ const AdminGroups = () => {
                                 // Filter by coach if selected
                                 if (scheduleCoachFilter !== 'ALL' && g.coachId !== scheduleCoachFilter) return;
 
-                                const coach = coaches.find(c => c.id === g.coachId);
-                                const coachName = coach?.name || (g as any).coachName || 'Тренер не назначен';
-                                const coachPhoto = getCoachPhoto(coach);
+                                const matchedCoach = 
+                                    coaches.find(c => c.id === g.coachId) ||
+                                    users.find(u => u.id === g.coachId) ||
+                                    coaches.find(c => c.name?.trim().toLowerCase() === g.coachName?.trim().toLowerCase()) ||
+                                    users.find(u => (u.displayName || u.name)?.trim().toLowerCase() === g.coachName?.trim().toLowerCase());
+
+                                const coachName = matchedCoach?.name || matchedCoach?.displayName || (g as any).coachName || 'Тренер не назначен';
+                                const coachPhoto = getCoachPhoto(matchedCoach) || matchedCoach?.image || (g as any).coachImage || '';
                                 const groupUsers = users.filter(u => u.groupId === g.id);
                                 const maxCap = g.maxStudents || 20;
                                 const groupSched = g.schedule || [];
@@ -2318,7 +2638,7 @@ const AdminGroups = () => {
                                             time: s.time || '18:00',
                                             endTime: s.endTime || '',
                                             location: s.location || 'Главный манеж',
-                                            coach,
+                                            coach: matchedCoach,
                                             coachName,
                                             coachPhoto,
                                             studentCount: groupUsers.length,
@@ -2476,7 +2796,7 @@ const AdminGroups = () => {
                                                         <span className="text-white/20 text-xs font-medium group-hover/empty:text-white/50 transition-colors">
                                                             Выходной
                                                         </span>
-                                                        <span className="text-[10px] text-sparta-gold font-bold mt-1.5 opacity-0 group-hover/empty:opacity-100 transition-opacity flex items-center gap-1">
+                                                        <span className="text-[10px] text-sparta-gold/60 group-hover/empty:text-sparta-gold font-bold mt-1.5 transition-colors flex items-center gap-1">
                                                             <Plus size={12} /> Добавить
                                                         </span>
                                                     </div>
@@ -3520,6 +3840,239 @@ const AdminGroups = () => {
                 coaches={activeCoaches}
                 defaultGroup={publishMessengerTargetGroup}
             />
+
+            {/* Bulk Coach Assignment Modal */}
+            {isBulkCoachModalOpen && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-[#111113] border border-sparta-gold/30 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-[0_0_50px_rgba(245,158,11,0.15)] space-y-6 animate-in fade-in zoom-in-95 font-manrope">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="font-russo text-white text-lg flex items-center gap-2">
+                                    <span className="text-sparta-gold">👔</span>
+                                    <span>Массовое назначение тренера</span>
+                                </h3>
+                                <p className="text-xs text-white/60 mt-1">
+                                    Выбранный наставник будет назначен для <strong className="text-sparta-gold">{selectedGroupIds.length}</strong> групп. Групповые чаты и расписание синхронизируются автоматически.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setIsBulkCoachModalOpen(false)}
+                                className="text-white/40 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Selected Groups Chips */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-white/50 font-bold uppercase tracking-wider block">
+                                Выбранные группы:
+                            </label>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-1">
+                                {selectedGroupIds.map(gid => {
+                                    const g = groups.find(item => item.id === gid);
+                                    return (
+                                        <span key={gid} className="px-3 py-1 rounded-xl bg-white/[0.05] border border-white/10 text-white text-xs font-semibold font-russo flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-sparta-gold" />
+                                            {g?.name || gid}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Coach Selector */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-white/60 font-bold uppercase tracking-wider block">
+                                Выберите тренера:
+                            </label>
+                            <select
+                                value={bulkSelectedCoachId}
+                                onChange={e => setBulkSelectedCoachId(e.target.value)}
+                                className="w-full bg-[#18181b] border border-white/20 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-sparta-gold transition-colors cursor-pointer"
+                            >
+                                {activeCoaches.map(c => (
+                                    <option key={c.id} value={c.id} className="bg-[#18181b] text-white">
+                                        {c.name} ({c.role})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsBulkCoachModalOpen(false)}
+                                disabled={isBulkAssigning}
+                                className="flex-1 py-3 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleBulkAssignCoach}
+                                disabled={isBulkAssigning || !bulkSelectedCoachId}
+                                className="flex-[2] py-3 px-5 rounded-xl bg-gradient-to-r from-sparta-gold to-amber-500 hover:brightness-110 text-black font-bold text-sm shadow-[0_0_25px_rgba(245,158,11,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer font-russo"
+                            >
+                                {isBulkAssigning ? (
+                                    <>
+                                        <RefreshCw className="animate-spin" size={16} />
+                                        <span>Назначение...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={16} />
+                                        <span>Применить к {selectedGroupIds.length} группам</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Express Coach-to-Coach Transfer Modal */}
+            {isExpressTransferModalOpen && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-[#111113] border border-sparta-gold/30 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-[0_0_50px_rgba(245,158,11,0.15)] space-y-6 animate-in fade-in zoom-in-95 font-manrope">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="font-russo text-white text-lg flex items-center gap-2">
+                                    <span className="text-sparta-gold">🔄</span>
+                                    <span>Экспресс-передача групп</span>
+                                </h3>
+                                <p className="text-xs text-white/60 mt-1">
+                                    Быстрая передача всех составов от одного тренера другому без ручного выбора чекбоксами.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setIsExpressTransferModalOpen(false)}
+                                className="text-white/40 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Step 1: From Coach */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                <span>1. С какого тренера передать:</span>
+                            </label>
+                            <select
+                                value={expressFromCoachId}
+                                onChange={e => {
+                                    const nextFrom = e.target.value;
+                                    setExpressFromCoachId(nextFrom);
+                                    if (expressToCoachId === nextFrom) {
+                                        const other = activeCoaches.find(c => c.id !== nextFrom);
+                                        if (other) setExpressToCoachId(other.id);
+                                    }
+                                }}
+                                className="w-full bg-[#18181b] border border-white/20 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-amber-400 transition-colors cursor-pointer"
+                            >
+                                {activeCoaches.map(c => {
+                                    const coachGroupCount = groups.filter(g => 
+                                        g.coachId === c.id || 
+                                        (c.name && (g.coachName || '').trim().toLowerCase() === c.name.trim().toLowerCase())
+                                    ).length;
+                                    return (
+                                        <option key={c.id} value={c.id} className="bg-[#18181b] text-white">
+                                            {c.name} ({coachGroupCount} {coachGroupCount === 1 ? 'группа' : coachGroupCount >= 2 && coachGroupCount <= 4 ? 'группы' : 'групп'})
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </div>
+
+                        {/* Step 2: To Coach */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                <span>2. Кому передать (новый наставник):</span>
+                            </label>
+                            <select
+                                value={expressToCoachId}
+                                onChange={e => setExpressToCoachId(e.target.value)}
+                                className="w-full bg-[#18181b] border border-white/20 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-emerald-400 transition-colors cursor-pointer"
+                            >
+                                {activeCoaches
+                                    .filter(c => c.id !== expressFromCoachId)
+                                    .map(c => (
+                                        <option key={c.id} value={c.id} className="bg-[#18181b] text-white">
+                                            {c.name} ({c.role})
+                                        </option>
+                                    ))}
+                            </select>
+                        </div>
+
+                        {/* Transferable Groups Preview */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs text-white/50 font-bold uppercase tracking-wider">
+                                    Будут переданы составы ({expressTransferableGroups.length}):
+                                </label>
+                            </div>
+
+                            {expressTransferableGroups.length > 0 ? (
+                                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                    {expressTransferableGroups.map(g => {
+                                        const count = users.filter(u => u.groupId === g.id).length;
+                                        return (
+                                            <div
+                                                key={g.id}
+                                                className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-xs"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-sparta-gold shrink-0" />
+                                                    <span className="text-white font-semibold font-russo">{g.name}</span>
+                                                    <span className="text-white/40 text-[11px] font-sans">({g.ageRange?.min || 0}–{g.ageRange?.max || 18} лет)</span>
+                                                </div>
+                                                <span className="text-white/60 font-mono text-[11px]">
+                                                    {count} учеников
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center text-xs text-white/40">
+                                    У выбранного тренера сейчас нет привязанных групп.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsExpressTransferModalOpen(false)}
+                                disabled={isExpressTransferring}
+                                className="flex-1 py-3 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleExpressTransfer}
+                                disabled={isExpressTransferring || expressTransferableGroups.length === 0 || !expressToCoachId || expressFromCoachId === expressToCoachId}
+                                className="flex-[2] py-3 px-5 rounded-xl bg-gradient-to-r from-sparta-gold to-amber-500 hover:brightness-110 text-black font-bold text-sm shadow-[0_0_25px_rgba(245,158,11,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer font-russo"
+                            >
+                                {isExpressTransferring ? (
+                                    <>
+                                        <RefreshCw className="animate-spin" size={16} />
+                                        <span>Передача...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ArrowRightLeft size={16} />
+                                        <span>Передать все составы ({expressTransferableGroups.length})</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };

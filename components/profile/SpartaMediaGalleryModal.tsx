@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X,
@@ -24,6 +23,7 @@ import {
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { SpartaPreviewPlayer } from './SpartaPreviewPlayer';
+import { BaseModal } from '../ui/BaseModal';
 
 const VerificationBadge = ({ role, verification }: { role?: string, verification?: any }) => {
     if (!verification?.isVerified && !['admin', 'trainer', 'coach', 'developer'].includes(role?.toLowerCase() || '')) return null;
@@ -99,13 +99,8 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
     const [isCopied, setIsCopied] = useState<boolean>(false);
     const [isDownloading, setIsDownloading] = useState<boolean>(false);
     const [showControls, setShowControls] = useState<boolean>(true);
-    const [mounted, setMounted] = useState<boolean>(false);
 
     const touchStartRef = useRef<{ x: number, y: number } | null>(null);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
 
     // Prepare list of active media items
     const mediaList = allMediaItems.length > 0 ? allMediaItems : (initialItem ? [initialItem] : []);
@@ -156,9 +151,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
         if (!isOpen) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            } else if (e.key === 'ArrowRight') {
+            if (e.key === 'ArrowRight') {
                 handleNext();
             } else if (e.key === 'ArrowLeft') {
                 handlePrev();
@@ -174,9 +167,9 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, handleNext, handlePrev, onClose]);
+    }, [isOpen, handleNext, handlePrev]);
 
-    if (!isOpen || !currentMedia || !mounted) return null;
+    if (!isOpen || !currentMedia) return null;
 
     // Helper: Formatted timestamp
     const getFormattedDate = (timestamp: any) => {
@@ -222,12 +215,11 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
         }
     };
 
-    // Copy action: copies real image binary (PNG) to clipboard
+    // Copy action
     const handleCopy = async () => {
         if (!currentMedia.mediaUrl) return;
 
         if (currentMedia.mediaType === 'video') {
-            // For video, copy URL
             try {
                 await navigator.clipboard.writeText(currentMedia.mediaUrl);
                 setIsCopied(true);
@@ -238,9 +230,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
             return;
         }
 
-        // For images: convert to PNG binary blob for full clipboard support (Telegram, Discord, Photoshop, etc.)
         try {
-            // Method 1: Fetch -> ImageBitmap -> Canvas -> PNG Blob
             let pngBlob: Blob | null = null;
             try {
                 const response = await fetch(currentMedia.mediaUrl, { mode: 'cors' });
@@ -264,7 +254,6 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                 console.warn("Direct fetch blob conversion failed, falling back to Image element:", fetchErr);
             }
 
-            // Method 2: HTML Image element fallback
             if (!pngBlob) {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
@@ -293,7 +282,6 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                 return;
             }
 
-            // Method 3: Ultimate fallback to URL string if clipboard item binary write is blocked by browser policy
             await navigator.clipboard.writeText(currentMedia.mediaUrl);
             setIsCopied(true);
             setTimeout(() => setIsCopied(false), 2000);
@@ -344,16 +332,24 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
 
     const categoryBadge = currentMedia.category ? (CATEGORY_LABELS[currentMedia.category] || CATEGORY_LABELS.general) : null;
 
-    const modalContent = (
-        <AnimatePresence>
+    return (
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-4xl"
+            customCard
+            showCloseButton={false}
+            glowColor="amber"
+            zIndex="z-[350]"
+        >
             <div
-                className="fixed inset-0 z-[350] flex flex-col bg-black/95 sm:backdrop-blur-3xl select-none overflow-hidden"
+                className="relative w-full h-[88vh] max-h-[850px] flex flex-col bg-black/95 rounded-3xl select-none overflow-hidden border border-white/10"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 onMouseMove={() => setShowControls(true)}
                 onClick={() => setShowControls(prev => !prev)}
             >
-                {/* Ergonomic Centered Top Bar (Right Above the Media) */}
+                {/* Ergonomic Centered Top Bar */}
                 <AnimatePresence>
                     {showControls && (
                         <motion.div
@@ -413,7 +409,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                             <button
                                                 type="button"
                                                 onClick={() => setZoom(z => (z > 1 ? 1 : 2))}
-                                                className={`p-1.5 rounded-xl transition-all ${
+                                                className={`p-1.5 rounded-xl transition-all cursor-pointer ${
                                                     zoom > 1
                                                         ? 'bg-sparta-gold text-black font-bold'
                                                         : 'hover:bg-white/10 text-white/70 hover:text-white'
@@ -426,7 +422,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                             <button
                                                 type="button"
                                                 onClick={() => setRotation(r => (r + 90) % 360)}
-                                                className="p-1.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all active:scale-95"
+                                                className="p-1.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all active:scale-95 cursor-pointer"
                                                 title="Повернуть на 90°"
                                             >
                                                 <RotateCw size={15} />
@@ -438,7 +434,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                     <button
                                         type="button"
                                         onClick={handleCopy}
-                                        className="p-1.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all active:scale-95"
+                                        className="p-1.5 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all active:scale-95 cursor-pointer"
                                         title="Скопировать"
                                     >
                                         {isCopied ? <Check size={15} className="text-green-400" /> : <Copy size={15} />}
@@ -449,7 +445,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                         type="button"
                                         onClick={handleDownload}
                                         disabled={isDownloading}
-                                        className="p-1.5 rounded-xl hover:bg-sparta-gold hover:text-black text-white/80 transition-all active:scale-95"
+                                        className="p-1.5 rounded-xl hover:bg-sparta-gold hover:text-black text-white/80 transition-all active:scale-95 cursor-pointer"
                                         title="Скачать оригинал"
                                     >
                                         <Download size={15} />
@@ -461,7 +457,8 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                     <button
                                         type="button"
                                         onClick={onClose}
-                                        className="p-1.5 rounded-xl hover:bg-red-500 text-white/80 hover:text-white transition-all active:scale-90"
+                                        aria-label="Закрыть"
+                                        className="p-1.5 rounded-xl hover:bg-red-500 text-white/80 hover:text-white transition-all active:scale-90 cursor-pointer"
                                         title="Закрыть (Esc)"
                                     >
                                         <X size={16} />
@@ -472,17 +469,16 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                     )}
                 </AnimatePresence>
 
-                {/* Main Media Canvas (Ergonomic Centered Container) */}
+                {/* Main Media Canvas */}
                 <div
                     className="flex-1 relative flex items-center justify-center overflow-hidden p-2 sm:p-6"
                     onWheel={handleWheel}
                 >
-                    {/* Media Item & Close-proximity Navigation */}
                     <div
-                        className="relative w-full h-full max-h-[80vh] flex items-center justify-center"
+                        className="relative w-full h-full max-h-[75vh] flex items-center justify-center"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Floating Prev Button (Closer to the Media) */}
+                        {/* Floating Prev Button */}
                         {currentIndex > 0 && showControls && (
                             <motion.button
                                 initial={{ opacity: 0, x: -10 }}
@@ -492,7 +488,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                     e.stopPropagation();
                                     handlePrev();
                                 }}
-                                className="absolute left-2 sm:left-4 lg:left-8 z-30 p-2.5 sm:p-3 rounded-full bg-[#121218]/85 hover:bg-sparta-gold text-white hover:text-black transition-all border border-white/15 backdrop-blur-2xl shadow-2xl active:scale-95"
+                                className="absolute left-2 sm:left-4 lg:left-8 z-30 p-2.5 sm:p-3 rounded-full bg-[#121218]/85 hover:bg-sparta-gold text-white hover:text-black transition-all border border-white/15 backdrop-blur-2xl shadow-2xl active:scale-95 cursor-pointer"
                                 title="Предыдущее (←)"
                             >
                                 <ChevronLeft size={20} />
@@ -504,7 +500,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                 key={currentMedia.mediaUrl}
                                 src={currentMedia.mediaUrl}
                                 autoPlay={true}
-                                className="max-w-full max-h-[80vh]"
+                                className="max-w-full max-h-[75vh]"
                             />
                         ) : (
                             <motion.img
@@ -521,11 +517,11 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                 drag={zoom > 1}
                                 dragConstraints={{ top: -300, bottom: 300, left: -400, right: 400 }}
                                 onDoubleClick={() => setZoom(z => (z > 1 ? 1 : 2))}
-                                className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl transition-transform cursor-grab active:cursor-grabbing"
+                                className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl transition-transform cursor-grab active:cursor-grabbing"
                             />
                         )}
 
-                        {/* Floating Next Button (Closer to the Media) */}
+                        {/* Floating Next Button */}
                         {currentIndex < mediaList.length - 1 && showControls && (
                             <motion.button
                                 initial={{ opacity: 0, x: 10 }}
@@ -535,7 +531,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                     e.stopPropagation();
                                     handleNext();
                                 }}
-                                className="absolute right-2 sm:right-4 lg:right-8 z-30 p-2.5 sm:p-3 rounded-full bg-[#121218]/85 hover:bg-sparta-gold text-white hover:text-black transition-all border border-white/15 backdrop-blur-2xl shadow-2xl active:scale-95"
+                                className="absolute right-2 sm:right-4 lg:right-8 z-30 p-2.5 sm:p-3 rounded-full bg-[#121218]/85 hover:bg-sparta-gold text-white hover:text-black transition-all border border-white/15 backdrop-blur-2xl shadow-2xl active:scale-95 cursor-pointer"
                                 title="Следующее (→)"
                             >
                                 <ChevronRight size={20} />
@@ -544,7 +540,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                     </div>
                 </div>
 
-                {/* Ergonomic Centered Bottom Action Island (Right Below the Media) */}
+                {/* Ergonomic Centered Bottom Action Island */}
                 <AnimatePresence>
                     {showControls && (
                         <motion.div
@@ -558,7 +554,6 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                 className="pointer-events-auto bg-[#121218]/90 backdrop-blur-2xl border border-white/15 rounded-2xl p-2 sm:p-2.5 flex items-center justify-between gap-3 shadow-2xl"
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                {/* Caption text if exists */}
                                 {currentMedia.text ? (
                                     <p className="text-xs text-white/90 font-medium px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 flex-1 truncate">
                                         {currentMedia.text}
@@ -569,7 +564,6 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                     </span>
                                 )}
 
-                                {/* Action Buttons */}
                                 <div className="flex items-center gap-1.5 shrink-0">
                                     {onReply && (
                                         <button
@@ -578,7 +572,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                                 onReply(currentMedia);
                                                 onClose();
                                             }}
-                                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-sparta-gold hover:text-black text-white text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
+                                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-sparta-gold hover:text-black text-white text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm cursor-pointer"
                                         >
                                             <CornerUpLeft size={13} />
                                             <span>Ответить</span>
@@ -592,7 +586,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                                 onForward(currentMedia);
                                                 onClose();
                                             }}
-                                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
+                                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm cursor-pointer"
                                         >
                                             <Share2 size={13} />
                                             <span className="hidden sm:inline">Переслать</span>
@@ -606,7 +600,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                                 onDelete(currentMedia.id);
                                                 onClose();
                                             }}
-                                            className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white transition-all active:scale-95"
+                                            className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white transition-all active:scale-95 cursor-pointer"
                                             title="Удалить медиа"
                                         >
                                             <Trash2 size={14} />
@@ -618,11 +612,8 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                     )}
                 </AnimatePresence>
             </div>
-        </AnimatePresence>
+        </BaseModal>
     );
-
-    return createPortal(modalContent, document.body);
 };
 
 export default SpartaMediaGalleryModal;
-

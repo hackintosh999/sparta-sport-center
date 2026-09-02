@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     MessageCircle,
@@ -81,6 +82,8 @@ interface MessagesSectionProps {
 
 
 const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, initialChatId, initialTargetUid, initialTargetName, initialStudentName, onMobileDetailChange, onTabChange }) => {
+    const [searchParams] = useSearchParams();
+    const directChatId = searchParams.get('chatId') || initialChatId;
     const [activeCategory, setActiveCategory] = useState('all');
     const [chats, setChats] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -238,47 +241,95 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
         return chat.type === 'private' || chat.type === 'direct' || chat.type === 'parent' || chat.type === 'child' || chat.type === 'social' || (Array.isArray(chat.participants) && chat.participants.length === 2);
     };
 
+    // Helper to extract the other participant's dynamic details relative to current user
+    const getOtherParticipantInfo = (chat: any) => {
+        if (!chat) return { otherId: null, details: {} as any, role: '', name: '', childInfo: '' };
+
+        const isCurrentUser = (id: string) => {
+            if (!id) return false;
+            if (id === user?.uid) return true;
+            if (isTrainer && userProfile?.coachId && id === userProfile.coachId) return true;
+            return false;
+        };
+
+        let otherId: string | null = null;
+        if (Array.isArray(chat.participants)) {
+            otherId = chat.participants.find((id: string) => !isCurrentUser(id)) ||
+                chat.participants.find((id: string) => id !== user?.uid) || null;
+        }
+        if (!otherId) {
+            otherId = (chat.parentId && !isCurrentUser(chat.parentId)) ? chat.parentId :
+                (chat.studentUid && !isCurrentUser(chat.studentUid)) ? chat.studentUid :
+                (chat.targetUserId && !isCurrentUser(chat.targetUserId)) ? chat.targetUserId :
+                (chat.userId && !isCurrentUser(chat.userId)) ? chat.userId :
+                (chat.coachId && !isCurrentUser(chat.coachId)) ? chat.coachId : null;
+        }
+
+        const details = (otherId && chat.participantDetails?.[otherId]) || {};
+        const live = otherId ? participantData[otherId] : null;
+
+        // Dynamic Role calculation
+        let role = (details.role || live?.role || (otherId && chat.participantRoles?.[otherId]) || '').toLowerCase();
+        if (!role) {
+            if (chat.type === 'parent' || chat.parentName || (otherId && chat.parentId === otherId)) {
+                role = 'parent';
+            } else if (chat.type === 'child' || (otherId && chat.studentUid === otherId)) {
+                role = 'student';
+            } else if (isTrainer) {
+                role = 'parent';
+            } else if (isParent) {
+                role = 'coach';
+            }
+        }
+
+        // Dynamic Display Name calculation
+        let name = details.name ||
+            live?.name ||
+            (otherId && chat.participantNames?.[otherId]) ||
+            chat.parentName;
+
+        const lowChatName = (chat.name || '').toLowerCase();
+        if (!name || ['родитель', 'ребенок', 'чат', 'группа', 'тренер'].includes(name.toLowerCase())) {
+            if (role === 'parent') {
+                name = chat.parentName || (chat.childName ? `Родитель (${chat.childName})` : (chat.name && !lowChatName.includes('тренер') ? chat.name : 'Родитель'));
+            } else if (role === 'student') {
+                name = chat.childName || chat.studentName || 'Ученик';
+            } else if (role === 'coach' || role === 'trainer') {
+                name = chat.coachName || (chat.name && !lowChatName.includes('родитель') ? chat.name : 'Тренер');
+            } else {
+                name = chat.name || 'Собеседник';
+            }
+        }
+
+        const childInfo = (chat.childName || chat.studentName)
+            ? `Родитель: ${chat.childName || chat.studentName}`
+            : 'Родитель ученика';
+
+        return { otherId, details, role, name, childInfo };
+    };
+
     const isCoachChat = (chat: any) => {
         if (!isDirectChat(chat)) return false;
-        const otherId = chat.participants?.find((id: string) => id !== user.uid);
-        const live = otherId ? participantData[otherId] : null;
-        const otherRole = (live?.role || (otherId && chat.participantRoles ? chat.participantRoles[otherId] : '') || '').toLowerCase();
-        if (otherRole === 'coach' || otherRole === 'trainer') return true;
-        const coachUid = userProfile?.coachId;
-        if (coachUid && chat.participants?.includes(coachUid)) return true;
-        if (chat.coachId) return true;
-        const name = (chat.name || '').toLowerCase();
-        return name.includes('тренер') || name.includes('coach');
+        const { role } = getOtherParticipantInfo(chat);
+        return role === 'coach' || role === 'trainer';
     };
 
     const isChildChat = (chat: any) => {
         if (!isDirectChat(chat)) return false;
-        if (isCoachChat(chat)) return false;
-        const otherId = chat.participants?.find((id: string) => id !== user.uid);
-        const live = otherId ? participantData[otherId] : null;
-        const otherRole = (live?.role || (otherId && chat.participantRoles ? chat.participantRoles[otherId] : '') || '').toLowerCase();
-        if (otherRole === 'student' || otherRole === 'kid' || otherRole === 'child') return true;
-        if (otherId && (otherId === userProfile?.studentUid || otherId === userProfile?.childId)) return true;
-        if (isParent && !isCoachChat(chat)) return true;
-        return false;
+        const { role } = getOtherParticipantInfo(chat);
+        return role === 'student' || role === 'kid' || role === 'child' || chat.type === 'child';
     };
 
     const isParentDirectChat = (chat: any) => {
         if (!isDirectChat(chat)) return false;
-        if (isCoachChat(chat)) return false;
-        const otherId = chat.participants?.find((id: string) => id !== user.uid);
-        const live = otherId ? participantData[otherId] : null;
-        const otherRole = (live?.role || (otherId && chat.participantRoles ? chat.participantRoles[otherId] : '') || '').toLowerCase();
-        if (otherRole === 'parent') return true;
-        if (otherId && (otherId === userProfile?.parentId)) return true;
-        if (isStudent && !isCoachChat(chat) && (chat.name?.toLowerCase().includes('родитель') || chat.type === 'parent')) return true;
-        return false;
+        const { role } = getOtherParticipantInfo(chat);
+        return role === 'parent' || chat.type === 'parent';
     };
 
     const isFriendChat = (chat: any) => {
         if (!isDirectChat(chat)) return false;
-        if (isCoachChat(chat) || isParentDirectChat(chat) || (isParent && isChildChat(chat))) return false;
-        return true;
+        const { role } = getOtherParticipantInfo(chat);
+        return role === 'friend' || (!['coach', 'trainer', 'parent', 'student', 'child', 'kid'].includes(role) && chat.type !== 'parent');
     };
 
     const isGroupChat = (chat: any) => {
@@ -541,22 +592,31 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                 return false;
             });
 
+            const isCurrentUser = (id: string) => {
+                if (!id) return false;
+                if (id === user.uid) return true;
+                if (id === 'coach' && isTrainer) return true;
+                if (isTrainer && userProfile?.coachId && id === userProfile.coachId) return true;
+                return false;
+            };
+
             // Helper to extract the exact other participant's UID from any direct chat
             const getChatOtherUid = (chat: any) => {
+
                 // 1. Array check
                 if (Array.isArray(chat.participants)) {
                     for (const p of chat.participants) {
                         const uidStr = typeof p === 'string' ? p : (p?.id || p?.uid);
-                        if (uidStr && uidStr !== user.uid) return uidStr;
+                        if (uidStr && !isCurrentUser(uidStr)) return uidStr;
                     }
                 }
 
                 // 2. Explicit direct UID fields
-                if (chat.coachId && chat.coachId !== user.uid) return chat.coachId;
-                if (chat.studentUid && chat.studentUid !== user.uid) return chat.studentUid;
-                if (chat.parentId && chat.parentId !== user.uid) return chat.parentId;
-                if (chat.targetUserId && chat.targetUserId !== user.uid) return chat.targetUserId;
-                if (chat.userId && chat.userId !== user.uid) return chat.userId;
+                if (chat.parentId && !isCurrentUser(chat.parentId)) return chat.parentId;
+                if (chat.studentUid && !isCurrentUser(chat.studentUid)) return chat.studentUid;
+                if (chat.targetUserId && !isCurrentUser(chat.targetUserId)) return chat.targetUserId;
+                if (chat.userId && !isCurrentUser(chat.userId)) return chat.userId;
+                if (chat.coachId && !isCurrentUser(chat.coachId)) return chat.coachId;
 
                 // 3. Match family relations from user profile
                 if (isParent && userProfile?.studentUid) {
@@ -573,7 +633,7 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                 }
 
                 // 4. Match student's coach
-                if (userProfile?.coachId) {
+                if (isStudent && userProfile?.coachId) {
                     const lowName = (chat.name || '').toLowerCase();
                     if (lowName.includes('тренер') || lowName.includes('coach')) {
                         return userProfile.coachId;
@@ -603,8 +663,14 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                 } else {
                     // Direct / 1-on-1 chat (Parent-Child, Coach-User, Friend-Friend, etc.)
                     const otherUid = getChatOtherUid(chat);
-                    if (otherUid) {
+                    if (chat.type === 'parent' && chat.parentId && !isCurrentUser(chat.parentId)) {
+                        dedupeKey = `direct_parent_${chat.parentId}`;
+                    } else if (otherUid) {
                         dedupeKey = `direct_${otherUid}`;
+                    } else if (chat.type === 'parent' && (chat.parentName || chat.childName || chat.studentName)) {
+                        const pName = (chat.parentName || '').toLowerCase().trim();
+                        const cName = (chat.childName || chat.studentName || '').toLowerCase().trim();
+                        dedupeKey = `direct_parent_${pName}_${cName}`;
                     } else {
                         const cleanName = (chat.name || '')
                             .replace(/\(тренер\)|\(сотрудник\)|\(родитель\)|\(спортсмен\)|\(ученик\)|\(друг\)/gi, '')
@@ -631,7 +697,7 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                         ...secondary,
                         ...primary,
                         id: primary.id,
-                        type: isGroup ? 'group' : 'private',
+                        type: primary.type || secondary.type || (isGroup ? 'group' : 'private'),
                         isPrivate: !isGroup && !isSaved && !isChannel,
                         participants: Array.from(new Set([...(secondary.participants || []), ...(primary.participants || [])])),
                         participantNames: { ...(secondary.participantNames || {}), ...(primary.participantNames || {}) },
@@ -1056,12 +1122,64 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
         }
     };
 
+    // Fetch chat directly from Firestore by ID if not yet in cache or list
+    const fetchChatById = async (chatId: string) => {
+        try {
+            const chatRef = doc(db, 'chats', chatId);
+            const chatSnap = await getDoc(chatRef);
+            if (chatSnap.exists()) {
+                const chatData = { id: chatSnap.id, ...chatSnap.data() };
+                setChats(prev => {
+                    if (prev.some(c => c.id === chatData.id)) return prev;
+                    return [chatData, ...prev];
+                });
+                handleSelectChat(chatData, true);
+                return;
+            }
+
+            // Fallback: check private_chats
+            const privRef = doc(db, 'private_chats', chatId);
+            const privSnap = await getDoc(privRef);
+            if (privSnap.exists()) {
+                const chatData = { id: privSnap.id, ...privSnap.data() };
+                setChats(prev => {
+                    if (prev.some(c => c.id === chatData.id)) return prev;
+                    return [chatData, ...prev];
+                });
+                handleSelectChat(chatData, true);
+            }
+        } catch (err) {
+            console.error("Error in fetchChatById:", err);
+        }
+    };
+
+    // Auto-select chat when directChatId is present in URL or props
+    useEffect(() => {
+        if (!directChatId) return;
+
+        // 1. Check if chat is already present in loaded chats
+        const chatToSelect = chats.find(c =>
+            c.id === directChatId ||
+            (Array.isArray(c.participants) && c.participants.length === 2 && directChatId.includes(c.participants[0]) && directChatId.includes(c.participants[1]))
+        );
+
+        if (chatToSelect) {
+            if (!selectedChat || selectedChat.id !== chatToSelect.id) {
+                handleSelectChat(chatToSelect, true);
+            }
+            return;
+        }
+
+        // 2. If list is still loading or chat not in cache, force fetch document from Firestore
+        fetchChatById(directChatId);
+    }, [directChatId, chats]);
+
     // Deep-linking: auto-select chat from initialChatId or targetUid
     useEffect(() => {
         if (loading || isCreating) return;
 
         const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-        const effectiveChatId = initialChatId || urlParams?.get('chatId');
+        const effectiveChatId = directChatId || initialChatId || urlParams?.get('chatId');
         const effectiveTargetUid = initialTargetUid || urlParams?.get('targetUid');
         const effectiveTargetName = initialTargetName || urlParams?.get('targetName') || 'Пользователь';
         const effectiveStudentName = initialStudentName || urlParams?.get('studentName');
@@ -1069,10 +1187,14 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
         const currentParamsKey = `${effectiveChatId}-${effectiveTargetUid}`;
         if (currentParamsKey === prevParamsKey.current && hasHandledParams.current) return;
 
-        if (effectiveChatId && chats.length > 0) {
+        if (effectiveChatId) {
             const chatToSelect = chats.find(c => c.id === effectiveChatId);
             if (chatToSelect && (!selectedChat || selectedChat.id !== effectiveChatId)) {
                 handleSelectChat(chatToSelect, true);
+                hasHandledParams.current = true;
+                prevParamsKey.current = currentParamsKey;
+            } else if (!chatToSelect) {
+                fetchChatById(effectiveChatId);
                 hasHandledParams.current = true;
                 prevParamsKey.current = currentParamsKey;
             }
@@ -1099,12 +1221,13 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                 prevParamsKey.current = currentParamsKey;
             }
         }
-    }, [initialChatId, initialTargetUid, initialTargetName, initialStudentName, chats, isCreating, loading, user?.uid]);
+    }, [directChatId, initialChatId, initialTargetUid, initialTargetName, initialStudentName, chats, isCreating, loading, user?.uid]);
 
     const handleSelectChat = async (chat: any, openMobile: boolean = true) => {
         setSelectedChat(chat);
         if (openMobile) {
             setIsMobileDetailVisible(true);
+            onMobileDetailChange?.(true);
         }
 
         // Ensure the chat is visible in the current category if user manually clicked
@@ -1149,12 +1272,12 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
     useEffect(() => {
         if (loading || chats.length === 0 || selectedChat) return;
 
-        if (!initialChatId && !initialTargetUid) {
+        if (!directChatId && !initialChatId && !initialTargetUid) {
             if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
                 handleSelectChat(chats[0], false);
             }
         }
-    }, [chats, loading, selectedChat, initialChatId, initialTargetUid]);
+    }, [chats, loading, selectedChat, directChatId, initialChatId, initialTargetUid]);
 
     const handleContextMenu = (e: React.MouseEvent, chatId: string) => {
         e.preventDefault();
@@ -1923,7 +2046,7 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                             ) : (
                                 filteredChats.map(chat => {
                                     const thisIsSaved = chat.type === 'saved' || chat.id === `saved_${user.uid}`;
-                                    const otherId = chat.participants?.find((id: string) => id !== user.uid);
+                                    const { otherId, details: otherParticipant, role: otherRole, name: interlocutorName, childInfo } = getOtherParticipantInfo(chat);
 
                                     const liveData = otherId ? participantData[otherId] : null;
                                     const isDirect = isDirectChat(chat);
@@ -1935,11 +2058,11 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
 
                                     const displayName = thisIsSaved
                                         ? '⭐️ Избранное'
-                                        : isDirect && otherId
-                                            ? (liveData?.name || (chat.participantNames ? chat.participantNames[otherId] : null) || (chat.name && !['родитель', 'ребенок', 'чат', 'группа'].includes(chat.name.toLowerCase()) ? chat.name : (isParent ? (userProfile?.childName || 'Ребенок') : (isStudent ? (userProfile?.parentName || 'Родитель') : chat.name))))
+                                        : isDirect
+                                            ? interlocutorName
                                             : chat.name;
                                     const displayAvatar = isDirect && otherId
-                                        ? (liveData?.avatarUrl || (chat.participantAvatars ? chat.participantAvatars[otherId] : chat.avatarUrl))
+                                        ? (otherParticipant?.avatarUrl || otherParticipant?.photoURL || liveData?.avatarUrl || (chat.participantAvatars ? chat.participantAvatars[otherId] : chat.avatarUrl))
                                         : chat.avatarUrl;
 
                                     const lastClearedTime = userPrefs[chat.id]?.lastClearedAt?.toMillis?.() ||
@@ -2046,39 +2169,19 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                                                             <Crown size={9} /> Тренер
                                                         </span>
                                                     )}
-                                                    {isDirect && isParent && thisIsChild && (
-                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                                                            <Baby size={9} /> Спортсмен
-                                                        </span>
-                                                    )}
-                                                    {isDirect && isStudent && thisIsParentRole && (
+                                                    {thisIsParentRole && (
                                                         <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/30">
                                                             <Users size={9} /> Родитель
                                                         </span>
                                                     )}
-                                                    {isDirect && isTrainer && thisIsParentRole && (
-                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                                            <Users size={9} /> Родитель
+                                                    {thisIsParentRole && (chat.childName || chat.studentName) && (
+                                                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-300/80 border border-amber-500/20">
+                                                            👨‍👩‍👧 {childInfo}
                                                         </span>
                                                     )}
-                                                    {isDirect && isTrainer && thisIsChild && (
+                                                    {thisIsChild && (
                                                         <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md flex items-center gap-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                                                            <Baby size={9} /> Ученик
-                                                        </span>
-                                                    )}
-                                                    {thisIsFriend && (
-                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                                                            🤝 Друг
-                                                        </span>
-                                                    )}
-                                                    {thisIsGroup && (
-                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                                            ⚽ Команда
-                                                        </span>
-                                                    )}
-                                                    {chat.type === 'parent' && chat.studentName && (
-                                                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                                            👨‍👩‍👧 Ребёнок: {chat.studentName}
+                                                            <Baby size={9} /> {isTrainer ? 'Ученик' : 'Спортсмен'}
                                                         </span>
                                                     )}
                                                     {chat.type === 'staff' && (
@@ -2142,11 +2245,7 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                                     groupId={selectedChat.groupId || selectedChat.id}
                                     groupName={
                                         isDirectChat(selectedChat)
-                                            ? (() => {
-                                                const otherId = selectedChat.participants?.find((id: string) => id !== user.uid);
-                                                const liveData = otherId ? participantData[otherId] : null;
-                                                return liveData?.name || (otherId && selectedChat.participantNames ? selectedChat.participantNames[otherId] : null) || (selectedChat.name && !['родитель', 'ребенок', 'чат', 'группа'].includes(selectedChat.name.toLowerCase()) ? selectedChat.name : (isParent ? (userProfile?.childName || 'Ребенок') : (isStudent ? (userProfile?.parentName || 'Родитель') : selectedChat.name)));
-                                            })()
+                                            ? getOtherParticipantInfo(selectedChat).name
                                             : selectedChat.name
                                     }
                                     isUnifiedChat={true}
@@ -2499,7 +2598,7 @@ const MessagesSection: React.FC<MessagesSectionProps> = ({ user, userProfile, in
                                                                                     <p className="text-white font-bold">{u.childName || u.full_name || u.email}</p>
                                                                                     <p className="text-white/40 text-xs">{u.email}</p>
                                                                                 </div>
-                                                                                <Plus size={16} className="text-sparta-gold opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                                <Plus size={16} className="text-sparta-gold/50 group-hover:text-sparta-gold transition-colors" />
                                                                             </div>
                                                                         </button>
                                                                     ))}
@@ -2960,7 +3059,7 @@ const CreationOption: React.FC<{ icon: any, title: string, desc: string, onClick
         <h4 className="text-white font-russo uppercase text-sm mb-1 tracking-tight">{title}</h4>
         <p className="text-white/40 text-[10px] font-medium leading-relaxed uppercase tracking-tighter">{desc}</p>
 
-        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-0 right-0 p-4 opacity-40 group-hover:opacity-100 transition-opacity">
             <ChevronRight size={16} className="text-sparta-gold" />
         </div>
     </motion.div>

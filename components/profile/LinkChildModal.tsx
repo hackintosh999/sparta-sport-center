@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, User, Check, Loader2, AlertCircle, Phone, Sparkles, Trophy, Users, Plus, MapPin, Calendar, ShieldCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { X, Search, User, Check, Loader2, AlertCircle, Phone, Users, Plus, ShieldCheck } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { findChildToLink, linkParentToChild, linkParentToRegistryChild, createAndLinkChild } from '../../services/userService';
 import { SPARTA_LOCATIONS } from '../../constants/cities';
+import { BaseModal } from '../ui/BaseModal';
 
 interface LinkChildModalProps {
     isOpen: boolean;
@@ -208,294 +209,280 @@ export const LinkChildModal: React.FC<LinkChildModalProps> = ({
         }
     };
 
-    if (!isOpen) return null;
-
     const matchedLocation = SPARTA_LOCATIONS.find(l => l.id === selectedBranchId) || SPARTA_LOCATIONS[0];
     const calcAge = 2026 - (parseInt(newBirthYear, 10) || 2018);
 
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={onClose}
-                    className="absolute inset-0 bg-black/85 backdrop-blur-md"
-                />
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            showCloseButton={false}
+            glowColor="amber"
+            zIndex="z-[120]"
+        >
+            <div className="relative space-y-5 text-left font-manrope">
+                {/* Header */}
+                <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center border border-sparta-gold/40 shadow-md">
+                            <Users size={20} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl sm:text-2xl font-russo text-white uppercase tracking-wider">
+                                Дети в семье
+                            </h3>
+                            <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mt-0.5">
+                                Добавление любого количества спортсменов
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        aria-label="Закрыть"
+                        className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
 
-                <motion.div
-                    initial={{ scale: 0.93, opacity: 0, y: 20 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.93, opacity: 0, y: 20 }}
-                    className="relative w-full max-w-lg bg-[#141418] border border-sparta-gold/30 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-left font-manrope"
-                >
-                    {/* Background glow */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-sparta-gold/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+                {/* Mode Switcher Tabs */}
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-white/5 border border-white/10 rounded-2xl">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setMode('create');
+                            setError('');
+                            setSuccessMsg('');
+                        }}
+                        className={`py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                            mode === 'create'
+                                ? 'bg-sparta-gold text-black shadow-md font-black'
+                                : 'text-white/60 hover:text-white'
+                        }`}
+                    >
+                        <Plus size={14} />
+                        <span>Создать профиль</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setMode('search');
+                            setError('');
+                            setSuccessMsg('');
+                        }}
+                        className={`py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                            mode === 'search'
+                                ? 'bg-sparta-gold text-black shadow-md font-black'
+                                : 'text-white/60 hover:text-white'
+                        }`}
+                    >
+                        <Search size={14} />
+                        <span>Найти в базе</span>
+                    </button>
+                </div>
 
-                    <div className="relative z-10 space-y-5">
-                        {/* Header */}
-                        <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center border border-sparta-gold/40 shadow-md">
-                                    <Users size={20} />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl sm:text-2xl font-russo text-white uppercase tracking-wider">
-                                        Дети в семье
-                                    </h3>
-                                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mt-0.5">
-                                        Добавление любого количества спортсменов
-                                    </p>
-                                </div>
+                {/* MODE 1: CREATE NEW CHILD */}
+                {mode === 'create' && (
+                    <form onSubmit={handleCreateChild} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                                👦 Имя и фамилия ребёнка:
+                            </label>
+                            <div className="relative">
+                                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                <input
+                                    type="text"
+                                    value={newChildName}
+                                    onChange={(e) => setNewChildName(e.target.value)}
+                                    placeholder="Например: Артём Иванов"
+                                    required
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-semibold"
+                                />
                             </div>
-                            <button
-                                onClick={onClose}
-                                className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors cursor-pointer"
-                            >
-                                <X size={20} />
-                            </button>
                         </div>
 
-                        {/* Mode Switcher Tabs */}
-                        <div className="grid grid-cols-2 gap-1.5 p-1 bg-white/5 border border-white/10 rounded-2xl">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setMode('create');
-                                    setError('');
-                                    setSuccessMsg('');
-                                }}
-                                className={`py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                                    mode === 'create'
-                                        ? 'bg-sparta-gold text-black shadow-md font-black'
-                                        : 'text-white/60 hover:text-white'
-                                }`}
-                            >
-                                <Plus size={14} />
-                                <span>Создать профиль</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setMode('search');
-                                    setError('');
-                                    setSuccessMsg('');
-                                }}
-                                className={`py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                                    mode === 'search'
-                                        ? 'bg-sparta-gold text-black shadow-md font-black'
-                                        : 'text-white/60 hover:text-white'
-                                }`}
-                            >
-                                <Search size={14} />
-                                <span>Найти в базе</span>
-                            </button>
-                        </div>
-
-                        {/* MODE 1: CREATE NEW CHILD */}
-                        {mode === 'create' && (
-                            <form onSubmit={handleCreateChild} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                                        👦 Имя и фамилия ребёнка:
-                                    </label>
-                                    <div className="relative">
-                                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
-                                        <input
-                                            type="text"
-                                            value={newChildName}
-                                            onChange={(e) => setNewChildName(e.target.value)}
-                                            placeholder="Например: Артём Иванов"
-                                            required
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-semibold"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                                            📅 Год рождения:
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="2010"
-                                            max="2024"
-                                            value={newBirthYear}
-                                            onChange={(e) => setNewBirthYear(e.target.value)}
-                                            required
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-3.5 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-mono font-bold"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                                            📍 Филиал Спарты:
-                                        </label>
-                                        <select
-                                            value={selectedBranchId}
-                                            onChange={(e) => setSelectedBranchId(e.target.value)}
-                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl py-3 px-3 text-white outline-none focus:border-sparta-gold transition-all text-xs font-semibold cursor-pointer"
-                                        >
-                                            {SPARTA_LOCATIONS.map(loc => (
-                                                <option key={loc.id} value={loc.id}>
-                                                    {loc.name} {(loc as any).cityName ? `(${(loc as any).cityName})` : ''}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Preview Card */}
-                                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between text-xs">
-                                    <div className="space-y-0.5">
-                                        <span className="text-[10px] uppercase font-bold text-sparta-gold">
-                                            Группа {newBirthYear} г.р. ({calcAge > 0 ? `${calcAge} лет` : '...'})
-                                        </span>
-                                        <p className="text-white/80 font-semibold">{matchedLocation.name}</p>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                                        <ShieldCheck size={13} />
-                                        <span>Готов к привязке</span>
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={isCreating || !newChildName.trim()}
-                                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-sparta-gold via-yellow-400 to-sparta-gold hover:brightness-110 disabled:opacity-50 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 cursor-pointer"
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                                    📅 Год рождения:
+                                </label>
+                                <input
+                                    type="number"
+                                    min="2010"
+                                    max="2024"
+                                    value={newBirthYear}
+                                    onChange={(e) => setNewBirthYear(e.target.value)}
+                                    required
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-3.5 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-mono font-bold"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                                    📍 Филиал Спарты:
+                                </label>
+                                <select
+                                    value={selectedBranchId}
+                                    onChange={(e) => setSelectedBranchId(e.target.value)}
+                                    className="w-full bg-zinc-900 border border-white/10 rounded-xl py-3 px-3 text-white outline-none focus:border-sparta-gold transition-all text-xs font-semibold cursor-pointer"
                                 >
-                                    {isCreating ? (
-                                        <Loader2 size={16} className="animate-spin" />
-                                    ) : (
-                                        <>
-                                            <Plus size={16} />
-                                            <span>Создать и привязать к семье</span>
-                                        </>
-                                    )}
-                                </button>
-                            </form>
-                        )}
+                                    {SPARTA_LOCATIONS.map(loc => (
+                                        <option key={loc.id} value={loc.id}>
+                                            {loc.name} {(loc as any).cityName ? `(${(loc as any).cityName})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
 
-                        {/* MODE 2: SEARCH IN REGISTRY */}
-                        {mode === 'search' && (
-                            <div className="space-y-4">
-                                <div className="space-y-3">
-                                    <div className="relative">
-                                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
-                                        <input
-                                            type="text"
-                                            value={childName}
-                                            onChange={(e) => setChildName(e.target.value)}
-                                            placeholder="Фамилия или имя ребенка"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-semibold"
-                                        />
-                                    </div>
+                        {/* Preview Card */}
+                        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between text-xs">
+                            <div className="space-y-0.5">
+                                <span className="text-[10px] uppercase font-bold text-sparta-gold">
+                                    Группа {newBirthYear} г.р. ({calcAge > 0 ? `${calcAge} лет` : '...'})
+                                </span>
+                                <p className="text-white/80 font-semibold">{matchedLocation.name}</p>
+                            </div>
+                            <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                                <ShieldCheck size={13} />
+                                <span>Готов к привязке</span>
+                            </div>
+                        </div>
 
-                                    <div className="relative">
-                                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
-                                        <input
-                                            type="tel"
-                                            value={phone}
-                                            onChange={(e) => setPhone(formatPhone(e.target.value))}
-                                            placeholder="Телефон родителя (+7 9XX XXX-XX-XX)"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-semibold"
-                                        />
-                                    </div>
-                                </div>
+                        <button
+                            type="submit"
+                            disabled={isCreating || !newChildName.trim()}
+                            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-sparta-gold via-yellow-400 to-sparta-gold hover:brightness-110 disabled:opacity-50 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 cursor-pointer"
+                        >
+                            {isCreating ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <>
+                                    <Plus size={16} />
+                                    <span>Создать и привязать к семье</span>
+                                </>
+                            )}
+                        </button>
+                    </form>
+                )}
 
-                                {isSearching && (
-                                    <div className="flex items-center justify-center py-3 gap-2.5 text-sparta-gold">
-                                        <Loader2 className="animate-spin" size={16} />
-                                        <span className="text-[11px] font-bold uppercase tracking-wider">Ищем в реестре Спарты...</span>
-                                    </div>
-                                )}
+                {/* MODE 2: SEARCH IN REGISTRY */}
+                {mode === 'search' && (
+                    <div className="space-y-4">
+                        <div className="space-y-3">
+                            <div className="relative">
+                                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                <input
+                                    type="text"
+                                    value={childName}
+                                    onChange={(e) => setChildName(e.target.value)}
+                                    placeholder="Фамилия или имя ребенка"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-semibold"
+                                />
+                            </div>
 
-                                {results.length > 0 && (
-                                    <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-                                        <p className="text-[10px] font-bold text-sparta-gold uppercase tracking-wider">
-                                            Найдено в базе Спарты: {results.length}
-                                        </p>
-                                        {results.map((candidate) => (
-                                            <motion.div
-                                                key={candidate.id}
-                                                initial={{ opacity: 0, y: 5 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                onClick={() => !isLinking && handleLink(candidate)}
-                                                className="p-3.5 rounded-2xl bg-white/5 hover:bg-sparta-gold/15 border border-white/10 hover:border-sparta-gold/50 transition-all cursor-pointer flex items-center justify-between gap-3 group"
-                                            >
-                                                <div className="space-y-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-base">⚽</span>
-                                                        <h4 className="text-white font-russo text-sm uppercase truncate group-hover:text-sparta-gold transition-colors">
-                                                            {candidate.name}
-                                                        </h4>
-                                                    </div>
-                                                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-white/60">
-                                                        {candidate.age ? (
-                                                            <span className="px-2 py-0.5 rounded-md bg-white/10 text-white/80 font-bold">
-                                                                {candidate.age} лет
-                                                            </span>
-                                                        ) : null}
-                                                        <span className="px-2 py-0.5 rounded-md bg-sparta-gold/20 text-sparta-gold font-bold">
-                                                            {candidate.groupName || 'Группа Sparta'}
-                                                        </span>
-                                                        {candidate.type === 'pending' && (
-                                                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold">
-                                                                В реестре клуба
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
+                            <div className="relative">
+                                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                <input
+                                    type="tel"
+                                    value={phone}
+                                    onChange={(e) => setPhone(formatPhone(e.target.value))}
+                                    placeholder="Телефон родителя (+7 9XX XXX-XX-XX)"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/30 outline-none focus:border-sparta-gold transition-all text-xs font-semibold"
+                                />
+                            </div>
+                        </div>
 
-                                                <button
-                                                    type="button"
-                                                    disabled={isLinking}
-                                                    className="px-3.5 py-2 rounded-xl bg-sparta-gold text-black font-extrabold text-xs shrink-0 shadow-md group-hover:scale-105 transition-all flex items-center gap-1.5 cursor-pointer"
-                                                >
-                                                    {isLinking ? (
-                                                        <Loader2 size={14} className="animate-spin" />
-                                                    ) : (
-                                                        <>
-                                                            <Check size={14} />
-                                                            <span>Привязать</span>
-                                                        </>
-                                                    )}
-                                                </button>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                )}
+                        {isSearching && (
+                            <div className="flex items-center justify-center py-3 gap-2.5 text-sparta-gold">
+                                <Loader2 className="animate-spin" size={16} />
+                                <span className="text-[11px] font-bold uppercase tracking-wider">Ищем в реестре Спарты...</span>
                             </div>
                         )}
 
-                        {/* Error Message */}
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-2.5 text-red-400 text-xs"
-                            >
-                                <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                                <p className="font-semibold leading-relaxed">{error}</p>
-                            </motion.div>
-                        )}
+                        {results.length > 0 && (
+                            <div className="space-y-2.5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                                <p className="text-[10px] font-bold text-sparta-gold uppercase tracking-wider">
+                                    Найдено в базе Спарты: {results.length}
+                                </p>
+                                {results.map((candidate) => (
+                                    <motion.div
+                                        key={candidate.id}
+                                        initial={{ opacity: 0, y: 5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        onClick={() => !isLinking && handleLink(candidate)}
+                                        className="p-3.5 rounded-2xl bg-white/5 hover:bg-sparta-gold/15 border border-white/10 hover:border-sparta-gold/50 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                                    >
+                                        <div className="space-y-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-base">⚽</span>
+                                                <h4 className="text-white font-russo text-sm uppercase truncate group-hover:text-sparta-gold transition-colors">
+                                                    {candidate.name}
+                                                </h4>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-white/60">
+                                                {candidate.age ? (
+                                                    <span className="px-2 py-0.5 rounded-md bg-white/10 text-white/80 font-bold">
+                                                        {candidate.age} лет
+                                                    </span>
+                                                ) : null}
+                                                <span className="px-2 py-0.5 rounded-md bg-sparta-gold/20 text-sparta-gold font-bold">
+                                                    {candidate.groupName || 'Группа Sparta'}
+                                                </span>
+                                                {candidate.type === 'pending' && (
+                                                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold">
+                                                        В реестре клуба
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
 
-                        {/* Success Message */}
-                        {successMsg && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center gap-2.5 text-emerald-300 text-xs font-bold"
-                            >
-                                <Check size={16} className="shrink-0 text-emerald-400" />
-                                <p>{successMsg}</p>
-                            </motion.div>
+                                        <button
+                                            type="button"
+                                            disabled={isLinking}
+                                            className="px-3.5 py-2 rounded-xl bg-sparta-gold text-black font-extrabold text-xs shrink-0 shadow-md group-hover:scale-105 transition-all flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                            {isLinking ? (
+                                                <Loader2 size={14} className="animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <Check size={14} />
+                                                    <span>Привязать</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </div>
                         )}
                     </div>
-                </motion.div>
+                )}
+
+                {/* Error Message */}
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-2.5 text-red-400 text-xs"
+                    >
+                        <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                        <p className="font-semibold leading-relaxed">{error}</p>
+                    </motion.div>
+                )}
+
+                {/* Success Message */}
+                {successMsg && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center gap-2.5 text-emerald-300 text-xs font-bold"
+                    >
+                        <Check size={16} className="shrink-0 text-emerald-400" />
+                        <p>{successMsg}</p>
+                    </motion.div>
+                )}
             </div>
-        </AnimatePresence>
+        </BaseModal>
     );
 };
 

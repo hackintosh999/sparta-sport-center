@@ -1233,7 +1233,7 @@ const DirectorDashboard = () => {
                                                     <span className="text-sparta-gold font-russo text-sm">★</span>
                                                     <span className="text-sm text-white font-bold">{coach.rating}</span>
                                                 </div>
-                                                <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
                                                     <div className="flex flex-col items-center">
                                                         <span className="text-[7px] text-white/40 uppercase">Пос</span>
                                                         <span className="text-[9px] text-blue-400 font-bold">{coach.metrics.attendance}</span>

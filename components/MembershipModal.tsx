@@ -37,6 +37,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Button, GlassCard } from './UIComponents';
 import { Program } from '../types';
 import { db } from '../firebase';
+import { BaseModal } from './ui/BaseModal';
 import { collection, addDoc, Timestamp, doc, updateDoc, getDoc, setDoc, query, where, getDocs, arrayUnion, deleteField, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import MembershipReceipt from './profile/MembershipReceipt';
@@ -772,53 +773,48 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
     const perSession = Math.floor(displayPrice / totalSessions) || 450;
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 bg-black/85 backdrop-blur-md"
-                    />
-
-                    {/* Modal Content */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                        className="relative w-full max-w-lg bg-zinc-950 border border-white/10 rounded-[2rem] shadow-[0_0_60px_rgba(0,0,0,0.8)] overflow-hidden z-10 my-auto font-manrope text-white"
-                    >
-                        {/* Header */}
-                        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900">
-                            <div className="flex items-center gap-3">
-                                {step === 'bank_transfer' && !isSuccess && (
-                                    <button
-                                        onClick={() => setStep('form')}
-                                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all"
-                                    >
-                                        <ArrowLeft size={18} />
-                                    </button>
-                                )}
-                                <div>
-                                    <h2 className="text-lg sm:text-xl font-russo text-white uppercase tracking-wider">
-                                        {isSuccess ? 'Бронирование подтверждено' : step === 'bank_transfer' ? 'Оплата и подтверждение' : `Абонемент «${program.title}»`}
-                                    </h2>
-                                    <p className="text-xs text-white/40">
-                                        {isSuccess ? 'Ваш заказ зафиксирован в системе' : step === 'bank_transfer' ? 'Прямой перевод без скрытых комиссий' : 'Быстрое оформление за 1 минуту'}
-                                    </p>
-                                </div>
-                            </div>
-                            <button onClick={onClose} className="p-2 rounded-full bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-all">
-                                <X size={20} />
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            showCloseButton={false}
+            noPadding
+            glowColor="amber"
+            zIndex="z-50"
+        >
+            <div className="relative w-full bg-zinc-950 rounded-[2rem] overflow-hidden font-manrope text-white flex flex-col max-h-[85vh]">
+                {/* Header */}
+                <div className="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 shrink-0">
+                    <div className="flex items-center gap-3">
+                        {step === 'bank_transfer' && !isSuccess && (
+                            <button
+                                onClick={() => setStep('form')}
+                                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer"
+                            >
+                                <ArrowLeft size={18} />
                             </button>
+                        )}
+                        <div>
+                            <h2 className="text-lg sm:text-xl font-russo text-white uppercase tracking-wider">
+                                {isSuccess ? 'Бронирование подтверждено' : step === 'bank_transfer' ? 'Оплата и подтверждение' : `Абонемент «${program.title}»`}
+                            </h2>
+                            <p className="text-xs text-white/40">
+                                {isSuccess ? 'Ваш заказ зафиксирован в системе' : step === 'bank_transfer' ? 'Прямой перевод без скрытых комиссий' : 'Быстрое оформление за 1 минуту'}
+                            </p>
                         </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        aria-label="Закрыть"
+                        className="p-2 rounded-full bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-all cursor-pointer"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
 
-                        {/* Modal Body */}
-                        <div className="p-5 sm:p-6 max-h-[80vh] overflow-y-auto">
-                            <AnimatePresence mode="wait">
+                {/* Modal Body */}
+                <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-1">
+                    <AnimatePresence mode="wait">
                                 {isSuccess ? (
                                     <motion.div
                                         key="success"
@@ -1396,12 +1392,10 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
                                         </div>
                                     </motion.div>
                                 )}
-                            </AnimatePresence>
-                        </div>
-                    </motion.div>
+                    </AnimatePresence>
                 </div>
-            )}
-        </AnimatePresence>
+            </div>
+        </BaseModal>
     );
 };
 

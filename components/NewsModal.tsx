@@ -15,6 +15,7 @@ import { useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Paperclip, FileText, Image as ImageIcon, Video, XCircle, Download, Maximize2 } from 'lucide-react';
 import MediaViewerModal from './MediaViewerModal';
+import { BaseModal } from './ui/BaseModal';
 
 
 const categories = [
@@ -580,7 +581,7 @@ const NewsModal: React.FC<NewsModalProps> = ({ news: initialNews, onClose }) => 
     const currentMedia = mediaItems[currentMediaIndex];
 
     return (
-        <AnimatePresence>
+        <>
             {showShareModal && (
                 <ShareModal
                     isOpen={showShareModal}
@@ -589,12 +590,14 @@ const NewsModal: React.FC<NewsModalProps> = ({ news: initialNews, onClose }) => 
                     title={currentNews.title}
                 />
             )}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] flex items-center justify-center p-2 md:p-4 bg-black/90 backdrop-blur-md"
-                onClick={onClose}
+            <BaseModal
+                isOpen={!!currentNews}
+                onClose={onClose}
+                maxWidth="max-w-full"
+                customCard
+                showCloseButton={false}
+                glowColor="amber"
+                zIndex="z-[100]"
             >
                 <div
                     className={`relative w-full max-w-[98vw] h-[98vh] md:h-[95vh] flex flex-row shadow-2xl rounded-3xl overflow-hidden border border-white/10 bg-[#121212]/90 backdrop-blur-2xl transition-all duration-500 ease-in-out ${showComments ? 'md:max-w-[1600px]' : 'md:max-w-[1200px]'}`}
@@ -655,13 +658,15 @@ const NewsModal: React.FC<NewsModalProps> = ({ news: initialNews, onClose }) => 
                                 <>
                                     <button
                                         onClick={prevMedia}
-                                        className="absolute left-6 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/40 text-white/90 hover:bg-sparta-gold hover:text-black backdrop-blur-xl transition-all opacity-0 group-hover/gallery:opacity-100 z-40 hover:scale-110 shadow-lg border border-white/10"
+                                        className="absolute left-6 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/50 text-white/90 hover:bg-sparta-gold hover:text-black backdrop-blur-xl transition-all opacity-60 hover:opacity-100 group-hover/gallery:opacity-100 z-40 hover:scale-110 shadow-lg border border-white/10 cursor-pointer"
+                                        title="Предыдущее фото"
                                     >
                                         <ChevronLeft size={32} />
                                     </button>
                                     <button
                                         onClick={nextMedia}
-                                        className="absolute right-6 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/40 text-white/90 hover:bg-sparta-gold hover:text-black backdrop-blur-xl transition-all opacity-0 group-hover/gallery:opacity-100 z-40 hover:scale-110 shadow-lg border border-white/10"
+                                        className="absolute right-6 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/50 text-white/90 hover:bg-sparta-gold hover:text-black backdrop-blur-xl transition-all opacity-60 hover:opacity-100 group-hover/gallery:opacity-100 z-40 hover:scale-110 shadow-lg border border-white/10 cursor-pointer"
+                                        title="Следующее фото"
                                     >
                                         <ChevronRight size={32} />
                                     </button>
@@ -1079,7 +1084,7 @@ const NewsModal: React.FC<NewsModalProps> = ({ news: initialNews, onClose }) => 
                         )}
                     </AnimatePresence>
                 </div>
-            </motion.div>
+            </BaseModal>
             {/* Media Viewer Modal */}
             <MediaViewerModal
                 isOpen={viewerOpen}
@@ -1087,7 +1092,7 @@ const NewsModal: React.FC<NewsModalProps> = ({ news: initialNews, onClose }) => 
                 items={viewerItems}
                 initialIndex={viewerIndex}
             />
-        </AnimatePresence>
+        </>
     );
 };
 

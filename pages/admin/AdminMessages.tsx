@@ -607,7 +607,7 @@ const AdminMessages = () => {
                                     className="p-6 cursor-pointer flex flex-col md:flex-row gap-4 md:items-center relative"
                                 >
                                     {/* Selection Checkbox */}
-                                    <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                    <div className={`absolute left-2 top-1/2 -translate-y-1/2 transition-opacity ${selectedMessages.has(msg.id) ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'}`} onClick={(e) => e.stopPropagation()}>
                                         <input
                                             type="checkbox"
                                             checked={selectedMessages.has(msg.id)}

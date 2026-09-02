@@ -108,8 +108,18 @@ export interface Order {
 export interface User {
     id: string;
     email: string;
-    role: 'user' | 'admin' | 'director' | 'coach' | 'parent';
-    status: 'active' | 'deleted' | 'banned';
+    role: 'user' | 'admin' | 'director' | 'coach' | 'trainer' | 'parent' | 'developer' | string;
+    status: 'active' | 'deleted' | 'banned' | string;
+    displayName?: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    photoURL?: string;
+    image?: string;
+    coachId?: string;
+    isStaff?: boolean;
+    isAdmin?: boolean;
     parentName: string;
     parentPhone: string;
     childName: string;

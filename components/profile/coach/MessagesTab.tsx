@@ -1,10 +1,13 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     MessageSquare,
     ChevronRight,
     ArrowLeft
 } from 'lucide-react';
 import CoachChat from '../CoachChat';
+import { db } from '../../../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface ChatParticipant {
     id: string;
@@ -29,6 +32,40 @@ const MessagesTab: React.FC<MessagesTabProps> = ({
     user,
     userProfile
 }) => {
+    const [searchParams] = useSearchParams();
+    const directChatId = searchParams.get('chatId');
+
+    useEffect(() => {
+        if (!directChatId) return;
+
+        // 1. Check in activeChats
+        const found = activeChats.find(c => c.id === directChatId);
+        if (found) {
+            setSelectedStudentForChat(found);
+            return;
+        }
+
+        // 2. Fetch directly from Firestore
+        const fetchChat = async () => {
+            try {
+                const snap = await getDoc(doc(db, 'chats', directChatId));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    const otherId = data.participants?.find((p: string) => p !== user?.uid);
+                    const otherName = (data.participantNames && otherId && data.participantNames[otherId]) || data.childName || data.name || 'Родитель';
+                    setSelectedStudentForChat({
+                        id: otherId || directChatId,
+                        name: otherName,
+                        childName: data.childName
+                    });
+                }
+            } catch (err) {
+                console.error("Error fetching chat in MessagesTab:", err);
+            }
+        };
+
+        fetchChat();
+    }, [directChatId, activeChats, user?.uid, setSelectedStudentForChat]);
     return (
         <div className="space-y-6">
             {selectedStudentForChat ? (

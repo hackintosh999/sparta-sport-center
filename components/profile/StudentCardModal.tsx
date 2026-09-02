@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, Trophy, Award, Shield, Zap, Sparkles, CheckCircle2, Flame, Target, ChevronRight } from 'lucide-react';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useStudentAchievements, SpartanUnifiedAchievement, getAward3DDefaultIcon } from '../../hooks/useStudentAchievements';
 import { AwardDetailModal } from './AwardDetailModal';
 import { SpartaCoinIcon } from '../SpartaCoinIcon';
+import { BaseModal } from '../ui/BaseModal';
 
 export interface StudentStats {
     totalTrainings: number;
@@ -178,21 +178,23 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
     const slots = [0, 1, 2, 3];
 
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto">
-                <div className="absolute inset-0" onClick={onClose} />
-
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.92, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.92, y: 20 }}
-                    className="relative max-w-sm w-full my-auto z-10 flex flex-col items-center select-none"
-                >
+        <>
+            <BaseModal
+                isOpen={isOpen}
+                onClose={onClose}
+                maxWidth="max-w-sm"
+                customCard
+                showCloseButton={false}
+                glowColor="amber"
+                zIndex="z-[300]"
+            >
+                <div className="relative w-full flex flex-col items-center select-none">
                     {/* Close Button */}
                     <button
                         type="button"
                         onClick={onClose}
                         className="absolute -top-12 right-0 p-2.5 text-white/60 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all cursor-pointer z-20 backdrop-blur-md"
+                        aria-label="Закрыть карточку"
                     >
                         <X size={18} />
                     </button>
@@ -406,8 +408,8 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
                             </div>
                         </div>
                     </div>
-                </motion.div>
-            </div>
+                </div>
+            </BaseModal>
 
             {/* Interactive Award Detail Modal */}
             <AwardDetailModal
@@ -417,7 +419,7 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
                 studentId={studentId}
                 onOpenAwards={onOpenAwards}
             />
-        </AnimatePresence>
+        </>
     );
 };
 

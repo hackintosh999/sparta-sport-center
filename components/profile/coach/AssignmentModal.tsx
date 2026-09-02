@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, X, Calendar, Loader2, CheckCircle2, User, Users, Sparkles, ChevronDown, Edit3 } from 'lucide-react';
+import { Zap, Calendar, Loader2, CheckCircle2, User, Users, ChevronDown, Edit3 } from 'lucide-react';
 import { format } from 'date-fns';
 import confetti from 'canvas-confetti';
 import { doc, collection, writeBatch, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { SpartaCoinIcon } from '../../SpartaCoinIcon';
+import { BaseModal } from '../../ui/BaseModal';
 
 export interface AssignmentTargetStudent {
     id: string;
@@ -64,7 +65,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-    // Deduplicate students list (Hook called unconditionally)
+    // Deduplicate students list
     const uniqueGroupStudents = React.useMemo(() => {
         const map = new Map<string, AssignmentTargetStudent>();
         groupStudents.forEach(s => {
@@ -111,8 +112,6 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
             }
         }
     }, [isOpen, student, uniqueGroupStudents, initialData]);
-
-    if (!isOpen) return null;
 
     // Active student and group resolution
     const isGroupWide = targetMode === 'group';
@@ -166,9 +165,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
             const studentId = isGroupWide ? null : (activeStudent?.id || activeStudent?.uid || activeStudent?.studentId || null);
             const studentUid = isGroupWide ? null : (activeStudent?.uid || activeStudent?.assignedUid || activeStudent?.id || null);
 
-            // =========================
             // EDIT MODE
-            // =========================
             if (isEditMode && initialData?.id) {
                 const batch = writeBatch(db);
                 const updatePayload: any = {
@@ -192,18 +189,15 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                     updatedAt: serverTimestamp()
                 };
 
-                // 1. Update homework document
                 const hwRef = doc(db, "homework", initialData.id);
                 batch.set(hwRef, updatePayload, { merge: true });
 
-                // 2. Update trainingPlan document if exists
                 const planId = initialData.planId || initialData.id;
                 if (planId) {
                     const planRef = doc(db, "trainingPlan", planId);
                     batch.set(planRef, updatePayload, { merge: true });
                 }
 
-                // 3. Update assigned_tasks document
                 const assignedRef = doc(db, "assigned_tasks", initialData.id);
                 batch.set(assignedRef, {
                     ...updatePayload,
@@ -212,7 +206,6 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                     taskDescription: description.trim()
                 }, { merge: true });
 
-                // 4. If group challenge, update group doc
                 if (isGroupWide && targetGroupId) {
                     const groupRef = doc(db, 'groups', targetGroupId);
                     batch.set(groupRef, {
@@ -239,15 +232,10 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 return;
             }
 
-            // =========================
             // CREATE MODE
-            // =========================
             const batch = writeBatch(db);
-
-            // Generate one shared ID for all assignment collections to avoid duplicate records
             const sharedDocId = doc(collection(db, "homework")).id;
 
-            // 1. Create entry in trainingPlan collection
             const newPlanRef = doc(db, "trainingPlan", sharedDocId);
             const planPayload = {
                 id: sharedDocId,
@@ -275,7 +263,6 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
             };
             batch.set(newPlanRef, planPayload);
 
-            // 2. Create entry in homework & assigned_tasks collections
             const homeworkRef = doc(db, "homework", sharedDocId);
             const homeworkPayload = {
                 id: sharedDocId,
@@ -299,7 +286,6 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
             };
             batch.set(homeworkRef, homeworkPayload);
 
-            // Also write to assigned_tasks for compatibility
             const assignedRef = doc(db, "assigned_tasks", sharedDocId);
             batch.set(assignedRef, {
                 ...homeworkPayload,
@@ -308,7 +294,6 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 taskDescription: description.trim()
             });
 
-            // If personal, also append to student user doc in users collection
             if (!isGroupWide) {
                 const targetUId = studentUid || studentId;
                 if (targetUId) {
@@ -329,7 +314,6 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 }
             }
 
-            // 3. If group challenge, update group doc
             if (isGroupWide && targetGroupId) {
                 const groupRef = doc(db, 'groups', targetGroupId);
                 batch.set(groupRef, {
@@ -349,7 +333,6 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 }
             }
 
-            // 4. Create notifications
             if (!isGroupWide && (studentId || studentUid)) {
                 const notifRef = doc(collection(db, "notifications"));
                 batch.set(notifRef, {
@@ -412,7 +395,13 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto">
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            glowColor="amber"
+            zIndex="z-[200]"
+        >
             {/* Toast Notification */}
             <AnimatePresence>
                 {toastMessage && (
@@ -428,22 +417,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 )}
             </AnimatePresence>
 
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                className="bg-[#121214] border border-white/15 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative space-y-6 text-left"
-            >
-                {/* Close Button */}
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors cursor-pointer p-1.5 rounded-xl hover:bg-white/10"
-                    title="Закрыть"
-                >
-                    <X size={20} />
-                </button>
-
+            <div className="relative space-y-6 text-left">
                 {/* 1. HEADER */}
                 <div className="flex items-start gap-4 pr-10">
                     <div className="p-3 bg-gradient-to-br from-amber-500/20 to-sparta-gold/20 text-sparta-gold rounded-2xl border border-sparta-gold/30 shrink-0 shadow-inner">
@@ -469,7 +443,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                     </div>
                 </div>
 
-                {/* 2. TARGET MODE SWITCHER (Segmented Control) */}
+                {/* 2. TARGET MODE SWITCHER */}
                 <div className="space-y-3">
                     <div className="flex items-center gap-1.5 p-1.5 bg-black/50 rounded-2xl border border-white/10">
                         <button
@@ -503,7 +477,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                         </button>
                     </div>
 
-                    {/* Student Select Dropdown (when Лично ученику is active) */}
+                    {/* Student Select Dropdown */}
                     {!isGroupWide && uniqueGroupStudents.length > 0 && (
                         <div className="space-y-1.5 animate-fadeIn">
                             <label className="text-[11px] font-black text-white/60 uppercase tracking-wider block">
@@ -646,8 +620,8 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                         </button>
                     </div>
                 </form>
-            </motion.div>
-        </div>
+            </div>
+        </BaseModal>
     );
 };
 

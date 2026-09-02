@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-    X,
     AlertTriangle,
     Clock,
     UserCheck,
@@ -9,11 +8,11 @@ import {
     CheckCircle2,
     Loader2,
     Send,
-    ShieldAlert,
-    Sparkles
+    ShieldAlert
 } from 'lucide-react';
 import { createScheduleOverride } from '../../services/scheduleOverrides';
 import { SPARTA_SCHEDULE } from '../../constants/spartaSchedule';
+import { BaseModal } from '../ui/BaseModal';
 
 interface ScheduleOverrideModalProps {
     isOpen: boolean;
@@ -125,18 +124,17 @@ export const ScheduleOverrideModal: React.FC<ScheduleOverrideModalProps> = ({
         }
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                className="bg-[#121215] border border-sparta-gold/30 rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col"
-            >
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            glowColor="amber"
+            zIndex="z-[160]"
+        >
+            <div className="relative overflow-hidden flex flex-col text-left">
                 {/* Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
+                <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0 pr-10">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
                             <ShieldAlert size={22} />
@@ -150,12 +148,6 @@ export const ScheduleOverrideModal: React.FC<ScheduleOverrideModalProps> = ({
                             </p>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
-                    >
-                        <X size={18} />
-                    </button>
                 </div>
 
                 {successMessage ? (
@@ -203,7 +195,7 @@ export const ScheduleOverrideModal: React.FC<ScheduleOverrideModalProps> = ({
                             </div>
                         </div>
 
-                        {/* Action Type Selection (Tabs) */}
+                        {/* Action Type Selection */}
                         <div>
                             <label className="text-[10px] uppercase font-bold text-white/50 block mb-1.5">
                                 Что произошло?
@@ -250,7 +242,7 @@ export const ScheduleOverrideModal: React.FC<ScheduleOverrideModalProps> = ({
                             </div>
                         </div>
 
-                        {/* Action Details Depending on Action Type */}
+                        {/* Action Details */}
                         {actionType === 'rescheduled' && (
                             <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
                                 <label className="text-[10px] uppercase font-bold text-amber-300 block">
@@ -319,7 +311,7 @@ export const ScheduleOverrideModal: React.FC<ScheduleOverrideModalProps> = ({
                             )}
                         </div>
 
-                        {/* Auto subscription extension toggle (only for cancellations) */}
+                        {/* Auto subscription extension toggle */}
                         {actionType === 'cancelled' && (
                             <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3">
                                 <div>
@@ -350,7 +342,7 @@ export const ScheduleOverrideModal: React.FC<ScheduleOverrideModalProps> = ({
                             <button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:from-yellow-400 hover:to-yellow-500 text-black font-russo text-xs uppercase tracking-wider shadow-lg shadow-sparta-gold/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:from-yellow-400 hover:to-yellow-500 text-black font-russo text-xs uppercase tracking-wider shadow-lg shadow-sparta-gold/20 transition-all flex items-center justify-center gap-2 cursor-pointer font-black"
                             >
                                 {isSubmitting ? (
                                     <Loader2 size={16} className="animate-spin" />
@@ -364,7 +356,9 @@ export const ScheduleOverrideModal: React.FC<ScheduleOverrideModalProps> = ({
                         </div>
                     </form>
                 )}
-            </motion.div>
-        </div>
+            </div>
+        </BaseModal>
     );
 };
+
+export default ScheduleOverrideModal;

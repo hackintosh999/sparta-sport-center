@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { db, storage } from '../../firebase';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp, writeBatch } from 'firebase/firestore';
-// Removing storage imports from usage logic to be 100% safe
-// import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp, writeBatch, getDocs, where, arrayUnion } from 'firebase/firestore';
 import {
-    Plus, Trash2, Image as ImageIcon, Loader, Edit2, X, Save, Search, UploadCloud, Users, Check, RefreshCw
+    Plus, Trash2, Image as ImageIcon, Loader, Edit2, X, Save, Search, UploadCloud, Users, Check, RefreshCw, ShieldAlert, ArrowRightLeft
 } from 'lucide-react';
+import { triggerScheduleSync } from '../../services/scheduleSync';
 
 interface Coach {
     id: string;
@@ -45,11 +44,21 @@ const AdminTeam = () => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [syncing, setSyncing] = useState(false);
 
+    const [groups, setGroups] = useState<any[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
+
+    // Successor / Group Reassignment Modal State
+    const [isSuccessorModalOpen, setIsSuccessorModalOpen] = useState(false);
+    const [retiringCoach, setRetiringCoach] = useState<Coach | null>(null);
+    const [attachedGroups, setAttachedGroups] = useState<any[]>([]);
+    const [selectedSuccessorId, setSelectedSuccessorId] = useState<string>('');
+    const [isReassigning, setIsReassigning] = useState(false);
+
     // --- Effects ---
     useEffect(() => {
         const q = query(collection(db, "coaches"), orderBy("order", "asc"));
 
-        const unsubscribe = onSnapshot(collection(db, "coaches"), (snapshot) => {
+        const unsubscribeCoaches = onSnapshot(collection(db, "coaches"), (snapshot) => {
             const data = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
             data.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
             setCoaches(data);
@@ -59,7 +68,20 @@ const AdminTeam = () => {
             setErrorMessage(`Ошибка доступа к БД: ${error.message}`);
             setLoading(false);
         });
-        return () => unsubscribe();
+
+        const unsubscribeGroups = onSnapshot(collection(db, "groups"), (snapshot) => {
+            setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
+        const unsubscribeUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
+        return () => {
+            unsubscribeCoaches();
+            unsubscribeGroups();
+            unsubscribeUsers();
+        };
     }, []);
 
     const handleAutoSync = async () => {
@@ -218,9 +240,90 @@ const AdminTeam = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (window.confirm("Удалить тренера?")) {
-            await deleteDoc(doc(db, "coaches", id));
+    const handleDelete = async (coach: Coach) => {
+        // 1. Check if coach has attached groups
+        const cleanCoachName = (coach.name || '').trim().toLowerCase();
+        const matchedGroups = groups.filter(g => 
+            g.coachId === coach.id || 
+            (g.coachName && g.coachName.trim().toLowerCase() === cleanCoachName)
+        );
+
+        // 2. If NO attached groups: standard confirmation
+        if (matchedGroups.length === 0) {
+            if (window.confirm(`Вы уверены, что хотите удалить тренера ${coach.name}?`)) {
+                await deleteDoc(doc(db, "coaches", coach.id));
+                setSuccessMessage("Тренер успешно удален!");
+                setTimeout(() => setSuccessMessage(null), 2000);
+            }
+            return;
+        }
+
+        // 3. If groups exist (> 0): open Successor Reassignment Modal
+        const otherCoaches = coaches.filter(c => c.id !== coach.id);
+        setRetiringCoach(coach);
+        setAttachedGroups(matchedGroups);
+        setSelectedSuccessorId(otherCoaches[0]?.id || '');
+        setIsSuccessorModalOpen(true);
+    };
+
+    const handleReassignAndDelete = async () => {
+        if (!retiringCoach || !selectedSuccessorId) return;
+        const successor = coaches.find(c => c.id === selectedSuccessorId);
+        if (!successor) return;
+
+        setIsReassigning(true);
+        try {
+            const batch = writeBatch(db);
+
+            // 1. Reassign all attached groups to successor
+            for (const g of attachedGroups) {
+                const groupRef = doc(db, "groups", g.id);
+                batch.update(groupRef, {
+                    coachId: successor.id,
+                    coachName: successor.name,
+                    coachImage: successor.image || '',
+                    updatedAt: serverTimestamp()
+                });
+            }
+
+            // 2. Delete retiring coach from coaches
+            const coachRef = doc(db, "coaches", retiringCoach.id);
+            batch.delete(coachRef);
+
+            // Commit atomic batch
+            await batch.commit();
+
+            // 3. Synchronize group chats in `chats` collection
+            for (const g of attachedGroups) {
+                try {
+                    const qChats = query(collection(db, 'chats'), where('groupId', '==', g.id));
+                    const chatsSnap = await getDocs(qChats);
+                    for (const cDoc of chatsSnap.docs) {
+                        await updateDoc(doc(db, 'chats', cDoc.id), {
+                            coachId: successor.id,
+                            coachName: successor.name,
+                            participants: arrayUnion(successor.id),
+                            updatedAt: serverTimestamp()
+                        });
+                    }
+                } catch (chatErr) {
+                    console.warn("Could not sync chat for group", g.id, chatErr);
+                }
+            }
+
+            // 4. Update website timetable schedule
+            await triggerScheduleSync().catch(console.error);
+
+            setSuccessMessage(`✓ ${attachedGroups.length} групп успешно переданы тренеру ${successor.name}. Карточка сотрудника удалена.`);
+            setIsSuccessorModalOpen(false);
+            setRetiringCoach(null);
+            setAttachedGroups([]);
+            setTimeout(() => setSuccessMessage(null), 3500);
+        } catch (error: any) {
+            console.error("Reassignment error:", error);
+            setErrorMessage("Ошибка при передаче групп: " + error.message);
+        } finally {
+            setIsReassigning(false);
         }
     };
 
@@ -312,9 +415,9 @@ const AdminTeam = () => {
                                                 <Users size={32} className="text-white/20" />
                                             )}
                                         </div>
-                                        {/* Action Overlay */}
-                                        <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <Edit2 size={24} className="text-white" />
+                                        {/* Edit Badge indicator */}
+                                        <div className="absolute bottom-1 right-1 p-1.5 rounded-full bg-sparta-gold/90 text-black shadow-md opacity-80 group-hover:opacity-100 transition-opacity" title="Редактировать карточку">
+                                            <Edit2 size={13} strokeWidth={2.5} />
                                         </div>
                                     </div>
 
@@ -324,12 +427,12 @@ const AdminTeam = () => {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDelete(coach.id);
+                                            handleDelete(coach);
                                         }}
-                                        className="absolute top-4 right-4 p-2 text-white/20 hover:text-red-500 transition-all opacity-100 group-hover:opacity-100 z-30"
-                                        title="Удалить"
+                                        className="absolute top-4 right-4 p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all z-30 cursor-pointer"
+                                        title="Удалить / передать группы"
                                     >
-                                        <Trash2 size={18} />
+                                        <Trash2 size={16} />
                                     </button>
                                 </div>
                             ))
@@ -432,6 +535,103 @@ const AdminTeam = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Successor Reassignment Modal (Защитный диалог передачи групп) */}
+            {isSuccessorModalOpen && retiringCoach && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-[#111113] border border-amber-500/30 rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-[0_0_50px_rgba(245,158,11,0.15)] space-y-6 animate-in fade-in zoom-in-95 font-manrope">
+                        {/* Header Warning */}
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300">
+                            <ShieldAlert size={28} className="shrink-0 text-amber-400 mt-0.5" />
+                            <div>
+                                <h3 className="font-russo text-white text-lg leading-tight">
+                                    Передача групп перед удалением сотрудника
+                                </h3>
+                                <p className="text-xs text-white/70 mt-1">
+                                    За тренером <strong className="text-amber-400">{retiringCoach.name}</strong> закреплено <strong className="text-white">{attachedGroups.length}</strong> активных групп. Пожалуйста, выберите наставника-преемника, которому будут переданы все группы и чаты.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* List of Attached Groups */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-white/50 font-bold uppercase tracking-wider block">
+                                Передаваемые группы ({attachedGroups.length}):
+                            </label>
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                {attachedGroups.map(g => {
+                                    const count = users.filter(u => u.groupId === g.id).length || g.studentCount || 0;
+                                    return (
+                                        <div key={g.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all">
+                                            <div className="overflow-hidden">
+                                                <p className="text-white text-sm font-bold font-russo truncate">{g.name}</p>
+                                                <p className="text-white/40 text-[11px] font-semibold">
+                                                    Возраст: {g.ageRange?.min || 0}–{g.ageRange?.max || 18} лет
+                                                </p>
+                                            </div>
+                                            <span className="px-3 py-1 rounded-full bg-sparta-gold/10 text-sparta-gold border border-sparta-gold/30 text-xs font-bold font-mono shrink-0">
+                                                {count} учеников
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Successor Selector */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-white/60 font-bold uppercase tracking-wider block">
+                                Новый наставник (Преемник):
+                            </label>
+                            <select
+                                value={selectedSuccessorId}
+                                onChange={e => setSelectedSuccessorId(e.target.value)}
+                                className="w-full bg-[#18181b] border border-white/20 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-sparta-gold transition-colors cursor-pointer"
+                            >
+                                {coaches.filter(c => c.id !== retiringCoach.id).map(c => (
+                                    <option key={c.id} value={c.id} className="bg-[#18181b] text-white">
+                                        {c.name} — {c.role}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsSuccessorModalOpen(false);
+                                    setRetiringCoach(null);
+                                    setAttachedGroups([]);
+                                }}
+                                disabled={isReassigning}
+                                className="flex-1 py-3 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleReassignAndDelete}
+                                disabled={isReassigning || !selectedSuccessorId}
+                                className="flex-[2] py-3 px-5 rounded-xl bg-gradient-to-r from-sparta-gold to-amber-500 hover:brightness-110 text-black font-bold text-sm shadow-[0_0_25px_rgba(245,158,11,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer font-russo"
+                            >
+                                {isReassigning ? (
+                                    <>
+                                        <Loader className="animate-spin" size={16} />
+                                        <span>Передача и удаление...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ArrowRightLeft size={16} />
+                                        <span>Передать группы и удалить сотрудника</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

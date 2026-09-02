@@ -1985,7 +1985,7 @@ const AdminFinance = () => {
                                                 <div className="text-base font-bold text-red-400">-{e.amount.toLocaleString()} ₽</div>
                                                 <button
                                                     onClick={() => handleDeleteExpense(e.id)}
-                                                    className="p-1.5 bg-red-500/10 text-red-400 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white"
+                                                    className="p-1.5 bg-red-500/10 text-red-400 rounded-lg opacity-40 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white cursor-pointer"
                                                     title="Удалить расход"
                                                 >
                                                     <Trash2 size={12} />

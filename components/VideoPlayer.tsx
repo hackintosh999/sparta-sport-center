@@ -141,13 +141,50 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, poster, autoPlay = false
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     }, []);
 
-    // Show/Hide Controls on Hover
+    // Auto-hide timer logic
+    const resetControlsTimeout = () => {
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        if (isPlaying) {
+            controlsTimeoutRef.current = setTimeout(() => {
+                setShowControls(false);
+            }, 3000);
+        }
+    };
+
+    useEffect(() => {
+        if (!isPlaying) {
+            setShowControls(true);
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        } else {
+            resetControlsTimeout();
+        }
+        return () => {
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        };
+    }, [isPlaying]);
+
+    // Show/Hide Controls on Mouse Move
     const handleMouseMove = () => {
         setShowControls(true);
-        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-        controlsTimeoutRef.current = setTimeout(() => {
-            if (isPlaying) setShowControls(false);
-        }, 2800);
+        resetControlsTimeout();
+    };
+
+    // Single Tap on Video: toggle controls if playing, or togglePlay if paused
+    const handleVideoTap = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isPlaying) {
+            togglePlay();
+            return;
+        }
+        setShowControls(prev => {
+            const nextState = !prev;
+            if (nextState) {
+                resetControlsTimeout();
+            } else if (controlsTimeoutRef.current) {
+                clearTimeout(controlsTimeoutRef.current);
+            }
+            return nextState;
+        });
     };
 
     const getEmbedUrl = (url: string) => {
@@ -181,8 +218,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, poster, autoPlay = false
             ref={containerRef}
             className={`relative group rounded-2xl overflow-hidden bg-black select-none flex items-center justify-center w-full h-full max-h-full ${className}`}
             onMouseMove={handleMouseMove}
-            onMouseLeave={() => isPlaying && setShowControls(false)}
-            onClick={togglePlay}
+            onMouseLeave={() => {
+                if (isPlaying) {
+                    setShowControls(false);
+                    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+                }
+            }}
+            onClick={handleVideoTap}
         >
             {/* 3D Border Effects */}
             <div className="absolute inset-0 pointer-events-none rounded-2xl border border-white/10 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] z-20" />
@@ -282,6 +324,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, poster, autoPlay = false
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
+                        transition={{ duration: 0.3 }}
                         className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 bg-gradient-to-t from-black/95 via-black/60 to-transparent z-30"
                         onClick={(e) => e.stopPropagation()}
                     >

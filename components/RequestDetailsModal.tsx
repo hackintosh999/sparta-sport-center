@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, User, Phone, Mail, MessageSquare, Ban, CheckCircle2, AlertCircle, Clock, Trash2, Edit2, Save } from 'lucide-react';
+import { Calendar, User, Phone, Mail, MessageSquare, Ban, CheckCircle2, Clock, Trash2, Edit2, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { BaseModal } from './ui/BaseModal';
 
 interface RequestDetailsModalProps {
     isOpen: boolean;
@@ -32,7 +31,7 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({ isOpen, onClo
         }
     }, [request]);
 
-    if (!isOpen || !request) return null;
+    if (!request) return null;
 
     const handleDelete = async () => {
         const isNew = request.status === 'new';
@@ -60,7 +59,7 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({ isOpen, onClo
             await updateDoc(doc(db, "requests", request.id), {
                 parentName: editForm.parentName,
                 parentPhone: editForm.parentPhone,
-                name: editForm.parentName, // Keep compatible with older fields if needed
+                name: editForm.parentName,
                 phone: editForm.parentPhone,
                 updatedAt: new Date()
             });
@@ -88,175 +87,158 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({ isOpen, onClo
     const canEdit = request.status === 'new';
 
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={onClose}
-                    className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                />
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
-                    className="relative bg-[#121212] border border-white/10 rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl overflow-hidden"
-                >
-                    {/* Background Glow */}
-                    <div className={`absolute top - 0 right - 0 w - 64 h - 64 ${statusInfo.bg.replace('/10', '/5')} blur - [80px] rounded - full pointer - events - none`} />
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            glowColor="amber"
+            zIndex="z-50"
+        >
+            <div className="text-left font-manrope">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-6 pr-10">
+                    <div>
+                        <h2 className="text-2xl font-bold text-white font-russo mb-1">Детали заявки</h2>
+                        <p className="text-white/50 text-xs">ID: {request.id}</p>
+                    </div>
+                    {canEdit && !isEditing && (
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-sparta-gold cursor-pointer"
+                            title="Редактировать"
+                        >
+                            <Edit2 size={18} />
+                        </button>
+                    )}
+                </div>
 
-                    {/* Header */}
-                    <div className="flex justify-between items-start mb-8 relative">
-                        <div>
-                            <h2 className="text-2xl font-bold text-white font-russo mb-2">Детали заявки</h2>
-                            <p className="text-white/50 text-sm">ID: {request.id}</p>
+                {/* Status Badge */}
+                <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border mb-6 ${statusInfo.bg} ${statusInfo.border}`}>
+                    <StatusIcon size={18} className={statusInfo.color} />
+                    <span className={`font-bold text-sm ${statusInfo.color}`}>{statusInfo.label}</span>
+                </div>
+
+                {/* Content Grid */}
+                <div className="space-y-5 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Программа</label>
+                            <div className="text-white text-sm font-medium flex items-center gap-2">
+                                <Calendar size={15} className="text-sparta-gold" />
+                                {request.programType || 'Пробная тренировка'}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {canEdit && !isEditing && (
-                                <button
-                                    onClick={() => setIsEditing(true)}
-                                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-sparta-gold"
-                                    title="Редактировать"
-                                >
-                                    <Edit2 size={20} />
-                                </button>
-                            )}
-                            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white">
-                                <X size={20} />
-                            </button>
+                        <div className="space-y-1">
+                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Дата создания</label>
+                            <div className="text-white text-sm font-medium">
+                                {request.createdAt?.seconds
+                                    ? format(new Date(request.createdAt.seconds * 1000), 'd MMMM yyyy HH:mm', { locale: ru })
+                                    : 'Неизвестно'}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Status Badge */}
-                    <div className={`flex items - center gap - 2 px - 4 py - 3 rounded - xl border mb - 8 ${statusInfo.bg} ${statusInfo.border} `}>
-                        <StatusIcon size={20} className={statusInfo.color} />
-                        <span className={`font - bold ${statusInfo.color} `}>{statusInfo.label}</span>
-                    </div>
+                    <div className="h-px bg-white/5" />
 
-                    {/* Content Grid */}
-                    <div className="space-y-6 mb-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1">
-                                <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Программа</label>
-                                <div className="text-white font-medium flex items-center gap-2">
-                                    <Calendar size={16} className="text-sparta-gold" />
-                                    {request.programType || 'Пробная тренировка'}
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Дата создания</label>
-                                <div className="text-white font-medium">
-                                    {request.createdAt?.seconds
-                                        ? format(new Date(request.createdAt.seconds * 1000), 'd MMMM yyyy HH:mm', { locale: ru })
-                                        : 'Неизвестно'}
-                                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Имя спортсмена</label>
+                            <div className="text-white text-sm font-medium flex items-center gap-2">
+                                <User size={15} className="text-white/50" />
+                                {request.childName || 'Не указано'}
                             </div>
                         </div>
 
-                        <div className="h-px bg-white/5" />
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1">
-                                <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Имя спортсмена</label>
-                                <div className="text-white font-medium flex items-center gap-2">
-                                    <User size={16} className="text-white/50" />
-                                    {request.childName || 'Не указано'}
-                                </div>
-                            </div>
-
-                            {/* Parent Name Field */}
-                            <div className="space-y-1">
-                                <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Имя родителя</label>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        value={editForm.parentName}
-                                        onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })}
-                                        className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-1 text-white text-sm focus:border-sparta-gold outline-none"
-                                    />
-                                ) : (
-                                    <div className="text-white font-medium flex items-center gap-2">
-                                        <User size={16} className="text-white/50" />
-                                        {request.parentName || request.name || 'Не указано'}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Phone Field */}
-                            <div className="space-y-1">
-                                <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Телефон</label>
-                                {isEditing ? (
-                                    <input
-                                        type="tel"
-                                        value={editForm.parentPhone}
-                                        onChange={(e) => setEditForm({ ...editForm, parentPhone: e.target.value })}
-                                        className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-1 text-white text-sm focus:border-sparta-gold outline-none"
-                                    />
-                                ) : (
-                                    <div className="text-white font-medium flex items-center gap-2">
-                                        <Phone size={16} className="text-white/50" />
-                                        {request.parentPhone || request.phone || 'Не указано'}
-                                    </div>
-                                )}
-                            </div>
-                            {/* Optional fields if they exist */}
-                            {request.email && (
-                                <div className="space-y-1">
-                                    <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Email</label>
-                                    <div className="text-white font-medium flex items-center gap-2">
-                                        <Mail size={16} className="text-white/50" />
-                                        {request.email}
-                                    </div>
+                        {/* Parent Name Field */}
+                        <div className="space-y-1">
+                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Имя родителя</label>
+                            {isEditing ? (
+                                <input
+                                    type="text"
+                                    value={editForm.parentName}
+                                    onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })}
+                                    className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-1.5 text-white text-xs focus:border-sparta-gold outline-none"
+                                />
+                            ) : (
+                                <div className="text-white text-sm font-medium flex items-center gap-2">
+                                    <User size={15} className="text-white/50" />
+                                    {request.parentName || request.name || 'Не указано'}
                                 </div>
                             )}
                         </div>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-3">
-                        {isEditing ? (
-                            <>
-                                <button
-                                    onClick={() => setIsEditing(false)}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl transition-all font-bold border border-white/10"
-                                >
-                                    Отмена
-                                </button>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={loading}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-sparta-gold text-black hover:bg-yellow-500 py-3 rounded-xl transition-all font-bold disabled:opacity-50"
-                                >
-                                    {loading ? 'Сохранение...' : 'Сохранить'}
-                                    <Save size={18} />
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <button
-                                    onClick={() => { onClose(); onContactSupport(); }}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl transition-all font-bold border border-white/10"
-                                >
-                                    <MessageSquare size={18} />
-                                    Поддержка
-                                </button>
+                        {/* Phone Field */}
+                        <div className="space-y-1">
+                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Телефон</label>
+                            {isEditing ? (
+                                <input
+                                    type="tel"
+                                    value={editForm.parentPhone}
+                                    onChange={(e) => setEditForm({ ...editForm, parentPhone: e.target.value })}
+                                    className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-1.5 text-white text-xs focus:border-sparta-gold outline-none"
+                                />
+                            ) : (
+                                <div className="text-white text-sm font-medium flex items-center gap-2">
+                                    <Phone size={15} className="text-white/50" />
+                                    {request.parentPhone || request.phone || 'Не указано'}
+                                </div>
+                            )}
+                        </div>
 
-                                <button
-                                    onClick={handleDelete}
-                                    disabled={loading}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-3 rounded-xl transition-all font-bold border border-red-500/20 disabled:opacity-50"
-                                >
-                                    <Trash2 size={18} />
-                                    {loading ? 'Удаление...' : (request.status === 'new' ? 'Отменить' : 'Удалить')}
-                                </button>
-                            </>
+                        {request.email && (
+                            <div className="space-y-1">
+                                <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Email</label>
+                                <div className="text-white text-sm font-medium flex items-center gap-2">
+                                    <Mail size={15} className="text-white/50" />
+                                    {request.email}
+                                </div>
+                            </div>
                         )}
                     </div>
+                </div>
 
-                </motion.div>
+                {/* Actions */}
+                <div className="flex gap-3">
+                    {isEditing ? (
+                        <>
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl transition-all font-bold text-xs border border-white/10 cursor-pointer"
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={loading}
+                                className="flex-1 flex items-center justify-center gap-2 bg-sparta-gold text-black hover:bg-yellow-500 py-3 rounded-xl transition-all font-bold text-xs disabled:opacity-50 cursor-pointer"
+                            >
+                                {loading ? 'Сохранение...' : 'Сохранить'}
+                                <Save size={15} />
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => { onClose(); onContactSupport(); }}
+                                className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl transition-all font-bold text-xs border border-white/10 cursor-pointer"
+                            >
+                                <MessageSquare size={15} />
+                                Поддержка
+                            </button>
+
+                            <button
+                                onClick={handleDelete}
+                                disabled={loading}
+                                className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-3 rounded-xl transition-all font-bold text-xs border border-red-500/20 disabled:opacity-50 cursor-pointer"
+                            >
+                                <Trash2 size={15} />
+                                {loading ? 'Удаление...' : (request.status === 'new' ? 'Отменить' : 'Удалить')}
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
-        </AnimatePresence>
+        </BaseModal>
     );
 };
 

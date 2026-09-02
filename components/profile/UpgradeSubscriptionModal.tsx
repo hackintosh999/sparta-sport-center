@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    X, TrendingUp, Sparkles, Check, 
-    Trophy, ArrowRight, ShieldCheck, 
-    CreditCard, Loader2, Star, Zap, Activity
+    X, TrendingUp, Sparkles, 
+    Trophy, 
+    CreditCard, Loader2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { db } from '../../firebase';
 import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
 import { SubscriptionPlan, SubscriptionStatus } from '../../types/subscription';
 import { SPARTA_SUBSCRIPTIONS } from '../../constants/spartaSubscriptions';
+import { BaseModal } from '../ui/BaseModal';
 
 interface UpgradeSubscriptionModalProps {
     isOpen: boolean;
@@ -152,195 +152,190 @@ export const UpgradeSubscriptionModal: React.FC<UpgradeSubscriptionModalProps> =
         }
     };
 
-    if (!isOpen || !activeChild) return null;
+    if (!activeChild) return null;
 
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[140] flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={onClose}
-                    className="absolute inset-0 bg-black/85 backdrop-blur-md"
-                />
-
-                <motion.div
-                    initial={{ scale: 0.94, opacity: 0, y: 20 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.94, opacity: 0, y: 20 }}
-                    className="relative w-full max-w-lg bg-[#16161a] border border-sparta-gold/40 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-left"
-                >
-                    {/* Header */}
-                    <div className="flex justify-between items-center mb-5">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sparta-gold to-yellow-500 text-black flex items-center justify-center font-bold shadow-md shadow-sparta-gold/20">
-                                <TrendingUp size={20} />
-                            </div>
-                            <div>
-                                <h3 className="text-base sm:text-lg font-russo text-white uppercase tracking-wider">
-                                    Повышение тарифа
-                                </h3>
-                                <p className="text-[11px] text-white/50">
-                                    Переход на новый уровень с перерасчетом остатка
-                                </p>
-                            </div>
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            showCloseButton={false}
+            glowColor="amber"
+            zIndex="z-[140]"
+        >
+            <div className="relative text-left font-manrope">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-5">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sparta-gold to-yellow-500 text-black flex items-center justify-center font-bold shadow-md shadow-sparta-gold/20">
+                            <TrendingUp size={20} />
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors cursor-pointer"
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-
-                    {/* Current Plan Summary Card */}
-                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between mb-4">
-                        <div className="space-y-0.5">
-                            <span className="text-[10px] uppercase font-bold text-white/40 block">Текущий абонемент:</span>
-                            <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                                <span className="text-sparta-gold font-russo uppercase">{currentTitle}</span>
-                                <span className="text-white/40 font-normal">({activeChild.childName || 'Спортсмен'})</span>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <span className="text-[10px] uppercase font-bold text-white/40 block">Остаток:</span>
-                            <span className="text-xs sm:text-sm font-mono font-bold text-emerald-400">
-                                {currentRemaining} из {currentTotal} зан.
-                            </span>
+                        <div>
+                            <h3 className="text-base sm:text-lg font-russo text-white uppercase tracking-wider">
+                                Повышение тарифа
+                            </h3>
+                            <p className="text-[11px] text-white/50">
+                                Переход на новый уровень с перерасчетом остатка
+                            </p>
                         </div>
                     </div>
+                    <button
+                        onClick={onClose}
+                        aria-label="Закрыть"
+                        className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
 
-                    {/* Target Plans Options */}
-                    <div className="space-y-2.5 mb-5">
-                        <label className="block text-xs font-bold text-white/70 uppercase tracking-wider">
-                            Выберите новый тариф:
-                        </label>
-                        <div className="space-y-2.5">
-                            {availablePlans.map((plan) => {
-                                const isSelected = selectedTargetPlanId === plan.id;
-                                const isPlanPremium = plan.id === 'plan_premium_14';
-                                const planSessionsToAdd = Math.max(0, (plan.totalSessions || 12) - currentTotal);
+                {/* Current Plan Summary Card */}
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between mb-4">
+                    <div className="space-y-0.5">
+                        <span className="text-[10px] uppercase font-bold text-white/40 block">Текущий абонемент:</span>
+                        <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                            <span className="text-sparta-gold font-russo uppercase">{currentTitle}</span>
+                            <span className="text-white/40 font-normal">({activeChild.childName || 'Спортсмен'})</span>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-[10px] uppercase font-bold text-white/40 block">Остаток:</span>
+                        <span className="text-xs sm:text-sm font-mono font-bold text-emerald-400">
+                            {currentRemaining} из {currentTotal} зан.
+                        </span>
+                    </div>
+                </div>
 
-                                return (
-                                    <button
-                                        key={plan.id}
-                                        type="button"
-                                        onClick={() => setSelectedTargetPlanId(plan.id)}
-                                        className={`w-full p-4 rounded-2xl border text-left transition-all relative overflow-hidden cursor-pointer ${
-                                            isSelected
-                                                ? 'bg-gradient-to-br from-sparta-gold/20 via-amber-500/10 to-transparent border-sparta-gold shadow-lg shadow-sparta-gold/10'
-                                                : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10'
-                                        }`}
-                                    >
-                                        {plan.badge && (
-                                            <span className="absolute top-0 right-0 px-3 py-1 bg-sparta-gold text-black font-extrabold text-[9px] uppercase tracking-wider rounded-bl-xl shadow-sm">
-                                                {plan.badge}
-                                            </span>
-                                        )}
+                {/* Target Plans Options */}
+                <div className="space-y-2.5 mb-5">
+                    <label className="block text-xs font-bold text-white/70 uppercase tracking-wider">
+                        Выберите новый тариф:
+                    </label>
+                    <div className="space-y-2.5">
+                        {availablePlans.map((plan) => {
+                            const isSelected = selectedTargetPlanId === plan.id;
+                            const isPlanPremium = plan.id === 'plan_premium_14';
+                            const planSessionsToAdd = Math.max(0, (plan.totalSessions || 12) - currentTotal);
 
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] ${
-                                                        isSelected ? 'border-sparta-gold bg-sparta-gold text-black font-bold' : 'border-white/30 text-transparent'
-                                                    }`}>
-                                                        ✓
-                                                    </div>
-                                                    <span className="text-sm font-russo text-white uppercase tracking-wider">
-                                                        «{plan.title}»
-                                                    </span>
-                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold text-[10px] font-mono">
-                                                        +{planSessionsToAdd} зан.
-                                                    </span>
+                            return (
+                                <button
+                                    key={plan.id}
+                                    type="button"
+                                    onClick={() => setSelectedTargetPlanId(plan.id)}
+                                    className={`w-full p-4 rounded-2xl border text-left transition-all relative overflow-hidden cursor-pointer ${
+                                        isSelected
+                                            ? 'bg-gradient-to-br from-sparta-gold/20 via-amber-500/10 to-transparent border-sparta-gold shadow-lg shadow-sparta-gold/10'
+                                            : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10'
+                                    }`}
+                                >
+                                    {plan.badge && (
+                                        <span className="absolute top-0 right-0 px-3 py-1 bg-sparta-gold text-black font-extrabold text-[9px] uppercase tracking-wider rounded-bl-xl shadow-sm">
+                                            {plan.badge}
+                                        </span>
+                                    )}
+
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] ${
+                                                    isSelected ? 'border-sparta-gold bg-sparta-gold text-black font-bold' : 'border-white/30 text-transparent'
+                                                }`}>
+                                                    ✓
                                                 </div>
-
-                                                <p className="text-[11px] text-white/60 leading-tight pl-7">
-                                                    {plan.description}
-                                                </p>
-
-                                                {/* Plan Features */}
-                                                <div className="pl-7 pt-1 space-y-1">
-                                                    {plan.features?.slice(0, 2).map((feat, idx) => (
-                                                        <div key={idx} className="flex items-center gap-1.5 text-[10px] text-white/80">
-                                                            <Sparkles size={11} className="text-sparta-gold shrink-0" />
-                                                            <span>{feat}</span>
-                                                        </div>
-                                                    ))}
-                                                    {isPlanPremium && (
-                                                        <div className="flex items-center gap-1.5 text-[10px] text-amber-300 font-bold">
-                                                            <Trophy size={11} className="text-sparta-gold shrink-0" />
-                                                            <span>2 индивидуальные тренировки с наставником</span>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <span className="text-sm font-russo text-white uppercase tracking-wider">
+                                                    «{plan.title}»
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold text-[10px] font-mono">
+                                                    +{planSessionsToAdd} зан.
+                                                </span>
                                             </div>
 
-                                            <div className="text-right shrink-0 mt-5 sm:mt-0">
-                                                <span className="text-base font-russo text-white block">
-                                                    {plan.price?.toLocaleString('ru-RU')} ₽
-                                                </span>
-                                                <span className="text-[9px] text-white/40 block">в месяц</span>
+                                            <p className="text-[11px] text-white/60 leading-tight pl-7">
+                                                {plan.description}
+                                            </p>
+
+                                            {/* Plan Features */}
+                                            <div className="pl-7 pt-1 space-y-1">
+                                                {plan.features?.slice(0, 2).map((feat, idx) => (
+                                                    <div key={idx} className="flex items-center gap-1.5 text-[10px] text-white/80">
+                                                        <Sparkles size={11} className="text-sparta-gold shrink-0" />
+                                                        <span>{feat}</span>
+                                                    </div>
+                                                ))}
+                                                {isPlanPremium && (
+                                                    <div className="flex items-center gap-1.5 text-[10px] text-amber-300 font-bold">
+                                                        <Trophy size={11} className="text-sparta-gold shrink-0" />
+                                                        <span>2 индивидуальные тренировки с наставником</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                    </button>
-                                );
-                            })}
+
+                                        <div className="text-right shrink-0 mt-5 sm:mt-0">
+                                            <span className="text-base font-russo text-white block">
+                                                {plan.price?.toLocaleString('ru-RU')} ₽
+                                            </span>
+                                            <span className="text-[9px] text-white/40 block">в месяц</span>
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Calculation & Surcharge Box */}
+                {selectedTargetPlan && (
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-sparta-gold/15 to-amber-500/5 border border-sparta-gold/30 space-y-2 mb-5">
+                        <div className="flex items-center justify-between text-xs text-white/70">
+                            <span>Стоимость нового тарифа «{selectedTargetPlan.title}»:</span>
+                            <span className="font-mono text-white font-bold">{targetPrice.toLocaleString('ru-RU')} ₽</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-white/70">
+                            <span>Зачёт неиспользованных {currentRemaining} занятий:</span>
+                            <span className="font-mono text-emerald-400 font-bold">-{currentUnusedValue.toLocaleString('ru-RU')} ₽</span>
+                        </div>
+                        <div className="pt-2 border-t border-sparta-gold/20 flex items-center justify-between">
+                            <div>
+                                <span className="text-xs uppercase font-extrabold text-white block">Сумма доплаты:</span>
+                                <span className="text-[10px] text-sparta-gold">Баланс пополнится на +{additionalSessions} тренировок</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xl sm:text-2xl font-russo text-sparta-gold font-mono">
+                                    {surcharge.toLocaleString('ru-RU')} ₽
+                                </span>
+                            </div>
                         </div>
                     </div>
+                )}
 
-                    {/* Calculation & Surcharge Box */}
-                    {selectedTargetPlan && (
-                        <div className="p-4 rounded-2xl bg-gradient-to-br from-sparta-gold/15 to-amber-500/5 border border-sparta-gold/30 space-y-2 mb-5">
-                            <div className="flex items-center justify-between text-xs text-white/70">
-                                <span>Стоимость нового тарифа «{selectedTargetPlan.title}»:</span>
-                                <span className="font-mono text-white font-bold">{targetPrice.toLocaleString('ru-RU')} ₽</span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs text-white/70">
-                                <span>Зачёт неиспользованных {currentRemaining} занятий:</span>
-                                <span className="font-mono text-emerald-400 font-bold">-{currentUnusedValue.toLocaleString('ru-RU')} ₽</span>
-                            </div>
-                            <div className="pt-2 border-t border-sparta-gold/20 flex items-center justify-between">
-                                <div>
-                                    <span className="text-xs uppercase font-extrabold text-white block">Сумма доплаты:</span>
-                                    <span className="text-[10px] text-sparta-gold">Баланс пополнится на +{additionalSessions} тренировок</span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-xl sm:text-2xl font-russo text-sparta-gold font-mono">
-                                        {surcharge.toLocaleString('ru-RU')} ₽
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2.5">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
-                        >
-                            Отмена
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleConfirmUpgrade}
-                            disabled={isUpgrading || !selectedTargetPlan}
-                            className="flex-[2] py-3.5 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:brightness-110 disabled:opacity-50 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 cursor-pointer"
-                        >
-                            {isUpgrading ? (
-                                <Loader2 size={16} className="animate-spin" />
-                            ) : (
-                                <>
-                                    <CreditCard size={15} />
-                                    <span>Доплатить {surcharge.toLocaleString('ru-RU')} ₽ и улучшить</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </motion.div>
+                {/* Action Buttons */}
+                <div className="flex gap-2.5">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                        Отмена
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleConfirmUpgrade}
+                        disabled={isUpgrading || !selectedTargetPlan}
+                        className="flex-[2] py-3.5 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:brightness-110 disabled:opacity-50 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 cursor-pointer"
+                    >
+                        {isUpgrading ? (
+                            <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                            <>
+                                <CreditCard size={15} />
+                                <span>Доплатить {surcharge.toLocaleString('ru-RU')} ₽ и улучшить</span>
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
-        </AnimatePresence>
+        </BaseModal>
     );
 };
+
+export default UpgradeSubscriptionModal;

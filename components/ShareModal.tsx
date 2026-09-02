@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Copy, Check, Mail, Smartphone } from 'lucide-react';
+import { X, Copy, Check, Mail } from 'lucide-react';
+import { BaseModal } from './ui/BaseModal';
 
 interface ShareModalProps {
     isOpen: boolean;
@@ -79,7 +79,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url, title }) 
         {
             id: 'mailru',
             name: 'Mail.ru',
-            link: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`, // Mail.ru handles mailto well usually or web intent difficult
+            link: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`,
             color: 'text-blue-600'
         },
         {
@@ -90,92 +90,85 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url, title }) 
         }
     ];
 
-
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-md"
+            showCloseButton={false}
+            glowColor="blue"
+            zIndex="z-[150]"
+        >
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-russo text-white">Поделиться</h3>
+                <button
                     onClick={onClose}
+                    aria-label="Закрыть"
+                    className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors cursor-pointer"
                 >
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        className="bg-[#121212] border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl relative"
-                        onClick={e => e.stopPropagation()}
+                    <X size={20} />
+                </button>
+            </div>
+
+            {/* Copy Link Section */}
+            <div className="mb-8">
+                <p className="text-xs text-white/40 mb-2 font-bold uppercase tracking-wider">Ссылка на новость</p>
+                <div className="flex items-center gap-2 bg-white/5 p-2 pr-2.5 rounded-xl border border-white/10">
+                    <div className="flex-1 overflow-hidden">
+                        <p className="text-sm text-white/90 truncate px-2">{url}</p>
+                    </div>
+                    <button
+                        onClick={handleCopy}
+                        className={`p-2 rounded-lg transition-all cursor-pointer ${
+                            copied ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'
+                        }`}
                     >
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-russo text-white">Поделиться</h3>
-                            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
+                        {copied ? <Check size={18} /> : <Copy size={18} />}
+                    </button>
+                </div>
+            </div>
 
-                        {/* Copy Link Section */}
-                        <div className="mb-8">
-                            <p className="text-xs text-white/40 mb-2 font-bold uppercase tracking-wider">Ссылка на новость</p>
-                            <div className="flex items-center gap-2 bg-white/5 p-2 pr-2.5 rounded-xl border border-white/10">
-                                <div className="flex-1 overflow-hidden">
-                                    <p className="text-sm text-white/90 truncate px-2">{url}</p>
-                                </div>
-                                <button
-                                    onClick={handleCopy}
-                                    className={`p-2 rounded-lg transition-all ${copied ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-                                >
-                                    {copied ? <Check size={18} /> : <Copy size={18} />}
-                                </button>
-                            </div>
+            {/* Socials Grid */}
+            <div className="grid grid-cols-4 gap-4 mb-8">
+                {shareLinks.map(social => (
+                    <a
+                        key={social.id}
+                        href={social.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col items-center gap-2 group cursor-pointer"
+                    >
+                        <div className={`w-14 h-14 ${social.color} rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 group-hover:shadow-xl`}>
+                            {social.icon}
                         </div>
+                        <span className="text-xs text-white/50 group-hover:text-white transition-colors font-medium">
+                            {social.name}
+                        </span>
+                    </a>
+                ))}
+            </div>
 
-                        {/* Socials Grid */}
-                        <div className="grid grid-cols-4 gap-4 mb-8">
-                            {shareLinks.map(social => (
-                                <a
-                                    key={social.id}
-                                    href={social.link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex flex-col items-center gap-2 group cursor-pointer"
-                                >
-                                    <div className={`w-14 h-14 ${social.color} rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 group-hover:shadow-xl`}>
-                                        {social.icon}
-                                    </div>
-                                    <span className="text-xs text-white/50 group-hover:text-white transition-colors font-medium">
-                                        {social.name}
-                                    </span>
-                                </a>
-                            ))}
-                        </div>
-
-                        {/* Email Section */}
-                        <div>
-                            <p className="text-xs text-white/40 mb-3 font-bold uppercase tracking-wider flex items-center gap-2">
-                                <Mail size={12} />
-                                Отправить на почту
-                            </p>
-                            <div className="grid grid-cols-3 gap-3">
-                                {emailProviders.map(provider => (
-                                    <a
-                                        key={provider.id}
-                                        href={provider.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 transition-all"
-                                    >
-                                        <span className={`text-sm font-bold ${provider.color}`}>{provider.name}</span>
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+            {/* Email Section */}
+            <div>
+                <p className="text-xs text-white/40 mb-3 font-bold uppercase tracking-wider flex items-center gap-2">
+                    <Mail size={12} />
+                    Отправить на почту
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                    {emailProviders.map(provider => (
+                        <a
+                            key={provider.id}
+                            href={provider.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                            <span className={`text-sm font-bold ${provider.color}`}>{provider.name}</span>
+                        </a>
+                    ))}
+                </div>
+            </div>
+        </BaseModal>
     );
 };
 

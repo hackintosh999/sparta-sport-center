@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Star, CheckCircle2, Lock, Sparkles, Trophy, Award, Scroll, Calendar, UserCheck } from 'lucide-react';
 import { SpartanUnifiedAchievement, useStudentAchievements, MAX_PINNED_SLOTS, getAward3DDefaultIcon } from '../../hooks/useStudentAchievements';
 import { SpartaCoinIcon } from '../SpartaCoinIcon';
@@ -8,6 +8,7 @@ import { ru } from 'date-fns/locale';
 import confetti from 'canvas-confetti';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { BaseModal } from '../ui/BaseModal';
 
 interface AwardDetailModalProps {
     isOpen: boolean;
@@ -100,27 +101,28 @@ export const AwardDetailModal: React.FC<AwardDetailModalProps> = ({
     };
 
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[350] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl overflow-y-auto">
-                <div className="absolute inset-0" onClick={onClose} />
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-md"
+            customCard
+            showCloseButton={false}
+            glowColor="amber"
+            zIndex="z-[350]"
+        >
+            <div className="relative w-full rounded-3xl bg-gradient-to-b from-[#1c1b18] via-[#141416] to-[#0c0c0e] border-2 border-sparta-gold/50 p-6 sm:p-8 text-center space-y-5 shadow-[0_0_50px_rgba(212,175,55,0.25)] overflow-hidden">
+                {/* Background Golden Glow */}
+                <div className="absolute top-0 right-1/4 w-48 h-32 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
 
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="relative max-w-md w-full my-auto z-10 rounded-3xl bg-gradient-to-b from-[#1c1b18] via-[#141416] to-[#0c0c0e] border-2 border-sparta-gold/50 p-6 sm:p-8 text-center space-y-5 shadow-[0_0_50px_rgba(212,175,55,0.25)] overflow-hidden"
+                {/* Close Button */}
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="absolute top-4 right-4 p-2 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all cursor-pointer z-20"
+                    aria-label="Закрыть"
                 >
-                    {/* Background Golden Glow */}
-                    <div className="absolute top-0 right-1/4 w-48 h-32 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
-
-                    {/* Close Button */}
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="absolute top-4 right-4 p-2 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all cursor-pointer z-20"
-                    >
-                        <X size={18} />
-                    </button>
+                    <X size={18} />
+                </button>
 
                     {/* 1. КРУПНАЯ 2.5D ИКОНКА С ПАРИРУЮЩЕЙ АНИМАЦИЕЙ */}
                     <div className="relative py-2 flex flex-col items-center justify-center">
@@ -284,9 +286,8 @@ export const AwardDetailModal: React.FC<AwardDetailModalProps> = ({
                             )
                         )}
                     </div>
-                </motion.div>
             </div>
-        </AnimatePresence>
+        </BaseModal>
     );
 };
 

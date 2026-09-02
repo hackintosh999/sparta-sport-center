@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Bell, Info, CheckCircle, AlertCircle, Filter, Trash2,
-    CheckSquare, ExternalLink, MessageSquare, Zap, CreditCard,
-    Shield, Calendar, ChevronRight, Clock
+    X, Bell, Info, Filter, Trash2,
+    CheckSquare, MessageSquare, Zap, CreditCard,
+    Shield, ChevronRight
 } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -62,7 +63,6 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
         }
         onClose();
 
-        // Improved chat redirection with support for various notification types
         const isChatNote = note.type === 'chat' ||
             note.type === 'chat_message' ||
             note.type === 'coach_message' ||
@@ -141,7 +141,9 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
         return notifications.filter(n => !n.isRead && (cat === 'all' || (cat === 'system' ? (n.type === 'announcement' || n.type === 'request' || n.type === 'news') : n.type === cat))).length;
     };
 
-    return (
+    if (typeof document === 'undefined') return null;
+
+    const drawerContent = (
         <AnimatePresence>
             {isOpen && (
                 <>
@@ -150,14 +152,14 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/90 backdrop-blur-md z-[60]"
+                        className="fixed inset-0 bg-black/90 backdrop-blur-md z-[120]"
                     />
                     <motion.div
                         initial={{ opacity: 0, x: '100%' }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: '100%' }}
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="fixed inset-y-0 right-0 z-[70] w-full max-w-md bg-[#080808] border-l border-white/10 shadow-3xl flex flex-col font-manrope overflow-hidden"
+                        className="fixed inset-y-0 right-0 z-[130] w-full max-w-md bg-[#080808] border-l border-white/10 shadow-3xl flex flex-col font-manrope overflow-hidden text-left"
                     >
                         {/* Header */}
                         <div className="p-8 pb-6 bg-[#0a0a0a] relative overflow-hidden">
@@ -168,7 +170,11 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                                     <h2 className="text-2xl font-russo text-white uppercase tracking-widest">Уведомления</h2>
                                     <p className="text-white/40 text-xs mt-1 font-medium">Ваш пульс событий в Спарте</p>
                                 </div>
-                                <button onClick={onClose} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all">
+                                <button
+                                    onClick={onClose}
+                                    aria-label="Закрыть"
+                                    className="p-2.5 bg-white/5 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all cursor-pointer"
+                                >
                                     <X size={20} />
                                 </button>
                             </div>
@@ -181,7 +187,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                                         <button
                                             key={tab.id}
                                             onClick={() => setActiveTab(tab.id)}
-                                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${activeTab === tab.id ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative cursor-pointer ${activeTab === tab.id ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
                                         >
                                             {tab.icon}
                                             <span>{tab.label}</span>
@@ -199,13 +205,13 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                             <div className="flex gap-4">
                                 <button
                                     onClick={() => setSortOrder('newest')}
-                                    className={`text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${sortOrder === 'newest' ? 'text-sparta-gold' : 'text-white/20 hover:text-white/40'}`}
+                                    className={`text-[10px] font-black uppercase tracking-[0.2em] transition-colors cursor-pointer ${sortOrder === 'newest' ? 'text-sparta-gold' : 'text-white/20 hover:text-white/40'}`}
                                 >
                                     Последние
                                 </button>
                                 <button
                                     onClick={() => setSortOrder('unread')}
-                                    className={`text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${sortOrder === 'unread' ? 'text-sparta-gold' : 'text-white/20 hover:text-white/40'}`}
+                                    className={`text-[10px] font-black uppercase tracking-[0.2em] transition-colors cursor-pointer ${sortOrder === 'unread' ? 'text-sparta-gold' : 'text-white/20 hover:text-white/40'}`}
                                 >
                                     Непрочитанные
                                 </button>
@@ -213,14 +219,14 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                             <div className="flex gap-2">
                                 <button
                                     onClick={markAllAsRead}
-                                    className="p-2 text-white/20 hover:text-sparta-gold transition-colors"
+                                    className="p-2 text-white/20 hover:text-sparta-gold transition-colors cursor-pointer"
                                     title="Прочитать все"
                                 >
                                     <CheckSquare size={16} />
                                 </button>
                                 <button
                                     onClick={clearAll}
-                                    className="p-2 text-white/20 hover:text-red-500 transition-colors"
+                                    className="p-2 text-white/20 hover:text-red-500 transition-colors cursor-pointer"
                                     title="Очистить всё"
                                 >
                                     <Trash2 size={16} />
@@ -245,7 +251,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                                             groups[groupKey].push(note);
                                         });
 
-                                        return Object.entries(groups).map(([groupName, groupNotes], groupIdx) => (
+                                        return Object.entries(groups).map(([groupName, groupNotes]) => (
                                             <div key={groupName} className="space-y-4">
                                                 <div className="flex items-center gap-4 my-2">
                                                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 whitespace-nowrap">{groupName}</span>
@@ -293,7 +299,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                                                                                         'Системное'}
                                                                         </div>
                                                                     </div>
-                                                                    <div className="flex items-center gap-1 text-[10px] text-sparta-gold font-bold opacity-0 group-hover:opacity-100 transition-opacity translate-x-1 group-hover:translate-x-0">
+                                                                    <div className="flex items-center gap-1 text-[10px] text-sparta-gold/60 group-hover:text-sparta-gold font-bold opacity-60 group-hover:opacity-100 transition-all">
                                                                         Детали <ChevronRight size={10} />
                                                                     </div>
                                                                 </div>
@@ -301,10 +307,11 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                                                         </div>
 
                                                         {/* Action Buttons overlay */}
-                                                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="absolute top-2 right-2 flex gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
                                                             <button
                                                                 onClick={(e) => deleteNotification(note.id, e)}
-                                                                className="p-1.5 bg-black/40 hover:bg-red-500/80 rounded-lg text-white/20 hover:text-white transition-all"
+                                                                className="p-1.5 bg-white/5 hover:bg-red-500/80 rounded-lg text-white/40 hover:text-white transition-all cursor-pointer"
+                                                                title="Удалить уведомление"
                                                             >
                                                                 <Trash2 size={12} />
                                                             </button>
@@ -339,6 +346,8 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
             )}
         </AnimatePresence>
     );
+
+    return createPortal(drawerContent, document.body);
 };
 
 export default NotificationsModal;

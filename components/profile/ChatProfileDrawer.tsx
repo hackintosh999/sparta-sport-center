@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X,
@@ -45,12 +45,22 @@ import {
     Briefcase,
     GraduationCap,
     Info,
-    Pin
+    Pin,
+    AlertTriangle,
+    FilePlus,
+    UploadCloud,
+    ExternalLink,
+    Lock,
+    Eye,
+    Clock,
+    Trash2,
+    Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '../../supabase';
 import { db } from '../../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { CoachNote } from '../../types/user';
 
 export interface ChatProfileDrawerProps {
     isOpen: boolean;
@@ -128,14 +138,28 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
     const otherParticipant = useMemo(() => {
         if (!isPrivate) return null;
         const other = groupMembers.find(m => m.id !== currentUser?.uid);
-        if (other) return other;
+        
+        const otherId = groupData?.parentId || groupData?.coachId || (Array.isArray(groupData?.participants) ? groupData.participants.find((id: string) => id !== currentUser?.uid) : null);
+        const otherRole = (otherId ? groupData?.participantRoles?.[otherId] : null) || (otherId ? groupData?.participantDetails?.[otherId]?.role : null) || (groupData?.type === 'parent' ? 'parent' : null);
+        const otherName = (otherId ? groupData?.participantNames?.[otherId] : null) || (otherId ? groupData?.participantDetails?.[otherId]?.name : null) || (groupData?.type === 'parent' ? (groupData.parentName || 'Родитель') : null) || groupName;
+
+        if (other) {
+            return {
+                ...other,
+                role: other.role || otherRole || (groupData?.type === 'parent' ? 'parent' : 'student'),
+                full_name: other.full_name || other.displayName || other.name || other.parentName || otherName,
+                childName: other.childName || other.studentName || groupData?.childName || groupData?.studentName
+            };
+        }
 
         const isCoachName = (groupName || '').toLowerCase().includes('тренер') || !!groupData?.coachId;
+        const resolvedRole = otherRole || (groupData?.type === 'parent' ? 'parent' : (isCoachName ? 'trainer' : 'student'));
         return {
-            id: groupData?.coachId || groupData?.participants?.find((id: string) => id !== currentUser?.uid),
-            full_name: groupName || 'Собеседник',
-            role: isCoachName ? 'trainer' : 'student',
+            id: otherId,
+            full_name: otherName || 'Собеседник',
+            role: resolvedRole,
             photoURL: groupData?.chatAvatarUrl,
+            childName: groupData?.childName || groupData?.studentName,
             license: isCoachName ? 'Лицензия РФС / UEFA B' : undefined,
             experienceYears: isCoachName ? '8 лет' : undefined,
             position: !isCoachName ? 'Нападающий ⚡' : undefined,
@@ -144,6 +168,397 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
     }, [isPrivate, groupMembers, currentUser?.uid, groupName, groupData]);
 
     const effectiveUserProfile = selectedUserProfile || (isPrivate ? otherParticipant : null);
+
+    // Linked Child & Parent Data States
+    const [linkedChildData, setLinkedChildData] = useState<any | null>(null);
+    const [childGroupTitle, setChildGroupTitle] = useState<string>('');
+    const [loadingChild, setLoadingChild] = useState(false);
+
+    const [studentParentData, setStudentParentData] = useState<any | null>(null);
+    const [studentGroupTitle, setStudentGroupTitle] = useState<string>('');
+
+    // Escape Key Listener for Closing Drawer
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        if (isOpen) {
+            window.addEventListener('keydown', handleKeyDown);
+        }
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, onClose]);
+
+    // Fetch Linked Child Data (if Parent) or Parent & Group (if Student)
+    useEffect(() => {
+        if (!effectiveUserProfile) return;
+        const role = effectiveUserProfile.role;
+
+        // A. If PARENT: fetch linked child document and group
+        if (role === 'parent') {
+            const childId = effectiveUserProfile.childrenIds?.[0] || effectiveUserProfile.childId || effectiveUserProfile.linkedChildId;
+            if (childId) {
+                setLoadingChild(true);
+                getDoc(doc(db, 'users', childId))
+                    .then(async (snap) => {
+                        if (snap.exists()) {
+                            const cData: any = { id: snap.id, ...snap.data() };
+                            setLinkedChildData(cData);
+                            if (cData.groupId) {
+                                try {
+                                    const gSnap = await getDoc(doc(db, 'groups', cData.groupId));
+                                    if (gSnap.exists()) {
+                                        setChildGroupTitle(gSnap.data().name || gSnap.data().title || 'Группа SPARTA');
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                    })
+                    .catch((err) => console.warn("Error loading child doc:", err))
+                    .finally(() => setLoadingChild(false));
+            } else {
+                setLinkedChildData(null);
+                setChildGroupTitle('');
+            }
+        }
+
+        // B. If STUDENT: fetch parent document and group
+        if (role === 'user' || role === 'student') {
+            const pId = effectiveUserProfile.parentId || effectiveUserProfile.linkedParentId;
+            if (pId) {
+                getDoc(doc(db, 'users', pId))
+                    .then((snap) => {
+                        if (snap.exists()) {
+                            setStudentParentData({ id: snap.id, ...snap.data() });
+                        }
+                    })
+                    .catch((err) => console.warn("Error loading parent doc:", err));
+            } else {
+                setStudentParentData(null);
+            }
+
+            if (effectiveUserProfile.groupId) {
+                getDoc(doc(db, 'groups', effectiveUserProfile.groupId))
+                    .then((gSnap) => {
+                        if (gSnap.exists()) {
+                            setStudentGroupTitle(gSnap.data().name || gSnap.data().title || 'Группа SPARTA');
+                        }
+                    })
+                    .catch(() => {});
+            }
+        }
+    }, [effectiveUserProfile]);
+
+    // Age / Birth Year Formatter Helper
+    const getChildAgeText = (child: any, fallbackAge?: number | string) => {
+        const birthDate = child?.birthDate || child?.birthdate || child?.dateOfBirth;
+        if (birthDate) {
+            try {
+                const b = typeof birthDate === 'string' ? new Date(birthDate) : (birthDate?.toDate ? birthDate.toDate() : new Date(birthDate));
+                if (!isNaN(b.getTime())) {
+                    const now = new Date();
+                    let age = now.getFullYear() - b.getFullYear();
+                    const m = now.getMonth() - b.getMonth();
+                    if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+                    return `${age} лет (${b.getFullYear()} г.р.)`;
+                }
+            } catch (e) {}
+        }
+        const birthYear = child?.childBirthYear || child?.birthYear;
+        if (birthYear) {
+            const y = Number(birthYear);
+            if (y > 1900 && y < 2030) {
+                const age = new Date().getFullYear() - y;
+                return `${age} лет (${y} г.р.)`;
+            }
+        }
+        if (fallbackAge) {
+            return `${fallbackAge} лет`;
+        }
+        if (child?.age || child?.childAge) {
+            return `${child.age || child.childAge} лет`;
+        }
+        return null;
+    };
+
+    const isStaffOrCoach = Boolean(
+        currentUserProfile?.role === 'coach' ||
+        currentUserProfile?.role === 'trainer' ||
+        currentUserProfile?.role === 'admin' ||
+        currentUserProfile?.role === 'director' ||
+        currentUserProfile?.role === 'developer' ||
+        currentUser?.role === 'coach' ||
+        currentUser?.role === 'trainer' ||
+        currentUser?.role === 'admin' ||
+        currentUser?.role === 'director'
+    );
+
+    // Coach Notes Timeline State
+    const [coachNotesList, setCoachNotesList] = useState<CoachNote[]>([]);
+    const [newCoachNoteText, setNewCoachNoteText] = useState<string>('');
+    const [isAddingCoachNote, setIsAddingCoachNote] = useState(false);
+    const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+
+    // Medical Doc State
+    const [isEditingMedical, setIsEditingMedical] = useState(false);
+    const [medicalValidUntil, setMedicalValidUntil] = useState<string>('');
+    const [medicalNotes, setMedicalNotes] = useState<string>('');
+    const [medicalPhotoFile, setMedicalPhotoFile] = useState<File | null>(null);
+    const [isSavingMedical, setIsSavingMedical] = useState(false);
+    const [medicalPhotoPreviewModal, setMedicalPhotoPreviewModal] = useState<string | null>(null);
+
+    // Sync Coach Notes and Medical Doc from linked child or active user
+    useEffect(() => {
+        const activeTarget = linkedChildData || effectiveUserProfile;
+        if (activeTarget) {
+            let notesList: CoachNote[] = [];
+            if (Array.isArray(activeTarget.coachNotesList) && activeTarget.coachNotesList.length > 0) {
+                notesList = activeTarget.coachNotesList;
+            } else if (activeTarget.coachNotes || activeTarget.notes) {
+                // Graceful fallback for legacy single string note
+                const legacyText = activeTarget.coachNotes || activeTarget.notes;
+                notesList = [{
+                    id: 'legacy_1',
+                    text: legacyText,
+                    createdAt: activeTarget.updatedAt ? format(new Date(activeTarget.updatedAt), 'dd.MM.yyyy, HH:mm') : 'Ранее',
+                    authorName: 'Тренер клуба',
+                    authorId: 'legacy'
+                }];
+            }
+            setCoachNotesList(notesList);
+            setNewCoachNoteText('');
+
+            const med = activeTarget.medicalDoc;
+            setMedicalValidUntil(med?.validUntil || '');
+            setMedicalNotes(med?.notes || '');
+            setMedicalPhotoFile(null);
+            setIsEditingMedical(false);
+        }
+    }, [linkedChildData, effectiveUserProfile]);
+
+    // Check who can delete a note
+    const canDeleteNote = (note: CoachNote) => {
+        const myUid = currentUser?.uid;
+        const myRole = currentUserProfile?.role || currentUser?.role;
+        const isAdminOrDirector = myRole === 'admin' || myRole === 'director';
+        return myUid === note.authorId || isAdminOrDirector;
+    };
+
+    // Add Coach Note to Timeline Handler
+    const handleAddCoachNote = async () => {
+        if (!newCoachNoteText.trim()) return;
+        const targetId = linkedChildData?.id || (effectiveUserProfile?.role === 'user' || effectiveUserProfile?.role === 'student' ? effectiveUserProfile.id : (effectiveUserProfile?.childrenIds?.[0] || effectiveUserProfile?.id));
+        if (!targetId) return;
+
+        setIsAddingCoachNote(true);
+        try {
+            const rawAuthorName = currentUserProfile?.name || currentUserProfile?.full_name || currentUserProfile?.displayName || 'Тренер';
+            const authorName = rawAuthorName.toLowerCase().startsWith('тренер') ? rawAuthorName : `Тренер ${rawAuthorName}`;
+            const authorId = currentUser?.uid || 'coach';
+            const nowStr = format(new Date(), 'dd.MM.yyyy, HH:mm');
+
+            const newNote: CoachNote = {
+                id: `note_${Date.now()}`,
+                text: newCoachNoteText.trim(),
+                createdAt: nowStr,
+                authorName: authorName,
+                authorId: authorId
+            };
+
+            const updatedList = [newNote, ...coachNotesList];
+
+            // Optimistic update
+            setCoachNotesList(updatedList);
+            setNewCoachNoteText('');
+
+            await setDoc(doc(db, 'users', targetId), {
+                coachNotesList: updatedList,
+                coachNotes: newNote.text, // for backward compatibility
+                notes: newNote.text,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            if (linkedChildData && linkedChildData.id === targetId) {
+                setLinkedChildData((prev: any) => ({ ...prev, coachNotesList: updatedList, coachNotes: newNote.text, notes: newNote.text }));
+            }
+            if (effectiveUserProfile && effectiveUserProfile.id === targetId) {
+                effectiveUserProfile.coachNotesList = updatedList;
+                effectiveUserProfile.coachNotes = newNote.text;
+                effectiveUserProfile.notes = newNote.text;
+            }
+        } catch (err) {
+            console.error('Error adding coach note:', err);
+            alert('Не удалось добавить заметку тренера');
+        } finally {
+            setIsAddingCoachNote(false);
+        }
+    };
+
+    // Delete Coach Note Handler
+    const handleDeleteCoachNote = async (noteId: string) => {
+        const targetId = linkedChildData?.id || (effectiveUserProfile?.role === 'user' || effectiveUserProfile?.role === 'student' ? effectiveUserProfile.id : (effectiveUserProfile?.childrenIds?.[0] || effectiveUserProfile?.id));
+        if (!targetId) return;
+
+        setDeletingNoteId(noteId);
+        try {
+            const updatedList = coachNotesList.filter(n => n.id !== noteId);
+            setCoachNotesList(updatedList);
+
+            await setDoc(doc(db, 'users', targetId), {
+                coachNotesList: updatedList,
+                coachNotes: updatedList[0]?.text || '',
+                notes: updatedList[0]?.text || '',
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            if (linkedChildData && linkedChildData.id === targetId) {
+                setLinkedChildData((prev: any) => ({ ...prev, coachNotesList: updatedList, coachNotes: updatedList[0]?.text || '', notes: updatedList[0]?.text || '' }));
+            }
+            if (effectiveUserProfile && effectiveUserProfile.id === targetId) {
+                effectiveUserProfile.coachNotesList = updatedList;
+                effectiveUserProfile.coachNotes = updatedList[0]?.text || '';
+                effectiveUserProfile.notes = updatedList[0]?.text || '';
+            }
+        } catch (err) {
+            console.error('Error deleting coach note:', err);
+            alert('Не удалось удалить заметку');
+        } finally {
+            setDeletingNoteId(null);
+        }
+    };
+
+    // Save Medical Doc Handler
+    const handleSaveMedicalDoc = async () => {
+        const targetId = linkedChildData?.id || (effectiveUserProfile?.role === 'user' || effectiveUserProfile?.role === 'student' ? effectiveUserProfile.id : (effectiveUserProfile?.childrenIds?.[0] || effectiveUserProfile?.id));
+        if (!targetId) return;
+
+        setIsSavingMedical(true);
+        try {
+            let photoUrl = (linkedChildData || effectiveUserProfile)?.medicalDoc?.photoUrl;
+
+            if (medicalPhotoFile) {
+                const fileExt = medicalPhotoFile.name.split('.').pop() || 'jpg';
+                const filePath = `medical-docs/${targetId}_${Date.now()}.${fileExt}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('chat-media')
+                    .upload(filePath, medicalPhotoFile);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('chat-media')
+                    .getPublicUrl(filePath);
+
+                photoUrl = publicUrl;
+            }
+
+            // Calculate status
+            let status: 'valid' | 'expiring' | 'expired' | 'missing' = 'missing';
+            if (medicalValidUntil) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const exp = new Date(medicalValidUntil);
+                exp.setHours(0, 0, 0, 0);
+                const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                if (diffDays < 0) status = 'expired';
+                else if (diffDays <= 14) status = 'expiring';
+                else status = 'valid';
+            }
+
+            const updatedMedicalDoc = {
+                status,
+                validUntil: medicalValidUntil || null,
+                photoUrl: photoUrl || null,
+                notes: medicalNotes || '',
+                updatedAt: new Date().toISOString()
+            };
+
+            await setDoc(doc(db, 'users', targetId), {
+                medicalDoc: updatedMedicalDoc
+            }, { merge: true });
+
+            if (linkedChildData && linkedChildData.id === targetId) {
+                setLinkedChildData((prev: any) => ({ ...prev, medicalDoc: updatedMedicalDoc }));
+            }
+            if (effectiveUserProfile && effectiveUserProfile.id === targetId) {
+                effectiveUserProfile.medicalDoc = updatedMedicalDoc;
+            }
+
+            setIsEditingMedical(false);
+            setMedicalPhotoFile(null);
+        } catch (err) {
+            console.error('Error saving medical doc:', err);
+            alert('Не удалось сохранить данные медсправки');
+        } finally {
+            setIsSavingMedical(false);
+        }
+    };
+
+    // Calculate Medical Status Helper
+    const getMedicalStatusInfo = (medDoc?: any) => {
+        if (!medDoc || !medDoc.validUntil) {
+            return {
+                status: 'missing' as const,
+                label: 'Справка не загружена',
+                badge: (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 text-[9px] font-black uppercase tracking-wider">
+                        <AlertTriangle size={10} /> Справка отсутствует
+                    </span>
+                ),
+                color: 'red'
+            };
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const exp = new Date(medDoc.validUntil);
+        exp.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        let formattedDate = medDoc.validUntil;
+        try {
+            formattedDate = format(exp, 'dd.MM.yyyy');
+        } catch (e) {}
+
+        if (diffDays < 0) {
+            return {
+                status: 'expired' as const,
+                label: `Просрочена (${formattedDate})`,
+                badge: (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-[9px] font-black uppercase tracking-wider">
+                        <AlertTriangle size={10} /> Просрочена ({formattedDate})
+                    </span>
+                ),
+                color: 'red'
+            };
+        } else if (diffDays <= 14) {
+            return {
+                status: 'expiring' as const,
+                label: `Истекает через ${diffDays} дн. (${formattedDate})`,
+                badge: (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[9px] font-black uppercase tracking-wider">
+                        <Clock size={10} /> Истекает через ${diffDays} дн.
+                    </span>
+                ),
+                color: 'amber'
+            };
+        } else {
+            return {
+                status: 'valid' as const,
+                label: `Допуск до ${formattedDate}`,
+                badge: (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[9px] font-black uppercase tracking-wider">
+                        <Check size={10} /> Допуск до ${formattedDate}
+                    </span>
+                ),
+                color: 'emerald'
+            };
+        }
+    };
 
     const [isEditingCoach, setIsEditingCoach] = useState(false);
     const [coachEditData, setCoachEditData] = useState({
@@ -306,13 +721,13 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
 
     return (
         <div className="absolute inset-0 z-40 flex justify-end overflow-hidden pointer-events-none">
-            {/* Backdrop: Only for mobile screens so desktop chat is never blacked out */}
+            {/* Backdrop: Allows click outside to close on all devices */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={onClose}
-                className="md:hidden absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-auto z-10"
+                className="absolute inset-0 bg-black/60 md:bg-black/40 backdrop-blur-sm pointer-events-auto z-10"
             />
 
             {/* Sidebar Drawer */}
@@ -623,7 +1038,17 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
 
                         const rawStatus = getUserStatus(targetUser.lastSeen);
                         const isOnline = rawStatus === 'в сети' || targetUser.id === currentUser?.uid;
-                        const displayName = targetUser.full_name || targetUser.childName || targetUser.email || 'Участник';
+                        const displayName =
+                            targetUser.full_name ||
+                            targetUser.name ||
+                            targetUser.displayName ||
+                            targetUser.parentName ||
+                            targetUser.parentFullName ||
+                            groupData?.participantNames?.[targetUser.id] ||
+                            groupData?.participantDetails?.[targetUser.id]?.name ||
+                            (isPrivate && groupName && !groupName.toLowerCase().startsWith('чат') ? groupName : null) ||
+                            targetUser.email ||
+                            (isParent ? 'Родитель' : isCoach ? 'Тренер' : 'Воспитанник');
                         const xpValue = Number(targetUser.manualStats?.xp || targetUser.xp || 850);
                         const playerLevel = Math.floor(xpValue / 100) || 8;
                         const playerNumber = targetUser.playerNumber || targetUser.number || 10;
@@ -682,6 +1107,233 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                 <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/45 text-[10px] font-semibold tracking-wide">
                                     <span className="w-1.5 h-1.5 rounded-full bg-white/30" />
                                     <span>{offlineText}</span>
+                                </div>
+                            );
+                        };
+
+                        // 1. Render Medical Doc Card Helper
+                        const renderMedicalDocSection = (targetUserOrChild: any) => {
+                            const medDoc = targetUserOrChild?.medicalDoc;
+                            const medInfo = getMedicalStatusInfo(medDoc);
+
+                            return (
+                                <div className="w-full p-4 rounded-3xl bg-white/[0.04] border border-white/10 text-left space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base">🩺</span>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-wider text-white">Медсправка ребенка</p>
+                                                <p className="text-[8px] text-white/40 font-bold uppercase">Допуск к тренировкам</p>
+                                            </div>
+                                        </div>
+                                        <div>{medInfo.badge}</div>
+                                    </div>
+
+                                    {/* Notes / Health group */}
+                                    {medDoc?.notes && (
+                                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-[11px] text-white/80">
+                                            <span className="text-[9px] font-bold text-white/40 uppercase block mb-0.5">Группа здоровья / ограничения:</span>
+                                            {medDoc.notes}
+                                        </div>
+                                    )}
+
+                                    {/* Photo preview if exists */}
+                                    {medDoc?.photoUrl && (
+                                        <div className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <img
+                                                    src={medDoc.photoUrl}
+                                                    alt="Справка"
+                                                    className="w-10 h-10 rounded-lg object-cover border border-white/10 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                                    onClick={() => setMedicalPhotoPreviewModal(medDoc.photoUrl)}
+                                                />
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold text-white truncate">Скан медсправки</p>
+                                                    <p className="text-[9px] text-white/40">Нажмите для увеличения</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setMedicalPhotoPreviewModal(medDoc.photoUrl)}
+                                                className="p-2 rounded-lg bg-white/10 hover:bg-white/15 text-white/70 hover:text-white transition-colors"
+                                                title="Просмотреть"
+                                            >
+                                                <Eye size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Edit / Upload form */}
+                                    {isEditingMedical ? (
+                                        <div className="pt-2 border-t border-white/10 space-y-2.5 animate-in fade-in duration-200">
+                                            <div>
+                                                <label className="text-[9px] font-black text-white/40 uppercase block mb-1">
+                                                    Действует до (дата)
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={medicalValidUntil}
+                                                    onChange={(e) => setMedicalValidUntil(e.target.value)}
+                                                    className="w-full bg-[#1c1c22] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sparta-gold"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] font-black text-white/40 uppercase block mb-1">
+                                                    Ограничения / группа здоровья
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Например: 1 группа, без ограничений"
+                                                    value={medicalNotes}
+                                                    onChange={(e) => setMedicalNotes(e.target.value)}
+                                                    className="w-full bg-[#1c1c22] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] font-black text-white/40 uppercase block mb-1">
+                                                    Фото / скан справки
+                                                </label>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => {
+                                                        if (e.target.files?.[0]) setMedicalPhotoFile(e.target.files[0]);
+                                                    }}
+                                                    className="w-full text-[10px] text-white/60 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-white/10 file:text-white hover:file:bg-white/20"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2 pt-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSaveMedicalDoc}
+                                                    disabled={isSavingMedical}
+                                                    className="flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                                                >
+                                                    {isSavingMedical ? <span className="animate-spin text-xs">⏳</span> : <Save size={13} />}
+                                                    <span>Сохранить</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsEditingMedical(false)}
+                                                    disabled={isSavingMedical}
+                                                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white/70 text-xs font-bold transition-all"
+                                                >
+                                                    Отмена
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        (isStaffOrCoach || targetUser.id === currentUser?.uid) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setMedicalValidUntil(medDoc?.validUntil || '');
+                                                    setMedicalNotes(medDoc?.notes || '');
+                                                    setIsEditingMedical(true);
+                                                }}
+                                                className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all"
+                                            >
+                                                <Edit3 size={12} />
+                                                <span>{medDoc?.validUntil ? 'Обновить медсправку' : 'Загрузить медсправку'}</span>
+                                            </button>
+                                        )
+                                    )}
+                                </div>
+                            );
+                        };
+
+                        // 2. Render Coach Notes Timeline Helper
+                        const renderCoachNotesSection = () => {
+                            if (!isStaffOrCoach) return null;
+
+                            return (
+                                <div className="w-full p-4 rounded-3xl bg-amber-500/[0.06] border border-amber-500/25 text-left space-y-3 shadow-md">
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5 text-sparta-gold">
+                                            <Lock size={13} />
+                                            <p className="text-[10px] font-black uppercase tracking-wider">
+                                                Тренерские заметки
+                                            </p>
+                                            {coachNotesList.length > 0 && (
+                                                <span className="text-[10px] font-bold text-white/40">({coachNotesList.length})</span>
+                                            )}
+                                        </div>
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-amber-400/70 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                                            Приватно
+                                        </span>
+                                    </div>
+
+                                    <p className="text-[9px] text-white/50 leading-relaxed">
+                                        Лента видна только тренерам и руководству клуба. Недоступна родителям.
+                                    </p>
+
+                                    {/* Compact Input Row with ➕ button */}
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={newCoachNoteText}
+                                            onChange={(e) => setNewCoachNoteText(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleAddCoachNote();
+                                                }
+                                            }}
+                                            placeholder="Новая заметка о ребенке или семье..."
+                                            className="flex-1 bg-[#161412] border border-amber-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-sparta-gold transition-colors"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleAddCoachNote}
+                                            disabled={isAddingCoachNote || !newCoachNoteText.trim()}
+                                            className="w-9 h-9 rounded-xl bg-sparta-gold hover:bg-yellow-400 text-black flex items-center justify-center transition-all shadow-md active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                                            title="Добавить заметку"
+                                        >
+                                            {isAddingCoachNote ? <Loader2 size={15} className="animate-spin" /> : <Plus size={16} className="stroke-[2.5]" />}
+                                        </button>
+                                    </div>
+
+                                    {/* Timeline Notes List */}
+                                    {coachNotesList.length > 0 ? (
+                                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                                            {coachNotesList.map((note) => {
+                                                const canDelete = canDeleteNote(note);
+                                                const isDeleting = deletingNoteId === note.id;
+
+                                                return (
+                                                    <div
+                                                        key={note.id}
+                                                        className="p-2.5 rounded-2xl bg-[#141210] border border-white/5 space-y-1 group/note hover:border-amber-500/25 transition-all"
+                                                    >
+                                                        <div className="flex items-center justify-between text-[9px] text-white/40">
+                                                            <span className="font-semibold text-amber-400/80 truncate">
+                                                                {note.createdAt} • {note.authorName}
+                                                            </span>
+                                                            {canDelete && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteCoachNote(note.id)}
+                                                                    disabled={isDeleting}
+                                                                    className="opacity-40 group-hover/note:opacity-100 p-1 text-white/40 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-all cursor-pointer"
+                                                                    title="Удалить заметку"
+                                                                >
+                                                                    {isDeleting ? <span className="animate-spin text-[8px]">⏳</span> : <Trash2 size={11} />}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-white/90 font-medium leading-snug whitespace-pre-wrap">
+                                                            {note.text}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <p className="text-[10px] text-white/30 italic text-center py-2">
+                                            Заметок пока нет. Добавьте первую запись выше.
+                                        </p>
+                                    )}
                                 </div>
                             );
                         };
@@ -912,7 +1564,9 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                                     {(targetUser.photoURL || targetUser.avatarUrl) ? (
                                                         <img src={targetUser.photoURL || targetUser.avatarUrl} alt="" className="w-full h-full rounded-2xl object-cover" />
                                                     ) : (
-                                                        <User size={42} className="text-sparta-gold/40" />
+                                                        <div className="w-full h-full rounded-2xl bg-gradient-to-br from-amber-600/30 to-stone-950 flex items-center justify-center text-sparta-gold font-russo text-3xl font-black shadow-inner">
+                                                            {displayName.charAt(0).toUpperCase()}
+                                                        </div>
                                                     )}
                                                 </div>
 
@@ -936,10 +1590,21 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                             </div>
 
                                             {/* Specialization Badge */}
-                                            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-sparta-gold/20 border border-sparta-gold/40 text-sparta-gold text-[10px] font-black uppercase tracking-wider mb-4 shadow-sm">
+                                            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-sparta-gold/20 border border-sparta-gold/40 text-sparta-gold text-[10px] font-black uppercase tracking-wider mb-3.5 shadow-sm">
                                                 <Dumbbell size={12} />
                                                 <span>{targetUser.specialization || 'Тренер клуба SPARTA'}</span>
                                             </div>
+
+                                            {/* Direct Call Button for Coach */}
+                                            {targetUser.phone && (
+                                                <a
+                                                    href={`tel:${targetUser.phone}`}
+                                                    className="w-full py-2.5 px-4 mb-3.5 bg-gradient-to-r from-sparta-gold to-yellow-500 hover:from-yellow-400 hover:to-amber-500 text-black font-black uppercase tracking-wider text-xs rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 group"
+                                                >
+                                                    <Phone size={14} className="fill-black group-hover:scale-110 transition-transform" />
+                                                    <span>Позвонить тренеру {targetUser.phone}</span>
+                                                </a>
+                                            )}
 
                                             {/* Coach Stats Hologram Grid */}
                                             <div className="grid grid-cols-3 gap-2 w-full pt-1 mb-3.5">
@@ -1012,7 +1677,9 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                                 {(targetUser.photoURL || targetUser.avatarUrl) ? (
                                                     <img src={targetUser.photoURL || targetUser.avatarUrl} alt="" className="w-full h-full rounded-2xl object-cover" />
                                                 ) : (
-                                                    <User size={40} className="text-white/20" />
+                                                    <div className="w-full h-full rounded-2xl bg-gradient-to-br from-yellow-600/30 to-amber-950 flex items-center justify-center text-sparta-gold font-russo text-3xl font-black shadow-inner">
+                                                        {displayName.charAt(0).toUpperCase()}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -1025,9 +1692,49 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                         </div>
 
                                         {/* Status */}
-                                        <div className="mb-3.5">
+                                        <div className="mb-3">
                                             {renderStatusBadge()}
                                         </div>
+
+                                        {/* Group Info */}
+                                        <div className="w-full p-3 rounded-2xl bg-white/5 border border-white/10 mb-3 text-left">
+                                            <p className="text-[9px] font-black uppercase tracking-wider text-white/40">Группа подготовки</p>
+                                            <p className="text-xs font-bold text-white truncate mt-0.5">{studentGroupTitle || targetUser.groupName || 'Группа SPARTA'}</p>
+                                        </div>
+
+                                        {/* Parent Contact Card */}
+                                        {(() => {
+                                            const parentName =
+                                                studentParentData?.displayName ||
+                                                studentParentData?.name ||
+                                                studentParentData?.full_name ||
+                                                targetUser.parentName ||
+                                                targetUser.parentFullName ||
+                                                'Родитель спортсмена';
+                                            const parentPhone =
+                                                studentParentData?.phone ||
+                                                studentParentData?.parentPhone ||
+                                                targetUser.parentPhone;
+
+                                            return (
+                                                <div className="w-full p-3.5 rounded-2xl bg-emerald-500/[0.08] border border-emerald-500/30 mb-3.5 text-left space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-[9px] font-black uppercase tracking-wider text-emerald-400">Родитель спортсмена</p>
+                                                        <span className="text-[9px] text-white/40 font-bold">Семья</span>
+                                                    </div>
+                                                    <p className="text-xs font-bold text-white truncate">{parentName}</p>
+                                                    {parentPhone && (
+                                                        <a
+                                                            href={`tel:${parentPhone}`}
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-[10px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95"
+                                                        >
+                                                            <Phone size={12} className="fill-black" />
+                                                            <span>Позвонить {parentPhone}</span>
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
 
                                         {/* Level & XP Progress */}
                                         <div className="w-full p-3.5 rounded-2xl bg-white/5 border border-white/10 mb-3.5 text-left">
@@ -1063,6 +1770,12 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                                 </div>
                                             ))}
                                         </div>
+
+                                        {/* 🩺 Medical Certificate Card */}
+                                        {renderMedicalDocSection(targetUser)}
+
+                                        {/* 🔒 Coach Notes */}
+                                        {renderCoachNotesSection()}
                                     </motion.div>
                                 )}
 
@@ -1077,13 +1790,15 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                     >
                                         <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-52 h-52 bg-emerald-500/25 rounded-full blur-3xl pointer-events-none" />
 
-                                        {/* Avatar */}
-                                        <div className="relative mb-3 group">
+                                        {/* Avatar with dynamic initials */}
+                                        <div className="relative mb-3.5 group">
                                             <div className="w-24 h-24 rounded-3xl bg-[#141b18] border-2 border-emerald-500/60 p-1 shadow-xl overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
                                                 {(targetUser.photoURL || targetUser.avatarUrl) ? (
                                                     <img src={targetUser.photoURL || targetUser.avatarUrl} alt="" className="w-full h-full rounded-2xl object-cover" />
                                                 ) : (
-                                                    <User size={40} className="text-emerald-400/40" />
+                                                    <div className="w-full h-full rounded-2xl bg-gradient-to-br from-emerald-600/30 to-emerald-950 flex items-center justify-center text-emerald-300 font-russo text-3xl font-black shadow-inner">
+                                                        {displayName.charAt(0).toUpperCase()}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -1095,30 +1810,102 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                             <VerificationBadge role={role} verification={targetUser.verification} />
                                         </div>
 
-                                        <div className="mb-3">
+                                        <div className="mb-2.5">
                                             {renderStatusBadge()}
                                         </div>
 
-                                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider mb-4">
-                                            <Heart size={12} />
-                                            <span>Родитель воспитанника</span>
+                                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider mb-3.5 shadow-sm">
+                                            <Heart size={12} className="fill-emerald-400/30" />
+                                            <span>👨‍👦 Родитель</span>
                                         </div>
 
-                                        {/* Child Connection Card */}
-                                        <div className="w-full p-3.5 rounded-2xl bg-white/5 border border-white/10 text-left space-y-2">
-                                            <p className="text-[9px] font-black uppercase tracking-wider text-white/40">Юный спортсмен</p>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center font-black">
-                                                    ⚽
+                                        {/* Child Connection Card (Ребенок в Спарте) */}
+                                        {(() => {
+                                            const childName =
+                                                linkedChildData?.displayName ||
+                                                linkedChildData?.name ||
+                                                linkedChildData?.childFullName ||
+                                                linkedChildData?.childName ||
+                                                groupData?.childName ||
+                                                groupData?.studentName ||
+                                                targetUser.childName ||
+                                                targetUser.child_name ||
+                                                'Воспитанник Спарты';
+
+                                            const childAgeText = getChildAgeText(linkedChildData, groupData?.childAge || targetUser.childAge);
+                                            const groupTitle = childGroupTitle || linkedChildData?.groupName || groupData?.groupTitle || 'Ожидает распределения';
+
+                                            const hasActiveSubscription = Boolean(
+                                                linkedChildData?.subscription?.status === 'active' ||
+                                                (Number(linkedChildData?.subscription?.daysRemaining) > 0) ||
+                                                linkedChildData?.isSubscriptionActive === true
+                                            );
+
+                                            return (
+                                                <div className="w-full p-4 rounded-3xl bg-gradient-to-br from-white/[0.06] via-white/[0.02] to-transparent border border-white/10 text-left space-y-3 shadow-md mb-3.5">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                                                            <span>⚽ Ребенок в Спарте</span>
+                                                        </p>
+                                                        {hasActiveSubscription ? (
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[9px] font-black uppercase tracking-wider">
+                                                                <Check size={10} /> Действующий абонемент
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[9px] font-black uppercase tracking-wider">
+                                                                <Sparkles size={10} /> Пробное занятие
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-sparta-gold/20 border border-emerald-500/30 flex items-center justify-center text-xl shrink-0 shadow-sm">
+                                                            {linkedChildData?.avatarUrl || linkedChildData?.photoURL ? (
+                                                                <img src={linkedChildData.avatarUrl || linkedChildData.photoURL} alt="" className="w-full h-full rounded-2xl object-cover" />
+                                                            ) : (
+                                                                <span>⚽</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h5 className="text-sm font-black font-russo text-white uppercase tracking-tight truncate">
+                                                                {childName}
+                                                            </h5>
+                                                            {childAgeText && (
+                                                                <p className="text-xs text-white/70 font-medium">
+                                                                    {childAgeText}
+                                                                </p>
+                                                            )}
+                                                            <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mt-0.5 truncate">
+                                                                {groupTitle}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {linkedChildData && (
+                                                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
+                                                            <div className="p-2 rounded-xl bg-white/5 border border-white/5 text-center">
+                                                                <p className="text-[9px] font-black text-white/40 uppercase">Номер</p>
+                                                                <p className="text-xs font-black font-russo text-sparta-gold mt-0.5">
+                                                                    № {linkedChildData.playerNumber || linkedChildData.number || '—'}
+                                                                </p>
+                                                            </div>
+                                                            <div className="p-2 rounded-xl bg-white/5 border border-white/5 text-center">
+                                                                <p className="text-[9px] font-black text-white/40 uppercase">Баланс</p>
+                                                                <p className="text-xs font-black font-russo text-emerald-400 mt-0.5">
+                                                                    {linkedChildData.balance || 0} ₽
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-bold text-white truncate">
-                                                        {targetUser.childName || targetUser.child_name || 'Воспитанник Спарты'}
-                                                    </p>
-                                                    <p className="text-[10px] text-emerald-400/80 font-medium">Группа подготовки SPARTA</p>
-                                                </div>
-                                            </div>
-                                        </div>
+                                            );
+                                        })()}
+
+                                        {/* 🩺 Medical Certificate Card for Child */}
+                                        {renderMedicalDocSection(linkedChildData || targetUser)}
+
+                                        {/* 🔒 Coach Notes for Child/Parent */}
+                                        {renderCoachNotesSection()}
                                     </motion.div>
                                 )}
 
@@ -1134,12 +1921,14 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                         <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-52 h-52 bg-indigo-500/25 rounded-full blur-3xl pointer-events-none" />
 
                                         {/* Avatar */}
-                                        <div className="relative mb-3 group">
+                                        <div className="relative mb-3.5 group">
                                             <div className="w-24 h-24 rounded-3xl bg-[#161524] border-2 border-indigo-500/60 p-1 shadow-xl overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
                                                 {(targetUser.photoURL || targetUser.avatarUrl) ? (
                                                     <img src={targetUser.photoURL || targetUser.avatarUrl} alt="" className="w-full h-full rounded-2xl object-cover" />
                                                 ) : (
-                                                    <ShieldCheck size={40} className="text-indigo-400" />
+                                                    <div className="w-full h-full rounded-2xl bg-gradient-to-br from-indigo-600/30 to-slate-950 flex items-center justify-center text-indigo-300 font-russo text-3xl font-black shadow-inner">
+                                                        {displayName.charAt(0).toUpperCase()}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -1151,14 +1940,25 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                             <VerificationBadge role={role} verification={targetUser.verification} />
                                         </div>
 
-                                        <div className="mb-3">
+                                        <div className="mb-2.5">
                                             {renderStatusBadge()}
                                         </div>
 
-                                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-black uppercase tracking-wider mb-4">
+                                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-black uppercase tracking-wider mb-3.5">
                                             <ShieldCheck size={12} />
                                             <span>Администрация SPARTA</span>
                                         </div>
+
+                                        {/* Direct Call Button for Admin */}
+                                        {targetUser.phone && (
+                                            <a
+                                                href={`tel:${targetUser.phone}`}
+                                                className="w-full py-2.5 px-4 mb-3.5 bg-indigo-500 hover:bg-indigo-400 text-white font-black uppercase tracking-wider text-xs rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95"
+                                            >
+                                                <Phone size={14} className="fill-white" />
+                                                <span>Позвонить в клуб {targetUser.phone}</span>
+                                            </a>
+                                        )}
 
                                         {/* Staff Areas */}
                                         <div className="w-full p-3.5 rounded-2xl bg-white/5 border border-white/10 text-left space-y-1.5 text-[10px] text-white/70">
@@ -1206,8 +2006,8 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                     </div>
                                 </div>
 
-                                {/* Actions with User */}
-                                {targetUser.id !== currentUser.uid && (
+                                {/* Actions with User (Only when clicking from a group member list, never duplicate in 1-on-1 private chat) */}
+                                {targetUser.id !== currentUser.uid && !isPrivate && (
                                     <div className="space-y-2 pt-2">
                                         <button
                                             onClick={() => {
@@ -1272,11 +2072,11 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                                     </div>
 
                                     {canEditAvatar && (
-                                        <label className="absolute inset-0 bg-black/60 backdrop-blur-xs rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer border-2 border-sparta-gold">
-                                            <Camera size={20} className="text-sparta-gold mb-1" />
-                                            <span className="text-[9px] font-black uppercase text-white tracking-widest">
-                                                {isUploadingAvatar ? '...' : 'Изменить'}
-                                            </span>
+                                        <label 
+                                            className="absolute bottom-0 right-0 p-2 rounded-2xl bg-black/80 hover:bg-black text-sparta-gold border border-sparta-gold/60 shadow-lg cursor-pointer transition-all hover:scale-105"
+                                            title="Сменить аватар чата"
+                                        >
+                                            <Camera size={14} className="text-sparta-gold" />
                                             <input
                                                 type="file"
                                                 accept="image/*"
@@ -1434,7 +2234,52 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                         </div>
                     ) : null}
                 </div>
+
+                {/* 🌟 3. Sticky Bottom Action Bar (Fixed Call Button) */}
+                {effectiveUserProfile && effectiveUserProfile.id !== currentUser?.uid && (
+                    <div className="shrink-0 p-4 bg-[#141418]/95 backdrop-blur-xl border-t border-white/10 z-20">
+                        {effectiveUserProfile.phone ? (
+                            <a
+                                href={`tel:${effectiveUserProfile.phone}`}
+                                className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black uppercase tracking-wider text-xs rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2.5 active:scale-[0.98] group"
+                            >
+                                <Phone size={16} className="fill-white group-hover:scale-110 transition-transform" />
+                                <span>Позвонить {effectiveUserProfile.phone}</span>
+                            </a>
+                        ) : (
+                            <button
+                                disabled
+                                className="w-full py-3 px-4 bg-white/5 border border-white/10 text-white/30 font-bold uppercase tracking-wider text-xs rounded-2xl cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                <Phone size={14} />
+                                <span>Телефон не указан</span>
+                            </button>
+                        )}
+                    </div>
+                )}
             </motion.div>
+
+            {/* Fullscreen Medical Photo Lightbox */}
+            {medicalPhotoPreviewModal && (
+                <div
+                    onClick={() => setMedicalPhotoPreviewModal(null)}
+                    className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto"
+                >
+                    <div className="relative max-w-2xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            onClick={() => setMedicalPhotoPreviewModal(null)}
+                            className="absolute -top-10 right-0 text-white/80 hover:text-white p-2"
+                        >
+                            <X size={24} />
+                        </button>
+                        <img
+                            src={medicalPhotoPreviewModal}
+                            alt="Медицинская справка"
+                            className="max-h-[85vh] w-auto rounded-2xl shadow-2xl border border-white/20 object-contain"
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Navigation, Copy, Check, Car, Building2, X, Phone, Compass, ExternalLink } from 'lucide-react';
 import { LocationItem } from '../types/city';
 import { SPARTA_LOCATIONS } from '../constants/cities';
 import { useCity } from '../context/CityContext';
+import { BaseModal } from './ui/BaseModal';
 
 interface RouteModalProps {
     isOpen: boolean;
@@ -83,43 +83,35 @@ export const RouteModal: React.FC<RouteModalProps> = ({
     };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-md"
-                        onClick={onClose}
-                    />
-
-                    {/* Modal Box / Bottom Sheet */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 100 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 100 }}
-                        className="bg-[#121212] w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
-                    >
-                        {/* Mobile Pull Indicator */}
-                        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mt-3 sm:hidden" />
-
-                        {/* Header */}
-                        <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-sparta-gold/10 border border-sparta-gold/30 flex items-center justify-center text-sparta-gold">
-                                    <Compass size={20} />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-russo text-white">Проложить маршрут</h3>
-                                    <p className="text-xs text-white/50">Выберите нужный зал SPARTA</p>
-                                </div>
-                            </div>
-                            <button onClick={onClose} className="text-white/50 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5">
-                                <X size={22} />
-                            </button>
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            showCloseButton={false}
+            noPadding
+            glowColor="amber"
+            zIndex="z-[110]"
+        >
+            <div className="flex flex-col max-h-[85vh]">
+                {/* Header */}
+                <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-sparta-gold/10 border border-sparta-gold/30 flex items-center justify-center text-sparta-gold">
+                            <Compass size={20} />
                         </div>
+                        <div>
+                            <h3 className="text-lg font-russo text-white">Проложить маршрут</h3>
+                            <p className="text-xs text-white/50">Выберите нужный зал SPARTA</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        aria-label="Закрыть"
+                        className="text-white/50 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5 cursor-pointer"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
 
                         {/* Location Tabs */}
                         <div className="p-4 bg-black/40 border-b border-white/5 overflow-x-auto scrollbar-none flex gap-2">
@@ -282,10 +274,8 @@ export const RouteModal: React.FC<RouteModalProps> = ({
                             </div>
                         );
                     })()}
-                    </motion.div>
                 </div>
-            )}
-        </AnimatePresence>
+        </BaseModal>
     );
 };
 

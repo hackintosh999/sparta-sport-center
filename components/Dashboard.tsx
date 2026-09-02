@@ -10,7 +10,7 @@ import {
     Zap, PartyPopper, X, Loader2, CalendarRange, Gift, QrCode, Share2, Receipt, BadgeCheck,
     CheckCircle2, Copy, ExternalLink, Infinity, Package, Truck, MapPin, Trash2, RotateCcw,
     LayoutDashboard, Tag, Heart, Users, ArrowUpRight, Database, CheckCircle, Sparkles,
-    MessageCircle, Download, Flame, Smartphone, BellRing, Pencil, FileText, Lock, Info, Eye, Edit2, Terminal
+    MessageCircle, Download, Flame, Smartphone, BellRing, Pencil, FileText, Lock, Info, Eye, Edit2, Terminal, Camera
 } from 'lucide-react';
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { Container, GlassCard, Button } from './UIComponents';
@@ -2392,7 +2392,7 @@ const Dashboard = () => {
     if (loading || !user) return <div className="dashboard-theme min-h-screen bg-main flex items-center justify-center text-main">Загрузка...</div>;
 
     return (
-        <div className="dashboard-theme min-h-screen bg-main pt-0 md:pt-20 pb-20 font-manrope">
+        <div className={`dashboard-theme min-h-screen bg-main ${activeTab === 'messages_unified' ? 'h-screen overflow-hidden p-0 pt-0 md:pt-0 pb-0' : 'pt-0 md:pt-20 pb-20'} font-manrope`}>
             {/* Role Impersonation Floating Top Navigation Bar */}
             {impersonatedRole && (
                 <div className="sticky top-0 md:top-16 z-50 bg-[#121212]/95 border-b border-sparta-gold/40 text-white px-3 py-2 shadow-2xl backdrop-blur-2xl flex flex-wrap items-center justify-between gap-2">
@@ -2501,7 +2501,7 @@ const Dashboard = () => {
                 <div className="absolute top-0 right-0 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-sparta-gold/5 blur-[60px] md:blur-[100px] rounded-full pointer-events-none translate-x-1/2 -translate-y-1/2" />
             </div>
 
-            <Container fluid={true} className={`!px-2 sm:!px-3 md:!px-5 lg:!px-6 transition-all duration-300 ${activeTab === 'messages_unified' ? 'h-[100dvh] md:h-screen overflow-hidden pb-0' : 'min-h-screen pb-20 md:pb-4'} pt-0 mt-0 w-full`}>
+            <Container fluid={true} className={`!px-2 sm:!px-3 md:!px-5 lg:!px-6 transition-all duration-300 ${activeTab === 'messages_unified' ? 'h-screen overflow-hidden pb-2 pt-2' : 'min-h-screen pb-20 md:pb-4'} pt-0 mt-0 w-full`}>
                 {activeTab !== 'messages_unified' && (
                     <>
                         <LinkingRequestBanner userId={user.uid} />
@@ -2570,10 +2570,10 @@ const Dashboard = () => {
                     </div>
                 )}
 
-                <div className={`flex flex-col md:flex-row gap-3 md:gap-5 ${activeTab === 'messages_unified' ? 'items-stretch h-[calc(100dvh-1rem)] md:h-[calc(100vh-1rem)] pb-0 min-h-0 overflow-hidden' : 'items-start pb-16 md:py-2 min-h-[calc(100vh-1.5rem)]'} relative z-10 pt-1 w-full`}>
+                <div className={`flex flex-col md:flex-row gap-3 md:gap-5 ${activeTab === 'messages_unified' ? 'items-stretch h-[calc(100vh-1rem)] pb-0 min-h-0 overflow-hidden' : 'items-start pb-16 md:py-2 min-h-[calc(100vh-1.5rem)]'} relative z-10 pt-0 w-full`}>
                     {/* Sidebar - hidden on mobile */}
                     <div className="hidden md:block w-full md:w-[250px] lg:w-[270px] xl:w-[290px] shrink-0">
-                        <div className="bg-[#111115]/95 border border-white/10 rounded-[28px] p-4 md:p-5 backdrop-blur-2xl sticky top-2 shadow-2xl shadow-black/60 max-h-[calc(100vh-1.5rem)] overflow-y-auto custom-scrollbar">
+                        <div className={`bg-[#111115]/95 border border-white/10 rounded-[28px] p-4 md:p-5 backdrop-blur-2xl sticky top-2 shadow-2xl shadow-black/60 ${activeTab === 'messages_unified' ? 'h-full max-h-[calc(100vh-1rem)]' : 'max-h-[calc(100vh-1.5rem)]'} overflow-y-auto custom-scrollbar`}>
                             <div className="flex flex-col items-center text-center mb-5 relative">
                                 {/* Hidden File Input */}
                                 <input
@@ -2608,13 +2608,18 @@ const Dashboard = () => {
                                             </div>
                                         )}
 
-                                        {/* Hover Overlay */}
+                                        {/* Avatar Change Overlay & Visible Indicator */}
                                         {!isUploadingAvatar && (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <span className="text-[10px] text-white font-bold uppercase tracking-wider text-center px-2">
-                                                    Сменить фото
-                                                </span>
-                                            </div>
+                                            <>
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <span className="text-[10px] text-white font-bold uppercase tracking-wider text-center px-2">
+                                                        Сменить фото
+                                                    </span>
+                                                </div>
+                                                <div className="absolute bottom-1 right-1 p-1.5 rounded-full bg-black/80 text-sparta-gold border border-sparta-gold/50 shadow-md group-hover:scale-110 transition-transform" title="Сменить фото">
+                                                    <Camera size={12} />
+                                                </div>
+                                            </>
                                         )}
                                     </div>
                                 </div>

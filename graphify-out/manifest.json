@@ -240,8 +240,8 @@
     "semantic_hash": "090aac3d832f43bdabdc9967a74e02b0"
   },
   ".mcp.json": {
-    "mtime": 1787035387.112837,
-    "ast_hash": "954051d6922430d495255e97b7684755",
+    "mtime": 1787856486.0116289,
+    "ast_hash": "a75612d093ba56630e01c0112dac0bab",
     "semantic_hash": ""
   },
   ".swarm/schema.sql": {
@@ -250,13 +250,13 @@
     "semantic_hash": "d21b4e3318f08973dc08fbb9688312fc"
   },
   "App.tsx": {
-    "mtime": 1786919119.964341,
-    "ast_hash": "bbbffd11da28886c9edcaec941546197",
+    "mtime": 1788258413.1113253,
+    "ast_hash": "276fb0ea935a519a8543082969508a58",
     "semantic_hash": ""
   },
   "components/AuthModal.tsx": {
-    "mtime": 1787439219.501076,
-    "ast_hash": "5ded69d2b18728da4f4d35b95640e918",
+    "mtime": 1788372308.5087545,
+    "ast_hash": "b6678e0289615c3acfa8ce0afc4cdd32",
     "semantic_hash": ""
   },
   "components/BannedScreen.tsx": {
@@ -265,8 +265,8 @@
     "semantic_hash": "2962fafd088a09f0ed8f325cb992a7f5"
   },
   "components/BroadcastArchiveModal.tsx": {
-    "mtime": 1786918918.9110413,
-    "ast_hash": "4e79b0fb7613a94f92758f8350a2df02",
+    "mtime": 1788278552.0433335,
+    "ast_hash": "9c8fdd079db2da5cb9c985977ce8728b",
     "semantic_hash": ""
   },
   "components/BroadcastChat.tsx": {
@@ -280,24 +280,24 @@
     "semantic_hash": "63417527d59a70d88428a615a8e1020e"
   },
   "components/CartSidebar.tsx": {
-    "mtime": 1787471528.7008462,
-    "ast_hash": "b461b460be5013979cd1fcd6a0566628",
+    "mtime": 1788285900.5448122,
+    "ast_hash": "fa661a12d1c772c5b147f53ad875cd04",
     "semantic_hash": ""
   },
   "components/ContactModal.tsx": {
-    "mtime": 1785493098.9594512,
-    "ast_hash": "67ea3329f243f5998ad879fdbd6f814b",
-    "semantic_hash": "67ea3329f243f5998ad879fdbd6f814b"
+    "mtime": 1788278472.1210597,
+    "ast_hash": "69813833a30de9f4556c023f04d439ef",
+    "semantic_hash": ""
   },
   "components/Dashboard.tsx": {
-    "mtime": 1787595693.9420557,
-    "ast_hash": "3698639c0190320e5b1e4ee2563a3695",
+    "mtime": 1788373994.4935458,
+    "ast_hash": "4a99507857bf2a9cde9e639b820305a3",
     "semantic_hash": ""
   },
   "components/DocumentViewerModal.tsx": {
-    "mtime": 1785493098.9012747,
-    "ast_hash": "21ba35f26322317243b0a156024f2474",
-    "semantic_hash": "21ba35f26322317243b0a156024f2474"
+    "mtime": 1788278510.499415,
+    "ast_hash": "4d8c9be1fb25eea3a9bd8884394ceb0c",
+    "semantic_hash": ""
   },
   "components/GifPicker.tsx": {
     "mtime": 1785493098.9012747,
@@ -305,19 +305,19 @@
     "semantic_hash": "126390cc6187c269f02bc8dced3641e6"
   },
   "components/GroupsSection.tsx": {
-    "mtime": 1786777557.8947623,
-    "ast_hash": "5b0e145c385216b97964370b5b8285b9",
+    "mtime": 1788371491.5590818,
+    "ast_hash": "4212e86823bc649691fadd8426c72347",
     "semantic_hash": ""
   },
   "components/LandingPage.tsx": {
-    "mtime": 1787472676.4824378,
-    "ast_hash": "ce64410197ecf11b947d478c2be2f689",
+    "mtime": 1788124757.9422193,
+    "ast_hash": "9808f81cbd59edeef31bfcdf6b5ceea4",
     "semantic_hash": ""
   },
   "components/LeaveReviewModal.tsx": {
-    "mtime": 1785493098.8144386,
-    "ast_hash": "30e6e6405d05df341e4dce51a4a854bc",
-    "semantic_hash": "30e6e6405d05df341e4dce51a4a854bc"
+    "mtime": 1788373967.1437232,
+    "ast_hash": "10487d0b284395ebbe4a6fb0974ff189",
+    "semantic_hash": ""
   },
   "components/LoadingScreen.tsx": {
     "mtime": 1785493098.8180819,
@@ -330,19 +330,19 @@
     "semantic_hash": "db6c2e8e8791aeaeaa61aa0f0a5bd9ee"
   },
   "components/MediaViewerModal.tsx": {
-    "mtime": 1785493098.811224,
-    "ast_hash": "d959c51dbada77449ee373f30830d2b1",
-    "semantic_hash": "d959c51dbada77449ee373f30830d2b1"
+    "mtime": 1788279294.2365546,
+    "ast_hash": "13d56cd662f5bfa8efad1121d9a7c3b3",
+    "semantic_hash": ""
   },
   "components/MembershipModal.tsx": {
-    "mtime": 1787588134.669578,
-    "ast_hash": "272a8016ff796f7a278f408d910cf25c",
+    "mtime": 1788279372.0973768,
+    "ast_hash": "cc372346a27c301c5fb97b3c5295e4c4",
     "semantic_hash": ""
   },
   "components/NewsModal.tsx": {
-    "mtime": 1785493098.762866,
-    "ast_hash": "cd462e8aa2ab8ba889d7898d664a5ab8",
-    "semantic_hash": "cd462e8aa2ab8ba889d7898d664a5ab8"
+    "mtime": 1788373912.314938,
+    "ast_hash": "a5659192ec4e77f7a0c958c8399210a4",
+    "semantic_hash": ""
   },
   "components/NewsSection.tsx": {
     "mtime": 1786701019.9851768,
@@ -350,13 +350,13 @@
     "semantic_hash": ""
   },
   "components/NotificationsModal.tsx": {
-    "mtime": 1785493098.7199695,
-    "ast_hash": "ea25a6df373b595d41860c70d4cec545",
-    "semantic_hash": "ea25a6df373b595d41860c70d4cec545"
+    "mtime": 1788373858.0707846,
+    "ast_hash": "7aa92968579183d2ad884db5dba8811b",
+    "semantic_hash": ""
   },
   "components/ProfileViewModal.tsx": {
-    "mtime": 1785877091.303532,
-    "ast_hash": "ff0cf5c1e8ca5cb81887fcb811147c87",
+    "mtime": 1788373979.5633943,
+    "ast_hash": "03d939a35bb7d5e1653a417b5da5e995",
     "semantic_hash": ""
   },
   "components/RelatedNewsList.tsx": {
@@ -365,13 +365,13 @@
     "semantic_hash": "cfcabc5380399fb25abf2e5a975752ee"
   },
   "components/RequestDetailsModal.tsx": {
-    "mtime": 1785493098.687651,
-    "ast_hash": "40bbda346645309a9e34715c320e7cbf",
-    "semantic_hash": "40bbda346645309a9e34715c320e7cbf"
+    "mtime": 1788279235.1328824,
+    "ast_hash": "4950e6f82ab1f9b1b36d608d5a24baf6",
+    "semantic_hash": ""
   },
   "components/ReviewMediaModal.tsx": {
-    "mtime": 1786989459.7944634,
-    "ast_hash": "dfc018cbae40f83a5856732f04c8be52",
+    "mtime": 1788373971.0358884,
+    "ast_hash": "de42697dd6e3da2c212ddba436bfe3db",
     "semantic_hash": ""
   },
   "components/ReviewsSection.tsx": {
@@ -390,9 +390,9 @@
     "semantic_hash": ""
   },
   "components/ShareModal.tsx": {
-    "mtime": 1785493098.638663,
-    "ast_hash": "f2f26037d418c59d042e9e1dd0caad04",
-    "semantic_hash": "f2f26037d418c59d042e9e1dd0caad04"
+    "mtime": 1788278527.0273871,
+    "ast_hash": "3d7c97e29b879008177d0ee480a163cc",
+    "semantic_hash": ""
   },
   "components/SizeAdvisor.tsx": {
     "mtime": 1785496036.2924001,
@@ -400,19 +400,19 @@
     "semantic_hash": "710a85fc0487496669a32d0f1300ce39"
   },
   "components/SmartEnrollmentWizard.tsx": {
-    "mtime": 1786916006.3378112,
-    "ast_hash": "9dd3eeb28dac0c0319cfe6f539ebb46e",
+    "mtime": 1788371500.2360902,
+    "ast_hash": "d6b2276c56b9e378c50026e92e82681a",
     "semantic_hash": ""
   },
   "components/SpartaVideoPlayer.tsx": {
-    "mtime": 1785493098.590471,
-    "ast_hash": "7fef7c668d5a87fb5fec58c515550b00",
-    "semantic_hash": "7fef7c668d5a87fb5fec58c515550b00"
+    "mtime": 1788374206.0133955,
+    "ast_hash": "2ba41e450098c9d548881969f099ae91",
+    "semantic_hash": ""
   },
   "components/TermsModal.tsx": {
-    "mtime": 1785493098.5809286,
-    "ast_hash": "35be6aa601d19e7c46f01435ece5bd2e",
-    "semantic_hash": "35be6aa601d19e7c46f01435ece5bd2e"
+    "mtime": 1788278485.432973,
+    "ast_hash": "52909593a7938fc3d0641a5e195a1512",
+    "semantic_hash": ""
   },
   "components/ThemeToggle.tsx": {
     "mtime": 1785493098.590471,
@@ -420,14 +420,14 @@
     "semantic_hash": "cb6613fde6ad4e083182fff2ecada56b"
   },
   "components/TopUpModal.tsx": {
-    "mtime": 1786916017.7812204,
-    "ast_hash": "6b6b20359b1176a8c51b238525d8f803",
+    "mtime": 1788278498.0283346,
+    "ast_hash": "1913e8a794cc939a25dccb6d5809356d",
     "semantic_hash": ""
   },
   "components/TrialModal.tsx": {
-    "mtime": 1785493098.5809286,
-    "ast_hash": "8259a74c78d54d4d9f7fc561db5d0c9f",
-    "semantic_hash": "8259a74c78d54d4d9f7fc561db5d0c9f"
+    "mtime": 1788279114.1910934,
+    "ast_hash": "51e30482c067435ab14ceece2f127789",
+    "semantic_hash": ""
   },
   "components/UIComponents.tsx": {
     "mtime": 1787594509.941051,
@@ -435,8 +435,8 @@
     "semantic_hash": ""
   },
   "components/VideoPlayer.tsx": {
-    "mtime": 1786989278.4068336,
-    "ast_hash": "387969491606e24a7b4e3223a87b0711",
+    "mtime": 1788374239.2740138,
+    "ast_hash": "d4fc54e12c13c53134f1899cf4c0f26e",
     "semantic_hash": ""
   },
   "components/Viewer3D.tsx": {
@@ -450,8 +450,8 @@
     "semantic_hash": "b38f07bae12d793ddceb25b17a7a418a"
   },
   "components/admin/AdminLayout.tsx": {
-    "mtime": 1787501873.998862,
-    "ast_hash": "2392813a43335bdc7d1d0ba9913c280c",
+    "mtime": 1788375249.5765646,
+    "ast_hash": "98820a0564ad4f061486d652a221ed79",
     "semantic_hash": ""
   },
   "components/admin/AdminRoute.tsx": {
@@ -470,9 +470,9 @@
     "semantic_hash": "36963b2e8d6e3fc343561f8d6b6935a5"
   },
   "components/admin/ReplyTemplatesModal.tsx": {
-    "mtime": 1785493098.5123444,
-    "ast_hash": "5adc55aa63d7759a32cb74daa8ae35b2",
-    "semantic_hash": "5adc55aa63d7759a32cb74daa8ae35b2"
+    "mtime": 1788373850.4033284,
+    "ast_hash": "179ccc29db5eefa65472995aadb15d8a",
+    "semantic_hash": ""
   },
   "components/admin/RichTextEditor.tsx": {
     "mtime": 1785493098.5029547,
@@ -485,8 +485,8 @@
     "semantic_hash": "f02f21920323814d0c746b0e62de3b23"
   },
   "components/profile/AchievementsList.tsx": {
-    "mtime": 1787386588.17443,
-    "ast_hash": "1756a8f55b2c05006bf59cb2d7e75aa4",
+    "mtime": 1788212509.2993727,
+    "ast_hash": "eeeea51375c480cf22c0bf1332ddea0d",
     "semantic_hash": ""
   },
   "components/profile/ActivitySection.tsx": {
@@ -495,13 +495,13 @@
     "semantic_hash": "86788ee567990997f6f6d087598ecf52"
   },
   "components/profile/AttendanceSection.tsx": {
-    "mtime": 1787438739.8297892,
-    "ast_hash": "54a9312c34d18b79c39142a394e292bf",
+    "mtime": 1788120620.3439062,
+    "ast_hash": "2aa11de0211698961a5f5af4a1aa7f09",
     "semantic_hash": ""
   },
   "components/profile/CoachCalendar.tsx": {
-    "mtime": 1787501006.290444,
-    "ast_hash": "af3f7342d69d9c99e3b30b43fe523d2f",
+    "mtime": 1788373664.891511,
+    "ast_hash": "3ab2a3c761a58deb04d9f69be2e6dc5d",
     "semantic_hash": ""
   },
   "components/profile/CoachChat.tsx": {
@@ -510,14 +510,14 @@
     "semantic_hash": ""
   },
   "components/profile/CoachSection.tsx": {
-    "mtime": 1787474070.5769064,
-    "ast_hash": "6cfe424361308a4a63cc0ba6456abf4f",
+    "mtime": 1788373678.6822503,
+    "ast_hash": "2cfc36403027e6301424326279aea830",
     "semantic_hash": ""
   },
   "components/profile/CreatePollModal.tsx": {
-    "mtime": 1785493098.4102106,
-    "ast_hash": "346410ccdc4c0b99bc2ef7e74038c56b",
-    "semantic_hash": "346410ccdc4c0b99bc2ef7e74038c56b"
+    "mtime": 1788278832.5131226,
+    "ast_hash": "443ba05965318201137c070395f2b2e9",
+    "semantic_hash": ""
   },
   "components/profile/FriendsSection.tsx": {
     "mtime": 1787398391.3582654,
@@ -525,13 +525,13 @@
     "semantic_hash": ""
   },
   "components/profile/GroupChat.tsx": {
-    "mtime": 1787596102.3312335,
-    "ast_hash": "b6fb18d1238ecd97170ba84aaf923edf",
+    "mtime": 1788373720.5544922,
+    "ast_hash": "bfad32b22401eaa0ce250f51cf140ec0",
     "semantic_hash": ""
   },
   "components/profile/LinkChildModal.tsx": {
-    "mtime": 1787439635.9804986,
-    "ast_hash": "d87d4f91ec585fa41a2b4a5f62e37c4e",
+    "mtime": 1788278858.574931,
+    "ast_hash": "336da81a8d0c5dbf033be20e172a7459",
     "semantic_hash": ""
   },
   "components/profile/LinkingRequestBanner.tsx": {
@@ -550,13 +550,13 @@
     "semantic_hash": ""
   },
   "components/profile/MessagesSection.tsx": {
-    "mtime": 1787597749.9547272,
-    "ast_hash": "9ea54b55c77b18a3c4c2e87452e2cdff",
+    "mtime": 1788373732.2168958,
+    "ast_hash": "5b3654ae6a7861bbf52d7264aa85487e",
     "semantic_hash": ""
   },
   "components/profile/ParentDashboard.tsx": {
-    "mtime": 1787499863.3976922,
-    "ast_hash": "18795f3c5e4071dec52e6fdc45a07a79",
+    "mtime": 1788125159.5256057,
+    "ast_hash": "b297d6b3b8fb85c879f54d26972c6904",
     "semantic_hash": ""
   },
   "components/profile/PollMessage.tsx": {
@@ -585,14 +585,14 @@
     "semantic_hash": "800f1837acaa81b62bd204ff63c87ba2"
   },
   "components/profile/coach/DailyHub.tsx": {
-    "mtime": 1787502150.069278,
-    "ast_hash": "e47d7a8d80405162d9c9958bfd234e66",
+    "mtime": 1788210525.2696495,
+    "ast_hash": "99ee0af446510d7cb1c897964c762d68",
     "semantic_hash": ""
   },
   "components/profile/coach/MessagesTab.tsx": {
-    "mtime": 1785493098.0659828,
-    "ast_hash": "91039c1e369cbb7054d757a68cd87e0d",
-    "semantic_hash": "91039c1e369cbb7054d757a68cd87e0d"
+    "mtime": 1788367193.820768,
+    "ast_hash": "84bfae70987c1d7923a3f1c2dc5607bd",
+    "semantic_hash": ""
   },
   "components/profile/coach/StatsLab.tsx": {
     "mtime": 1785493098.0659828,
@@ -600,8 +600,8 @@
     "semantic_hash": "4d74f0e418b606b579df40218704259b"
   },
   "components/profile/coach/TrialsTab.tsx": {
-    "mtime": 1787474112.8455408,
-    "ast_hash": "e54e9d6e40fe58bc9380aaed325ab7e5",
+    "mtime": 1788370334.7760456,
+    "ast_hash": "9afd054f62074ecce3ddb7958cff8b14",
     "semantic_hash": ""
   },
   "components/shop/ShopToast.tsx": {
@@ -620,8 +620,8 @@
     "semantic_hash": "5f56b24eaf33f34831b32e268f604142"
   },
   "context/AuthContext.tsx": {
-    "mtime": 1786912529.4605901,
-    "ast_hash": "0c1f72dd401ac053dd822509a33cae7c",
+    "mtime": 1788372291.259596,
+    "ast_hash": "e3511c5e1df698ced4561e2b3fcbadd0",
     "semantic_hash": ""
   },
   "context/CartContext.tsx": {
@@ -680,8 +680,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1787040430.5456593,
-    "ast_hash": "20aa036098bcde4e10b959ad0daa65db",
+    "mtime": 1788371206.8255324,
+    "ast_hash": "bc09e7f4819697ff4b2ef28cf9b8b405",
     "semantic_hash": ""
   },
   "pages/Broadcasts.tsx": {
@@ -695,8 +695,8 @@
     "semantic_hash": "8c37588307fad44e92b355b4fa36dbc3"
   },
   "pages/ProductDetails.tsx": {
-    "mtime": 1787444773.0448012,
-    "ast_hash": "1b8d25f47109df8053ad88902bd56a92",
+    "mtime": 1788286011.9097934,
+    "ast_hash": "b51c93748b36fe21298b62c8c08f56e6",
     "semantic_hash": ""
   },
   "pages/ResetPassword.tsx": {
@@ -705,13 +705,13 @@
     "semantic_hash": "27e13739676e52a4dc05baa2af08e703"
   },
   "pages/Shop.tsx": {
-    "mtime": 1787441357.2838712,
-    "ast_hash": "af0bf81275b908669ce1debf515517d3",
+    "mtime": 1788281280.0182898,
+    "ast_hash": "3818c773e93699f25cb041442348f660",
     "semantic_hash": ""
   },
   "pages/admin/AdminAchievements.tsx": {
-    "mtime": 1787386832.615985,
-    "ast_hash": "af3ba10b86ab7a4797aa0f9160eb635b",
+    "mtime": 1788259180.7027488,
+    "ast_hash": "a19a4719dff1b73ef5d576815e16a8d8",
     "semantic_hash": ""
   },
   "pages/admin/AdminBans.tsx": {
@@ -725,9 +725,9 @@
     "semantic_hash": ""
   },
   "pages/admin/AdminComments.tsx": {
-    "mtime": 1785494870.5697281,
-    "ast_hash": "84ef5ea4bbb12aca3dfa1ecac6038e3f",
-    "semantic_hash": "84ef5ea4bbb12aca3dfa1ecac6038e3f"
+    "mtime": 1788373888.79208,
+    "ast_hash": "973c26a73db3bef8adb7a6b3da94182e",
+    "semantic_hash": ""
   },
   "pages/admin/AdminDashboard.tsx": {
     "mtime": 1787434599.797886,
@@ -735,28 +735,28 @@
     "semantic_hash": ""
   },
   "pages/admin/AdminDirections.tsx": {
-    "mtime": 1786702046.0282118,
-    "ast_hash": "b797856bc3d52e6b13425f6e8b460653",
+    "mtime": 1788373820.3400133,
+    "ast_hash": "4a72c04c16dd10abac67032a330d356c",
     "semantic_hash": ""
   },
   "pages/admin/AdminFinance.tsx": {
-    "mtime": 1787471503.723278,
-    "ast_hash": "5eb604ea77f17c7d96e22b69a64413c9",
+    "mtime": 1788373741.0375552,
+    "ast_hash": "e850a550d57a7190540163422204e495",
     "semantic_hash": ""
   },
   "pages/admin/AdminGroups.tsx": {
-    "mtime": 1787501999.0262024,
-    "ast_hash": "45ed0951967ee6119a3d41981e31c3c4",
+    "mtime": 1788373625.2841442,
+    "ast_hash": "e3dbd1750cf29f49cd84cd0a9d1c7a8a",
     "semantic_hash": ""
   },
   "pages/admin/AdminMessages.tsx": {
-    "mtime": 1785494870.4108412,
-    "ast_hash": "1d4c204ec8c95fb0b3125d996d2e1f40",
-    "semantic_hash": "1d4c204ec8c95fb0b3125d996d2e1f40"
+    "mtime": 1788373831.0745337,
+    "ast_hash": "40eef35b240b04a922610b91c44d6ee6",
+    "semantic_hash": ""
   },
   "pages/admin/AdminNews.tsx": {
-    "mtime": 1786207844.8934207,
-    "ast_hash": "e0933224421ab2fa3d2586515ab49896",
+    "mtime": 1788373754.581508,
+    "ast_hash": "aefd95d9dd0330361b3a35c8cff4a89e",
     "semantic_hash": ""
   },
   "pages/admin/AdminPromos.tsx": {
@@ -775,9 +775,9 @@
     "semantic_hash": "77d658fbed9d8b5d77666af2e1dd998d"
   },
   "pages/admin/AdminScanner.tsx": {
-    "mtime": 1785494870.3235393,
-    "ast_hash": "2f240ea4644170d9ddb56ad403f4e1d4",
-    "semantic_hash": "2f240ea4644170d9ddb56ad403f4e1d4"
+    "mtime": 1788120664.0950909,
+    "ast_hash": "dca33b353b38b74af486f9b1206dbfb1",
+    "semantic_hash": ""
   },
   "pages/admin/AdminSchedule.tsx": {
     "mtime": 1787501096.1576774,
@@ -785,28 +785,28 @@
     "semantic_hash": ""
   },
   "pages/admin/AdminSettings.tsx": {
-    "mtime": 1785494870.7397268,
-    "ast_hash": "5293c0da40df5b85fa4ef3d3346e093b",
-    "semantic_hash": "5293c0da40df5b85fa4ef3d3346e093b"
+    "mtime": 1788373902.4719684,
+    "ast_hash": "5e425a178109d853ff4b9a72ebbd8d2f",
+    "semantic_hash": ""
   },
   "pages/admin/AdminShop.tsx": {
-    "mtime": 1787441047.2815094,
-    "ast_hash": "8ccb6be567762426a334e23e9806bcba",
+    "mtime": 1788373795.3698509,
+    "ast_hash": "a5f225858d72514b9b5b90dc01e737db",
     "semantic_hash": ""
   },
   "pages/admin/AdminTeam.tsx": {
-    "mtime": 1785494870.2337627,
-    "ast_hash": "97b8ec135b93b61c06a2da06680c26d2",
-    "semantic_hash": "97b8ec135b93b61c06a2da06680c26d2"
+    "mtime": 1788373651.1955547,
+    "ast_hash": "e9896c2f5c66a4e23972e36ea71a8018",
+    "semantic_hash": ""
   },
   "pages/admin/AdminUsers.tsx": {
-    "mtime": 1787444781.5691833,
-    "ast_hash": "23a8483a2d3795e4ea3fd484d8674f3f",
+    "mtime": 1788373640.2121546,
+    "ast_hash": "95eccfac964e224033cb1b5e622ef6fb",
     "semantic_hash": ""
   },
   "pages/admin/DirectorDashboard.tsx": {
-    "mtime": 1786206453.9107368,
-    "ast_hash": "dab96648a950b6cc1c9a8def1d3ef69d",
+    "mtime": 1788373838.5923295,
+    "ast_hash": "a5555e48475ab2256dcabaf211989c7c",
     "semantic_hash": ""
   },
   "pages/legal/EducationInfo.tsx": {
@@ -835,8 +835,8 @@
     "semantic_hash": "92922baf0b9cb92c38ed3b10b76799da"
   },
   "server.js": {
-    "mtime": 1787588074.2419379,
-    "ast_hash": "bf1de8ee716873c1ed207038222672b1",
+    "mtime": 1788120261.4858618,
+    "ast_hash": "7e93f774d73c8698982bb70200835758",
     "semantic_hash": ""
   },
   "services/aiActionResolver.ts": {
@@ -850,8 +850,8 @@
     "semantic_hash": ""
   },
   "services/userService.ts": {
-    "mtime": 1787439630.668715,
-    "ast_hash": "b975d09c1bd605f1078835afdd743ad2",
+    "mtime": 1788124286.7633185,
+    "ast_hash": "2368f82a7c911957b04b38316117eb4b",
     "semantic_hash": ""
   },
   "src/data/programs.ts": {
@@ -890,9 +890,9 @@
     "semantic_hash": ""
   },
   "types/index.ts": {
-    "mtime": 1785581037.2760618,
-    "ast_hash": "67aa1c326711ae68ee447d682afa2c56",
-    "semantic_hash": "67aa1c326711ae68ee447d682afa2c56"
+    "mtime": 1788120157.9093168,
+    "ast_hash": "90e467f5d49d8f828c807e4e90f066ad",
+    "semantic_hash": ""
   },
   "types/news.ts": {
     "mtime": 1785495840.5448658,
@@ -905,13 +905,13 @@
     "semantic_hash": "728d19b3d043f719ba7a12d4af297081"
   },
   "types/shop.ts": {
-    "mtime": 1787440970.5558596,
-    "ast_hash": "9fb3a2c1772d3ff3db08f646e32e3413",
+    "mtime": 1788372360.9213495,
+    "ast_hash": "fe0b80d96882d36a99a6fc50745b8233",
     "semantic_hash": ""
   },
   "types/user.ts": {
-    "mtime": 1787433227.4046614,
-    "ast_hash": "06ab7819393b8cf0fa002330c36c8192",
+    "mtime": 1788370095.1954937,
+    "ast_hash": "4b8f6df07b46d8ce42241e3729066078",
     "semantic_hash": ""
   },
   "utils/SoundManager.ts": {
@@ -925,8 +925,8 @@
     "semantic_hash": "f8a1d907b419dbeada800369ea5e5d87"
   },
   "utils/studentLinking.ts": {
-    "mtime": 1787499716.5562518,
-    "ast_hash": "7e396b76e906d2d2ff82504fae84352a",
+    "mtime": 1788123328.750095,
+    "ast_hash": "823f020a6b9d619540c0ded5f1327405",
     "semantic_hash": ""
   },
   "vercel.json": {
@@ -945,13 +945,13 @@
     "semantic_hash": ""
   },
   "components/ProfileSetupModal.tsx": {
-    "mtime": 1785596348.2621894,
-    "ast_hash": "cba6b0609359553fcbbb08b39989316c",
+    "mtime": 1788279220.0150871,
+    "ast_hash": "be959d59a50af7123b4dd95d8b4184d7",
     "semantic_hash": ""
   },
   "components/bonus/BonusModal.tsx": {
-    "mtime": 1785596345.4602911,
-    "ast_hash": "6c042e3b9930e36d4349b117c84cf55e",
+    "mtime": 1788278740.5565984,
+    "ast_hash": "c3f693db04e64bc5c0518af2950bdeb4",
     "semantic_hash": ""
   },
   "scratch/fix_clean.js": {
@@ -2120,8 +2120,8 @@
     "semantic_hash": ""
   },
   "components/admin/ExcelImportModal.tsx": {
-    "mtime": 1787436562.2125275,
-    "ast_hash": "4f86bdff07ee35699db05a295d5aa420",
+    "mtime": 1788373870.3446207,
+    "ast_hash": "7aec0e6dbf2a4684f69caaae97b8ab7e",
     "semantic_hash": ""
   },
   "PROJECT_CONTEXT.md": {
@@ -2175,8 +2175,8 @@
     "semantic_hash": ""
   },
   "components/dashboard/KidDashboard.tsx": {
-    "mtime": 1787594684.083617,
-    "ast_hash": "f60a05c2ffde5d5acf9b78301eb3f12d",
+    "mtime": 1788373928.605011,
+    "ast_hash": "3e89ec7959f898604e24fd1b0dcd255a",
     "semantic_hash": ""
   },
   "hooks/useAuth.ts": {
@@ -2200,8 +2200,8 @@
     "semantic_hash": ""
   },
   "components/profile/MessageContextMenu.tsx": {
-    "mtime": 1787596074.0867536,
-    "ast_hash": "6d3700c3e8ae40c01708d2acfb6ebaa6",
+    "mtime": 1787945494.751997,
+    "ast_hash": "70058419ed31c0cad9f332460e60931c",
     "semantic_hash": ""
   },
   "components/profile/AudioRecorder.tsx": {
@@ -2330,8 +2330,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1785862743.1112008,
-    "ast_hash": "1c0e6761655f695f3840bcbdb8753525",
+    "mtime": 1788374731.4823992,
+    "ast_hash": "7bcac923f58a2e4fc852164580f997ab",
     "semantic_hash": ""
   },
   "llm-council/CLAUDE.md": {
@@ -3830,8 +3830,8 @@
     "semantic_hash": ""
   },
   "components/EditProfileModal.tsx": {
-    "mtime": 1785876427.9787574,
-    "ast_hash": "95bc74f19624d3bab1814f7b0fba166a",
+    "mtime": 1788279271.2860992,
+    "ast_hash": "92cfbdfae281ceabe066fe565006e509",
     "semantic_hash": ""
   },
   "components/IncomingRequestToastContainer.tsx": {
@@ -3840,8 +3840,8 @@
     "semantic_hash": ""
   },
   "components/SwitchGroupModal.tsx": {
-    "mtime": 1786346085.0813072,
-    "ast_hash": "3468c22bb8de6b7b0f5c16d7e5f3762a",
+    "mtime": 1788278539.0716224,
+    "ast_hash": "557a3f43abfd91bc0018c680b1678399",
     "semantic_hash": ""
   },
   "components/WhyUsPositioningSection.tsx": {
@@ -3865,8 +3865,8 @@
     "semantic_hash": ""
   },
   "mcp_config.json": {
-    "mtime": 1787035397.498419,
-    "ast_hash": "0cea0976dc749422dd3fde92b67f8679",
+    "mtime": 1788255984.0113182,
+    "ast_hash": "582489cbcdf1a7a64b6a7b46f1e10efd",
     "semantic_hash": ""
   },
   "services/headroomService.ts": {
@@ -6650,13 +6650,13 @@
     "semantic_hash": ""
   },
   "components/ParentAccountSetupModal.tsx": {
-    "mtime": 1786912506.3984332,
-    "ast_hash": "e34fee074ee39d754a88d62c9dcbc80b",
+    "mtime": 1788279186.6795976,
+    "ast_hash": "d0ec4cab83c4613423eaaafe666af623",
     "semantic_hash": ""
   },
   "components/PostStreamModal.tsx": {
-    "mtime": 1786918894.3973038,
-    "ast_hash": "c54e5fd23bd93d9f18c0dcb3bd03bec2",
+    "mtime": 1788279204.755137,
+    "ast_hash": "34c863f0cfd293220039b3c6a69c9fca",
     "semantic_hash": ""
   },
   "components/ReviewCommentsDrawer.tsx": {
@@ -6665,8 +6665,8 @@
     "semantic_hash": ""
   },
   "components/RouteModal.tsx": {
-    "mtime": 1786908874.9995687,
-    "ast_hash": "6de877d5579a77e4798970d9a9751aae",
+    "mtime": 1788278435.2471218,
+    "ast_hash": "e0ccc2844ec8790a1564928f82c7e7cb",
     "semantic_hash": ""
   },
   "components/SmoothFlipCounter.tsx": {
@@ -6675,8 +6675,8 @@
     "semantic_hash": ""
   },
   "components/Sparta3DIcons.tsx": {
-    "mtime": 1786919556.256645,
-    "ast_hash": "2d752fd90008d66fb2d2d517f9e19ab4",
+    "mtime": 1788212409.3212485,
+    "ast_hash": "b05ee35831385aa5a33104ac14207150",
     "semantic_hash": ""
   },
   "components/VoiceReviewPlayer.tsx": {
@@ -6685,13 +6685,13 @@
     "semantic_hash": ""
   },
   "constants/cities.ts": {
-    "mtime": 1786908519.5402792,
-    "ast_hash": "368b966f9c990ed059ecb86ad79173dc",
+    "mtime": 1788120169.405183,
+    "ast_hash": "87f8c6c01901582369c0ee33211e4ff7",
     "semantic_hash": ""
   },
   "constants/spartaSchedule.ts": {
-    "mtime": 1786907160.0639305,
-    "ast_hash": "3aaead977d4c17c7a114251f77d4f49d",
+    "mtime": 1788371473.5410745,
+    "ast_hash": "0194d48f88083ee31165d75fc6a5d61e",
     "semantic_hash": ""
   },
   "context/CityContext.tsx": {
@@ -6705,8 +6705,8 @@
     "semantic_hash": ""
   },
   "pages/admin/AdminLocations.tsx": {
-    "mtime": 1786375652.9736204,
-    "ast_hash": "c4646278af936f02474425e6559e648c",
+    "mtime": 1788373881.9820578,
+    "ast_hash": "f72beca8baf6c0ab5a85fd4a08fd13e6",
     "semantic_hash": ""
   },
   "types/city.ts": {
@@ -6730,8 +6730,8 @@
     "semantic_hash": ""
   },
   "utils/supabaseStorage.ts": {
-    "mtime": 1786989248.252173,
-    "ast_hash": "db4a439ea56817361ce74fe34aefc6c3",
+    "mtime": 1788291260.0334542,
+    "ast_hash": "728ac59af5da9279984bc6c30bc30bfa",
     "semantic_hash": ""
   },
   "utils/webrtcStream.ts": {
@@ -6740,8 +6740,8 @@
     "semantic_hash": ""
   },
   "HANDOFF_NEXT_SESSION.md": {
-    "mtime": 1786371296.3241558,
-    "ast_hash": "c8b4081f784c9c9d88ed128392ff844a",
+    "mtime": 1788374754.2106006,
+    "ast_hash": "6b0eaae3d975d23a4df9e12c3825500a",
     "semantic_hash": ""
   },
   "skill-observations/last-review-date.txt": {
@@ -6840,8 +6840,8 @@
     "semantic_hash": ""
   },
   "components/admin/SavedListsModal.tsx": {
-    "mtime": 1787437965.432542,
-    "ast_hash": "d81714bc136e1adb23a39ac4bf3c3fee",
+    "mtime": 1788373844.613114,
+    "ast_hash": "5de22357081a01b40cb676d0baa7cd8b",
     "semantic_hash": ""
   },
   "components/dev/DeveloperConsole.tsx": {
@@ -6850,8 +6850,8 @@
     "semantic_hash": ""
   },
   "components/profile/AnnouncementModal.tsx": {
-    "mtime": 1787586827.0213766,
-    "ast_hash": "04cdc58010162cf55d5bbd353a9d07e2",
+    "mtime": 1788278793.9972734,
+    "ast_hash": "406e11dab0e35943bdf974e4cb8d4313",
     "semantic_hash": ""
   },
   "components/profile/ChatAttachmentMenu.tsx": {
@@ -6860,8 +6860,8 @@
     "semantic_hash": ""
   },
   "components/profile/ChatProfileDrawer.tsx": {
-    "mtime": 1787590038.115596,
-    "ast_hash": "0be0cadee0f9d9c39c91f9c1bea7cb36",
+    "mtime": 1788373695.560516,
+    "ast_hash": "e91689d8c66cd678ec4f143d2b32cea4",
     "semantic_hash": ""
   },
   "components/profile/FamilyScheduleSection.tsx": {
@@ -6870,38 +6870,38 @@
     "semantic_hash": ""
   },
   "components/profile/MediaUploadTrayModal.tsx": {
-    "mtime": 1787591026.8130102,
-    "ast_hash": "2efd1ba66dfa615b793ab3b715ba7920",
+    "mtime": 1788278878.9756997,
+    "ast_hash": "156bfa5b79961dbc5fe0294a740f354b",
     "semantic_hash": ""
   },
   "components/profile/SpartaCreateStoryModal.tsx": {
-    "mtime": 1787597493.165489,
-    "ast_hash": "539e1fe32642e688baeb714d66a5c4a0",
+    "mtime": 1788278918.2215257,
+    "ast_hash": "856ff210100d3110f364bbc9acd06cb1",
     "semantic_hash": ""
   },
   "components/profile/SpartaMediaGalleryModal.tsx": {
-    "mtime": 1787591867.418931,
-    "ast_hash": "9aa582db6692a87a39d1b5374c39a722",
+    "mtime": 1788278985.3504465,
+    "ast_hash": "19775d50b0f95ada25550026302f6b4b",
     "semantic_hash": ""
   },
   "components/profile/SpartaReactions.tsx": {
-    "mtime": 1787596040.8993046,
-    "ast_hash": "5658285fd886c15c12a0bcab75acd5c6",
+    "mtime": 1787599696.3291998,
+    "ast_hash": "895da6eb39066b4e504d57cfb52ab5e0",
     "semantic_hash": ""
   },
   "components/profile/SpartaStoriesViewer.tsx": {
-    "mtime": 1787597470.8971345,
-    "ast_hash": "46f86893a13cabbe4af5249062a788d5",
+    "mtime": 1788212533.6228418,
+    "ast_hash": "ab0d9028140560fa6ed544c7e8128760",
     "semantic_hash": ""
   },
   "components/profile/coach/CoachQuickPlanner.tsx": {
-    "mtime": 1787342448.0038474,
-    "ast_hash": "6f717ef8f009e73220dc0bd0d03e08cc",
+    "mtime": 1788207538.1436894,
+    "ast_hash": "f2b92640cb9456f580ac3fb8acac82e4",
     "semantic_hash": ""
   },
   "components/schedule/ScheduleOverrideModal.tsx": {
-    "mtime": 1787502030.323682,
-    "ast_hash": "62ccc23bf495a9cb4b8f0f201945a879",
+    "mtime": 1788279092.721334,
+    "ast_hash": "b620609a66ed55af9f690768f2130e0c",
     "semantic_hash": ""
   },
   "e2e/capture-banners.spec.ts": {
@@ -8005,8 +8005,8 @@
     "semantic_hash": ""
   },
   "public/banner-assets/sparta-tennis-a4-vector.svg": {
-    "mtime": 1787329093.3294857,
-    "ast_hash": "236d32c7582f6facfcc7081137f97210",
+    "mtime": 1787660989.2417836,
+    "ast_hash": "0d93b74c7b6e948450a869b70871cfe0",
     "semantic_hash": ""
   },
   "public/banner-assets/sparta-tennis-bg.png": {
@@ -8060,8 +8060,8 @@
     "semantic_hash": ""
   },
   "public/banner-assets/sparta-tennis-poster.svg": {
-    "mtime": 1787238461.1198306,
-    "ast_hash": "c3d7beaa853d78d92021508726031812",
+    "mtime": 1787660238.4742534,
+    "ast_hash": "5157a34e44d66e5158b269c6bbee88fd",
     "semantic_hash": ""
   },
   "public/banner-assets/sparta-tennis-ref-full.png": {
@@ -8195,8 +8195,8 @@
     "semantic_hash": ""
   },
   "public/sparta-tennis-a4.svg": {
-    "mtime": 1787329093.3486443,
-    "ast_hash": "236d32c7582f6facfcc7081137f97210",
+    "mtime": 1787660989.309674,
+    "ast_hash": "0d93b74c7b6e948450a869b70871cfe0",
     "semantic_hash": ""
   },
   "public/sparta-tennis-mint-poster.png": {
@@ -8210,13 +8210,638 @@
     "semantic_hash": ""
   },
   "public/sparta-tennis-poster.svg": {
-    "mtime": 1787238461.145302,
-    "ast_hash": "c3d7beaa853d78d92021508726031812",
+    "mtime": 1787660238.3772223,
+    "ast_hash": "5157a34e44d66e5158b269c6bbee88fd",
     "semantic_hash": ""
   },
   "public/sparta-tennis-rollup.jpg": {
     "mtime": 1787336376.0660534,
     "ast_hash": "0248cac1b731206132957107b07dfb7d",
+    "semantic_hash": ""
+  },
+  "components/SpartaCoinIcon.tsx": {
+    "mtime": 1788212371.2684326,
+    "ast_hash": "237101e1d745db5f9ff9955360502eef",
+    "semantic_hash": ""
+  },
+  "components/SubscriptionsShowcase.tsx": {
+    "mtime": 1788121928.1193373,
+    "ast_hash": "271f35884857cfa8547b1f0589d5d1e0",
+    "semantic_hash": ""
+  },
+  "components/UIComponents.figma.tsx": {
+    "mtime": 1787857836.2264254,
+    "ast_hash": "41f32e00aadd23d1a7ee0845c4d6174c",
+    "semantic_hash": ""
+  },
+  "components/admin/AdminAwardsManager.tsx": {
+    "mtime": 1788262167.945675,
+    "ast_hash": "0b042ac1ad016956c6453efe94e4c4e3",
+    "semantic_hash": ""
+  },
+  "components/admin/ScheduleMessengerPublishModal.tsx": {
+    "mtime": 1788278726.7021646,
+    "ast_hash": "a73f55426e7bb8ee755c0abed93afea9",
+    "semantic_hash": ""
+  },
+  "components/dashboard/BadgeCard.tsx": {
+    "mtime": 1788258102.2783847,
+    "ast_hash": "067443dda90f1e1dfddba342d5ae4bbf",
+    "semantic_hash": ""
+  },
+  "components/dashboard/BadgeDetailModal.tsx": {
+    "mtime": 1788278753.4635355,
+    "ast_hash": "c2ce859a5bc946f080c7e4e1deca366e",
+    "semantic_hash": ""
+  },
+  "components/dashboard/CompactTaskList.tsx": {
+    "mtime": 1788215878.314449,
+    "ast_hash": "a5b8e86a1df7921b7c6624b918b33ab9",
+    "semantic_hash": ""
+  },
+  "components/dashboard/LevelProgressBar.tsx": {
+    "mtime": 1788212950.8498306,
+    "ast_hash": "b9a8c7f4b1797b3b4660305f8d827a9c",
+    "semantic_hash": ""
+  },
+  "components/dashboard/StudentDashboard.tsx": {
+    "mtime": 1788259612.3060665,
+    "ast_hash": "6a5c932cf54df7e6d31c529b846d8be3",
+    "semantic_hash": ""
+  },
+  "components/dashboard/TaskHistoryModal.tsx": {
+    "mtime": 1788278775.3858793,
+    "ast_hash": "b052ba024b4809f32d1a323ff4a5554b",
+    "semantic_hash": ""
+  },
+  "components/profile/AwardDetailModal.tsx": {
+    "mtime": 1788278387.1885443,
+    "ast_hash": "095a282edc499314cf5fb5cb8313cf76",
+    "semantic_hash": ""
+  },
+  "components/profile/AwardsPage.tsx": {
+    "mtime": 1788260748.0619557,
+    "ast_hash": "b0c65766146ef4097228ca6225192c9e",
+    "semantic_hash": ""
+  },
+  "components/profile/CertificateCard.tsx": {
+    "mtime": 1788262131.1466792,
+    "ast_hash": "bafc7e07750d0bbc8a59d886212488b0",
+    "semantic_hash": ""
+  },
+  "components/profile/CertificateLightboxModal.tsx": {
+    "mtime": 1788278811.7064686,
+    "ast_hash": "bd269e821ceda84201c554a0bbac5408",
+    "semantic_hash": ""
+  },
+  "components/profile/SidebarProfile.tsx": {
+    "mtime": 1788261821.0470953,
+    "ast_hash": "4680d68139ad30613f47b607470d17f0",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaAvatar.tsx": {
+    "mtime": 1787924578.5881276,
+    "ast_hash": "a872256ae012fdd93e69ebd3f4ab3f0e",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaDatePickerPopover.tsx": {
+    "mtime": 1787938792.2420247,
+    "ast_hash": "0b9921db1d2671b5317303da76d4ee1e",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaForwardModal.tsx": {
+    "mtime": 1788278935.5701463,
+    "ast_hash": "39df63c389937866be72ffa6f3980b91",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaHighlightsModal.tsx": {
+    "mtime": 1788278964.7272775,
+    "ast_hash": "f6cd707e61283a222daf2ca155074a23",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaModerationModal.tsx": {
+    "mtime": 1788279003.684305,
+    "ast_hash": "45732cadfcec7a6ad4c725331da9ffae",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaPreviewPlayer.tsx": {
+    "mtime": 1787942842.8408113,
+    "ast_hash": "97d3b759768133bd2908e5bb3b7d5481",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaProgressiveImage.tsx": {
+    "mtime": 1787939929.4218924,
+    "ast_hash": "e6f1907313c31b1c9e4871fc7b0b875f",
+    "semantic_hash": ""
+  },
+  "components/profile/SpartaScheduleChatCard.tsx": {
+    "mtime": 1787924631.0187638,
+    "ast_hash": "5112af47e9ef8dc61ad17dafdfd7cc57",
+    "semantic_hash": ""
+  },
+  "components/profile/StudentCardModal.tsx": {
+    "mtime": 1788278350.140372,
+    "ast_hash": "47e4f33f68d89b398cfa627554f18aa4",
+    "semantic_hash": ""
+  },
+  "components/profile/TrophiesGallery.tsx": {
+    "mtime": 1788258400.5001466,
+    "ast_hash": "180f4e6ad52bc6387da35937617424a8",
+    "semantic_hash": ""
+  },
+  "components/profile/TrophyStandCard.tsx": {
+    "mtime": 1788262081.4363248,
+    "ast_hash": "5e36d011b6758f37ecc1ac645bd5c73c",
+    "semantic_hash": ""
+  },
+  "components/profile/UpgradeSubscriptionModal.tsx": {
+    "mtime": 1788279020.419388,
+    "ast_hash": "3bebc094b1368f245b9c215fb413d4fa",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/ApplicantEnrollmentModal.tsx": {
+    "mtime": 1788370220.4184146,
+    "ast_hash": "48cad00ebe1db8e975849ce3eb63bbe8",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/AssignmentModal.tsx": {
+    "mtime": 1788279055.11421,
+    "ast_hash": "7b5392c1614f3ef3c7e4d397b702c0b5",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/CoachReviewDashboard.tsx": {
+    "mtime": 1788216358.6318069,
+    "ast_hash": "eb11f76b0017c5ecc14e7b54f2e5a634",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/CreateExerciseModal.tsx": {
+    "mtime": 1788291624.8141305,
+    "ast_hash": "8348ef2f8a7770a2b8deb2b4c7a13071",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/CreateTrainingPlanModal.tsx": {
+    "mtime": 1788292426.5105872,
+    "ast_hash": "490e471f4225da7703e85c6f8d970b84",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/ExerciseDetailModal.tsx": {
+    "mtime": 1788291650.9796557,
+    "ast_hash": "da050e841b354d7042638fbb32c1247c",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/ExerciseMediaGrid.tsx": {
+    "mtime": 1788291600.2778912,
+    "ast_hash": "b152cf894d008c8d34aefa6b99b948a2",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/RosterJournalTab.tsx": {
+    "mtime": 1788215933.779695,
+    "ast_hash": "8cfd2eae41dffea3ebf704aee7bf1c1b",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/StudentProfileModal.tsx": {
+    "mtime": 1788279080.9621372,
+    "ast_hash": "a027fe43a92af32c4315a1c3b3917272",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/TrainingPlanConspectModal.tsx": {
+    "mtime": 1788292476.045567,
+    "ast_hash": "21c6807648e106fee65142eff1055f07",
+    "semantic_hash": ""
+  },
+  "components/shop/MerchCard.tsx": {
+    "mtime": 1788280465.2770379,
+    "ast_hash": "6656b347d3af8fcfd1d8809475e33ef8",
+    "semantic_hash": ""
+  },
+  "components/shop/ProductModal.tsx": {
+    "mtime": 1788280485.9183497,
+    "ast_hash": "da010cfc6fc79c866c67ff5f40161777",
+    "semantic_hash": ""
+  },
+  "components/ui/BaseModal.tsx": {
+    "mtime": 1788278304.6173573,
+    "ast_hash": "de76e1e0a9288634fddd3cd15bd7a7a6",
+    "semantic_hash": ""
+  },
+  "constants/defaultSubscriptionPlans.js": {
+    "mtime": 1788121746.3847873,
+    "ast_hash": "b47a2d88bab991bdafc4c7c13c9d71db",
+    "semantic_hash": ""
+  },
+  "constants/spartaSubscriptions.ts": {
+    "mtime": 1788121723.3506708,
+    "ast_hash": "f5a4419be8e2658c07568b65fa7d1bbf",
+    "semantic_hash": ""
+  },
+  "figma.config.json": {
+    "mtime": 1787857833.1308825,
+    "ast_hash": "1dd7f554e4d75344e8d279d5349b0e2d",
+    "semantic_hash": ""
+  },
+  "hooks/useStudentAchievements.ts": {
+    "mtime": 1788261711.600216,
+    "ast_hash": "ca2ae8881f65a519c11e89f87cf595d5",
+    "semantic_hash": ""
+  },
+  "pages/admin/AdminSubscriptions.tsx": {
+    "mtime": 1788120747.1265752,
+    "ast_hash": "2d277a8ee6272474bc56f020f3a16985",
+    "semantic_hash": ""
+  },
+  "scripts/export-schedule-poster.mjs": {
+    "mtime": 1788182876.742182,
+    "ast_hash": "4d9e5dd169b90f03acc9a0a6654f5e42",
+    "semantic_hash": ""
+  },
+  "scripts/figma-generate-schedule-poster.js": {
+    "mtime": 1788201563.2163498,
+    "ast_hash": "33abb159bdf38f63084051074c3661a4",
+    "semantic_hash": ""
+  },
+  "scripts/generate-schedule-poster-svg.mjs": {
+    "mtime": 1788201519.1732807,
+    "ast_hash": "07d718f7ccd34c6dd87b979fbea227a8",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-tennis-a4-both.mjs": {
+    "mtime": 1787660724.3332021,
+    "ast_hash": "b6859b498be7c9a9350b6e3719b30276",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-tennis-a4-option1.mjs": {
+    "mtime": 1787660976.252241,
+    "ast_hash": "1c674e8164eab7c98b8d25321b22dc9b",
+    "semantic_hash": ""
+  },
+  "scripts/generate-svg-sparta-tennis-both-cities.mjs": {
+    "mtime": 1787660230.8832428,
+    "ast_hash": "5f7930212c15fe51026bbe09183465b2",
+    "semantic_hash": ""
+  },
+  "scripts/icons_base64.json": {
+    "mtime": 1788181434.2942553,
+    "ast_hash": "a91a6b32a2b9b9b0175fd45d44748d31",
+    "semantic_hash": ""
+  },
+  "scripts/seed-real-data.ts": {
+    "mtime": 1788371173.1574671,
+    "ast_hash": "085a4e3facecaf0b3746fabbcf4b5cdd",
+    "semantic_hash": ""
+  },
+  "scripts/setup_types.js": {
+    "mtime": 1788120123.5648756,
+    "ast_hash": "2a04944f2fff432609fd38250064bd4d",
+    "semantic_hash": ""
+  },
+  "src/components/ui/BaseModal.tsx": {
+    "mtime": 1788278290.090929,
+    "ast_hash": "6aae5bf2d7c911c2b569202cf4f647e7",
+    "semantic_hash": ""
+  },
+  "src/utils/spartaCoins.ts": {
+    "mtime": 1788285618.053291,
+    "ast_hash": "aa0839d256ab7510b50119e6650ee470",
+    "semantic_hash": ""
+  },
+  "types/attendance.ts": {
+    "mtime": 1788120143.2173328,
+    "ast_hash": "7ef1bb637bf3c29363ed40a8af3ff1b7",
+    "semantic_hash": ""
+  },
+  "types/subscription.ts": {
+    "mtime": 1788125256.8992555,
+    "ast_hash": "1e55c46d6baf44ae35f3fddcfb204259",
+    "semantic_hash": ""
+  },
+  "utils/coachLinking.ts": {
+    "mtime": 1788372273.503026,
+    "ast_hash": "7f7091d57b045bc84d86bbe3612dce32",
+    "semantic_hash": ""
+  },
+  "utils/spartaCoins.ts": {
+    "mtime": 1788280416.5299115,
+    "ast_hash": "dd1245a4f983a2b6fe90e481e1156227",
+    "semantic_hash": ""
+  },
+  "utils/subscriptionResolver.ts": {
+    "mtime": 1788124743.271888,
+    "ast_hash": "79fe1c2df5db4ff3d5c0329a531ae356",
+    "semantic_hash": ""
+  },
+  "utils/subscriptionStatusEngine.ts": {
+    "mtime": 1788209251.8371642,
+    "ast_hash": "fb6f60f1346d5586bf8e1c0c669a2632",
+    "semantic_hash": ""
+  },
+  "docs/session-handoff.md": {
+    "mtime": 1788374754.2106006,
+    "ast_hash": "6b0eaae3d975d23a4df9e12c3825500a",
+    "semantic_hash": ""
+  },
+  "public/action-camera-mockup.html": {
+    "mtime": 1788257390.549595,
+    "ast_hash": "a372f239487898e5623c1251688c5cf3",
+    "semantic_hash": ""
+  },
+  "public/schedule-poster.html": {
+    "mtime": 1788201630.4185712,
+    "ast_hash": "5f1a728acfc604d75db7a39443809ecf",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-a4-chelyabinsk-standalone.html": {
+    "mtime": 1787660989.7525175,
+    "ast_hash": "8ffc7d1fb551037c110f5d922ab7e160",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-a4-novosibirsk-standalone.html": {
+    "mtime": 1787660989.7354932,
+    "ast_hash": "ceae727a5eea2a81bfb76448bf38aa49",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-chelyabinsk-standalone.html": {
+    "mtime": 1787660238.9685838,
+    "ast_hash": "197d7972505ae56d5fe87c7d555e8c4c",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-novosibirsk-standalone.html": {
+    "mtime": 1787660238.9522069,
+    "ast_hash": "8d799d5c15291ac03f22eb0e06a4025e",
+    "semantic_hash": ""
+  },
+  "public/assets/awards/3d/certificate.jpg": {
+    "mtime": 1788261431.3869042,
+    "ast_hash": "e073dc83f32a48bb929fd480b7daf7a2",
+    "semantic_hash": ""
+  },
+  "public/assets/awards/3d/gold_cup.jpg": {
+    "mtime": 1788261288.1985414,
+    "ast_hash": "81cd2bf0e84238f575bb0ea71e35d5ab",
+    "semantic_hash": ""
+  },
+  "public/assets/awards/3d/gold_medal.jpg": {
+    "mtime": 1788261352.4968467,
+    "ast_hash": "ef9ffdeb3ede8967c1f0f46aa6512e01",
+    "semantic_hash": ""
+  },
+  "public/assets/awards/3d/silver_cup.jpg": {
+    "mtime": 1788261306.4506316,
+    "ast_hash": "174d73c1f264de677c070a8e6dbb7547",
+    "semantic_hash": ""
+  },
+  "public/assets/awards/3d/silver_medal.jpg": {
+    "mtime": 1788261369.5149844,
+    "ast_hash": "19ed2c6ea497a76e3b3f5b11e69cfc20",
+    "semantic_hash": ""
+  },
+  "public/badge-4k.svg": {
+    "mtime": 1788257586.810273,
+    "ast_hash": "30cb92b8a8b3bb9120cbdf23ab2751c4",
+    "semantic_hash": ""
+  },
+  "public/badge-displays.svg": {
+    "mtime": 1788257586.8142748,
+    "ast_hash": "314248923ed9940f603460acda9800fe",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/real-football-match.png": {
+    "mtime": 1787662528.4229615,
+    "ast_hash": "c412e70a89e539c416a6c20c5b28777b",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-a4-chelyabinsk.png": {
+    "mtime": 1787661004.13016,
+    "ast_hash": "3893ca22c3cb5a556943cd6561b46d9e",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-a4-chelyabinsk.svg": {
+    "mtime": 1787660989.5638008,
+    "ast_hash": "c9078167fb60e7efcf17484a203bd51a",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-a4-novosibirsk.png": {
+    "mtime": 1787660997.2032645,
+    "ast_hash": "b93bb21911a1f508f1948b2c417abc76",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-a4-novosibirsk.svg": {
+    "mtime": 1787660989.274772,
+    "ast_hash": "0d93b74c7b6e948450a869b70871cfe0",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-poster-chelyabinsk.png": {
+    "mtime": 1787660258.2336397,
+    "ast_hash": "013bd0061bdebc2b3f799565e3932506",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-poster-chelyabinsk.svg": {
+    "mtime": 1787660238.7886229,
+    "ast_hash": "84f1ae2e967dc87acea1a952b0c60e91",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-poster-novosibirsk.png": {
+    "mtime": 1787660248.734301,
+    "ast_hash": "23df050dc2d57c2d0b719828f1e8a5ef",
+    "semantic_hash": ""
+  },
+  "public/banner-assets/sparta-tennis-poster-novosibirsk.svg": {
+    "mtime": 1787660238.42726,
+    "ast_hash": "5157a34e44d66e5158b269c6bbee88fd",
+    "semantic_hash": ""
+  },
+  "public/coffee-hero.jpg": {
+    "mtime": 1787859112.5873513,
+    "ast_hash": "04e5e28e51803a7edaf3899039157448",
+    "semantic_hash": ""
+  },
+  "public/coffee-shop-website.svg": {
+    "mtime": 1787859153.558073,
+    "ast_hash": "6750610d2e32dd92c2760367b882dd91",
+    "semantic_hash": ""
+  },
+  "public/decor-dots.svg": {
+    "mtime": 1788257586.8142748,
+    "ast_hash": "51391999a67b10cc0f6465b78a8a21d0",
+    "semantic_hash": ""
+  },
+  "public/decor-flare.svg": {
+    "mtime": 1788257586.8152752,
+    "ast_hash": "bf7368b5557432916dd56c0f7765e5f0",
+    "semantic_hash": ""
+  },
+  "public/images/sparta-coin.png": {
+    "mtime": 1787132644.076588,
+    "ast_hash": "084e5656491f83f8e16525cb6b063d55",
+    "semantic_hash": ""
+  },
+  "public/schedule-poster.png": {
+    "mtime": 1788201588.5568821,
+    "ast_hash": "af4328a50cc1907f61f4717537f40f50",
+    "semantic_hash": ""
+  },
+  "public/schedule-poster.svg": {
+    "mtime": 1788201582.6208806,
+    "ast_hash": "bcfcba7bb6a82e15d135db32a9b9a1de",
+    "semantic_hash": ""
+  },
+  "public/sparta-ball-cutout.png": {
+    "mtime": 1787858939.0569363,
+    "ast_hash": "3346d3d418b3973bbde3c4fc9f2c0eb4",
+    "semantic_hash": ""
+  },
+  "public/sparta-ball-photo.jpg": {
+    "mtime": 1787858749.4911454,
+    "ast_hash": "e7106885c86c1f408fae6894a5ab9975",
+    "semantic_hash": ""
+  },
+  "public/sparta-coach-dashboard.svg": {
+    "mtime": 1787857157.8344135,
+    "ast_hash": "3226886086db276d918a61b5b506789f",
+    "semantic_hash": ""
+  },
+  "public/sparta-dashboard-full.svg": {
+    "mtime": 1787858458.1446328,
+    "ast_hash": "6d5d8bb16e74c4bdd9cb1a55879ef09d",
+    "semantic_hash": ""
+  },
+  "public/sparta-mobile-concept.svg": {
+    "mtime": 1787858439.0654924,
+    "ast_hash": "05f1f36aef7338ad1952b2b2107f212d",
+    "semantic_hash": ""
+  },
+  "public/sparta-product-infographic.svg": {
+    "mtime": 1787858955.2977915,
+    "ast_hash": "189c986957bef3ef6caa793f6a65e763",
+    "semantic_hash": ""
+  },
+  "public/sparta-schedule-widget.svg": {
+    "mtime": 1787857162.0440369,
+    "ast_hash": "b38b72e8edf3635de35bb3855f635054",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-a4-chelyabinsk.png": {
+    "mtime": 1787661004.13016,
+    "ast_hash": "3893ca22c3cb5a556943cd6561b46d9e",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-a4-chelyabinsk.svg": {
+    "mtime": 1787660989.5936854,
+    "ast_hash": "c9078167fb60e7efcf17484a203bd51a",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-a4-novosibirsk.png": {
+    "mtime": 1787660997.2032645,
+    "ast_hash": "b93bb21911a1f508f1948b2c417abc76",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-a4-novosibirsk.svg": {
+    "mtime": 1787660989.3430343,
+    "ast_hash": "0d93b74c7b6e948450a869b70871cfe0",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-poster-chelyabinsk.png": {
+    "mtime": 1787660258.2336397,
+    "ast_hash": "013bd0061bdebc2b3f799565e3932506",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-poster-chelyabinsk.svg": {
+    "mtime": 1787660238.7367003,
+    "ast_hash": "84f1ae2e967dc87acea1a952b0c60e91",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-poster-novosibirsk.png": {
+    "mtime": 1787660248.734301,
+    "ast_hash": "23df050dc2d57c2d0b719828f1e8a5ef",
+    "semantic_hash": ""
+  },
+  "public/sparta-tennis-poster-novosibirsk.svg": {
+    "mtime": 1787660238.3253517,
+    "ast_hash": "5157a34e44d66e5158b269c6bbee88fd",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/01_champion_medallion.jpg": {
+    "mtime": 1788181434.2544098,
+    "ast_hash": "bdded3229491344bebdcea0eda04d694",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/02_martial_arts_kimono.jpg": {
+    "mtime": 1788181434.2604117,
+    "ast_hash": "42d509fbe3115e3080d932d731cdbe51",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/03_logoped_speech.jpg": {
+    "mtime": 1788181434.2634585,
+    "ast_hash": "105d4303ecd48d991d9946e11036e4f6",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/04_lego_robotics.jpg": {
+    "mtime": 1788181434.2655783,
+    "ast_hash": "bf383b5b7b8b61a1b3a760f8fc662d71",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/05_qigong_leaf_health.jpg": {
+    "mtime": 1788181434.2682395,
+    "ast_hash": "f6ee25899567c78f4fa20925b45fc83d",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/06_dance_ballet_shoes.jpg": {
+    "mtime": 1788181434.2709484,
+    "ast_hash": "946dfebeeb884955fe84e141f7a2186c",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/07_english_language_globe.jpg": {
+    "mtime": 1788181434.2736113,
+    "ast_hash": "4871daf850f0953d58902f7595159823",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/08_school_backpack.jpg": {
+    "mtime": 1788181434.2762387,
+    "ast_hash": "3e5c2d38611f6130df45aaa7aa1636e5",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/champion.png": {
+    "mtime": 1788181434.2534096,
+    "ast_hash": "bdded3229491344bebdcea0eda04d694",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/dance.png": {
+    "mtime": 1788181434.2704136,
+    "ast_hash": "946dfebeeb884955fe84e141f7a2186c",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/english.png": {
+    "mtime": 1788181434.2736113,
+    "ast_hash": "4871daf850f0953d58902f7595159823",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/lego.png": {
+    "mtime": 1788181434.2650435,
+    "ast_hash": "bf383b5b7b8b61a1b3a760f8fc662d71",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/logoped.png": {
+    "mtime": 1788181434.2629266,
+    "ast_hash": "105d4303ecd48d991d9946e11036e4f6",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/martial.png": {
+    "mtime": 1788181434.2594118,
+    "ast_hash": "42d509fbe3115e3080d932d731cdbe51",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/qigong.png": {
+    "mtime": 1788181434.2677116,
+    "ast_hash": "f6ee25899567c78f4fa20925b45fc83d",
+    "semantic_hash": ""
+  },
+  "public/sparta_3d_icons/school.png": {
+    "mtime": 1788181434.2757244,
+    "ast_hash": "3e5c2d38611f6130df45aaa7aa1636e5",
+    "semantic_hash": ""
+  },
+  "docs/FULL_SESSION_HISTORY_AND_CONTEXT.md": {
+    "mtime": 1788374909.8342094,
+    "ast_hash": "55e2abae138f8687fec2215d89d35915",
     "semantic_hash": ""
   }
 }
