@@ -328,7 +328,7 @@ const NewsModal: React.FC<NewsModalProps> = ({ news: initialNews, onClose }) => 
     }, [currentNews?.id, userRole]);
 
     const sortedComments = useMemo(() => {
-        let sorted = [...comments];
+        const sorted = [...comments];
         switch (sortBy) {
             case 'newest': sorted.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); break;
             case 'oldest': sorted.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)); break;
@@ -600,14 +600,14 @@ const NewsModal: React.FC<NewsModalProps> = ({ news: initialNews, onClose }) => 
                 zIndex="z-[100]"
             >
                 <div
-                    className={`relative w-full max-w-[98vw] h-[98vh] md:h-[95vh] flex flex-row shadow-2xl rounded-3xl overflow-hidden border border-white/10 bg-[#121212]/90 backdrop-blur-2xl transition-all duration-500 ease-in-out ${showComments ? 'md:max-w-[1600px]' : 'md:max-w-[1200px]'}`}
+                    className={`relative w-full max-w-[98vw] h-[calc(100dvh-1rem)] md:h-[95vh] flex flex-col md:flex-row shadow-2xl rounded-2xl md:rounded-3xl overflow-hidden border border-white/10 bg-[#121212]/90 backdrop-blur-2xl transition-all duration-500 ease-in-out ${showComments ? 'md:max-w-[1600px]' : 'md:max-w-[1200px]'}`}
                     onClick={(e) => e.stopPropagation()}
                 >
 
                     {/* Left Column (News Content) */}
                     <div className={`flex-1 flex flex-col h-full bg-[#121212] relative overflow-hidden min-w-0 transition-opacity duration-300 ${showComments && window.innerWidth < 768 ? 'opacity-0 md:opacity-100 hidden md:flex' : 'flex'}`}>
                         {/* Gallery / Media Section (Top) */}
-                        <div className="w-full h-[40vh] md:h-[60vh] bg-black relative flex-shrink-0 group/gallery border-b border-white/5">
+                        <div className="w-full h-[32vh] sm:h-[40vh] md:h-[60vh] bg-black relative flex-shrink-0 group/gallery border-b border-white/5">
                             {mediaItems.length > 0 ? (
                                 <AnimatePresence mode='wait'>
                                     <motion.div
@@ -658,25 +658,27 @@ const NewsModal: React.FC<NewsModalProps> = ({ news: initialNews, onClose }) => 
                                 <>
                                     <button
                                         onClick={prevMedia}
-                                        className="absolute left-6 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/50 text-white/90 hover:bg-sparta-gold hover:text-black backdrop-blur-xl transition-all opacity-60 hover:opacity-100 group-hover/gallery:opacity-100 z-40 hover:scale-110 shadow-lg border border-white/10 cursor-pointer"
+                                        aria-label="Предыдущее фото"
+                                        className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 p-2 sm:p-4 rounded-full bg-black/50 text-white/90 hover:bg-sparta-gold hover:text-black backdrop-blur-xl transition-all opacity-70 hover:opacity-100 group-hover/gallery:opacity-100 z-40 hover:scale-110 shadow-lg border border-white/10 cursor-pointer"
                                         title="Предыдущее фото"
                                     >
-                                        <ChevronLeft size={32} />
+                                        <ChevronLeft size={20} className="sm:w-8 sm:h-8" />
                                     </button>
                                     <button
                                         onClick={nextMedia}
-                                        className="absolute right-6 top-1/2 -translate-y-1/2 p-4 rounded-full bg-black/50 text-white/90 hover:bg-sparta-gold hover:text-black backdrop-blur-xl transition-all opacity-60 hover:opacity-100 group-hover/gallery:opacity-100 z-40 hover:scale-110 shadow-lg border border-white/10 cursor-pointer"
+                                        aria-label="Следующее фото"
+                                        className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 p-2 sm:p-4 rounded-full bg-black/50 text-white/90 hover:bg-sparta-gold hover:text-black backdrop-blur-xl transition-all opacity-70 hover:opacity-100 group-hover/gallery:opacity-100 z-40 hover:scale-110 shadow-lg border border-white/10 cursor-pointer"
                                         title="Следующее фото"
                                     >
-                                        <ChevronRight size={32} />
+                                        <ChevronRight size={20} className="sm:w-8 sm:h-8" />
                                     </button>
 
                                     {/* Pagination Dots */}
-                                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-40 pointer-events-none">
+                                    <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-40 pointer-events-none">
                                         {mediaItems.map((_, idx) => (
                                             <div
                                                 key={idx}
-                                                className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentMediaIndex ? 'bg-sparta-gold w-6' : 'bg-white/30 w-1.5'}`}
+                                                className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentMediaIndex ? 'bg-sparta-gold w-5 sm:w-6' : 'bg-white/30 w-1.5'}`}
                                             />
                                         ))}
                                     </div>
@@ -684,21 +686,23 @@ const NewsModal: React.FC<NewsModalProps> = ({ news: initialNews, onClose }) => 
                             )}
 
                             {/* Close / Edit Buttons (Top Right of Media) */}
-                            <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
+                            <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-50 flex items-center gap-2 sm:gap-3">
                                 {userRole === 'admin' && (
                                     <button
                                         onClick={() => window.location.href = `/admin/news?editId=${currentNews.id}`}
-                                        className="bg-black/40 hover:bg-sparta-gold hover:text-black text-white p-3 rounded-full transition-all backdrop-blur-md border border-white/5 group-hover:border-white/20"
+                                        aria-label="Редактировать новость"
+                                        className="bg-black/50 hover:bg-sparta-gold hover:text-black text-white p-2 sm:p-3 rounded-full transition-all backdrop-blur-md border border-white/10 group-hover:border-white/20 cursor-pointer"
                                         title="Редактировать новость"
                                     >
-                                        <Edit2 size={24} />
+                                        <Edit2 size={18} className="sm:w-6 sm:h-6" />
                                     </button>
                                 )}
                                 <button
                                     onClick={onClose}
-                                    className="bg-black/40 hover:bg-white/10 text-white p-3 rounded-full transition-all backdrop-blur-md border border-white/5 group-hover:border-white/20"
+                                    aria-label="Закрыть"
+                                    className="bg-black/50 hover:bg-white/15 text-white p-2 sm:p-3 rounded-full transition-all backdrop-blur-md border border-white/10 group-hover:border-white/20 cursor-pointer"
                                 >
-                                    <X size={24} />
+                                    <X size={18} className="sm:w-6 sm:h-6" />
                                 </button>
                             </div>
                         </div>

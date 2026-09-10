@@ -152,30 +152,30 @@ export const DirectStreamViewer: React.FC<DirectStreamViewerProps> = ({
             )}
 
             {/* Top Overlay: Live Tag & Glass Scoreboard */}
-            <div className="absolute top-4 inset-x-4 flex items-center justify-between pointer-events-none z-20">
-                <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600/90 backdrop-blur-md text-white text-xs font-black tracking-wider uppercase shadow-xl border border-red-400/30 animate-pulse">
-                        <span className="w-2 h-2 rounded-full bg-white animate-ping" /> LIVE
+            <div className="absolute top-2 sm:top-4 inset-x-2 sm:inset-x-4 flex items-center justify-between pointer-events-none z-20">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-red-600/90 backdrop-blur-md text-white text-[10px] sm:text-xs font-black tracking-wider uppercase shadow-xl border border-red-400/30 animate-pulse">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-ping" /> LIVE
                     </span>
                     {matchTime && (
-                        <span className="px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md border border-white/15 text-sparta-gold text-xs font-mono font-bold shadow-lg">
+                        <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-black/75 backdrop-blur-md border border-white/15 text-sparta-gold text-[10px] sm:text-xs font-mono font-bold shadow-lg">
                             {matchTime}
                         </span>
                     )}
                 </div>
 
                 {/* 3D Glass Scoreboard Pill */}
-                <div className="px-4 py-2 rounded-2xl bg-black/75 backdrop-blur-xl border border-sparta-gold/40 flex items-center gap-3 shadow-[0_8px_25px_rgba(0,0,0,0.6)]">
-                    <div className="flex items-center gap-1.5">
-                        <Sparta3DShield size={18} />
-                        <span className="text-xs font-bold text-white uppercase tracking-wider hidden sm:inline">Спарта</span>
+                <div className="px-2.5 py-1 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl bg-black/75 backdrop-blur-xl border border-sparta-gold/40 flex items-center gap-1.5 sm:gap-3 shadow-[0_8px_25px_rgba(0,0,0,0.6)]">
+                    <div className="flex items-center gap-1 sm:gap-1.5">
+                        <Sparta3DShield size={16} className="sm:w-[18px] sm:h-[18px]" />
+                        <span className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider hidden sm:inline">Спарта</span>
                     </div>
 
-                    <div className="px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-400 to-sparta-gold text-black font-russo text-base font-black shadow-md">
+                    <div className="px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-md sm:rounded-lg bg-gradient-to-r from-amber-400 to-sparta-gold text-black font-russo text-xs sm:text-base font-black shadow-md">
                         {scoreSparta} : {scoreOpponent}
                     </div>
 
-                    <span className="text-xs font-bold text-white/80 uppercase tracking-wider">
+                    <span className="text-[11px] sm:text-xs font-bold text-white/80 uppercase tracking-wider max-w-[70px] sm:max-w-none truncate">
                         {opponentName}
                     </span>
                 </div>

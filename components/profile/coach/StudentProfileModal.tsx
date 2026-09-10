@@ -611,12 +611,12 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                         placeholder="Особенности техники, рекомендации, прогресс или индивидуальные задачи спортсмена..."
                         className="w-full p-3.5 bg-black/50 border border-white/10 focus:border-sparta-gold rounded-2xl text-xs text-white placeholder-white/30 outline-none resize-none"
                     />
-                    <div className="flex justify-end">
+                    <div className="flex justify-stretch sm:justify-end">
                         <button
                             type="button"
                             onClick={handleSaveCoachNotes}
                             disabled={isSavingNotes}
-                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            className="w-full sm:w-auto px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95"
                         >
                             {isSavingNotes ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                             <span>{isSavingNotes ? 'Сохранение...' : 'Сохранить заметку'}</span>

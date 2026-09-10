@@ -212,20 +212,20 @@ export const ApplicantEnrollmentModal: React.FC<ApplicantEnrollmentModalProps> =
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md pt-safe pb-safe">
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="relative w-full max-w-lg bg-[#141417] border border-white/10 rounded-[2.5rem] p-6 sm:p-7 shadow-2xl text-left space-y-5 overflow-hidden"
+                className="relative w-full max-w-lg bg-[#141417] border border-white/10 rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-7 shadow-2xl text-left space-y-4 sm:space-y-5 max-h-[calc(100dvh-2rem)] overflow-y-auto custom-scrollbar flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3 shrink-0">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
                             <span className="text-xl">🏆</span>
-                            <h3 className="text-xl font-black font-russo uppercase text-white tracking-wide">
+                            <h3 className="text-lg sm:text-xl font-black font-russo uppercase text-white tracking-wide">
                                 {isColleagueGroup ? 'Перевод новичка коллеге' : 'Зачисление в группу'}
                             </h3>
                         </div>
@@ -237,25 +237,25 @@ export const ApplicantEnrollmentModal: React.FC<ApplicantEnrollmentModalProps> =
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-2 rounded-2xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                        className="p-2 rounded-2xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer shrink-0"
                     >
                         <X size={18} />
                     </button>
                 </div>
 
                 {/* Applicant Summary Banner */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2 shrink-0">
                     <div className="flex items-center justify-between">
-                        <h4 className="text-base font-bold text-white font-russo uppercase truncate">
+                        <h4 className="text-sm sm:text-base font-bold text-white font-russo uppercase truncate">
                             {childFullName}
                         </h4>
                         {childAge && (
-                            <span className="text-xs font-semibold text-sparta-gold">
+                            <span className="text-xs font-semibold text-sparta-gold shrink-0">
                                 {childAge} лет {birthYear ? `(${birthYear} г.р.)` : ''}
                             </span>
                         )}
                     </div>
-                    <div className="flex items-center justify-between text-xs text-white/60">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-white/60 gap-1">
                         <span>Родитель: {parentFullName || '—'}</span>
                         {rawPhone && <span>{rawPhone}</span>}
                     </div>
@@ -321,12 +321,12 @@ export const ApplicantEnrollmentModal: React.FC<ApplicantEnrollmentModalProps> =
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-2 shrink-0">
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={isSubmitting}
-                        className="px-5 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold uppercase tracking-wider transition-all"
+                        className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold uppercase tracking-wider transition-all text-center cursor-pointer"
                     >
                         Отмена
                     </button>
@@ -336,7 +336,7 @@ export const ApplicantEnrollmentModal: React.FC<ApplicantEnrollmentModalProps> =
                             type="button"
                             onClick={handleSubmit}
                             disabled={isSubmitting || !effectiveGroupId}
-                            className="flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-white font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all shadow-xl shadow-teal-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                            className="w-full sm:flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-white font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all shadow-xl shadow-teal-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
                         >
                             {isSubmitting ? (
                                 <Loader2 size={16} className="animate-spin" />
@@ -350,7 +350,7 @@ export const ApplicantEnrollmentModal: React.FC<ApplicantEnrollmentModalProps> =
                             type="button"
                             onClick={handleSubmit}
                             disabled={isSubmitting || !effectiveGroupId}
-                            className="flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:from-yellow-400 hover:to-amber-500 text-black font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all shadow-xl shadow-sparta-gold/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                            className="w-full sm:flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:from-yellow-400 hover:to-amber-500 text-black font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all shadow-xl shadow-sparta-gold/20 active:scale-95 disabled:opacity-50 cursor-pointer"
                         >
                             {isSubmitting ? (
                                 <Loader2 size={16} className="animate-spin" />

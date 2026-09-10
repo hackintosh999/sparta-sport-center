@@ -241,7 +241,7 @@ const ReviewMediaModal: React.FC<ReviewMediaModalProps> = ({ isOpen, onClose, re
         try {
             let authorName = user.displayName || user.email?.split('@')[0] || 'Пользователь';
             let authorAvatar = user.photoURL || '';
-            let role = userProfile?.role || 'user';
+            const role = userProfile?.role || 'user';
 
             if (userProfile?.firstName && userProfile?.lastName) {
                 authorName = `${userProfile.firstName} ${userProfile.lastName}`;
@@ -453,9 +453,9 @@ const ReviewMediaModal: React.FC<ReviewMediaModalProps> = ({ isOpen, onClose, re
             glowColor="amber"
             zIndex="z-[100]"
         >
-            <div className="relative w-full h-[88vh] bg-[#0a0a0a] rounded-3xl overflow-hidden border border-white/10 flex flex-col md:flex-row shadow-[0_0_100px_rgba(0,0,0,0.8)] font-manrope text-left">
+            <div className="relative w-full h-[calc(100dvh-1.5rem)] md:h-[88vh] bg-[#0a0a0a] rounded-2xl md:rounded-3xl overflow-hidden border border-white/10 flex flex-col md:flex-row shadow-[0_0_100px_rgba(0,0,0,0.8)] font-manrope text-left">
                 {/* Media Section */}
-                <div className="flex-1 bg-black flex items-center justify-center relative group min-h-[320px]">
+                <div className="flex-1 bg-black flex items-center justify-center relative group min-h-[220px] sm:min-h-[280px] md:min-h-[320px]">
                             {currentMedia?.type === 'video' ? (
                                 <div className="w-full h-full p-2 md:p-4 flex items-center justify-center overflow-hidden">
                                     <VideoPlayer
@@ -928,7 +928,7 @@ const ReviewMediaModal: React.FC<ReviewMediaModalProps> = ({ isOpen, onClose, re
                             </div>
 
                             {/* Comment Input Bar */}
-                            <form onSubmit={handleSendComment} className="p-3 border-t border-white/10 bg-[#0d0d0d] flex items-center gap-2">
+                            <form onSubmit={handleSendComment} className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:pb-3 border-t border-white/10 bg-[#0d0d0d] flex items-center gap-2">
                                 <button
                                     type="button"
                                     onClick={isRecordingReplyAudio ? stopReplyAudioRecording : startReplyAudioRecording}

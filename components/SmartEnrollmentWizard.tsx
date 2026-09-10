@@ -395,7 +395,7 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
             glowColor="amber"
             zIndex="z-50"
         >
-            <div className="relative w-full bg-[#121212] overflow-hidden max-h-[88vh] flex flex-col font-manrope text-left rounded-3xl">
+            <div className="relative w-full bg-[#121212] overflow-hidden max-h-[calc(100dvh-1.5rem)] sm:max-h-[88vh] flex flex-col font-manrope text-left rounded-2xl sm:rounded-3xl">
                 {/* Header (Compact) */}
                 <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-white/10 relative z-10 shrink-0 bg-[#121212]/90">
                     <div className="flex items-center gap-2.5">
@@ -862,7 +862,7 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                 </div>
 
                 {/* Bottom Sticky Action Footer (Always Visible & Accessible) */}
-                <div className="p-3 sm:p-4 border-t border-white/10 bg-[#121212]/95 backdrop-blur-md relative z-10 shrink-0 space-y-2">
+                <div className="p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-4 border-t border-white/10 bg-[#121212]/95 backdrop-blur-md relative z-10 shrink-0 space-y-2">
                     {step === 1 && (
                         <button
                             type="submit"

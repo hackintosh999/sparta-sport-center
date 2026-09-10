@@ -240,7 +240,7 @@ const DEFAULT_EXERCISES = [
 interface CoachSectionProps {
     userProfile: any;
     user?: any;
-    initialSubTab?: 'dashboard' | 'groups' | 'messages' | 'stats' | 'calendar' | 'exercises' | 'programs' | 'trials';
+    initialSubTab?: 'dashboard' | 'groups' | 'messages' | 'stats' | 'calendar' | 'exercises' | 'programs' | 'trials' | 'journal' | 'review' | 'materials';
 }
 
 const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab }) => {
@@ -274,6 +274,12 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
     const navigate = useNavigate();
     const [mainTab, setMainTab] = useState<'dashboard' | 'journal' | 'review' | 'trials' | 'materials' | 'groups' | 'messages' | 'stats' | 'calendar' | 'exercises' | 'programs'>((initialSubTab as any) || 'dashboard');
     const [materialsSubTab, setMaterialsSubTab] = useState<'exercises' | 'programs' | 'calendar'>('exercises');
+
+    useEffect(() => {
+        if (initialSubTab && initialSubTab !== mainTab) {
+            setMainTab(initialSubTab as any);
+        }
+    }, [initialSubTab]);
 
     const [myGroups, setMyGroups] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -2503,7 +2509,7 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
             const calculatedXp = Number(assignmentRewardXp) || 50;
 
             // 1. Prepare training data
-            let trainingData: any = {
+            const trainingData: any = {
                 title: finalTitle,
                 description: assignmentDescription || assigningItem?.description || '',
                 coins: calculatedCoins,
@@ -2815,23 +2821,23 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                 </motion.div>
             </div>
 
-            {/* Navigation Command Dock v4.0 (4 Primary Tabs) */}
-            <div className={`sticky top-8 z-[100] flex flex-wrap items-center gap-2 p-2 backdrop-blur-3xl border rounded-[2.5rem] w-fit mx-auto lg:mx-0 shadow-3xl transition-all duration-500 ${theme === 'light'
+            {/* Navigation Command Dock v4.0 (4 Primary Tabs) - Desktop / Tablet */}
+            <div className={`sticky top-3 sm:top-8 z-[100] hidden md:flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 backdrop-blur-3xl border rounded-2xl sm:rounded-[2.5rem] w-full sm:w-fit overflow-x-auto no-scrollbar mx-auto lg:mx-0 shadow-3xl transition-all duration-500 ${theme === 'light'
                     ? 'bg-white/80 border-black/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.05)]'
                     : 'bg-[#111]/80 border-white/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
                 {[
-                    { id: 'dashboard', label: '⚽ Главная / Тренировка', icon: LayoutDashboard },
-                    { id: 'journal', label: '👥 Мои группы и дети', icon: Users },
-                    { id: 'review', label: '📝 Проверка заданий', icon: CheckSquare, badge: pendingSubmissionsCount },
-                    { id: 'trials', label: '📥 Новички и заявки', icon: UserPlus, badge: trialRequests.length },
-                    { id: 'materials', label: '📋 Упражнения и планы', icon: BookOpen }
+                    { id: 'dashboard', label: '⚽ Главная / Тренировка', shortLabel: 'Главная', icon: LayoutDashboard },
+                    { id: 'journal', label: '👥 Мои группы и дети', shortLabel: 'Группы', icon: Users },
+                    { id: 'review', label: '📝 Проверка заданий', shortLabel: 'Проверка', icon: CheckSquare, badge: pendingSubmissionsCount },
+                    { id: 'trials', label: '📥 Новички и заявки', shortLabel: 'Заявки', icon: UserPlus, badge: trialRequests.length },
+                    { id: 'materials', label: '📋 Упражнения и планы', shortLabel: 'Материалы', icon: BookOpen }
                 ].map((tab) => {
                     const isActive = mainTab === tab.id || (tab.id === 'materials' && (mainTab === 'exercises' || mainTab === 'programs' || mainTab === 'calendar'));
                     return (
                         <button
                             key={tab.id}
                             onClick={() => setMainTab(tab.id as any)}
-                            className={`group relative flex items-center gap-3 px-6 py-3.5 rounded-[1.8rem] transition-all duration-500 overflow-hidden cursor-pointer ${
+                            className={`group relative flex items-center gap-2 sm:gap-3 px-3.5 py-2.5 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-[1.8rem] transition-all duration-500 overflow-hidden cursor-pointer shrink-0 ${
                                 isActive
                                     ? theme === 'light' ? 'text-black font-black' : 'text-white font-black'
                                     : 'text-white/40 hover:text-sparta-gold'
@@ -2848,15 +2854,16 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                                         : 'group-hover:scale-110 group-hover:rotate-3'
                                 }`}
                             />
-                            <span className={`relative z-10 text-xs font-russo uppercase tracking-wider hidden sm:block transition-all ${
+                            <span className={`relative z-10 text-[11px] sm:text-xs font-russo uppercase tracking-wider transition-all whitespace-nowrap ${
                                 isActive ? 'opacity-100' : 'opacity-70'
                             }`}>
-                                {tab.label}
+                                <span className="sm:hidden">{tab.shortLabel}</span>
+                                <span className="hidden sm:inline">{tab.label}</span>
                             </span>
 
                             {tab.badge ? (
-                                <div className="absolute top-2 right-2 z-10">
-                                    <span className={`flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[9px] font-black shadow-lg transition-all ${
+                                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-10">
+                                    <span className={`flex items-center justify-center min-w-[18px] sm:min-w-[20px] h-[18px] sm:h-[20px] px-1 sm:px-1.5 rounded-full text-[8px] sm:text-[9px] font-black shadow-lg transition-all ${
                                         isActive
                                             ? 'bg-sparta-gold text-black animate-pulse'
                                             : 'bg-white/10 text-white group-hover:bg-sparta-gold group-hover:text-black hover:scale-110'

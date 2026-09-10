@@ -184,9 +184,9 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
             glowColor="amber"
             zIndex="z-[100]"
         >
-            <div className="bg-[#121212] w-full rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="bg-[#121212] w-full rounded-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[85vh]">
                 {/* Header */}
-                <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5 shrink-0">
+                <div className="p-4 sm:p-6 border-b border-white/5 flex justify-between items-center bg-white/5 shrink-0">
                     <div>
                         <h3 className="text-xl font-bold text-white flex items-center gap-2">
                             <MessageSquare className="text-sparta-gold" size={20} />
@@ -296,7 +296,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
                                     </div>
                                 </>
                             ) : (
-                                <div className="p-6">
+                                <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1">
                                     {success ? (
                                         <div className="py-12 flex flex-col items-center text-center">
                                             <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
@@ -314,7 +314,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
                                                 </div>
                                             )}
 
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                                 <div className="space-y-1">
                                                     <label className="text-xs text-white/50 ml-1">Ваше имя</label>
                                                     <div className="relative">

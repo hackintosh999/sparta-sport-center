@@ -256,9 +256,9 @@ export const SpartaHighlightsModal: React.FC<SpartaHighlightsModalProps> = ({
             glowColor="amber"
             zIndex="z-[10000]"
         >
-            <div className="relative w-full bg-[#121218] rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="relative w-full bg-[#121218] rounded-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[85vh]">
                 {/* Header */}
-                <div className="p-5 border-b border-white/10 flex items-center justify-between">
+                <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2.5">
                         <div className="w-10 h-10 rounded-2xl bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30 flex items-center justify-center shadow-lg shadow-sparta-gold/15">
                             <Star size={20} className="fill-sparta-gold text-sparta-gold" />
@@ -296,7 +296,7 @@ export const SpartaHighlightsModal: React.FC<SpartaHighlightsModalProps> = ({
                 </AnimatePresence>
 
                 {/* Tab Navigation */}
-                <div className="flex p-2 bg-white/5 border-b border-white/5 gap-1.5 overflow-x-auto custom-scrollbar">
+                <div className="flex p-2 bg-white/5 border-b border-white/5 gap-1.5 overflow-x-auto custom-scrollbar shrink-0">
                     {existingAlbums.length > 0 && initialStoryToSave && (
                         <button
                             onClick={() => { setActiveTab('choose'); setSelectedAlbumToManage(null); }}

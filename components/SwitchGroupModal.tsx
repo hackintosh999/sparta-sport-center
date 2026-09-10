@@ -76,18 +76,18 @@ export const SwitchGroupModal: React.FC<SwitchGroupModalProps> = ({
                     </div>
                 )}
 
-                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 w-full">
                     <button
                         onClick={onClose}
                         disabled={loading}
-                        className="w-full py-3.5 rounded-xl font-bold bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10 transition-all text-sm cursor-pointer"
+                        className="w-full py-3 sm:py-3.5 rounded-xl font-bold bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10 transition-all text-xs sm:text-sm cursor-pointer"
                     >
                         Отмена
                     </button>
                     <button
                         onClick={handleConfirmSwitch}
                         disabled={loading}
-                        className="w-full py-3.5 rounded-xl font-bold bg-sparta-gold text-black hover:bg-yellow-500 transition-all text-sm shadow-[0_0_15px_rgba(212,175,55,0.3)] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full py-3 sm:py-3.5 rounded-xl font-bold bg-sparta-gold text-black hover:bg-yellow-500 transition-all text-xs sm:text-sm shadow-[0_0_15px_rgba(212,175,55,0.3)] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
                         {loading ? 'Перевод...' : 'Подтвердить перевод'}
                     </button>

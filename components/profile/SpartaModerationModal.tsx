@@ -139,16 +139,16 @@ export const SpartaModerationModal: React.FC<SpartaModerationModalProps> = ({
             glowColor="red"
             zIndex="z-[10000]"
         >
-            <div className="relative w-full bg-[#121218] rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="relative w-full bg-[#121218] rounded-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[85vh]">
                 {/* Header */}
-                <div className="p-6 pb-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+                <div className="p-4 sm:p-6 pb-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02] shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400">
                             <Shield size={22} />
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-russo text-white uppercase">Модерация и безопасность</h3>
+                                <h3 className="text-base sm:text-lg font-russo text-white uppercase">Модерация и безопасность</h3>
                                 {pendingCount > 0 && (
                                     <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] font-black">
                                         {pendingCount} новых
@@ -171,7 +171,7 @@ export const SpartaModerationModal: React.FC<SpartaModerationModalProps> = ({
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="px-6 py-3 border-b border-white/5 flex items-center justify-between bg-black/20">
+                <div className="px-4 sm:px-6 py-3 border-b border-white/5 flex items-center justify-between bg-black/20 overflow-x-auto custom-scrollbar shrink-0">
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setFilterStatus('pending')}

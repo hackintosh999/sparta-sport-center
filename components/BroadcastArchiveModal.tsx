@@ -23,19 +23,19 @@ const BroadcastArchiveModal: React.FC<BroadcastArchiveModalProps> = ({ isOpen, o
             glowColor="amber"
             zIndex="z-[100]"
         >
-            <div className="relative w-full bg-[#0F0F0F] rounded-3xl overflow-hidden flex flex-col font-manrope max-h-[88vh]">
+            <div className="relative w-full bg-[#0F0F0F] rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col font-manrope max-h-[calc(100dvh-1.5rem)] sm:max-h-[88vh]">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/5 bg-[#141414] shrink-0">
-                    <div className="flex items-center gap-3">
-                        <Clock className="text-sparta-gold" size={24} />
-                        <h2 className="text-xl md:text-2xl font-russo text-white uppercase tracking-wider line-clamp-1">{broadcast.title}</h2>
+                <div className="flex items-center justify-between p-3.5 sm:p-4 md:p-6 border-b border-white/5 bg-[#141414] shrink-0">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <Clock className="text-sparta-gold shrink-0" size={20} />
+                        <h2 className="text-base sm:text-xl md:text-2xl font-russo text-white uppercase tracking-wider truncate">{broadcast.title}</h2>
                     </div>
                     <button
                         onClick={onClose}
                         aria-label="Закрыть"
-                        className="text-white/50 hover:text-white transition-colors p-2 bg-white/5 hover:bg-white/10 rounded-full cursor-pointer"
+                        className="text-white/50 hover:text-white transition-colors p-1.5 sm:p-2 bg-white/5 hover:bg-white/10 rounded-full cursor-pointer shrink-0 ml-2"
                     >
-                        <X size={24} />
+                        <X size={18} className="sm:w-6 sm:h-6" />
                     </button>
                 </div>
 
@@ -69,7 +69,7 @@ const BroadcastArchiveModal: React.FC<BroadcastArchiveModalProps> = ({ isOpen, o
                         </div>
 
                         {/* Comments/Chat Column */}
-                        <div className="lg:col-span-1 h-[450px] lg:h-auto min-h-[450px]">
+                        <div className="lg:col-span-1 h-[320px] sm:h-[450px] lg:h-auto min-h-[320px] sm:min-h-[450px]">
                             <BroadcastChat broadcastId={broadcast.id} isLive={false} />
                         </div>
                     </div>

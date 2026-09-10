@@ -92,16 +92,16 @@ export const RouteModal: React.FC<RouteModalProps> = ({
             glowColor="amber"
             zIndex="z-[110]"
         >
-            <div className="flex flex-col max-h-[85vh]">
+            <div className="flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[85vh]">
                 {/* Header */}
-                <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <div className="p-4 sm:p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
                     <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-sparta-gold/10 border border-sparta-gold/30 flex items-center justify-center text-sparta-gold">
-                            <Compass size={20} />
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-sparta-gold/10 border border-sparta-gold/30 flex items-center justify-center text-sparta-gold">
+                            <Compass size={18} className="sm:w-5 sm:h-5" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-russo text-white">Проложить маршрут</h3>
-                            <p className="text-xs text-white/50">Выберите нужный зал SPARTA</p>
+                            <h3 className="text-base sm:text-lg font-russo text-white">Проложить маршрут</h3>
+                            <p className="text-[11px] sm:text-xs text-white/50">Выберите нужный зал SPARTA</p>
                         </div>
                     </div>
                     <button
@@ -109,12 +109,12 @@ export const RouteModal: React.FC<RouteModalProps> = ({
                         aria-label="Закрыть"
                         className="text-white/50 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5 cursor-pointer"
                     >
-                        <X size={20} />
+                        <X size={18} className="sm:w-5 sm:h-5" />
                     </button>
                 </div>
 
-                        {/* Location Tabs */}
-                        <div className="p-4 bg-black/40 border-b border-white/5 overflow-x-auto scrollbar-none flex gap-2">
+                {/* Location Tabs */}
+                <div className="p-3 sm:p-4 bg-black/40 border-b border-white/5 overflow-x-auto scrollbar-none flex gap-2">
                             {activeLocations.map((loc) => {
                                 const isActive = loc.id === (currentLocation?.id || selectedId);
                                 return (
@@ -159,7 +159,7 @@ export const RouteModal: React.FC<RouteModalProps> = ({
                             const activeItem = allPhotos[photoIdx % allPhotos.length] || allPhotos[0];
 
                             return (
-                                <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar">
+                                <div className="p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-6 space-y-3.5 sm:space-y-5 overflow-y-auto custom-scrollbar">
                                     {/* Optional Real Photo Card */}
                                     {allPhotos.length > 0 && (
                                         <div className="space-y-2">
@@ -229,10 +229,10 @@ export const RouteModal: React.FC<RouteModalProps> = ({
                                 {/* Primary Action Button: Yandex Navigator 1-Click */}
                                 <button
                                     onClick={() => openYandexNavi(currentLocation)}
-                                    className="w-full bg-gold-gradient text-black font-russo tracking-wide py-4 px-6 rounded-2xl hover:brightness-110 transition-all flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(212,175,55,0.3)] active:scale-[0.99]"
+                                    className="w-full bg-gold-gradient text-black font-russo tracking-wide py-3.5 sm:py-4 px-4 sm:px-6 rounded-2xl hover:brightness-110 transition-all flex items-center justify-center gap-2.5 sm:gap-3 shadow-[0_0_25px_rgba(212,175,55,0.3)] active:scale-[0.99]"
                                 >
-                                    <Navigation size={22} className="fill-black" />
-                                    <span className="text-base">Открыть в Яндекс Навигаторе</span>
+                                    <Navigation size={20} className="fill-black sm:w-[22px] sm:h-[22px]" />
+                                    <span className="text-sm sm:text-base">Открыть в Яндекс Навигаторе</span>
                                 </button>
 
                                 {/* Secondary Buttons */}

@@ -143,7 +143,7 @@ const CoachChat: React.FC<CoachChatProps> = ({ user, userProfile, otherUser, isC
         const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
         const lastSeenTime = lastSeenDate.getTime();
 
-        let timeStr = format(lastSeenDate, 'HH:mm', { locale: ru });
+        const timeStr = format(lastSeenDate, 'HH:mm', { locale: ru });
 
         if (lastSeenTime >= startOfToday) {
             return { online: false, text: `был(а) в сети: сегодня в ${timeStr}` };

@@ -390,7 +390,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                 }
             });
 
-            let cleanDigits = phone.replace(/\D/g, '');
+            const cleanDigits = phone.replace(/\D/g, '');
             if (cleanDigits.length >= 10) {
                 phone = `+7 (${cleanDigits.slice(-10, -7)}) ${cleanDigits.slice(-7, -4)}-${cleanDigits.slice(-4, -2)}-${cleanDigits.slice(-2)}`;
             }
@@ -795,7 +795,7 @@ const findParentValue = (row: Record<string, any>) => {
                 className="hidden"
             />
 
-            <div className="bg-[#141414] rounded-2xl w-full p-6 overflow-hidden flex flex-col max-h-[88vh]">
+            <div className="bg-[#141414] rounded-2xl w-full p-4 sm:p-6 overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[88vh]">
 
                 {/* SUCCESS VIEW */}
                 {isImportSuccess ? (
@@ -851,7 +851,7 @@ const findParentValue = (row: Record<string, any>) => {
 
                         {/* Mode Switcher Tabs when no files uploaded yet */}
                         {uploadedFiles.length === 0 && (
-                            <div className="flex gap-2 mb-4 bg-white/5 p-1 rounded-2xl w-fit">
+                            <div className="flex flex-wrap gap-2 mb-4 bg-white/5 p-1 rounded-2xl w-full sm:w-fit">
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab('upload')}
@@ -1449,11 +1449,11 @@ const findParentValue = (row: Record<string, any>) => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
                                     <button
                                         type="button"
                                         onClick={handleCloseModal}
-                                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                        className="w-full sm:w-auto text-center px-4 py-2.5 sm:py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
                                     >
                                         Отмена
                                     </button>
@@ -1462,7 +1462,7 @@ const findParentValue = (row: Record<string, any>) => {
                                         type="button"
                                         onClick={handleConfirmImportAll}
                                         disabled={processing || allSelectedRows.length === 0}
-                                        className="px-5 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-green-600/20 cursor-pointer"
+                                        className="w-full sm:w-auto justify-center px-5 py-2.5 sm:py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-green-600/20 cursor-pointer"
                                     >
                                         {processing ? <RefreshCw className="animate-spin" size={14} /> : <Upload size={14} />}
                                         Импортировать все ({allSelectedRows.length})

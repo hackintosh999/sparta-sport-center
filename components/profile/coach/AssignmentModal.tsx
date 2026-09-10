@@ -596,18 +596,18 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                     </div>
 
                     {/* 4. FOOTER BUTTONS */}
-                    <div className="flex items-center gap-3 pt-4 border-t border-white/10">
+                    <div className="flex flex-col-reverse sm:flex-row items-center gap-2.5 sm:gap-3 pt-4 border-t border-white/10">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-2xl text-xs font-russo uppercase tracking-wider transition-all cursor-pointer"
+                            className="w-full sm:flex-1 py-3 sm:py-3.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-2xl text-xs font-russo uppercase tracking-wider transition-all cursor-pointer text-center"
                         >
                             Отмена
                         </button>
                         <button
                             type="submit"
                             disabled={isSubmitting || !title.trim()}
-                            className="flex-1 py-3.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-black rounded-2xl text-xs font-russo uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-95 font-black"
+                            className="w-full sm:flex-1 py-3 sm:py-3.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-black rounded-2xl text-xs font-russo uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-95 font-black"
                         >
                             {isSubmitting ? (
                                 <>

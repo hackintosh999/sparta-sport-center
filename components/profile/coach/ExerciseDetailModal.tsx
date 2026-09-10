@@ -123,7 +123,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[250] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto custom-scrollbar">
+            <div className="fixed inset-0 z-[250] flex items-center justify-center p-2 sm:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto custom-scrollbar pt-safe pb-safe">
                 {/* Backdrop Click */}
                 <div className="fixed inset-0" onClick={onClose} />
 
@@ -132,37 +132,37 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     transition={{ duration: 0.2 }}
-                    className="relative w-full max-w-4xl bg-[#121214] border border-amber-500/30 rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_30px_rgba(245,158,11,0.1)] overflow-hidden flex flex-col my-auto z-10"
+                    className="relative w-full max-w-4xl bg-[#121214] border border-amber-500/30 rounded-3xl sm:rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_30px_rgba(245,158,11,0.1)] overflow-hidden flex flex-col my-auto z-10 max-h-[calc(100dvh-1.5rem)]"
                 >
                     {/* Header */}
-                    <div className="p-6 sm:p-8 border-b border-white/10 flex items-start justify-between gap-4 bg-gradient-to-b from-white/5 to-transparent">
+                    <div className="p-4 sm:p-6 md:p-8 border-b border-white/10 flex items-start justify-between gap-3 sm:gap-4 bg-gradient-to-b from-white/5 to-transparent shrink-0">
                         <div>
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <span className="px-3 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-xl text-xs font-bold">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
+                                <span className="px-2.5 sm:px-3 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-xl text-[11px] sm:text-xs font-bold">
                                     {exercise.categoryLabel || exercise.category || 'Упражнение'}
                                 </span>
                                 {exercise.ageRange && (
-                                    <span className="px-3 py-1 bg-blue-500/15 border border-blue-500/30 text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1">
+                                    <span className="px-2.5 sm:px-3 py-1 bg-blue-500/15 border border-blue-500/30 text-blue-300 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1">
                                         <Users size={12} /> {exercise.ageRange}
                                     </span>
                                 )}
-                                <span className="px-3 py-1 bg-white/5 border border-white/10 text-zinc-300 rounded-xl text-xs font-bold flex items-center gap-1">
+                                <span className="px-2.5 sm:px-3 py-1 bg-white/5 border border-white/10 text-zinc-300 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1">
                                     <Clock size={12} /> {exercise.durationMinutes || 15} мин
                                 </span>
                             </div>
-                            <h2 className="text-2xl sm:text-3xl font-russo text-white uppercase tracking-tight">
+                            <h2 className="text-xl sm:text-3xl font-russo text-white uppercase tracking-tight">
                                 {exercise.title}
                             </h2>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setShowTimerWidget(true);
                                     setIsTimerRunning(true);
                                 }}
-                                className="px-3.5 py-2 rounded-2xl bg-amber-400/15 border border-amber-400/30 hover:bg-amber-400 text-amber-300 hover:text-black font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                                className="px-3 sm:px-3.5 py-2 rounded-2xl bg-amber-400/15 border border-amber-400/30 hover:bg-amber-400 text-amber-300 hover:text-black font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                                 title="Запустить таймер упражнения"
                             >
                                 <Timer size={16} />
@@ -171,7 +171,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
                             <button
                                 onClick={onClose}
-                                className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all border border-white/10 cursor-pointer"
+                                className="p-2 sm:p-2.5 rounded-2xl bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all border border-white/10 cursor-pointer"
                             >
                                 <X size={20} />
                             </button>
@@ -179,7 +179,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                     </div>
 
                     {/* Body */}
-                    <div className="p-6 sm:p-8 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                    <div className="p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6 overflow-y-auto max-h-[65vh] sm:max-h-[70vh] custom-scrollbar flex-1">
                         {/* Interactive Timer Banner (When triggered) */}
                         {showTimerWidget && (
                             <motion.div
@@ -363,12 +363,12 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="p-6 sm:p-8 border-t border-white/10 flex items-center justify-between gap-4 bg-gradient-to-t from-white/5 to-transparent flex-wrap">
+                    <div className="p-4 sm:p-6 md:p-8 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-gradient-to-t from-white/5 to-transparent shrink-0">
                         <div className="text-xs text-zinc-500 font-medium">
                             Автор: {exercise.coachName || 'Тренерский штаб Спарты'}
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col-reverse sm:flex-row items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
                             {canEdit && onEdit && (
                                 <button
                                     type="button"
@@ -376,7 +376,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                                         onClose();
                                         onEdit(exercise);
                                     }}
-                                    className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+                                    className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer text-center"
                                 >
                                     <Edit2 size={16} /> Редактировать
                                 </button>
@@ -388,7 +388,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                                     onClose();
                                     onAddToPlan(exercise);
                                 }}
-                                className="px-6 py-3 rounded-2xl bg-sparta-gold text-black hover:bg-amber-300 font-russo text-xs uppercase tracking-wider flex items-center gap-2 shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all cursor-pointer active:scale-95"
+                                className="w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-2xl bg-sparta-gold text-black hover:bg-amber-300 font-russo text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all cursor-pointer active:scale-95 text-center"
                             >
                                 <PlusCircle size={18} /> ➕ В план тренировки
                             </button>

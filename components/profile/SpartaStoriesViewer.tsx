@@ -792,7 +792,7 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                     />
 
                     {/* Top Header Layer: Progress Bars & Author Info */}
-                    <div className="relative z-30 p-4 pt-3 pb-0 flex flex-col gap-3">
+                    <div className="relative z-30 p-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-0 flex flex-col gap-3">
                         {/* Segmented Progress Bars */}
                         <div className="flex items-center gap-1.5 w-full">
                             {currentGroup.slides.map((_, idx) => {
@@ -1221,38 +1221,38 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                     </AnimatePresence>
 
                     {/* Bottom Action Footer: Likes, Comments, 3D Reactions & Direct Reply */}
-                    <div className="relative z-30 p-4 pt-2 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col gap-3">
+                    <div className="relative z-30 p-3 sm:p-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] md:pb-4 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col gap-2.5 sm:gap-3">
                         {/* Interactive Bar: 3D Reactions + Like Counter + Comments Button */}
-                        <div className="flex items-center justify-between gap-2 px-1">
+                        <div className="flex items-center justify-between gap-1.5 sm:gap-2 px-0.5 sm:px-1">
                             {/* 3D Quick Reactions */}
-                            <div className="flex items-center gap-1.5 sm:gap-2">
+                            <div className="flex items-center gap-1 sm:gap-1.5">
                                 {['fire', 'soccer', 'trophy', 'love', 'laugh'].map(key => (
                                     <motion.button
                                         key={key}
                                         whileHover={{ scale: 1.25 }}
                                         whileTap={{ scale: 0.9 }}
                                         onClick={() => handleQuickReaction(key)}
-                                        className="p-1.5 sm:p-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 backdrop-blur-md transition-colors shadow-lg"
+                                        className="p-1 sm:p-1.5 rounded-xl sm:rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 backdrop-blur-md transition-colors shadow-lg cursor-pointer"
                                     >
-                                        <Sparta3DReactionIcon emojiKey={key} size={22} />
+                                        <Sparta3DReactionIcon emojiKey={key} size={18} className="sm:w-[22px] sm:h-[22px]" />
                                     </motion.button>
                                 ))}
                             </div>
 
                             {/* Real-Time Likes & Comments Counters */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                 {/* Like Counter Button */}
                                 <motion.button
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
                                     onClick={handleToggleLike}
-                                    className={`px-3 py-1.5 rounded-2xl border flex items-center gap-1.5 text-xs font-black transition-all backdrop-blur-md ${
+                                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl sm:rounded-2xl border flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-black transition-all backdrop-blur-md cursor-pointer ${
                                         hasLiked
                                             ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-md shadow-red-500/20 ring-1 ring-red-500/40'
                                             : 'bg-white/10 hover:bg-white/20 border-white/15 text-white/80'
                                     }`}
                                 >
-                                    <Flame size={15} className={hasLiked ? 'text-orange-400 fill-orange-400 animate-pulse' : 'text-white/60'} />
+                                    <Flame size={14} className={hasLiked ? 'text-orange-400 fill-orange-400 animate-pulse' : 'text-white/60'} />
                                     <span>{likesCount}</span>
                                 </motion.button>
 
@@ -1261,9 +1261,9 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => setIsCommentsOpen(true)}
-                                    className="px-3 py-1.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white/80 flex items-center gap-1.5 text-xs font-black backdrop-blur-md transition-all"
+                                    className="px-2.5 sm:px-3 py-1.5 rounded-xl sm:rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white/80 flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-black backdrop-blur-md transition-all cursor-pointer"
                                 >
-                                    <MessageCircle size={15} className="text-sparta-gold" />
+                                    <MessageCircle size={14} className="text-sparta-gold" />
                                     <span>{liveComments.length}</span>
                                 </motion.button>
                             </div>
@@ -1323,7 +1323,7 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: '100%' }}
                                 transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                                className="absolute inset-x-0 bottom-0 z-50 h-[84%] bg-[#101016]/98 backdrop-blur-3xl border-t border-white/20 rounded-t-[36px] flex flex-col p-5 shadow-2xl"
+                                className="absolute inset-x-0 bottom-0 z-50 h-[84%] bg-[#101016]/98 backdrop-blur-3xl border-t border-white/20 rounded-t-[36px] flex flex-col p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shadow-2xl"
                             >
                                 {/* Sheet Header with Mini Story Preview */}
                                 <div className="flex items-center justify-between pb-3.5 border-b border-white/10">
@@ -1627,7 +1627,7 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: '100%' }}
                                 transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                                className="absolute inset-x-0 bottom-0 z-50 bg-[#121218]/98 backdrop-blur-2xl border-t border-white/20 rounded-t-[36px] flex flex-col p-6 shadow-2xl"
+                                className="absolute inset-x-0 bottom-0 z-50 bg-[#121218]/98 backdrop-blur-2xl border-t border-white/20 rounded-t-[36px] flex flex-col p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] shadow-2xl"
                             >
                                 <div className="flex items-center justify-between pb-4 border-b border-white/10">
                                     <div className="flex items-center gap-2">
@@ -1754,7 +1754,7 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: '100%' }}
                                 transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                                className="absolute inset-x-0 bottom-0 z-50 h-[70%] bg-[#121217]/95 backdrop-blur-2xl border-t border-white/20 rounded-t-[32px] flex flex-col p-5 shadow-2xl"
+                                className="absolute inset-x-0 bottom-0 z-50 h-[70%] bg-[#121217]/95 backdrop-blur-2xl border-t border-white/20 rounded-t-[32px] flex flex-col p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shadow-2xl"
                             >
                                 {/* Sheet Header */}
                                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -1766,7 +1766,8 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                     </div>
                                     <button
                                         onClick={() => setIsCommentsOpen(false)}
-                                        className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all"
+                                        aria-label="Закрыть"
+                                        className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all cursor-pointer"
                                     >
                                         <X size={16} />
                                     </button>
@@ -1780,7 +1781,7 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                             onClick={() => {
                                                 setNewCommentText(sticker);
                                             }}
-                                            className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-bold text-white/80 shrink-0 transition-colors"
+                                            className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-bold text-white/80 shrink-0 transition-colors cursor-pointer"
                                         >
                                             {sticker}
                                         </button>
@@ -1788,15 +1789,11 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                 </div>
 
                                 {/* Real-Time Comments List */}
-                                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1 py-2">
-                                    {liveComments.length === 0 ? (
-                                        <div className="text-center py-8 text-white/30 text-xs">
-                                            Будьте первым, кто оставит теплые слова поддержки!
-                                        </div>
-                                    ) : (
+                                <div className="flex-1 overflow-y-auto py-2 space-y-3 custom-scrollbar">
+                                    {liveComments.length > 0 ? (
                                         liveComments.map(c => (
-                                            <div key={c.id} className="flex gap-2.5 items-start bg-white/5 p-3 rounded-2xl border border-white/5">
-                                                <div className="w-8 h-8 rounded-xl bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30 flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
+                                            <div key={c.id} className="flex items-start gap-2.5 bg-white/5 p-3 rounded-2xl border border-white/5">
+                                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-xs text-white shrink-0 overflow-hidden">
                                                     {c.authorAvatar ? (
                                                         <img src={c.authorAvatar} alt={c.authorName} className="w-full h-full object-cover" />
                                                     ) : (
@@ -1808,12 +1805,16 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                                         <span className="text-xs font-bold text-white">{c.authorName}</span>
                                                         <span className="text-[9px] text-white/40">{c.createdAt}</span>
                                                     </div>
-                                                    <p className="text-xs text-white/80 mt-0.5 font-medium leading-snug">
+                                                    <p className="text-xs text-white/80 mt-0.5 font-medium leading-snug break-words">
                                                         {c.text}
                                                     </p>
                                                 </div>
                                             </div>
                                         ))
+                                    ) : (
+                                        <div className="text-center py-8 text-white/40 text-xs">
+                                            Пока нет комментариев. Будьте первым!
+                                        </div>
                                     )}
                                 </div>
 
@@ -1824,12 +1825,12 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                         value={newCommentText}
                                         onChange={(e) => setNewCommentText(e.target.value)}
                                         placeholder="Написать комментарий..."
-                                        className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-sparta-gold"
+                                        className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-sparta-gold transition-colors"
                                     />
                                     <button
                                         type="submit"
                                         disabled={!newCommentText.trim()}
-                                        className="px-4 py-2.5 rounded-2xl bg-sparta-gold text-black font-russo uppercase text-xs disabled:opacity-30 transition-all shadow-md"
+                                        className="px-4 py-2.5 rounded-2xl bg-sparta-gold text-black font-russo uppercase text-xs disabled:opacity-30 transition-all shadow-md cursor-pointer"
                                     >
                                         <Send size={14} />
                                     </button>
@@ -1848,7 +1849,7 @@ export const SpartaStoriesViewer: React.FC<SpartaStoriesViewerProps> = ({
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: '100%' }}
                                 transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                                className="absolute inset-x-0 bottom-0 z-50 bg-[#121217]/95 backdrop-blur-2xl border-t border-white/20 rounded-t-[32px] flex flex-col p-5 shadow-2xl"
+                                className="absolute inset-x-0 bottom-0 z-50 bg-[#121217]/95 backdrop-blur-2xl border-t border-white/20 rounded-t-[32px] flex flex-col p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shadow-2xl"
                             >
                                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
                                     <div className="flex items-center gap-2">

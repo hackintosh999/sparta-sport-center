@@ -456,6 +456,94 @@ app.post('/api/upload-media', upload.single('file'), async (req, res) => {
     }
 });
 
+// Speech-to-text Audio Transcription Endpoint
+app.post('/api/transcribe', upload.single('file'), async (req, res) => {
+    try {
+        let audioBuffer = null;
+        let mimeType = 'audio/webm';
+
+        if (req.file) {
+            audioBuffer = req.file.buffer;
+            mimeType = req.file.mimetype || 'audio/webm';
+        } else if (req.body?.audioUrl) {
+            const fetchRes = await fetch(req.body.audioUrl);
+            if (!fetchRes.ok) {
+                return res.status(400).json({ error: 'Failed to fetch audio from URL' });
+            }
+            const arrayBuf = await fetchRes.arrayBuffer();
+            audioBuffer = Buffer.from(arrayBuf);
+            mimeType = fetchRes.headers.get('content-type') || 'audio/webm';
+        }
+
+        if (!audioBuffer || audioBuffer.length === 0) {
+            return res.status(400).json({ error: 'No audio data provided' });
+        }
+
+        const cleanMime = mimeType.split(';')[0].trim();
+
+        // 1. Google Gemini (if GEMINI_API_KEY is configured)
+        const geminiKey = process.env.GEMINI_API_KEY;
+        if (geminiKey) {
+            try {
+                const genAI = new GoogleGenerativeAI(geminiKey);
+                const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+                const base64Audio = audioBuffer.toString('base64');
+
+                const prompt = 'Расшифруй это аудиосообщение на русском языке дословно. Верни только текст расшифровки, без лишних слов, без кавычек и без вводных фраз. Если звучит только музыка или тишина, верни [Без слов].';
+                const result = await model.generateContent([
+                    prompt,
+                    {
+                        inlineData: {
+                            mimeType: cleanMime,
+                            data: base64Audio
+                        }
+                    }
+                ]);
+
+                const text = result?.response?.text()?.trim();
+                if (text) {
+                    return res.json({ text });
+                }
+            } catch (geminiErr) {
+                console.warn('Gemini transcription attempt failed:', geminiErr.message);
+            }
+        }
+
+        // 2. OpenAI / Whisper API (if OPENAI_API_KEY is configured)
+        const openaiKey = process.env.OPENAI_API_KEY;
+        if (openaiKey) {
+            try {
+                const form = new FormData();
+                const blob = new Blob([audioBuffer], { type: cleanMime });
+                form.append('file', blob, 'audio.webm');
+                form.append('model', 'whisper-1');
+                form.append('language', 'ru');
+
+                const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${openaiKey}` },
+                    body: form
+                });
+                if (whisperRes.ok) {
+                    const whisperData = await whisperRes.json();
+                    if (whisperData?.text) {
+                        return res.json({ text: whisperData.text.trim() });
+                    }
+                }
+            } catch (whisperErr) {
+                console.warn('Whisper transcription failed:', whisperErr.message);
+            }
+        }
+
+        return res.status(503).json({
+            error: 'AI transcription service unavailable. Please configure GEMINI_API_KEY or OPENAI_API_KEY in .env.'
+        });
+    } catch (error) {
+        console.error('Transcription endpoint error:', error);
+        return res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+});
+
 
 // Endpoints for VK News management
 app.post('/api/vk-edit', async (req, res) => {

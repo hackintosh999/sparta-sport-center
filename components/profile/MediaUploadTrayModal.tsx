@@ -137,7 +137,7 @@ export const MediaUploadTrayModal: React.FC<MediaUploadTrayModalProps> = ({
             />
 
             <div
-                className="relative w-full bg-[#0e0e12] rounded-2xl flex flex-col overflow-hidden max-h-[88vh]"
+                className="relative w-full bg-[#0e0e12] rounded-2xl flex flex-col overflow-hidden max-h-[calc(100dvh-1.5rem)] sm:max-h-[88vh]"
                 onClick={() => {
                     setActiveActionMenuIndex(null);
                     setIsCategoryMenuOpen(false);
@@ -413,7 +413,7 @@ export const MediaUploadTrayModal: React.FC<MediaUploadTrayModalProps> = ({
                 </div>
 
                 {/* Minimalist Unified Action Bar */}
-                <div className="p-3 sm:p-4 bg-[#121218] border-t border-white/10 shrink-0">
+                <div className="p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-4 bg-[#121218] border-t border-white/10 shrink-0">
                     {isCategoryMenuOpen && (
                         <div className="mb-2.5 p-2 rounded-2xl bg-[#16161e] border border-sparta-gold/30 shadow-2xl flex flex-wrap gap-1.5 animate-in fade-in zoom-in-95 duration-150">
                             {MEDIA_CATEGORIES.map((cat) => {
@@ -440,14 +440,14 @@ export const MediaUploadTrayModal: React.FC<MediaUploadTrayModalProps> = ({
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2 bg-[#08080b] border border-white/15 focus-within:border-sparta-gold/80 rounded-2xl p-1.5 sm:p-2 transition-colors shadow-inner">
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-[#08080b] border border-white/15 focus-within:border-sparta-gold/80 rounded-2xl p-1.5 sm:p-2 transition-colors shadow-inner">
                         <button
                             type="button"
                             onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
-                            className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-sparta-gold border border-white/10 hover:border-sparta-gold/40 text-[11px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0 transition-all active:scale-95 cursor-pointer"
+                            className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-sparta-gold border border-white/10 hover:border-sparta-gold/40 text-[10px] sm:text-[11px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0 transition-all active:scale-95 cursor-pointer"
                             title="Выбрать категорию"
                         >
-                            <span>{currentCategoryObj.label}</span>
+                            <span className="truncate max-w-[80px] sm:max-w-none">{currentCategoryObj.label}</span>
                             <ChevronDown size={12} className={`transition-transform ${isCategoryMenuOpen ? 'rotate-180' : ''}`} />
                         </button>
 
@@ -457,7 +457,7 @@ export const MediaUploadTrayModal: React.FC<MediaUploadTrayModalProps> = ({
                             value={caption}
                             onChange={(e) => setCaption(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="Добавьте подпись к фото..."
+                            placeholder="Подпись..."
                             className="flex-1 bg-transparent px-2 py-1.5 text-xs sm:text-sm text-white placeholder:text-white/30 focus:outline-none min-w-0"
                         />
 
@@ -465,10 +465,10 @@ export const MediaUploadTrayModal: React.FC<MediaUploadTrayModalProps> = ({
                             type="button"
                             disabled={isExceedingLimit}
                             onClick={handleSendClick}
-                            className="px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:from-yellow-400 hover:to-amber-500 text-black font-black uppercase text-xs tracking-wider flex items-center gap-1.5 shadow-lg shadow-sparta-gold/30 hover:scale-102 active:scale-95 transition-all disabled:opacity-40 shrink-0 cursor-pointer"
+                            className="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:from-yellow-400 hover:to-amber-500 text-black font-black uppercase text-xs tracking-wider flex items-center gap-1.5 shadow-lg shadow-sparta-gold/30 hover:scale-102 active:scale-95 transition-all disabled:opacity-40 shrink-0 cursor-pointer"
                             title="Отправить в чат (Enter)"
                         >
-                            <span>Отправить</span>
+                            <span className="hidden sm:inline">Отправить</span>
                             <Send size={14} className="stroke-[2.5]" />
                         </button>
                     </div>

@@ -340,7 +340,7 @@ export const SpartaForwardModal: React.FC<SpartaForwardModalProps> = ({
             glowColor="amber"
             zIndex="z-[400]"
         >
-            <div className="bg-[#111116] rounded-2xl w-full overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="bg-[#111116] rounded-2xl w-full overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[85vh]">
                 {/* Header */}
                 <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
                     <div>
@@ -495,7 +495,7 @@ export const SpartaForwardModal: React.FC<SpartaForwardModalProps> = ({
                 </div>
 
                 {/* Bottom Action Button */}
-                <div className="p-3 sm:p-5 border-t border-white/10 bg-black/40">
+                <div className="p-3 sm:p-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-5 border-t border-white/10 bg-black/40">
                     <button
                         type="button"
                         disabled={selectedTargetIds.length === 0 || isSending}

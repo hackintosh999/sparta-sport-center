@@ -3094,6 +3094,24 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({ user, userProfile, o
                             >
                                 <span>🎴 Моя карточка</span>
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowQrModal(true)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 text-xs font-bold shadow-[0_0_12px_rgba(6,182,212,0.2)] transition-all cursor-pointer active:scale-95"
+                                title="Показать персональный QR-пропуск в зал"
+                            >
+                                <QrCode size={13} className="text-cyan-400" />
+                                <span>QR-Пропуск</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsHistoryModalOpen(true)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 text-xs font-bold shadow-[0_0_12px_rgba(244,63,94,0.2)] transition-all cursor-pointer active:scale-95"
+                                title="Открыть клубную хронику и ленту Спарта Live"
+                            >
+                                <Flame size={13} className="text-rose-400" />
+                                <span>Спарта Live</span>
+                            </button>
                         </div>
                     </div>
 
@@ -3125,6 +3143,70 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({ user, userProfile, o
                 userName={studentName}
                 onOpenShop={() => onTabChange('orders')}
             />
+
+            {/* Quick Interactive Card: Победа дня & Спарта Live */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-sparta-gold/10 via-amber-500/5 to-transparent border border-sparta-gold/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center shrink-0">
+                        {hasRecordedTodayVictory ? <CheckCircle2 size={22} className="text-emerald-400" /> : <Trophy size={22} className="text-sparta-gold" />}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs sm:text-sm font-russo text-white uppercase">
+                                {hasRecordedTodayVictory ? 'Победа дня записана! 🎯' : 'Запиши победу дня!'}
+                            </span>
+                            {!hasRecordedTodayVictory && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                                    +20 🟡 монет
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-[11px] text-white/50">
+                            {hasRecordedTodayVictory
+                                ? 'Отличный результат! Твоя победа видна в ленте команды'
+                                : 'Чему ты сегодня научился? Поделись с тренером и друзьями'}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setIsHistoryModalOpen(true);
+                            if (!hasRecordedTodayVictory) {
+                                setIsAddingVictoryNote(true);
+                            }
+                        }}
+                        className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-russo uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+                            hasRecordedTodayVictory
+                                ? 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
+                                : 'bg-sparta-gold text-black hover:bg-yellow-400 shadow-[0_0_15px_rgba(212,175,55,0.4)]'
+                        }`}
+                    >
+                        {hasRecordedTodayVictory ? (
+                            <>
+                                <History size={14} />
+                                <span>Моя хроника</span>
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles size={14} />
+                                <span>Записать победу</span>
+                            </>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsHistoryModalOpen(true)}
+                        className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-russo uppercase transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        title="Открыть ленту команды «Спарта Live»"
+                    >
+                        <Flame size={14} className="text-rose-400" />
+                        <span className="hidden xs:inline">Лента Live</span>
+                    </button>
+                </div>
+            </div>
 
             {/* 3. MAIN 2-COLUMN ACTION CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">

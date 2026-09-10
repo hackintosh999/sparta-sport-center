@@ -175,18 +175,18 @@ const CreatePollModal: React.FC<CreatePollModalProps> = ({ isOpen, onClose, grou
                         )}
                     </div>
 
-                    <div className="pt-2 flex gap-3">
+                    <div className="pt-2 flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3.5 rounded-2xl bg-white/5 text-white/60 font-bold text-xs uppercase tracking-wider hover:bg-white/10 transition-all cursor-pointer"
+                            className="w-full sm:flex-1 py-3.5 rounded-2xl bg-white/5 text-white/60 font-bold text-xs uppercase tracking-wider hover:bg-white/10 transition-all cursor-pointer text-center"
                         >
                             Отмена
                         </button>
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="flex-[2] py-3.5 rounded-2xl bg-sparta-gold text-black font-black text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-sparta-gold/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                            className="w-full sm:flex-[2] py-3.5 rounded-2xl bg-sparta-gold text-black font-black text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-sparta-gold/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-center"
                         >
                             {isSubmitting ? <RotateCcw size={18} className="animate-spin" /> : <><Send size={16} /> Опубликовать</>}
                         </button>

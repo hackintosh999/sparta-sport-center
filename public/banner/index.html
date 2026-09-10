@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Sparta Sports Center - Banner Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,700;1,800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    .subtitle {
+      color: #8b949e;
+      font-size: 14px;
+      margin-top: -20px;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 40px;
+      justify-content: center;
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #58a6ff;
+    }
+    .banner-frame {
+      width: 512px;
+      height: 1024px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #30363d;
+    }
+    img, svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+    }
+    .btn {
+      background: #238636;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn:hover {
+      background: #2ea043;
+    }
+  </style>
+</head>
+<body>
+  <h1>Спортивный центр "СПАРТА" — Точная типографика мяча и подвала</h1>
+  <p class="subtitle">Мяч и надпись ФУТБОЛ расположены на газоне над подвалом, контакты на полотне выровнены строго по референсу</p>
+  
+  <div class="actions">
+    <a class="btn" href="sparta_banner.svg" download="sparta_banner.svg">Скачать Figma SVG (Вектор)</a>
+    <a class="btn" href="sparta_banner.png" download="sparta_banner.png">Скачать PNG 1x (512x1024)</a>
+    <a class="btn" href="sparta_banner_2x.png" download="sparta_banner_2x.png">Скачать Ultra-HD 2x (1024x2048)</a>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">1. Референс заказчика</div>
+      <div class="banner-frame">
+        <img src="reference.jpg" alt="Reference">
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">2. Итоговый макет (типографика мяча над подвалом)</div>
+      <div class="banner-frame">
+        <img src="sparta_banner.png" alt="Sparta Banner Generated">
+      </div>
+    </div>
+  </div>
+</body>
+</html>

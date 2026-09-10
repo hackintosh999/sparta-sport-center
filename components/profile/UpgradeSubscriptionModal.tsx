@@ -309,11 +309,11 @@ export const UpgradeSubscriptionModal: React.FC<UpgradeSubscriptionModalProps> =
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex gap-2.5">
+                <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-2">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                        className="w-full sm:flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer text-center"
                     >
                         Отмена
                     </button>
@@ -321,7 +321,7 @@ export const UpgradeSubscriptionModal: React.FC<UpgradeSubscriptionModalProps> =
                         type="button"
                         onClick={handleConfirmUpgrade}
                         disabled={isUpgrading || !selectedTargetPlan}
-                        className="flex-[2] py-3.5 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:brightness-110 disabled:opacity-50 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 cursor-pointer"
+                        className="w-full sm:flex-[2] py-3.5 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-500 hover:brightness-110 disabled:opacity-50 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 cursor-pointer text-center"
                     >
                         {isUpgrading ? (
                             <Loader2 size={16} className="animate-spin" />

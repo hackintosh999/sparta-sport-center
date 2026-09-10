@@ -1,0 +1,17 @@
+{
+  "short_name": "SPARTA",
+  "name": "Футбольная школа SPARTA",
+  "description": "Детская футбольная школа SPARTA в Челябинске. Профессиональная подготовка детей.",
+  "icons": [
+    {
+      "src": "/logo-gold.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
+  "display": "standalone",
+  "orientation": "portrait"
+}

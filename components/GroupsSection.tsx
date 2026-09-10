@@ -53,10 +53,13 @@ const GroupsSection = ({ onJoinClick }: { onJoinClick?: (group?: any) => void })
                     <h2 className="text-4xl md:text-5xl font-russo text-white mb-4">
                         Наши <span className="text-transparent bg-clip-text bg-gradient-to-r from-sparta-gold to-yellow-600">Группы и Расписание</span>
                     </h2>
-                    <p className="text-white/60 text-base max-w-2xl mx-auto">
+                    <p className="text-white/60 text-base max-w-2xl mx-auto mb-3">
                         Официальная сетка тренировок с личной закрепленностью мест за детьми. 
                         Синхронизируется в реальном времени с тренерским штабом Sparta.
                     </p>
+                    <div className="inline-flex items-center gap-2 text-xs text-amber-300/90 bg-amber-400/10 border border-amber-400/20 px-4 py-2 rounded-xl max-w-xl mx-auto">
+                        <span>💡 Распределение в группу происходит после согласования с администратором и тренером с учетом возраста и спортивного опыта ребенка.</span>
+                    </div>
                 </div>
 
                 {/* Filter Tabs */}
@@ -222,7 +225,7 @@ const GroupsSection = ({ onJoinClick }: { onJoinClick?: (group?: any) => void })
                                             : 'bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black hover:brightness-110 shadow-[0_0_20px_rgba(212,175,55,0.25)] cursor-pointer'
                                     }`}
                                 >
-                                    <span>{isFull ? 'В лист ожидания' : 'Выбрать эту группу и записаться'}</span>
+                                    <span>{isFull ? 'Группа заполнена • Узнать о наборе' : 'Записаться на пробное в эту группу'}</span>
                                     <ChevronRight size={16} />
                                 </button>
                             </motion.div>

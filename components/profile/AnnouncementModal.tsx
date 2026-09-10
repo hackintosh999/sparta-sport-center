@@ -83,7 +83,7 @@ export const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                     <label className="text-[10px] font-black uppercase tracking-widest text-white/50 block mb-2">
                         Быстрые шаблоны:
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
                         {PRESETS.map((p, idx) => {
                             const IconComp = p.icon;
                             return (
@@ -91,7 +91,7 @@ export const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                                     key={idx}
                                     type="button"
                                     onClick={() => handleApplyPreset(p)}
-                                    className="flex items-center gap-2 p-2.5 bg-white/5 hover:bg-sparta-gold/15 border border-white/10 hover:border-sparta-gold/40 rounded-xl text-left transition-all group cursor-pointer"
+                                    className="flex items-center gap-2 p-2 sm:p-2.5 bg-white/5 hover:bg-sparta-gold/15 border border-white/10 hover:border-sparta-gold/40 rounded-xl text-left transition-all group cursor-pointer"
                                 >
                                     <IconComp size={15} className="text-sparta-gold shrink-0 group-hover:scale-110 transition-transform" />
                                     <span className="text-[11px] font-bold text-white/80 group-hover:text-white truncate">
@@ -104,7 +104,7 @@ export const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
                     {/* Title Input */}
                     <div>
                         <label className="text-[10px] font-black uppercase tracking-widest text-white/60 block mb-1.5">
@@ -115,7 +115,7 @@ export const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="Например: 📢 Перенос занятия..."
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sparta-gold transition-colors"
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-sparta-gold transition-colors"
                         />
                     </div>
 
@@ -127,37 +127,37 @@ export const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                         <textarea
                             value={text}
                             onChange={(e) => setText(e.target.value)}
-                            rows={4}
+                            rows={3}
                             required
                             placeholder="Введите подробности для спортсменов и родителей..."
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-sparta-gold resize-none transition-colors"
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-4 text-xs sm:text-sm text-white focus:outline-none focus:border-sparta-gold resize-none transition-colors"
                         />
                     </div>
 
                     {/* Priority Selector & Pin Checkbox */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 pt-1 sm:pt-2">
                         {/* Priority Toggle */}
-                        <div className="flex items-center gap-2">
+                        <div className="grid grid-cols-2 sm:flex items-center gap-1.5 sm:gap-2">
                             <button
                                 type="button"
                                 onClick={() => setPriority('normal')}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${priority === 'normal' ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'}`}
+                                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${priority === 'normal' ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'}`}
                             >
                                 <Sparkles size={13} />
-                                <span>Важно (Золото)</span>
+                                <span>Важно</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setPriority('urgent')}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${priority === 'urgent' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'}`}
+                                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${priority === 'urgent' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'}`}
                             >
                                 <Flame size={13} />
-                                <span>Срочно (Красный)</span>
+                                <span>Срочно</span>
                             </button>
                         </div>
 
                         {/* Pin Checkbox */}
-                        <label className="flex items-center gap-2 text-xs text-white/80 cursor-pointer select-none">
+                        <label className="flex items-center justify-end sm:justify-start gap-2 text-xs text-white/80 cursor-pointer select-none">
                             <input
                                 type="checkbox"
                                 checked={pin}

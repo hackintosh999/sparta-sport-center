@@ -2571,7 +2571,10 @@ const AdminUsers = () => {
 
             {/* Mass Group Assignment Modal */}
             {isBulkGroupModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) setIsBulkGroupModalOpen(false); }}
+                >
                     <div className="bg-[#1a1a1a] rounded-2xl w-full max-w-md border border-white/10 p-6 flex flex-col gap-5">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -2630,7 +2633,10 @@ const AdminUsers = () => {
 
             {/* Achievement Managment Modal */}
             {isAchievementsModalOpen && selectedUserForAchievements && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) setIsAchievementsModalOpen(false); }}
+                >
                     <div className="bg-[#1a1a1a] rounded-2xl w-full max-w-lg border border-white/10 p-6 max-h-[80vh] flex flex-col">
                         <div className="flex justify-between items-start mb-4">
                             <div>
@@ -2698,7 +2704,10 @@ const AdminUsers = () => {
 
             {/* Ban Modal */}
             {isBanModalOpen && selectedUserForBan && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) setIsBanModalOpen(false); }}
+                >
                     <div className="bg-[#1a1a1a] rounded-2xl w-full max-w-lg border border-white/10 p-6">
                         <h3 className="text-xl font-bold text-red-500 font-russo mb-2">Блокировка доступа</h3>
                         <p className="text-white/60 mb-6 text-sm">
@@ -2798,7 +2807,10 @@ const AdminUsers = () => {
 
             {/* Group Assignment Modal (Existing) */}
             {isGroupModalOpen && selectedUserForGroup && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) setIsGroupModalOpen(false); }}
+                >
                     <div className="bg-[#1a1a1a] rounded-2xl w-full max-w-md border border-white/10 p-6">
                         <h3 className="text-xl font-bold text-white font-russo mb-4">Назначение группы</h3>
                         <p className="text-white/60 mb-6 text-sm">
@@ -2844,7 +2856,10 @@ const AdminUsers = () => {
 
             {/* Subscription Management Modal */}
             {isSubModalOpen && selectedUserForSub && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) setIsSubModalOpen(false); }}
+                >
                     <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-4xl border border-white/10 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                         {/* Header */}
                         <div className="px-8 py-6 bg-gradient-to-r from-sparta-gold/20 to-transparent border-b border-white/5 flex justify-between items-center">
@@ -3433,7 +3448,10 @@ const AdminUsers = () => {
             {/* Order History Modal */}
             {
                 isHistoryModalOpen && selectedUserForSub && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div
+                        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                        onClick={(e) => { if (e.target === e.currentTarget) setIsHistoryModalOpen(false); }}
+                    >
                         <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh]">
                             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
                                 <div>
@@ -3490,7 +3508,10 @@ const AdminUsers = () => {
             {/* View Shop Orders Modal */}
             {
                 isShopOrdersModalOpen && selectedUserForShopOrders && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div
+                        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                        onClick={(e) => { if (e.target === e.currentTarget) setIsShopOrdersModalOpen(false); }}
+                    >
                         <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh]">
                             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
                                 <div>
@@ -3573,7 +3594,10 @@ const AdminUsers = () => {
             {/* Verification & Role Settings Modal */}
             {
                 isVerifyModalOpen && selectedUserForVerify && (
-                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+                    <div
+                        className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                        onClick={(e) => { if (e.target === e.currentTarget) setIsVerifyModalOpen(false); }}
+                    >
                         <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-lg border border-white/10 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                             <div className="px-8 py-6 bg-gradient-to-r from-blue-500/20 to-transparent border-b border-white/5 flex justify-between items-center">
                                 <div>
@@ -3734,7 +3758,10 @@ const AdminUsers = () => {
             {/* Mass Mail Modal */}
             {
                 isMassMailModalOpen && (
-                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+                    <div
+                        className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                        onClick={(e) => { if (e.target === e.currentTarget) setIsMassMailModalOpen(false); }}
+                    >
                         <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-xl border border-white/10 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                             <div className="px-8 py-6 bg-gradient-to-r from-blue-600/20 to-transparent border-b border-white/5 flex justify-between items-center">
                                 <div>
@@ -3853,7 +3880,10 @@ const AdminUsers = () => {
 
             {/* Create Staff Modal */}
             {isCreateStaffModalOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) setIsCreateStaffModalOpen(false); }}
+                >
                     <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-md border border-white/10 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center mb-6">
                             <div>
@@ -3967,7 +3997,10 @@ const AdminUsers = () => {
 
             {/* Staff Success Credentials Card Modal */}
             {staffSuccessData && (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                <div
+                    className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) setStaffSuccessData(null); }}
+                >
                     <div className="bg-[#1a1a1a] rounded-3xl w-full max-w-md border border-sparta-gold/30 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-bold text-white font-russo flex items-center gap-2">
@@ -4028,7 +4061,10 @@ const AdminUsers = () => {
             )}
             {/* Account Recovery / Reset Credentials Modal */}
             {isResetCredentialsModalOpen && selectedUserForReset && (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                <div
+                    className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) setIsResetCredentialsModalOpen(false); }}
+                >
                     <div className="bg-[#18181b] rounded-3xl w-full max-w-lg border border-sparta-gold/30 p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 space-y-6 text-left max-h-[90vh] overflow-y-auto font-manrope">
                         <div className="flex justify-between items-start border-b border-white/10 pb-4">
                             <div>

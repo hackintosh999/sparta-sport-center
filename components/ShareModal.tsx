@@ -129,19 +129,19 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url, title }) 
             </div>
 
             {/* Socials Grid */}
-            <div className="grid grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
                 {shareLinks.map(social => (
                     <a
                         key={social.id}
                         href={social.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex flex-col items-center gap-2 group cursor-pointer"
+                        className="flex flex-col items-center gap-1.5 sm:gap-2 group cursor-pointer"
                     >
-                        <div className={`w-14 h-14 ${social.color} rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 group-hover:shadow-xl`}>
+                        <div className={`w-11 h-11 sm:w-14 sm:h-14 ${social.color} rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 group-hover:shadow-xl`}>
                             {social.icon}
                         </div>
-                        <span className="text-xs text-white/50 group-hover:text-white transition-colors font-medium">
+                        <span className="text-[11px] sm:text-xs text-white/50 group-hover:text-white transition-colors font-medium">
                             {social.name}
                         </span>
                     </a>
@@ -150,20 +150,20 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url, title }) 
 
             {/* Email Section */}
             <div>
-                <p className="text-xs text-white/40 mb-3 font-bold uppercase tracking-wider flex items-center gap-2">
+                <p className="text-[11px] sm:text-xs text-white/40 mb-2.5 sm:mb-3 font-bold uppercase tracking-wider flex items-center gap-2">
                     <Mail size={12} />
                     Отправить на почту
                 </p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     {emailProviders.map(provider => (
                         <a
                             key={provider.id}
                             href={provider.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 transition-all cursor-pointer"
+                            className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 transition-all cursor-pointer"
                         >
-                            <span className={`text-sm font-bold ${provider.color}`}>{provider.name}</span>
+                            <span className={`text-xs sm:text-sm font-bold ${provider.color}`}>{provider.name}</span>
                         </a>
                     ))}
                 </div>

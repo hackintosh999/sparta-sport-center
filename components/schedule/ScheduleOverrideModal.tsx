@@ -132,7 +132,7 @@ export const ScheduleOverrideModal: React.FC<ScheduleOverrideModalProps> = ({
             glowColor="amber"
             zIndex="z-[160]"
         >
-            <div className="relative overflow-hidden flex flex-col text-left">
+            <div className="relative overflow-hidden flex flex-col text-left max-h-[calc(100dvh-2.5rem)] sm:max-h-[85vh]">
                 {/* Header */}
                 <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0 pr-10">
                     <div className="flex items-center gap-3">
@@ -330,7 +330,7 @@ export const ScheduleOverrideModal: React.FC<ScheduleOverrideModalProps> = ({
                         )}
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-3 pt-2">
+                        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 pt-2">
                             <button
                                 type="button"
                                 onClick={onClose}

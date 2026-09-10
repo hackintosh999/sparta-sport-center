@@ -1,89 +1,76 @@
-# 🚀 HANDOFF & SESSION MEMORY SUMMARY (Context Compression)
-
-> **Project:** SPARTA Sports Center Web & CRM Platform  
-> **Date:** September 2, 2026  
-> **Session Status:** COMPLETED & READY FOR NEXT SESSION HANDOFF  
-
----
+﻿# 🏆 СЕССИОННЫЙ ПЕРЕХОД: Нативная мобильная нижняя панель навигации (Mobile Bottom Dock) для всех ролей платформы SPARTA
 
 ## 🎯 1. Цель и фокус сессии
-
-В этой сессии был выполнен комплексный фронт работ по CRM, пользовательским интерфейсам и оптимизации админ-панели:
-1. **Ревизия авторизации и автопривязки тренеров (`/admin/groups`)**:
-   - Внедрение 4-уровневого каскадного поиска наставника группы: `coaches (по ID)` ➔ `users (по ID)` ➔ `coaches (по имени/телефону)` ➔ `users (по имени/телефону)`.
-   - Автоматическое назначение роли `'coach'` и привязка к группам при первой авторизации по номеру телефона (`utils/coachLinking.ts`).
-2. **Мастер преемника и пакетная передача групп**:
-   - Реализован защитный диалог преемника при удалении сотрудника в [`AdminTeam.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminTeam.tsx) (проверка закрепленных групп перед удалением, модалка передачи, атомарный batch, синхронизация групповых чатов и расписания).
-   - Пакетная смена наставника для выбранных чекбоксами групп в [`AdminGroups.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminGroups.tsx).
-   - Нативная смена тренера в 1 клик через интерактивную ячейку в таблице и пункт меню быстрых действий строки `•••`.
-   - Кнопка `[ 🔄 Передать группы ]` в шапке таблицы с экспресс-мастером.
-3. **Глобальный аудит и устранение скрытых на hover элементов**:
-   - Просканирована вся кодовая база (более 20 файлов). Все функциональные кнопки действий, ранее скрывавшиеся через `opacity-0` / `hidden`, переведены на постоянную видимость с мягким фокусом (`opacity-40–75%` в покое ➔ `100%` на hover), обеспечена 100% кликабельность на смартфонах/планшетах.
-4. **Восстановление автоскрытия контролов видеоплееров**:
-   - В [`SpartaVideoPlayer.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/SpartaVideoPlayer.tsx) и [`VideoPlayer.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/VideoPlayer.tsx) контролы скрываются при воспроизведении и видны на паузе.
-   - Восстановлены сброс таймера на 3 сек при движении мыши на ПК и одиночный тап по экрану для показа/скрытия интерфейса на тач-устройствах.
-   - Слайдер громкости свернут по умолчанию и раскрывается только при наведении.
-5. **Аудит и оптимизация QR-сканера (`/admin/scanner`)**:
-   - Проведён аудит логики сканера (`AdminScanner.tsx`), коллекций Firestore (`users`, `attendance`, `guest_passes`) и мест генерации QR-кодов в профилях (`KidDashboard.tsx`, `Dashboard.tsx`).
-   - Выявлен архитектурный диссонанс (сканер назван «сканером тренера», но тренеры работают только в мобильном кабинете `CoachSection.tsx`, где ведут групповой журнал посещаемости).
-   - Пункт «QR-Сканер» скрыт из сайдбара [`AdminLayout.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/admin/AdminLayout.tsx) для разгрузки меню «Управление», при этом маршрут `/admin/scanner` в [`App.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/App.tsx) и компонент сохранены в полной боевой готовности.
+1. **Профессиональная адаптация нижней панели навигации под мобильные устройства (iOS / Android):**
+   - Ликвидация дефицита мобильной навигации в личных кабинетах.
+   - Разработка специализированных 5-кнопочных нижних доков (`glassmorphic dark dock` с `backdrop-blur-2xl bg-[#0c0c10]/95` и `pb-safe`) под каждую роль пользователя с возвышенной центральной кнопкой быстрого действия (Elevated FAB).
+2. **Специализация навигации по ролям:**
+   - **👨‍👩‍👧 Родитель (`parent`):** «Семья» (`family`), «Заявки» (`requests`), центральный золотой FAB **«QR Вход»** (`showQR`), «Абонемент» (`subscriptions`), «Чат» (`messages_unified`).
+   - **⚽ Тренер (`coach`):** «Занятие» (`dashboard`), «Группы» (`journal`), центральный золотой FAB **«Сканер»** (`/admin/scanner`), «Задания» (`review`), «Чат» (`messages_unified`).
+   - **👦 Спортсмен / Ребёнок (`kid` / `user`):** «Дневник» (`requests` / `KidDashboard`), «Награды» (`achievements`), центральный золотой FAB **«QR Вход»** (`showQR`), «Призы» (`shop`), «Чат» (`messages_unified`).
+   - **🛡️ Администратор (`admin`):** «Обзор» (`/admin`), «Заявки» (`/admin/requests` с бейджем ожидания), центральный золотой FAB **«Сканер»** (`/admin/scanner`), «Люди» (`/admin/users`), «Меню» (выезжающий drawer).
+   - **👔 Руководитель / Директор (`director`):** «Сводка» (`profile`), «Анализ» (`analytics`), центральный золотой FAB **«Финансы»** (`/admin/finance`), «Чат» (`messages_unified`), «Админка» (`/admin`).
+   - **💻 Разработчик (`developer` / `super`):** «Сводка» (`profile`), «Пульт» (`analytics` / `DeveloperConsole`), центральный золотой FAB **«Роли»** (открытие шторки быстрой смены ролей), «Чат» (`messages_unified`), «Админка» (`/admin`).
+3. **Устранение наложения интерфейсов:**
+   - Скрытие дублирующегося десктопного Command Dock в `CoachSection.tsx` на смартфонах (`hidden md:flex`) — устранен конфликт двух плавающих доков.
+   - Синхронизация вкладок тренера между внешней мобильной панелью и внутренней логикой `CoachSection`.
+   - Внедрение интерактивной шторки `RoleSwitcherModal` для моментального тестирования любого личного кабинета прямо на смартфоне в 1 клик.
+4. **Контроль и визуальная верификация:**
+   - Playwright скриншоты всех 6 сценариев на iPhone вьюпорте (390x844).
+   - Чистая сборка TypeScript и Vite: `npm run build` — 0 ошибок.
+   - Актуализация графа знаний: `graphify update .`.
 
 ---
 
 ## 📁 2. Внесенные изменения (по файлам)
 
-- 📄 [`components/admin/AdminLayout.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/admin/AdminLayout.tsx) — скрыт пункт «QR-Сканер» из сайдбара навигации (разгружен блок «Управление», маршрут сохранён).
-- 📄 [`pages/admin/AdminGroups.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminGroups.tsx) — 4-уровневый каскад поиска наставника, интерактивная ячейка тренера, пункт в меню строки, постоянная кнопка `[ 🔄 Передать группы ]`, экспресс-мастер передачи, постоянная видимость кнопки `+ Добавить` в календаре.
-- 📄 [`pages/admin/AdminTeam.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminTeam.tsx) — защитный диалог преемника при удалении наставника (`checkAssignedGroups`, атомарная передача, `triggerScheduleSync`), постоянный бейдж редактирования карточки, улучшенная корзина.
-- 📄 [`utils/coachLinking.ts`](file:///c:/Users/User/Downloads/sparta-sports-center/utils/coachLinking.ts) — модуль автопривязки тренера по телефону к роли `'coach'` и группам.
-- 📄 [`pages/admin/AdminUsers.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminUsers.tsx) — постоянная видимость панели быстрых действий с абонементом (`[Напомнить]`, `[+30 дн.]`).
-- 📄 [`pages/admin/AdminShop.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminShop.tsx) — верхняя постоянная панель действий карточки товара (редактирование, клонирование, видимость, удаление), видимость кнопок удаления картинок галереи и таблиц размеров.
-- 📄 [`pages/admin/AdminDirections.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminDirections.tsx) — постоянная видимость кнопки удаления направления и кнопки выбора обложки.
-- 📄 [`pages/admin/AdminFinance.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminFinance.tsx) — постоянная видимость кнопки удаления статьи расхода (`Trash2`).
-- 📄 [`pages/admin/AdminMessages.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminMessages.tsx) — постоянная видимость чекбоксов выбора входящих сообщений (`opacity-40` / `100%`).
-- 📄 [`pages/admin/AdminSettings.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminSettings.tsx) — постоянная видимость крестиков удаления стоп-слов.
-- 📄 [`pages/admin/AdminComments.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminComments.tsx) — постоянная видимость иконки внешней ссылки новости.
-- 📄 [`pages/admin/DirectorDashboard.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/DirectorDashboard.tsx) — постоянная видимость микро-метрик наставника (посещаемость, популярность, удержание).
-- 📄 [`components/profile/CoachCalendar.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/profile/CoachCalendar.tsx) — видимость кнопки добавления тренировки `+` на карточке дня и корзины удаления пресетов.
-- 📄 [`components/profile/CoachSection.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/profile/CoachSection.tsx) — панель действий упражнения сделана видимой на десктопе (`opacity-50 hover:opacity-100`), постоянные стрелки лайтбокса.
-- 📄 [`components/profile/ChatProfileDrawer.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/profile/ChatProfileDrawer.tsx) — видимость корзины тренерской заметки, постоянный бейдж смены аватара чата.
-- 📄 [`components/profile/GroupChat.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/profile/GroupChat.tsx) — видимость кнопки чата с участником, шестеренки сессии и плюсов добавления.
-- 📄 [`components/profile/MessagesSection.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/profile/MessagesSection.tsx) — видимость `Plus` и шеврона карточки.
-- 📄 [`components/Dashboard.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/Dashboard.tsx) — постоянный угловой бейдж `Camera` для смены фото профиля.
-- 📄 [`components/ProfileViewModal.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/ProfileViewModal.tsx) — видимый оверлей смены фото в режиме редактирования.
-- 📄 [`components/NewsModal.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/NewsModal.tsx) & [`ReviewMediaModal.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/ReviewMediaModal.tsx) — постоянная видимость стрелок переключения галереи на тач-устройствах и ПК.
-- 📄 [`components/LeaveReviewModal.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/LeaveReviewModal.tsx) — постоянная угловая кнопка удаления фото отзыва.
-- 📄 [`components/dashboard/KidDashboard.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/dashboard/KidDashboard.tsx) — видимый ползунок скруббера видео и плашка «Открыть».
-- 📄 [`components/admin/SavedListsModal.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/admin/SavedListsModal.tsx) & [`ExcelImportModal.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/admin/ExcelImportModal.tsx) — постоянная видимость корзин строк.
-- 📄 [`components/admin/ReplyTemplatesModal.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/admin/ReplyTemplatesModal.tsx) & [`NotificationsModal.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/NotificationsModal.tsx) — постоянная видимость кнопок управления.
-- 📄 [`components/SpartaVideoPlayer.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/SpartaVideoPlayer.tsx) & [`VideoPlayer.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/components/VideoPlayer.tsx) — автоскрытие при воспроизведении, показ на паузе, одиночный тап для смартфонов, мышь на ПК с 3с таймером, всплывающий слайдер громкости.
-- 📄 [`AGENTS.md`](file:///c:/Users/User/Downloads/sparta-sports-center/AGENTS.md) — регламент Context Economy и протокол бесшовного перехода (`session-handoff`).
+### 1. [components/admin/AdminLayout.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/admin/AdminLayout.tsx)
+- Разработан компонент мобильной нижней панели `AdminMobileBottomNav` (5 кнопок: «Обзор», «Заявки» с динамическим счетчиком необработанных лидов, возвышенная центральная кнопка «Сканер» со световым ореолом, «Люди» и «Меню»).
+- Основному контейнеру административной панели добавлен безопасный отступ снизу `pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]`, исключающий перекрытие аналитики и таблиц навигационным доком.
+
+### 2. [components/profile/CoachSection.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/profile/CoachSection.tsx)
+- Расширен интерфейс `CoachSectionProps` (добавлены типы вкладок `journal`, `review`, `materials`).
+- Добавлен `useEffect` синхронизации входящего пропса `initialSubTab` с внутренним состоянием `mainTab`.
+- Верхний десктопный командный док тренера скрыт на смартфонах (`hidden md:flex`), благодаря чему тренер на телефоне видит один чистый, полнофункциональный нативный док навигации внизу экрана.
+
+### 3. [components/Dashboard.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/Dashboard.tsx)
+- Подключена иконка `CheckSquare` из `lucide-react`.
+- Добавлены состояния `coachSubTab`, `isRoleSwitcherOpen` и поддержка смены ролей на лету.
+- Реализован хук быстрого выбора вкладки при монтировании (без ожидания ответа Firestore: тренеры сразу получают `coaching`, родители — `family`, разработчики — `analytics`).
+- Пропс `initialSubTab={coachSubTab}` передан в `<CoachSection />`.
+- Реализована адаптивная нижняя панель навигации `{!hideMobileNavigation && (...) }` с контекстным рендерингом для всех ролей:
+  - Родитель (Семья / Заявки / QR Вход FAB / Абонемент / Чат).
+  - Тренер (Занятие / Группы / QR Сканер FAB / Задания / Чат).
+  - Спортсмен (Дневник / Награды / QR Вход FAB / Призы / Чат).
+  - Директор (Сводка / Анализ / Финансы FAB / Чат / Админка).
+  - Разработчик (Сводка / Пульт / Роли FAB / Чат / Админка).
+- Реализована выезжающая снизу шторка `RoleSwitcherModal` с плавной анимацией Framer Motion и закрытием по тапу на подложку.
 
 ---
 
-## ✅ 3. Текущее состояние и решенные задачи
-
-- Каскад наставников в `/admin/groups` работает без сбоев: имена тренеров отображаются даже при неполных связках.
-- Смена тренера доступна в 1 клик (из ячейки, из меню строки `•••`, через массовый выбор или экспресс-мастер в шапке).
-- Увольнение тренера защищено диалогом передачи групп.
-- Все скрытые кнопки интерфейса переведены в комфортную мягкую контрастность с ярким акцентом при наведении.
-- Видеоплееры скрывают элементы управления при проигрывании и удобно управляются одиночным тапом на смартфонах.
-- Меню админ-панели разгружено (скрыт лишний пункт «QR-Сканер»), при сохранении всех маршрутов и логики.
-- Граф базы знаний `graphify` полностью актуализирован (`python -m graphify update .`).
-
----
-
-## ⏳ 4. Нерешенные вопросы / Задачи на следующую сессию
-
-- [ ] **Тестирование сквозной передачи групп в продакшн Firestore:** проверка на реальных активных чатах и расписании.
-- [ ] **Ревизия ЛК Родителя и Спортсмена:** контрольная проверка мобильной адаптивности, отступов и плавности анимаций.
-- [ ] **E2E сценарии Playwright:** покрытие ключевых пользовательских и тренерских флоу автотестами.
+## 🛠️ 3. Текущее состояние и проверка качества
+1. **Проверка типов TypeScript и сборка Vite:**
+   - `npm run build` — **успешно собран за 22.98s** (Exit code: 0, 4552 модуля трансформировано, 0 ошибок сборки).
+2. **Граф кодовой базы:**
+   - `graphify update .` — **выполнен успешно** (2290 нод, 3574 связи, 272 сообщества).
+3. **Визуальное тестирование через Playwright (iPhone 14/15 390x844):**
+   - `dev-dashboard-mobile.png` — проверен кабинет разработчика с кнопкой «РОЛИ».
+   - `role-switcher-sheet.png` — проверена выезжающая шторка быстрой смены ролей.
+   - `coach-screen-clean.png` — проверен кабинет тренера с доком («Занятие», «Группы», центральный «Сканер», «Задания», «Чат»).
+   - `coach-groups-mobile.png` — проверено мгновенное переключение вкладок тренера из нижнего дока.
+   - `director-dashboard-mobile.png` — проверен кабинет директора («Сводка», «Анализ», золотой FAB «Финансы», «Чат», «Админка»).
+   - `parent-dashboard-mobile.png` — проверен кабинет родителя («Семья», «Заявки», золотой FAB «QR Вход», «Абонемент», «Чат»).
+   - `kid-dashboard-mobile.png` — проверен кабинет спортсмена («Дневник», «Награды», золотой FAB «QR Вход», «Призы», «Чат»).
+   - `admin-dashboard-mobile-final.png` — проверена мобильная CRM-панель администратора («Обзор», «Заявки», золотой FAB «Сканер», «Люди», «Меню»).
 
 ---
 
-## 🚀 5. Стартовый промпт для нового чата
+## 📋 4. Задачи на следующую сессию
+- [ ] Провести сквозное тестирование оформления заказа в магазине экипировки `Shop.tsx` с мобильного устройства при комбинированной оплате (рубли + монеты SpartaCoin).
+- [ ] Протестировать работу PWA режима (добавление на рабочий экран iOS/Android) и проверить отображение сплэш-скрина и статус-бара.
+- [ ] Протестировать отправку быстрого отчета о тренировке тренером прямо с кромки поля через смартфон.
 
-> Продолжаем работу над проектом Sparta Sports Center. Полный контекст зафиксирован в `docs/session-handoff.md` и `AGENTS.md`.
-> В завершенной сессии реализованы: 4-уровневый каскад тренеров, мастер преемника и передача групп в 1 клик в `/admin/groups`, глобальный аудит и устранение скрытых кнопок hover (20+ файлов), автоскрытие контролов видеоплееров, а также аудит QR-сканера со скрытием пункта из сайдбара админки.
-> База знаний graphify актуализирована. Подтверди готовность и переходи к задачам следующего спринта.
+---
 
+## 💬 5. Готовый стартовый промпт для нового чата
+> Продолжаем развитие SPARTA. Все мобильные личные кабинеты (Родитель, Тренер, Ребёнок, Админ, Директор, Разработчик) полностью адаптированы и оснащены нативными нижними панелями навигации (5 кнопок с возвышенным FAB) и шторкой тестирования ролей. Сборка `npm run build` проверена (0 ошибок), граф знаний `graphify` обновлен. Переходим к первой задаче из чек-листа: сквозное тестирование оформления заказа в магазине экипировки с мобильного устройства при комбинированной оплате.

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, User, Phone, Mail, MessageSquare, Ban, CheckCircle2, Clock, Trash2, Edit2, Save } from 'lucide-react';
+import { Calendar, User, Phone, Mail, MessageSquare, Ban, CheckCircle2, Clock, Trash2, Edit2, Save, MapPin, Sparkles, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -96,9 +96,9 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({ isOpen, onClo
         >
             <div className="text-left font-manrope">
                 {/* Header */}
-                <div className="flex justify-between items-start mb-6 pr-10">
+                <div className="flex justify-between items-start mb-4 sm:mb-6 pr-10">
                     <div>
-                        <h2 className="text-2xl font-bold text-white font-russo mb-1">Детали заявки</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold text-white font-russo mb-1">Детали заявки</h2>
                         <p className="text-white/50 text-xs">ID: {request.id}</p>
                     </div>
                     {canEdit && !isEditing && (
@@ -119,17 +119,17 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({ isOpen, onClo
                 </div>
 
                 {/* Content Grid */}
-                <div className="space-y-5 mb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="space-y-1">
-                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Программа</label>
+                            <label className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Программа</label>
                             <div className="text-white text-sm font-medium flex items-center gap-2">
                                 <Calendar size={15} className="text-sparta-gold" />
                                 {request.programType || 'Пробная тренировка'}
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Дата создания</label>
+                            <label className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Дата создания</label>
                             <div className="text-white text-sm font-medium">
                                 {request.createdAt?.seconds
                                     ? format(new Date(request.createdAt.seconds * 1000), 'd MMMM yyyy HH:mm', { locale: ru })
@@ -138,20 +138,51 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({ isOpen, onClo
                         </div>
                     </div>
 
+                    {/* Group & Schedule Details (if selected) */}
+                    {(request.groupTitle || request.preferredGroupTitle || request.groupSchedule || request.preferredDay || request.preferredLocation) && (
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2 text-xs">
+                            {(request.groupTitle || request.preferredGroupTitle) && (
+                                <div className="flex items-center gap-2 text-white">
+                                    <Sparkles size={14} className="text-sparta-gold shrink-0" />
+                                    <span>Группа: <strong className="text-sparta-gold">{request.groupTitle || request.preferredGroupTitle}</strong></span>
+                                </div>
+                            )}
+                            {(request.groupSchedule || request.preferredDay) && (
+                                <div className="flex items-center gap-2 text-white/70">
+                                    <Clock size={14} className="text-white/40 shrink-0" />
+                                    <span>Желаемый график: <strong className="text-white font-mono">{request.groupSchedule || request.preferredDay}</strong></span>
+                                </div>
+                            )}
+                            {request.preferredLocation && (
+                                <div className="flex items-center gap-2 text-white/70">
+                                    <MapPin size={14} className="text-white/40 shrink-0" />
+                                    <span>Локация: <strong className="text-white">{request.preferredLocation}</strong></span>
+                                </div>
+                            )}
+                            {request.experienceLevelLabel && (
+                                <div className="flex items-center gap-2 text-white/70">
+                                    <Activity size={14} className="text-white/40 shrink-0" />
+                                    <span>Уровень: <strong className="text-white">{request.experienceLevelLabel}</strong></span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="h-px bg-white/5" />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="space-y-1">
-                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Имя спортсмена</label>
+                            <label className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Имя спортсмена</label>
                             <div className="text-white text-sm font-medium flex items-center gap-2">
                                 <User size={15} className="text-white/50" />
-                                {request.childName || 'Не указано'}
+                                {request.childFullName || request.childName || 'Не указано'}
+                                {request.childAge ? <span className="text-white/40 text-xs">({request.childAge} лет)</span> : null}
                             </div>
                         </div>
 
                         {/* Parent Name Field */}
                         <div className="space-y-1">
-                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Имя родителя</label>
+                            <label className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Имя родителя</label>
                             {isEditing ? (
                                 <input
                                     type="text"
@@ -169,7 +200,7 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({ isOpen, onClo
 
                         {/* Phone Field */}
                         <div className="space-y-1">
-                            <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Телефон</label>
+                            <label className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Телефон для связи</label>
                             {isEditing ? (
                                 <input
                                     type="tel"
@@ -187,7 +218,7 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({ isOpen, onClo
 
                         {request.email && (
                             <div className="space-y-1">
-                                <label className="text-xs text-white/30 uppercase font-bold tracking-wider">Email</label>
+                                <label className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Email</label>
                                 <div className="text-white text-sm font-medium flex items-center gap-2">
                                     <Mail size={15} className="text-white/50" />
                                     {request.email}
@@ -195,10 +226,34 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({ isOpen, onClo
                             </div>
                         )}
                     </div>
+
+                    {/* Optional Comment */}
+                    {(request.experienceComment || request.comment) && (
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-xs text-white/70">
+                            <span className="text-[10px] text-white/40 uppercase font-bold block mb-1">Пожелание или комментарий:</span>
+                            <p className="italic">{request.experienceComment || request.comment}</p>
+                        </div>
+                    )}
+
+                    {/* Friendly Guidance Box */}
+                    <div className="p-3 bg-sparta-gold/10 border border-sparta-gold/20 rounded-xl text-xs text-white/70">
+                        {request.status === 'new' && (
+                            <span>Администратор свяжется с вами по указанному телефону в течение 15 минут, чтобы ответить на вопросы и согласовать пробное занятие.</span>
+                        )}
+                        {request.status === 'contacted' && (
+                            <span>Администратор находится в диалоге с вами и подбирает наиболее удобную группу и время.</span>
+                        )}
+                        {request.status === 'completed' && (
+                            <span className="text-green-400">Заявка успешно подтверждена! Ждем юного чемпиона на тренировке в Sparta!</span>
+                        )}
+                        {request.status === 'rejected' && (
+                            <span>Заявка отклонена или отменена. Вы можете подать новую заявку в любое удобное время.</span>
+                        )}
+                    </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
                     {isEditing ? (
                         <>
                             <button

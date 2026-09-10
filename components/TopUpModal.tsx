@@ -71,16 +71,16 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({ isOpen, onClose, user })
             noPadding
             glowColor="amber"
         >
-            <div className="relative w-full bg-[#1a1a1a] rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="relative w-full bg-[#1a1a1a] rounded-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[85vh]">
                 {/* Header */}
-                <div className="relative p-6 border-b border-white/10 shrink-0">
+                <div className="relative p-4 sm:p-6 border-b border-white/10 shrink-0">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-sparta-gold/10 rounded-full blur-3xl pointer-events-none" />
                     <div className="flex items-center justify-between relative z-10">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-sparta-gold/10 flex items-center justify-center border border-sparta-gold/20">
                                 <Wallet className="text-sparta-gold" size={20} />
                             </div>
-                            <h2 className="text-2xl font-russo text-white">Пополнение</h2>
+                            <h2 className="text-xl sm:text-2xl font-russo text-white">Пополнение</h2>
                         </div>
                         <button
                             onClick={onClose}
@@ -94,9 +94,9 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({ isOpen, onClose, user })
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto custom-scrollbar">
-                    <div className="mb-6">
-                        <label className="block text-white/60 text-sm font-bold uppercase tracking-wider mb-2">
+                <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar">
+                    <div className="mb-5 sm:mb-6">
+                        <label className="block text-white/60 text-xs sm:text-sm font-bold uppercase tracking-wider mb-2">
                             Сумма пополнения (₽)
                         </label>
                         <div className="relative">
@@ -109,7 +109,7 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({ isOpen, onClose, user })
                                 }}
                                 placeholder="0"
                                 min={minAmount}
-                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-4 text-2xl text-white font-bold placeholder:text-white/20 focus:outline-none focus:border-sparta-gold/50 transition-colors"
+                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3.5 sm:py-4 text-xl sm:text-2xl text-white font-bold placeholder:text-white/20 focus:outline-none focus:border-sparta-gold/50 transition-colors"
                             />
                         </div>
                         {error && (
@@ -118,12 +118,12 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({ isOpen, onClose, user })
                     </div>
 
                     {/* Presets */}
-                    <div className="grid grid-cols-4 gap-2 mb-8">
+                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-6 sm:mb-8">
                         {presetAmounts.map((preset) => (
                             <button
                                 key={preset}
                                 onClick={() => setAmount(preset.toString())}
-                                className={`py-2 rounded-xl text-sm font-bold transition-all border cursor-pointer ${
+                                className={`py-2 rounded-xl text-xs sm:text-sm font-bold transition-all border cursor-pointer ${
                                     amount === preset.toString()
                                         ? 'bg-sparta-gold text-black border-sparta-gold'
                                         : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:border-white/30'
@@ -135,13 +135,13 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({ isOpen, onClose, user })
                     </div>
 
                     {/* Payment Notice */}
-                    <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-sm text-white/60">
+                    <div className="p-3.5 sm:p-4 bg-white/5 rounded-xl border border-white/10 text-xs sm:text-sm text-white/60">
                         <p>Средства будут зачислены на ваш внутренний баланс. Вы сможете использовать их для покупки абонементов и дополнительных услуг.</p>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-white/10 shrink-0 bg-[#1a1a1a]">
+                <div className="p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-white/10 shrink-0 bg-[#1a1a1a]">
                     <button
                         onClick={handleTopUp}
                         disabled={isProcessing || !amount || Number(amount) < minAmount}

@@ -739,7 +739,7 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                 className="relative w-full max-w-[400px] bg-[#111114] border-l border-white/10 h-full overflow-hidden shadow-2xl flex flex-col pointer-events-auto z-20"
             >
                 {/* 🌟 1. Top Glass Header */}
-                <div className="shrink-0 h-16 bg-[#141418]/90 backdrop-blur-xl border-b border-white/10 px-5 flex items-center justify-between">
+                <div className="shrink-0 min-h-[4rem] h-[calc(4rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] bg-[#141418]/90 backdrop-blur-xl border-b border-white/10 px-4 sm:px-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         {selectedUserProfile && !isPrivate && !isSavedChat ? (
                             <button
@@ -2237,11 +2237,11 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
 
                 {/* 🌟 3. Sticky Bottom Action Bar (Fixed Call Button) */}
                 {effectiveUserProfile && effectiveUserProfile.id !== currentUser?.uid && (
-                    <div className="shrink-0 p-4 bg-[#141418]/95 backdrop-blur-xl border-t border-white/10 z-20">
+                    <div className="shrink-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-[#141418]/95 backdrop-blur-xl border-t border-white/10 z-20">
                         {effectiveUserProfile.phone ? (
                             <a
                                 href={`tel:${effectiveUserProfile.phone}`}
-                                className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black uppercase tracking-wider text-xs rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2.5 active:scale-[0.98] group"
+                                className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black uppercase tracking-wider text-xs rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2.5 active:scale-[0.98] group cursor-pointer"
                             >
                                 <Phone size={16} className="fill-white group-hover:scale-110 transition-transform" />
                                 <span>Позвонить {effectiveUserProfile.phone}</span>
@@ -2265,10 +2265,10 @@ export const ChatProfileDrawer: React.FC<ChatProfileDrawerProps> = ({
                     onClick={() => setMedicalPhotoPreviewModal(null)}
                     className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto"
                 >
-                    <div className="relative max-w-2xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="relative max-w-2xl max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
                         <button
                             onClick={() => setMedicalPhotoPreviewModal(null)}
-                            className="absolute -top-10 right-0 text-white/80 hover:text-white p-2"
+                            className="absolute -top-10 right-0 text-white/80 hover:text-white p-2 cursor-pointer"
                         >
                             <X size={24} />
                         </button>

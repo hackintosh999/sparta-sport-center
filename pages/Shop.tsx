@@ -184,7 +184,7 @@ const Shop = () => {
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.92 }}
                 onClick={() => setIsCartOpen(true)}
-                className="fixed bottom-5 right-5 sm:bottom-7 sm:right-7 z-40 bg-gradient-to-r from-yellow-500 to-amber-400 text-black p-3.5 sm:p-4 rounded-2xl shadow-[0_0_35px_rgba(234,179,8,0.35)] flex items-center justify-center cursor-pointer border border-yellow-300/40 backdrop-blur-md"
+                className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] right-5 sm:bottom-7 sm:right-7 z-40 bg-gradient-to-r from-yellow-500 to-amber-400 text-black p-3.5 sm:p-4 rounded-2xl shadow-[0_0_35px_rgba(234,179,8,0.35)] flex items-center justify-center cursor-pointer border border-yellow-300/40 backdrop-blur-md"
                 aria-label="Открыть корзину"
             >
                 <ShoppingCart size={22} className="sm:w-6 sm:h-6" />
@@ -939,7 +939,7 @@ const Shop = () => {
                             </div>
 
                             {/* Sticky Bottom Actions */}
-                            <div className="p-4 border-t border-white/10 bg-[#141414] flex gap-2.5">
+                            <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-4 border-t border-white/10 bg-[#141414] flex gap-2.5">
                                 <button
                                     type="button"
                                     onClick={resetFilters}

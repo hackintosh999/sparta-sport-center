@@ -467,7 +467,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         if (!banDetails?.isBanned) return;
 
-        let interval = setInterval(async () => {
+        const interval = setInterval(async () => {
             try {
                 const ipRes = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: 'unknown' }) }));
                 const { ip: currentIp } = await ipRes.json();

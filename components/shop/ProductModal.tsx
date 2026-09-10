@@ -498,7 +498,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     </AnimatePresence>
 
                     {/* Final Payment Summary Bar */}
-                    <div className="p-3.5 rounded-xl bg-black/60 border border-white/10 flex items-center justify-between">
+                    <div className="p-3.5 sm:p-4 rounded-xl bg-black/60 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                             <span className="text-[10px] text-zinc-400 uppercase font-bold block">
                                 Итого к оплате:
@@ -519,7 +519,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         <button
                             type="button"
                             onClick={handleAddToCart}
-                            className="py-3 px-6 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400 hover:from-amber-300 hover:to-yellow-300 text-black font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:scale-102 active:scale-98 transition-all flex items-center gap-2 cursor-pointer"
+                            className="w-full sm:w-auto py-3 px-6 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400 hover:from-amber-300 hover:to-yellow-300 text-black font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer text-center"
                         >
                             <ShoppingBag size={16} />
                             <span>В корзину</span>

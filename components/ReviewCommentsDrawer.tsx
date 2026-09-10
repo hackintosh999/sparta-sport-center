@@ -1037,7 +1037,7 @@ export const ReviewCommentsDrawer: React.FC<ReviewCommentsDrawerProps> = ({
                         </AnimatePresence>
 
                         {/* --- STICKY INPUT BAR --- */}
-                        <div className="p-3 md:p-4 bg-[#141414] border-t border-white/10">
+                        <div className="p-3 md:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:pb-4 bg-[#141414] border-t border-white/10">
                             {/* Replying banner */}
                             {replyingTarget && (
                                 <div className="mb-2 px-3 py-1.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-between text-xs text-yellow-300">

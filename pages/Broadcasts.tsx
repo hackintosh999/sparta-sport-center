@@ -300,7 +300,7 @@ const Broadcasts = () => {
 
                             {/* Live Parents Chat & Fan Reactions */}
                             <div className="space-y-4">
-                                <div className="h-[480px]">
+                                <div className="h-[360px] sm:h-[480px]">
                                     <BroadcastChat
                                         broadcastId={currentPrimaryBroadcast.id}
                                         isLive={currentPrimaryBroadcast.isLive || currentPrimaryBroadcast.status === 'live'}

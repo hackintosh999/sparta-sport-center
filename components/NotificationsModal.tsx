@@ -63,14 +63,36 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
         }
         onClose();
 
-        const isChatNote = note.type === 'chat' ||
-            note.type === 'chat_message' ||
-            note.type === 'coach_message' ||
-            (note.type === 'request' && note.relatedId);
+        // If notification is from Support Ticket / Request
+        const ticketId = note.relatedId || note.ticketId || note.data?.ticketId || note.data?.relatedId;
+        const noteType = (note.type || '').toLowerCase();
+        const noteTitle = (note.title || '').toLowerCase();
+        const noteMsg = (note.message || '').toLowerCase();
+
+        const isSupportNotification =
+            noteType === 'request' ||
+            noteType === 'ticket' ||
+            noteType === 'support' ||
+            noteType === 'support_message' ||
+            (ticketId && (
+                noteTitle.includes('поддержк') ||
+                noteTitle.includes('обращен') ||
+                noteMsg.includes('обращен') ||
+                (noteType === 'message' && !note.chatId && !note.data?.chatId)
+            ));
+
+        if (isSupportNotification && ticketId) {
+            navigate(`/dashboard?tab=messages&ticketId=${ticketId}`);
+            return;
+        }
+
+        const isChatNote = noteType === 'chat' ||
+            noteType === 'chat_message' ||
+            noteType === 'coach_message';
 
         if (isChatNote) {
             const chatId = note.data?.chatId || note.chatId;
-            const targetUid = note.data?.senderId || note.senderId || note.relatedId;
+            const targetUid = note.data?.senderId || note.senderId;
             const targetName = note.data?.senderName || note.senderName;
 
             let url = '/dashboard?tab=messages_unified';
@@ -93,7 +115,9 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
             case 'chat': return <MessageSquare size={18} className="text-blue-400" />;
             case 'training': return <Zap size={18} className="text-sparta-gold" />;
             case 'payment': return <CreditCard size={18} className="text-green-400" />;
-            case 'request': return <Info size={18} className="text-cyan-400" />;
+            case 'request':
+            case 'ticket':
+            case 'support': return <Info size={18} className="text-cyan-400" />;
             default: return <Bell size={18} className="text-white/40" />;
         }
     };
@@ -104,6 +128,9 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
             case 'chat': return 'bg-blue-500/10 border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.1)]';
             case 'training': return 'bg-sparta-gold/10 border-sparta-gold/20 shadow-[0_0_20px_rgba(212,175,55,0.1)]';
             case 'payment': return 'bg-green-500/10 border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.1)]';
+            case 'request':
+            case 'ticket':
+            case 'support': return 'bg-cyan-500/10 border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]';
             default: return 'bg-white/5 border-white/10';
         }
     };
@@ -117,7 +144,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
 
     const filtered = notifications.filter(n => {
         if (activeTab === 'all') return true;
-        if (activeTab === 'system') return n.type === 'announcement' || n.type === 'request' || n.type === 'news';
+        if (activeTab === 'system') return n.type === 'announcement' || n.type === 'request' || n.type === 'ticket' || n.type === 'support' || n.type === 'news';
         return n.type === activeTab;
     });
 
@@ -138,7 +165,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
     ];
 
     const unreadByCategory = (cat: NotificationCategory) => {
-        return notifications.filter(n => !n.isRead && (cat === 'all' || (cat === 'system' ? (n.type === 'announcement' || n.type === 'request' || n.type === 'news') : n.type === cat))).length;
+        return notifications.filter(n => !n.isRead && (cat === 'all' || (cat === 'system' ? (n.type === 'announcement' || n.type === 'request' || n.type === 'ticket' || n.type === 'support' || n.type === 'news') : n.type === cat))).length;
     };
 
     if (typeof document === 'undefined') return null;
@@ -159,15 +186,15 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: '100%' }}
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="fixed inset-y-0 right-0 z-[130] w-full max-w-md bg-[#080808] border-l border-white/10 shadow-3xl flex flex-col font-manrope overflow-hidden text-left"
+                        className="fixed inset-y-0 right-0 z-[130] w-full max-w-md bg-[#080808] border-l border-white/10 shadow-3xl flex flex-col font-manrope overflow-hidden text-left pt-safe pb-safe"
                     >
                         {/* Header */}
-                        <div className="p-8 pb-6 bg-[#0a0a0a] relative overflow-hidden">
+                        <div className="p-4 sm:p-8 pb-4 sm:pb-6 bg-[#0a0a0a] relative overflow-hidden shrink-0">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-sparta-gold/5 blur-[60px] rounded-full -mr-16 -mt-16" />
 
-                            <div className="flex items-center justify-between mb-8 relative z-10">
+                            <div className="flex items-center justify-between mb-4 sm:mb-8 relative z-10">
                                 <div>
-                                    <h2 className="text-2xl font-russo text-white uppercase tracking-widest">Уведомления</h2>
+                                    <h2 className="text-xl sm:text-2xl font-russo text-white uppercase tracking-widest">Уведомления</h2>
                                     <p className="text-white/40 text-xs mt-1 font-medium">Ваш пульс событий в Спарте</p>
                                 </div>
                                 <button
@@ -187,7 +214,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                                         <button
                                             key={tab.id}
                                             onClick={() => setActiveTab(tab.id)}
-                                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative cursor-pointer ${activeTab === tab.id ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                                            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative cursor-pointer ${activeTab === tab.id ? 'bg-sparta-gold text-black shadow-lg shadow-sparta-gold/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
                                         >
                                             {tab.icon}
                                             <span>{tab.label}</span>
@@ -201,7 +228,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                         </div>
 
                         {/* Quick Controls */}
-                        <div className="px-6 py-4 flex items-center justify-between bg-[#0a0a0a] border-b border-white/5 relative z-10">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-[#0a0a0a] border-b border-white/5 relative z-10 shrink-0">
                             <div className="flex gap-4">
                                 <button
                                     onClick={() => setSortOrder('newest')}
@@ -235,7 +262,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
                         </div>
 
                         {/* List */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar">
                             <AnimatePresence mode="popLayout">
                                 {sorted.length > 0 ? (
                                     (() => {

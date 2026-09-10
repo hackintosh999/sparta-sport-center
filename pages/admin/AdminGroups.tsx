@@ -3843,7 +3843,10 @@ const AdminGroups = () => {
 
             {/* Bulk Coach Assignment Modal */}
             {isBulkCoachModalOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                <div
+                    className="admin-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4"
+                    onClick={(e) => { if (e.target === e.currentTarget) setIsBulkCoachModalOpen(false); }}
+                >
                     <div className="bg-[#111113] border border-sparta-gold/30 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-[0_0_50px_rgba(245,158,11,0.15)] space-y-6 animate-in fade-in zoom-in-95 font-manrope">
                         <div className="flex items-start justify-between gap-4">
                             <div>
@@ -3934,7 +3937,10 @@ const AdminGroups = () => {
 
             {/* Express Coach-to-Coach Transfer Modal */}
             {isExpressTransferModalOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                <div
+                    className="admin-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4"
+                    onClick={(e) => { if (e.target === e.currentTarget) setIsExpressTransferModalOpen(false); }}
+                >
                     <div className="bg-[#111113] border border-sparta-gold/30 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-[0_0_50px_rgba(245,158,11,0.15)] space-y-6 animate-in fade-in zoom-in-95 font-manrope">
                         <div className="flex items-start justify-between gap-4">
                             <div>

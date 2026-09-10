@@ -8,9 +8,9 @@ import {
     TrendingUp, Activity, Trophy, Code, Dumbbell, Star, Wallet, ArrowRightLeft,
     ArrowRight, ShoppingBag, Clock, ShieldCheck, Mail, Phone, CreditCard, RefreshCw,
     Zap, PartyPopper, X, Loader2, CalendarRange, Gift, QrCode, Share2, Receipt, BadgeCheck,
-    CheckCircle2, Copy, ExternalLink, Infinity, Package, Truck, MapPin, Trash2, RotateCcw,
+    CheckCircle2, Copy, ExternalLink, Package, Truck, MapPin, Trash2, RotateCcw,
     LayoutDashboard, Tag, Heart, Users, ArrowUpRight, Database, CheckCircle, Sparkles,
-    MessageCircle, Download, Flame, Smartphone, BellRing, Pencil, FileText, Lock, Info, Eye, Edit2, Terminal, Camera
+    MessageCircle, Download, Flame, Smartphone, BellRing, Pencil, FileText, Lock, Info, Eye, Edit2, Terminal, Camera, Headphones, CheckSquare
 } from 'lucide-react';
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { Container, GlassCard, Button } from './UIComponents';
@@ -97,18 +97,25 @@ const Dashboard = () => {
         return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
     };
 
-    const { user, loading, logout } = useAuth();
+    const { user, userProfile: authUserProfile, loading, logout } = useAuth();
     const navigate = useNavigate();
 
-    const [userProfile, setUserProfile] = useState<any>(null);
+    const [userProfile, setUserProfile] = useState<any>(authUserProfile || null);
     const [impersonatedRole, setImpersonatedRole] = useState<string | null>(null);
 
+    useEffect(() => {
+        if (authUserProfile && !userProfile) {
+            setUserProfile(authUserProfile);
+        }
+    }, [authUserProfile]);
+
     const isSuperDev = isSuperDeveloper(user?.email);
-    const isRealDeveloper = isSuperDev || userProfile?.role === 'developer' || userProfile?.role === 'dev' || userProfile?.role === 'super';
-    const effectiveRole = impersonatedRole || (isSuperDev ? 'super' : (userProfile?.role || 'user'));
+    const isRealDeveloper = isSuperDev || (userProfile?.role || authUserProfile?.role) === 'developer' || (userProfile?.role || authUserProfile?.role) === 'dev' || (userProfile?.role || authUserProfile?.role) === 'super';
+    const effectiveRole = impersonatedRole || (isSuperDev ? 'super' : ((userProfile?.role || authUserProfile?.role) || 'user'));
     const isStaffAccount = ['super', 'admin', 'director', 'dev', 'developer', 'coach', 'trainer'].includes(effectiveRole);
 
     const [requests, setRequests] = useState<any[]>([]);
+    const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
     const [guestPasses, setGuestPasses] = useState<any[]>([]);
     const [isPassesLoaded, setIsPassesLoaded] = useState(false);
     const [directions, setDirections] = useState<any[]>([]);
@@ -119,6 +126,8 @@ const Dashboard = () => {
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<'profile' | 'requests' | 'messages' | 'favorites' | 'achievements' | 'orders' | 'stats' | 'subscriptions' | 'activity' | 'activity_log' | 'coaching' | 'messages_unified' | 'progress' | 'system' | 'analytics' | 'guest_passes' | 'friends' | 'family' | 'settings' | 'support' | 'documents'>('requests');
+    const [coachSubTab, setCoachSubTab] = useState<'dashboard' | 'journal' | 'review' | 'trials' | 'materials'>('dashboard');
+    const [isRoleSwitcherOpen, setIsRoleSwitcherOpen] = useState(false);
     const [showWizard, setShowWizard] = useState(false);
     const [orders, setOrders] = useState<any[]>([]);
     const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'history'>('active');
@@ -176,6 +185,35 @@ const Dashboard = () => {
     const [passwordResetStatus, setPasswordResetStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
     const [isResetLoading, setIsResetLoading] = useState(false);
     const hasSetInitialTab = React.useRef(false);
+
+    // Instant role-specific default tab resolution on load (zero delay)
+    useEffect(() => {
+        if (!hasSetInitialTab.current) {
+            const role = userProfile?.role || authUserProfile?.role;
+            const urlTab = searchParams.get('tab');
+            if (urlTab) {
+                setActiveTab(urlTab as any);
+                hasSetInitialTab.current = true;
+            } else if (role) {
+                if (role === 'coach' || role === 'trainer') {
+                    setActiveTab('coaching');
+                    hasSetInitialTab.current = true;
+                } else if (role === 'parent') {
+                    setActiveTab('family');
+                    hasSetInitialTab.current = true;
+                } else if (['super', 'developer', 'dev', 'director'].includes(role)) {
+                    setActiveTab('analytics');
+                    hasSetInitialTab.current = true;
+                } else if (role === 'admin') {
+                    setActiveTab('requests');
+                    hasSetInitialTab.current = true;
+                } else if (role === 'user' || role === 'student') {
+                    setActiveTab('requests');
+                    hasSetInitialTab.current = true;
+                }
+            }
+        }
+    }, [userProfile?.role, authUserProfile?.role]);
 
     // Avatar Upload State
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -1102,13 +1140,29 @@ const Dashboard = () => {
         };
 
         // 1. Fetch Requests
-        if (user.email) {
-            const q = query(collection(db, "requests"), where("email", "==", user.email));
-            unsubscribeRequests = onSnapshot(q, (snapshot) => {
-                const loadedRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setRequests(loadedRequests);
-            });
+        if (user) {
+            const reqConditions: any[] = [];
+            if (user.email) reqConditions.push(where("email", "==", user.email));
+            if (user.uid) reqConditions.push(where("userId", "==", user.uid));
+            if (userProfile?.parentPhone) reqConditions.push(where("parentPhone", "==", userProfile.parentPhone));
+            if (userProfile?.phone && userProfile.phone !== userProfile?.parentPhone) {
+                reqConditions.push(where("parentPhone", "==", userProfile.phone));
+            }
 
+            const q = reqConditions.length > 1
+                ? query(collection(db, "requests"), or(...reqConditions))
+                : (reqConditions.length === 1 ? query(collection(db, "requests"), reqConditions[0]) : null);
+
+            if (q) {
+                unsubscribeRequests = onSnapshot(q, (snapshot) => {
+                    const loadedRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    loadedRequests.sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                    setRequests(loadedRequests);
+                });
+            }
+        }
+
+        if (user.email) {
             // 4. Fetch Notifications
             const qNotifs = query(
                 collection(db, "notifications"),
@@ -1360,7 +1414,11 @@ const Dashboard = () => {
                 // ═══════════════════════════════════════════
                 if (!hasSetInitialTab.current) {
                     hasSetInitialTab.current = true;
-                    if (isSuperDev || ['super', 'developer', 'dev', 'director', 'admin'].includes(data.role)) {
+                    const urlTab = searchParams.get('tab');
+                    const validDashboardTabs = ['profile', 'requests', 'messages', 'favorites', 'achievements', 'orders', 'stats', 'subscriptions', 'activity', 'activity_log', 'coaching', 'messages_unified', 'progress', 'system', 'analytics', 'guest_passes', 'friends', 'family', 'settings'];
+                    if (urlTab && validDashboardTabs.includes(urlTab)) {
+                        setActiveTab(urlTab as any);
+                    } else if (isSuperDev || ['super', 'developer', 'dev', 'director', 'admin'].includes(data.role)) {
                         setActiveTab('analytics');
                     } else if (data.role === 'parent' || (data.childrenIds && data.childrenIds.length > 0)) {
                         setActiveTab('family');
@@ -1437,7 +1495,10 @@ const Dashboard = () => {
 
                 setShowWizard(false);
             } else {
-                console.log("No such user document!");
+                console.log("No such user document, keeping auth profile if available");
+                if (authUserProfile) {
+                    setUserProfile(authUserProfile);
+                }
             }
         });
 
@@ -1512,7 +1573,7 @@ const Dashboard = () => {
             }
         } else if (userProfile.role === 'trainer' && activeTab === 'requests') {
             setActiveTab('coaching');
-        } else if (userProfile.role === 'parent' && activeTab === 'requests') {
+        } else if (userProfile.role === 'parent' && activeTab === 'requests' && !searchParams.get('tab')) {
             setActiveTab('family');
         } else if ((userProfile.role === 'director' || userProfile.role === 'developer' || userProfile.role === 'dev') && !searchParams.get('tab') && activeTab === 'requests') {
             setActiveTab('analytics');
@@ -1588,23 +1649,25 @@ const Dashboard = () => {
         const tabParam = searchParams.get('tab');
         const ticketId = searchParams.get('ticketId');
 
-        if (tabParam === 'messages' || tabParam === 'messages_unified' || ticketId) {
-            // Redirect to unified messages
+        if (ticketId || tabParam === 'messages') {
+            if (activeTab !== 'messages') {
+                setActiveTab('messages');
+            }
+        } else if (tabParam === 'messages_unified' || searchParams.has('chatId') || searchParams.has('targetUid')) {
             if (activeTab !== 'messages_unified') {
                 setActiveTab('messages_unified');
             }
 
             // Clear one-time target parameters after they've been "consumed"
-            if (searchParams.has('targetUid') || searchParams.get('tab') === 'messages') {
+            if (searchParams.has('targetUid')) {
                 const newParams = new URLSearchParams(searchParams);
                 newParams.delete('targetUid');
                 newParams.delete('targetName');
                 newParams.delete('studentName');
-                if (newParams.get('tab') === 'messages') newParams.set('tab', 'messages_unified');
                 setSearchParams(newParams, { replace: true });
             }
 
-            // Handle sub-tab for support tickets
+            // Handle sub-tab for coach chat
             if (ticketId?.includes('_')) {
                 setMessagesSubTab('coach');
             }
@@ -1902,15 +1965,21 @@ const Dashboard = () => {
     // Handle Tab Change & Clear Badges
     const handleTabChange = async (tab: 'profile' | 'requests' | 'messages' | 'favorites' | 'achievements' | 'orders' | 'stats' | 'subscriptions' | 'activity' | 'activity_log' | 'coaching' | 'messages_unified' | 'progress' | 'guest_passes' | 'friends' | 'family' | 'settings' | 'analytics' | 'system') => {
         // Role-based tab guard: prevent cross-role navigation
-        if (userProfile?.role === 'parent' && tab === 'requests') {
-            setActiveTab('family'); // Parents → ParentDashboard
-            return;
-        }
         if (userProfile?.role === 'user' && tab === 'family') {
             setActiveTab('requests'); // Students → KidDashboard
             return;
         }
         setActiveTab(tab);
+        if (tab === 'requests') {
+            const newParams = new URLSearchParams(searchParams);
+            newParams.set('tab', 'requests');
+            setSearchParams(newParams, { replace: true });
+        } else if (searchParams.get('tab') === 'requests') {
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('tab');
+            setSearchParams(newParams, { replace: true });
+        }
+        setIsMobileChatActive(false);
         if (typeof window !== 'undefined') {
             window.scrollTo({ top: 0, behavior: 'instant' as any });
         }
@@ -2388,6 +2457,31 @@ const Dashboard = () => {
         }
     };
 
+    const handleDeleteRequest = async (req: any, e?: React.MouseEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const isNew = req.status === 'new';
+        const childName = req.childFullName || req.childName || req.name || 'спортсмена';
+        const confirmMsg = isNew
+            ? `Отменить заявку на пробную тренировку для ${childName}?`
+            : `Удалить заявку для ${childName} из списка?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        setDeletingRequestId(req.id);
+        try {
+            await deleteDoc(doc(db, 'requests', req.id));
+            showToast('✓ Заявка успешно удалена', 'success');
+        } catch (error) {
+            console.error("Error deleting request:", error);
+            showToast('Не удалось удалить заявку', 'error');
+        } finally {
+            setDeletingRequestId(null);
+        }
+    };
+
 
     if (loading || !user) return <div className="dashboard-theme min-h-screen bg-main flex items-center justify-center text-main">Загрузка...</div>;
 
@@ -2506,7 +2600,7 @@ const Dashboard = () => {
                     <>
                         <LinkingRequestBanner userId={user.uid} />
 
-                        {userProfile?.isTemporaryCredentials && (
+                        {userProfile?.isTemporaryCredentials && userProfile?.role !== 'parent' && !userProfile?.registeredViaTrial && (
                             <div className="mb-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg animate-in fade-in duration-300">
                                 <div className="flex items-start gap-3">
                                     <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl shrink-0 mt-0.5 sm:mt-0">
@@ -2540,7 +2634,7 @@ const Dashboard = () => {
 
                 {/* Mobile Top Header */}
                 {!isMobileChatActive && (
-                    <div className="md:hidden sticky top-0 z-40 bg-[#0c0c0c]/95 backdrop-blur-md border-b border-white/10 h-14 flex items-center justify-between px-3 mb-2 w-full">
+                    <div className="md:hidden sticky top-0 z-40 bg-[#0c0c0c]/95 backdrop-blur-md border-b border-white/10 min-h-[3.5rem] pt-safe flex items-center justify-between px-3 sm:px-4 mb-2 w-full">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => navigate('/')}
@@ -2570,7 +2664,7 @@ const Dashboard = () => {
                     </div>
                 )}
 
-                <div className={`flex flex-col md:flex-row gap-3 md:gap-5 ${activeTab === 'messages_unified' ? 'items-stretch h-[calc(100vh-1rem)] pb-0 min-h-0 overflow-hidden' : 'items-start pb-16 md:py-2 min-h-[calc(100vh-1.5rem)]'} relative z-10 pt-0 w-full`}>
+                <div className={`flex flex-col md:flex-row gap-3 md:gap-5 ${activeTab === 'messages_unified' ? 'items-stretch h-[calc(100dvh-1rem)] pb-0 min-h-0 overflow-hidden' : 'items-start pb-24 md:pb-8 md:py-2 min-h-[calc(100dvh-1.5rem)]'} relative z-10 pt-0 w-full`}>
                     {/* Sidebar - hidden on mobile */}
                     <div className="hidden md:block w-full md:w-[250px] lg:w-[270px] xl:w-[290px] shrink-0">
                         <div className={`bg-[#111115]/95 border border-white/10 rounded-[28px] p-4 md:p-5 backdrop-blur-2xl sticky top-2 shadow-2xl shadow-black/60 ${activeTab === 'messages_unified' ? 'h-full max-h-[calc(100vh-1rem)]' : 'max-h-[calc(100vh-1.5rem)]'} overflow-y-auto custom-scrollbar`}>
@@ -2624,8 +2718,8 @@ const Dashboard = () => {
                                     </div>
                                 </div>
                                 <h2 className="flex flex-wrap items-center justify-center gap-1 text-xl font-bold text-white font-russo text-center">
-                                    {userProfile?.role === 'parent'
-                                        ? (userProfile?.parentName || userProfile?.name || userProfile?.displayName || user.displayName || 'Родитель')
+                                    {effectiveRole === 'parent'
+                                        ? (userProfile?.parentName || authUserProfile?.parentName || userProfile?.name || userProfile?.displayName || user.displayName || 'Родитель')
                                         : (userProfile?.childName || userProfile?.name || userProfile?.displayName || user.displayName || 'Спортсмен')
                                     }
                                     {streak > 0 && (
@@ -2654,12 +2748,14 @@ const Dashboard = () => {
                                 </h2>
                                 <p className="text-white/50 text-sm font-manrope">{userProfile?.email || user?.email}</p>
 
-                                {/* 🏆 ВИТРИНА НАГРАД (3 СЛОТА) В САЙДБАРЕ */}
-                                <SidebarProfile
-                                    user={user}
-                                    userProfile={userProfile}
-                                    onTabChange={handleTabChange}
-                                />
+                                {/* 🏆 ВИТРИНА НАГРАД (3 СЛОТА) В САЙДБАРЕ - ТОЛЬКО ДЛЯ УЧЕНИКОВ */}
+                                {effectiveRole !== 'parent' && (
+                                    <SidebarProfile
+                                        user={user}
+                                        userProfile={userProfile}
+                                        onTabChange={handleTabChange}
+                                    />
+                                )}
                             </div>
                             <div className="flex justify-center gap-4 mt-4">
                                 <button
@@ -2754,6 +2850,19 @@ const Dashboard = () => {
                                         </button>
 
                                         <button
+                                            onClick={() => handleTabChange('requests')}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'requests' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
+                                        >
+                                            <Calendar size={18} className={activeTab === 'requests' ? 'text-black' : 'text-sparta-gold'} />
+                                            <span>Заявки на тренировки</span>
+                                            {requests.length > 0 && (
+                                                <span className="ml-auto bg-sparta-gold/20 text-sparta-gold border border-sparta-gold/30 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                                    {requests.length}
+                                                </span>
+                                            )}
+                                        </button>
+
+                                        <button
                                             onClick={() => handleTabChange('subscriptions')}
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'subscriptions' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                         >
@@ -2774,7 +2883,26 @@ const Dashboard = () => {
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages_unified' ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                         >
                                             <MessageSquare size={18} className={activeTab === 'messages_unified' ? 'text-black' : 'text-sparta-gold'} />
-                                            <span>Сообщения</span>
+                                            <span>Чаты группы</span>
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleTabChange('messages')}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                                                activeTab === 'messages'
+                                                    ? 'bg-sparta-gold text-black font-bold shadow-lg shadow-sparta-gold/20'
+                                                    : 'text-white/50 hover:text-white hover:bg-white/5'
+                                            }`}
+                                        >
+                                            <Headphones size={18} className={activeTab === 'messages' ? 'text-black' : 'text-sparta-gold'} />
+                                            <span>Поддержка и администрация</span>
+                                            {unreadMessages > 0 && (
+                                                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                                    activeTab === 'messages' ? 'bg-black text-sparta-gold' : 'bg-red-500 text-white'
+                                                }`}>
+                                                    {unreadMessages}
+                                                </span>
+                                            )}
                                         </button>
                                     </>
                                 ) : (
@@ -2831,17 +2959,6 @@ const Dashboard = () => {
                                             )}
                                         </button>
                                     </>
-                                )}
-
-                                {!isStaffAccount && Boolean(userProfile?.role === 'parent') && (
-                                    <button
-                                        onClick={() => handleTabChange('messages')}
-                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages' ? 'bg-white/10 text-white font-bold' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
-                                    >
-                                        <Shield size={18} />
-                                        <span>Поддержка</span>
-                                        {unreadMessages > 0 && <span className="ml-auto bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{unreadMessages}</span>}
-                                    </button>
                                 )}
 
                                 <div className="h-px bg-white/10 my-2" />
@@ -3049,10 +3166,9 @@ const Dashboard = () => {
                     {/* Main Content */}
                     <div className={`flex-1 min-w-0 w-full pt-0 mt-0 ${activeTab === 'messages_unified' ? 'h-full flex flex-col min-h-0 overflow-hidden' : ''}`}>
                         {/* Dashboard Main Header */}
-                        {activeTab !== 'messages_unified' && !((userProfile?.role === 'user' || userProfile?.role === 'student' || (!STAFF_ROLES.includes(userProfile?.role) && userProfile?.role !== 'parent' && !userProfile?.childrenIds?.length)) && activeTab === 'requests') && (
+                        {activeTab !== 'messages_unified' && activeTab !== 'requests' && (
                             <div className="mb-2 md:mb-8 hidden md:block">
                                 <h1 className="text-3xl font-russo text-white">
-                                    {activeTab === 'requests' && 'Мои тренировки и подписка'}
                                     {activeTab === 'profile' && 'Мой профиль'}
                                     {activeTab === 'achievements' && 'Мои достижения'}
                                     {activeTab === 'orders' && 'Мои покупки в магазине'}
@@ -3061,9 +3177,9 @@ const Dashboard = () => {
                                     {activeTab === 'coaching' && 'Командный центр тренера'}
                                     {activeTab === 'friends' && 'Sparta Community'}
                                     {activeTab === 'analytics' && (['director', 'developer', 'dev'].includes(userProfile?.role) ? 'Аналитика и стратегия' : 'Управление клубом')}
-
                                     {activeTab === 'stats' && 'Личная статистика'}
-                                    {activeTab === 'family' && 'Родительский контроль'}
+                                    {activeTab === 'family' && 'Моя семья'}
+                                    {activeTab === 'messages' && 'Поддержка и администрация'}
                                 </h1>
                             </div>
                         )}
@@ -3655,7 +3771,7 @@ const Dashboard = () => {
                             )}
 
                             {activeTab === 'coaching' && (
-                                <CoachSection user={user} userProfile={userProfile} />
+                                <CoachSection user={user} userProfile={userProfile} initialSubTab={coachSubTab} />
                             )}
 
                             {activeTab === 'analytics' && (
@@ -3884,7 +4000,7 @@ const Dashboard = () => {
 
                             <AnimatePresence>
                                 {selectedDoc && (
-                                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 pt-safe pb-safe">
                                         <motion.div
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
@@ -3896,29 +4012,29 @@ const Dashboard = () => {
                                             initial={{ opacity: 0, scale: 0.9, y: 30 }}
                                             animate={{ opacity: 1, scale: 1, y: 0 }}
                                             exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                                            className="relative w-full max-w-3xl bg-[#0a0a0a] border border-white/10 rounded-[40px] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]"
+                                            className="relative w-full max-w-3xl bg-[#0a0a0a] border border-white/10 rounded-3xl sm:rounded-[40px] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] max-h-[calc(100dvh-2rem)] flex flex-col"
                                         >
-                                            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-2xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center">
+                                            <div className="p-4 sm:p-6 md:p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02] shrink-0">
+                                                <div className="flex items-center gap-3 sm:gap-4">
+                                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center shrink-0">
                                                         {selectedDoc.icon}
                                                     </div>
                                                     <div>
-                                                        <h3 className="text-xl font-russo text-white uppercase tracking-wider">{selectedDoc.title}</h3>
-                                                        <p className="text-white/40 text-[10px] uppercase font-black tracking-widest mt-1">Официальный документ клуба</p>
+                                                        <h3 className="text-base sm:text-xl font-russo text-white uppercase tracking-wider">{selectedDoc.title}</h3>
+                                                        <p className="text-white/40 text-[9px] sm:text-[10px] uppercase font-black tracking-widest mt-0.5 sm:mt-1">Официальный документ клуба</p>
                                                     </div>
                                                 </div>
                                                 <button
                                                     onClick={() => setSelectedDoc(null)}
-                                                    className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                                    className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all shrink-0 cursor-pointer"
                                                 >
-                                                    <X size={24} />
+                                                    <X size={20} className="sm:w-6 sm:h-6" />
                                                 </button>
                                             </div>
 
-                                            <div className="p-10 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                                            <div className="p-4 sm:p-6 md:p-10 overflow-y-auto custom-scrollbar flex-1">
                                                 {selectedDoc.pdfUrl ? (
-                                                    <div className="w-full h-[65vh] rounded-2xl overflow-hidden border border-white/10 bg-white shadow-inner">
+                                                    <div className="w-full h-[55vh] sm:h-[65vh] rounded-2xl overflow-hidden border border-white/10 bg-white shadow-inner">
                                                         <iframe
                                                             src={`${selectedDoc.pdfUrl}#view=FitH&toolbar=0`}
                                                             className="w-full h-full border-none"
@@ -3927,16 +4043,16 @@ const Dashboard = () => {
                                                     </div>
                                                 ) : (
                                                     <div className="prose prose-invert max-w-none">
-                                                        <p className="text-white/60 leading-relaxed text-lg mb-8">
+                                                        <p className="text-white/60 leading-relaxed text-sm sm:text-lg mb-6 sm:mb-8">
                                                             {selectedDoc.content}
                                                         </p>
-                                                        <div className="space-y-6">
+                                                        <div className="space-y-4 sm:space-y-6">
                                                             {(selectedDoc.sections || []).map((section: any, i: number) => (
-                                                                <div key={i} className="space-y-3">
-                                                                    <h4 className="text-white font-bold uppercase tracking-tight text-sm">
+                                                                <div key={i} className="space-y-2 sm:space-y-3">
+                                                                    <h4 className="text-white font-bold uppercase tracking-tight text-xs sm:text-sm">
                                                                         {section.title}
                                                                     </h4>
-                                                                    <p className="text-white/30 text-sm leading-relaxed text-justify whitespace-pre-wrap">
+                                                                    <p className="text-white/30 text-xs sm:text-sm leading-relaxed text-justify whitespace-pre-wrap">
                                                                         {section.text}
                                                                     </p>
                                                                 </div>
@@ -3946,10 +4062,10 @@ const Dashboard = () => {
                                                 )}
                                             </div>
 
-                                            <div className="p-6 border-t border-white/5 bg-white/[0.02] flex items-center justify-center">
+                                            <div className="p-4 sm:p-6 border-t border-white/5 bg-white/[0.02] flex items-center justify-center shrink-0">
                                                 <button
                                                     onClick={() => setSelectedDoc(null)}
-                                                    className="px-10 py-4 bg-sparta-gold text-black font-black uppercase tracking-widest rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)]"
+                                                    className="w-full sm:w-auto px-6 sm:px-10 py-3 sm:py-4 bg-sparta-gold text-black font-black uppercase tracking-widest rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)] text-xs sm:text-sm cursor-pointer"
                                                 >
                                                     Понятно, закрыть
                                                 </button>
@@ -3959,7 +4075,7 @@ const Dashboard = () => {
                                 )}
 
                                 {isSessionsModalOpen && (
-                                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 pt-safe pb-safe">
                                         <motion.div
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
@@ -3971,22 +4087,22 @@ const Dashboard = () => {
                                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                             animate={{ opacity: 1, scale: 1, y: 0 }}
                                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                            className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl"
+                                            className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-3xl sm:rounded-[32px] overflow-hidden shadow-2xl max-h-[calc(100dvh-2rem)] flex flex-col"
                                         >
-                                            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                                            <div className="p-4 sm:p-6 md:p-8 border-b border-white/5 flex items-center justify-between shrink-0">
                                                 <div>
-                                                    <h3 className="text-2xl font-russo text-white uppercase tracking-wider">Кто в аккаунте</h3>
-                                                    <p className="text-white/40 text-xs mt-1 uppercase tracking-widest font-bold">Устройства, на которых вы вошли</p>
+                                                    <h3 className="text-lg sm:text-2xl font-russo text-white uppercase tracking-wider">Кто в аккаунте</h3>
+                                                    <p className="text-white/40 text-[10px] sm:text-xs mt-0.5 sm:mt-1 uppercase tracking-widest font-bold">Устройства, на которых вы вошли</p>
                                                 </div>
                                                 <button
                                                     onClick={() => setIsSessionsModalOpen(false)}
-                                                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all shrink-0 cursor-pointer"
                                                 >
                                                     <X size={20} />
                                                 </button>
                                             </div>
 
-                                            <div className="p-4 max-h-[60vh] overflow-y-auto space-y-3 custom-scrollbar">
+                                            <div className="p-4 max-h-[60vh] overflow-y-auto space-y-3 custom-scrollbar flex-1">
                                                 {deviceSessions.map((session) => (
                                                     <div
                                                         key={session.id}
@@ -4108,7 +4224,7 @@ const Dashboard = () => {
                             )}
 
                             {activeTab === 'requests' && (
-                                effectiveRole === 'user' ? (
+                                ((effectiveRole === 'user' || userProfile?.role === 'user' || userProfile?.role === 'student' || userProfile?.isStudent) && effectiveRole !== 'parent' && !isStaffAccount) ? (
                                     <KidDashboard
                                         user={user}
                                         userProfile={userProfile}
@@ -4116,6 +4232,22 @@ const Dashboard = () => {
                                     />
                                 ) : (
                                     <div className="space-y-6">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+                                            <div>
+                                                <h2 className="text-2xl sm:text-3xl font-russo text-white uppercase tracking-wider">
+                                                    Заявки на тренировки
+                                                </h2>
+                                                <p className="text-white/50 text-xs sm:text-sm mt-1">
+                                                    Отслеживайте статус рассмотрения ваших заявок на пробные занятия и подбор групп администратором
+                                                </p>
+                                            </div>
+                                            {requests.length > 0 && (
+                                                <span className="px-3.5 py-1.5 bg-sparta-gold/10 text-sparta-gold border border-sparta-gold/30 rounded-full text-xs font-bold w-fit">
+                                                    Всего заявок: {requests.length}
+                                                </span>
+                                            )}
+                                        </div>
+
                                         {/* Active Group Card (Moved sub management to subscriptions) */}
 
                                         <div className="grid gap-4">
@@ -4189,29 +4321,42 @@ const Dashboard = () => {
                                                         initial={{ opacity: 0, y: 10 }}
                                                         animate={{ opacity: 1, y: 0 }}
                                                         onClick={() => setSelectedRequest(req)}
-                                                        className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/10 transition-colors group cursor-pointer"
+                                                        className="bg-white/5 border border-white/10 hover:border-sparta-gold/30 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/10 transition-colors group cursor-pointer shadow-lg"
                                                     >
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-12 h-12 rounded-xl bg-sparta-gold/10 flex items-center justify-center text-sparta-gold group-hover:bg-sparta-gold group-hover:text-black transition-colors">
+                                                        <div className="flex items-start sm:items-center gap-4">
+                                                            <div className="w-12 h-12 rounded-xl bg-sparta-gold/10 flex items-center justify-center text-sparta-gold group-hover:bg-sparta-gold group-hover:text-black transition-colors shrink-0">
                                                                 <Calendar size={24} />
                                                             </div>
                                                             <div>
-                                                                <div className="flex items-center gap-3 mb-1">
-                                                                    <h4 className="text-white font-bold text-lg group-hover:text-sparta-gold transition-colors">
-                                                                        {req.programType || 'Пробная тренировка'}
+                                                                <div className="flex flex-wrap items-center gap-2.5 mb-1.5">
+                                                                    <h4 className="text-white font-bold text-base sm:text-lg group-hover:text-sparta-gold transition-colors">
+                                                                        {req.groupTitle ? `Группа: ${req.groupTitle}` : (req.programType || 'Пробная тренировка')}
                                                                     </h4>
-                                                                    <span className="text-xs bg-white/10 px-2 py-0.5 rounded text-white/50">
-                                                                        {req.createdAt?.seconds ? new Date(req.createdAt.seconds * 1000).toLocaleDateString() : 'Дата не указана'}
+                                                                    <span className="text-[11px] bg-white/10 px-2.5 py-0.5 rounded-full text-white/60">
+                                                                        {req.createdAt?.seconds ? new Date(req.createdAt.seconds * 1000).toLocaleDateString('ru-RU') : 'Дата отправки сохранена'}
                                                                     </span>
                                                                 </div>
-                                                                <p className="text-white/50 text-sm">
-                                                                    Спортсмен: <span className="text-white/70">{req.name}</span>
-                                                                </p>
+                                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/50">
+                                                                    <p>
+                                                                        Спортсмен: <strong className="text-white">{req.childFullName || req.childName || req.name || 'Спортсмен'}</strong>
+                                                                        {req.childAge ? ` (${req.childAge} лет)` : ''}
+                                                                    </p>
+                                                                    {req.groupSchedule && (
+                                                                        <p>
+                                                                            График: <span className="text-white font-mono">{req.groupSchedule}</span>
+                                                                        </p>
+                                                                    )}
+                                                                    {req.preferredLocation && (
+                                                                        <p>
+                                                                            Локация: <span className="text-sparta-gold">{req.preferredLocation}</span>
+                                                                        </p>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex items-center gap-4">
-                                                            <div className={`px-4 py-2 rounded-full text-sm font-bold border shadow-[0_0_10px_rgba(0,0,0,0.1)] ${req.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end pt-3 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                                                            <div className={`px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-[0_0_10px_rgba(0,0,0,0.1)] ${req.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                                                                 req.status === 'contacted' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
                                                                     req.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                                                                         'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
@@ -4221,7 +4366,26 @@ const Dashboard = () => {
                                                                         req.status === 'rejected' ? 'Отклонено' :
                                                                             'На рассмотрении'}
                                                             </div>
-                                                            <ArrowRight className="text-white/20 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => handleDeleteRequest(req, e)}
+                                                                    disabled={deletingRequestId === req.id}
+                                                                    className="p-2 rounded-xl bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400 border border-white/10 hover:border-red-500/30 transition-all cursor-pointer disabled:opacity-50"
+                                                                    title={req.status === 'new' ? 'Отменить и удалить заявку' : 'Удалить заявку из списка'}
+                                                                    aria-label="Удалить заявку"
+                                                                >
+                                                                    {deletingRequestId === req.id ? (
+                                                                        <Loader2 size={15} className="animate-spin text-red-400" />
+                                                                    ) : (
+                                                                        <Trash2 size={15} />
+                                                                    )}
+                                                                </button>
+                                                                <div className="flex items-center gap-1 text-xs text-white/40 group-hover:text-sparta-gold transition-colors">
+                                                                    <span>Подробнее</span>
+                                                                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </motion.div>
                                                 ))
@@ -4482,16 +4646,22 @@ const Dashboard = () => {
 
                             {activeTab === 'messages' && (
                                 <div className="space-y-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-xl font-bold text-white font-russo uppercase tracking-tighter">
-                                            {['admin', 'director', 'developer', 'dev'].includes(userProfile?.role) ? 'Панель поддержки клиентов' : 'Служба поддержки'}
-                                        </h3>
-                                        <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
-                                            <Shield size={14} className="text-sparta-gold" />
-                                            <span className="text-[10px] text-white/60 font-bold uppercase tracking-widest">Admin Support</span>
+                                    {['admin', 'director', 'developer', 'dev'].includes(userProfile?.role) && (
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-xl font-bold text-white font-russo uppercase tracking-tighter">
+                                                Панель поддержки клиентов
+                                            </h3>
+                                            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                                                <Shield size={14} className="text-sparta-gold" />
+                                                <span className="text-[10px] text-white/60 font-bold uppercase tracking-widest">Admin Support</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <UserRequests ticketId={searchParams.get('ticketId')} />
+                                    )}
+                                    <UserRequests
+                                        ticketId={searchParams.get('ticketId')}
+                                        onMobileDetailChange={(isVisible) => setIsMobileChatActive(isVisible)}
+                                        activeChild={sidebarActiveChild}
+                                    />
                                 </div>
                             )}
 
@@ -4644,7 +4814,7 @@ const Dashboard = () => {
                 isOpen={!!selectedRequest}
                 onClose={() => setSelectedRequest(null)}
                 request={selectedRequest}
-                onContactSupport={() => setActiveTab('messages')}
+                onContactSupport={() => setActiveTab(effectiveRole === 'parent' ? 'support' : 'messages')}
             />
             {/* Smart Enrollment Wizard */}
             {
@@ -4798,16 +4968,16 @@ const Dashboard = () => {
 
             {/* Phone Change Modal */}
             {isPhoneModalOpen && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#18181b] rounded-3xl w-full max-w-md border border-sparta-gold/30 p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-left font-manrope space-y-5">
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md pt-safe pb-safe">
+                    <div className="bg-[#18181b] rounded-3xl w-full max-w-md border border-sparta-gold/30 p-4 sm:p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-left font-manrope space-y-5 max-h-[calc(100dvh-2rem)] overflow-y-auto custom-scrollbar">
                         {/* Header */}
                         <div className="flex items-center justify-between border-b border-white/10 pb-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center border border-sparta-gold/30">
+                                <div className="w-10 h-10 rounded-2xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center border border-sparta-gold/30 shrink-0">
                                     <Phone size={20} />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-russo text-white uppercase tracking-wider">
+                                    <h3 className="text-base sm:text-lg font-russo text-white uppercase tracking-wider">
                                         Номер телефона
                                     </h3>
                                     <p className="text-[11px] text-white/50">Для SMS-уведомлений и связи с тренером</p>
@@ -4844,7 +5014,7 @@ const Dashboard = () => {
                                     type="tel"
                                     value={newPhoneInput}
                                     onChange={(e) => {
-                                        let raw = e.target.value;
+                                        const raw = e.target.value;
                                         let value = raw.replace(/\D/g, '');
                                         if (value.startsWith('8')) value = '7' + value.slice(1);
                                         if (!value.startsWith('7') && value.length > 0) value = '7' + value;
@@ -4867,18 +5037,18 @@ const Dashboard = () => {
                                 </p>
                             </div>
 
-                            <div className="flex gap-2.5 pt-2">
+                            <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-2">
                                 <button
                                     type="button"
                                     onClick={() => setIsPhoneModalOpen(false)}
-                                    className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                                    className="w-full sm:flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
                                 >
                                     Отмена
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSavingPhone || !newPhoneInput.trim()}
-                                    className="flex-1 py-3 rounded-xl bg-sparta-gold text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 hover:brightness-110 cursor-pointer disabled:opacity-50"
+                                    className="w-full sm:flex-1 py-3 rounded-xl bg-sparta-gold text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 hover:brightness-110 cursor-pointer disabled:opacity-50"
                                 >
                                     {isSavingPhone ? <Loader2 size={16} className="animate-spin" /> : '✓ Сохранить'}
                                 </button>
@@ -4890,20 +5060,20 @@ const Dashboard = () => {
 
             {/* Secure Email Change Modal */}
             {isEmailModalOpen && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#18181b] rounded-3xl w-full max-w-lg border border-sparta-gold/30 p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-left font-manrope space-y-6 max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md pt-safe pb-safe">
+                    <div className="bg-[#18181b] rounded-3xl w-full max-w-lg border border-sparta-gold/30 p-4 sm:p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-left font-manrope space-y-6 max-h-[calc(100dvh-2rem)] overflow-y-auto custom-scrollbar">
                         {/* Header */}
                         <div className="flex items-center justify-between border-b border-white/10 pb-4">
                             <div>
-                                <h3 className="text-xl font-russo text-white uppercase tracking-wider flex items-center gap-2">
-                                    <Mail className="text-sparta-gold" size={22} />
+                                <h3 className="text-lg sm:text-xl font-russo text-white uppercase tracking-wider flex items-center gap-2">
+                                    <Mail className="text-sparta-gold shrink-0" size={22} />
                                     Сменить Email
                                 </h3>
                                 <p className="text-xs text-white/50 mt-1">Персонализация и защита электронной почты</p>
                             </div>
                             <button
                                 onClick={() => setIsEmailModalOpen(false)}
-                                className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+                                className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors cursor-pointer"
                             >
                                 <X size={20} />
                             </button>
@@ -4923,32 +5093,32 @@ const Dashboard = () => {
                         )}
 
                         {/* Mode Selector Tabs */}
-                        <div className="grid grid-cols-3 gap-1.5 p-1 bg-white/5 rounded-2xl border border-white/10 text-[11px] font-bold">
+                        <div className="grid grid-cols-3 gap-1 p-1 bg-white/5 rounded-2xl border border-white/10 text-[10px] sm:text-[11px] font-bold">
                             <button
                                 type="button"
                                 onClick={() => { setEmailModalMode('password'); setEmailUpdateError(''); setEmailUpdateSuccess(''); }}
-                                className={`py-2.5 px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center ${emailModalMode === 'password' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
+                                className={`py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center leading-tight ${emailModalMode === 'password' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
                             >
-                                <Lock size={14} />
-                                <span>Помню пароль</span>
+                                <Lock size={14} className="shrink-0" />
+                                <span className="line-clamp-1">Пароль</span>
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => { setEmailModalMode('code'); setEmailUpdateError(''); setEmailUpdateSuccess(''); }}
-                                className={`py-2.5 px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center ${emailModalMode === 'code' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
+                                className={`py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center leading-tight ${emailModalMode === 'code' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
                             >
-                                <Mail size={14} />
-                                <span>Код на почту</span>
+                                <Mail size={14} className="shrink-0" />
+                                <span className="line-clamp-1">Код email</span>
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => { setEmailModalMode('admin_help'); setEmailUpdateError(''); setEmailUpdateSuccess(''); }}
-                                className={`py-2.5 px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center ${emailModalMode === 'admin_help' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
+                                className={`py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center leading-tight ${emailModalMode === 'admin_help' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
                             >
-                                <ShieldCheck size={14} />
-                                <span>Связаться</span>
+                                <ShieldCheck size={14} className="shrink-0" />
+                                <span className="line-clamp-1">Связаться</span>
                             </button>
                         </div>
 
@@ -5157,52 +5327,52 @@ const Dashboard = () => {
 
             {/* Secure Password Change Modal */}
             {isPasswordModalOpen && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="bg-[#18181b] rounded-3xl w-full max-w-lg border border-sparta-gold/30 p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-left font-manrope space-y-6 max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md pt-safe pb-safe">
+                    <div className="bg-[#18181b] rounded-3xl w-full max-w-lg border border-sparta-gold/30 p-4 sm:p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-left font-manrope space-y-6 max-h-[calc(100dvh-2rem)] overflow-y-auto custom-scrollbar">
                         {/* Header */}
                         <div className="flex items-center justify-between border-b border-white/10 pb-4">
                             <div>
-                                <h3 className="text-xl font-russo text-white uppercase tracking-wider flex items-center gap-2">
-                                    <Lock className="text-sparta-gold" size={22} />
+                                <h3 className="text-lg sm:text-xl font-russo text-white uppercase tracking-wider flex items-center gap-2">
+                                    <Lock className="text-sparta-gold shrink-0" size={22} />
                                     Сменить Пароль
                                 </h3>
                                 <p className="text-xs text-white/50 mt-1">Безопасность и парольная защита аккаунта</p>
                             </div>
                             <button
                                 onClick={() => setIsPasswordModalOpen(false)}
-                                className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+                                className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors cursor-pointer"
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
                         {/* Mode Selector Tabs */}
-                        <div className="grid grid-cols-3 gap-1.5 p-1 bg-white/5 rounded-2xl border border-white/10 text-[11px] font-bold">
+                        <div className="grid grid-cols-3 gap-1 p-1 bg-white/5 rounded-2xl border border-white/10 text-[10px] sm:text-[11px] font-bold">
                             <button
                                 type="button"
                                 onClick={() => { setPassModalMode('current_pass'); setPassUpdateError(''); setPassUpdateSuccess(''); }}
-                                className={`py-2.5 px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center ${passModalMode === 'current_pass' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
+                                className={`py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center leading-tight ${passModalMode === 'current_pass' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
                             >
-                                <Lock size={14} />
-                                <span>Помню пароль</span>
+                                <Lock size={14} className="shrink-0" />
+                                <span className="line-clamp-1">Помню пароль</span>
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => { setPassModalMode('reset_link'); setPassUpdateError(''); setPassUpdateSuccess(''); }}
-                                className={`py-2.5 px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center ${passModalMode === 'reset_link' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
+                                className={`py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center leading-tight ${passModalMode === 'reset_link' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
                             >
-                                <Mail size={14} />
-                                <span>Сбросить почтой</span>
+                                <Mail size={14} className="shrink-0" />
+                                <span className="line-clamp-1">Сбросить</span>
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => { setPassModalMode('admin_help'); setPassUpdateError(''); setPassUpdateSuccess(''); }}
-                                className={`py-2.5 px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center ${passModalMode === 'admin_help' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
+                                className={`py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl transition-all flex flex-col items-center gap-1 text-center leading-tight ${passModalMode === 'admin_help' ? 'bg-sparta-gold text-black shadow-md' : 'text-white/50 hover:text-white'}`}
                             >
-                                <ShieldCheck size={14} />
-                                <span>Связаться</span>
+                                <ShieldCheck size={14} className="shrink-0" />
+                                <span className="line-clamp-1">Связаться</span>
                             </button>
                         </div>
 
@@ -5494,7 +5664,7 @@ const Dashboard = () => {
             {/* QR Check-in Modal */}
             <AnimatePresence>
                 {showQR && (
-                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 pt-safe pb-safe">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -5506,7 +5676,7 @@ const Dashboard = () => {
                             initial={{ scale: 0.8, opacity: 0, y: 50 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.8, opacity: 0, y: 50 }}
-                            className="relative w-full max-w-sm bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-10 overflow-hidden shadow-2xl text-center"
+                            className="relative w-full max-w-sm bg-[#0a0a0a] border border-white/10 rounded-3xl sm:rounded-[3rem] p-5 sm:p-8 md:p-10 overflow-y-auto custom-scrollbar max-h-[calc(100dvh-2rem)] shadow-2xl text-center"
                         >
                             {/* Futuristic UI Elements */}
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sparta-gold to-transparent opacity-50" />
@@ -5514,37 +5684,38 @@ const Dashboard = () => {
 
                             <button
                                 onClick={() => setShowQR(false)}
-                                className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/40 transition-colors z-20"
+                                className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/40 transition-colors z-20 cursor-pointer"
                             >
-                                <X size={24} />
+                                <X size={22} />
                             </button>
 
                             <div className="relative z-10">
-                                <div className="flex flex-col items-center gap-2 mb-8">
-                                    <div className="p-3 bg-sparta-gold/10 rounded-2xl text-sparta-gold mb-2">
-                                        <QrCode size={32} />
+                                <div className="flex flex-col items-center gap-1.5 sm:gap-2 mb-5 sm:mb-8">
+                                    <div className="p-2.5 sm:p-3 bg-sparta-gold/10 rounded-2xl text-sparta-gold mb-1 sm:mb-2">
+                                        <QrCode size={28} className="sm:w-8 sm:h-8" />
                                     </div>
-                                    <h3 className="text-2xl font-russo text-white uppercase tracking-wider">Быстрый Check-in</h3>
+                                    <h3 className="text-xl sm:text-2xl font-russo text-white uppercase tracking-wider">Быстрый Check-in</h3>
                                     <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.2em]">Покажите код администратору</p>
                                 </div>
 
-                                <div className="bg-white p-6 rounded-[2.5rem] shadow-[0_0_50px_rgba(255,255,255,0.1)] mb-8 inline-block">
+                                <div className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-[0_0_50px_rgba(255,255,255,0.1)] mb-5 sm:mb-8 inline-flex items-center justify-center max-w-full">
                                     <QRCodeSVG
                                         value={user.uid}
-                                        size={200}
+                                        size={180}
+                                        className="w-36 h-36 sm:w-48 sm:h-48"
                                         level="H"
                                         includeMargin={false}
                                     />
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                <div className="space-y-3 sm:space-y-4">
+                                    <div className="p-3.5 sm:p-4 bg-white/5 rounded-2xl border border-white/5">
                                         <p className="text-[10px] text-white/20 uppercase font-black tracking-widest mb-1">Ваш ID</p>
-                                        <p className="text-sm font-russo text-white tracking-widest">{user.uid.toUpperCase()}</p>
+                                        <p className="text-xs sm:text-sm font-russo text-white tracking-widest break-all">{user.uid.toUpperCase()}</p>
                                     </div>
 
                                     {streak > 0 && (
-                                        <div className="flex items-center justify-center gap-2 text-orange-500 bg-orange-500/10 py-3 rounded-2xl border border-orange-500/20">
+                                        <div className="flex items-center justify-center gap-2 text-orange-500 bg-orange-500/10 py-2.5 sm:py-3 rounded-2xl border border-orange-500/20">
                                             <Flame size={16} fill="currentColor" className="animate-pulse" />
                                             <span className="text-xs font-black uppercase tracking-widest">Страйк: {streak} дней!</span>
                                         </div>
@@ -5590,84 +5761,48 @@ const Dashboard = () => {
             </AnimatePresence>
             {/* Role-tailored Fixed Mobile Bottom Navigation */}
             {!isMobileChatActive && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0c0c10]/95 backdrop-blur-2xl border-t border-white/10 px-2 py-2 safe-area-padding shadow-[0_-8px_32px_rgba(0,0,0,0.9)]">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0c0c10]/95 backdrop-blur-2xl border-t border-white/10 px-2 pt-1.5 pb-safe shadow-[0_-8px_32px_rgba(0,0,0,0.9)]">
                     <div className="flex items-center justify-between w-full max-w-lg mx-auto">
-                        {userProfile?.role === 'parent' ? (
+                        {effectiveRole === 'parent' ? (
+                            /* PARENT BOTTOM DOCK */
                             <>
                                 <button
                                     onClick={() => handleTabChange('family')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'family' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'family' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
                                 >
                                     <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'family' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <Users size={19} className={activeTab === 'family' ? 'text-sparta-gold' : 'text-white/50'} />
+                                        <Users size={18} className={activeTab === 'family' ? 'text-sparta-gold' : 'text-white/50'} />
                                     </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'family' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Семья</span>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'family' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Семья</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('requests')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'requests' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`relative p-1.5 rounded-xl transition-all ${activeTab === 'requests' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <Calendar size={18} className={activeTab === 'requests' ? 'text-sparta-gold' : 'text-white/50'} />
+                                        {requests.length > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-sparta-gold rounded-full animate-pulse" />}
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'requests' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Заявки</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowQR(true)}
+                                    className="flex-1 flex flex-col items-center justify-center -mt-4 py-0.5 px-0.5 group cursor-pointer"
+                                    title="Показать QR-код для входа"
+                                >
+                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-sparta-gold text-black flex items-center justify-center shadow-[0_0_18px_rgba(245,158,11,0.5)] border-2 border-black group-active:scale-95 transition-all">
+                                        <QrCode size={22} className="text-black stroke-[2.5]" />
+                                    </div>
+                                    <span className="text-[8px] tracking-tight uppercase font-russo mt-0.5 text-sparta-gold font-bold">QR Вход</span>
                                 </button>
                                 <button
                                     onClick={() => handleTabChange('subscriptions')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'subscriptions' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'subscriptions' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
                                 >
                                     <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'subscriptions' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <CreditCard size={19} className={activeTab === 'subscriptions' ? 'text-sparta-gold' : 'text-white/50'} />
+                                        <CreditCard size={18} className={activeTab === 'subscriptions' ? 'text-sparta-gold' : 'text-white/50'} />
                                     </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'subscriptions' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Абонемент</span>
-                                </button>
-                                <button
-                                    onClick={() => handleTabChange('messages_unified')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'messages_unified' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
-                                >
-                                    <div className={`relative p-1.5 rounded-xl transition-all ${activeTab === 'messages_unified' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <MessageSquare size={19} className={activeTab === 'messages_unified' ? 'text-sparta-gold' : 'text-white/50'} />
-                                        {unreadNotifications > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />}
-                                    </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'messages_unified' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Чат</span>
-                                </button>
-                                <button
-                                    onClick={() => handleTabChange('profile')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'profile' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
-                                >
-                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'profile' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <User size={19} className={activeTab === 'profile' ? 'text-sparta-gold' : 'text-white/50'} />
-                                    </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'profile' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Профиль</span>
-                                </button>
-                            </>
-                        ) : isStaffAccount ? (
-                            <>
-                                {['director', 'admin', 'developer', 'dev'].includes(userProfile?.role || '') && (
-                                    <button
-                                        onClick={() => handleTabChange('requests')}
-                                        className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'requests' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
-                                    >
-                                        <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'requests' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                            <LayoutDashboard size={18} className={activeTab === 'requests' ? 'text-sparta-gold' : 'text-white/50'} />
-                                        </div>
-                                        <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'requests' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Сводка</span>
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => handleTabChange('analytics')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'analytics' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
-                                >
-                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'analytics' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        {isRealDeveloper && !impersonatedRole ? (
-                                            <Terminal size={18} className={activeTab === 'analytics' ? 'text-sparta-gold' : 'text-white/50'} />
-                                        ) : (
-                                            <TrendingUp size={18} className={activeTab === 'analytics' ? 'text-sparta-gold' : 'text-white/50'} />
-                                        )}
-                                    </div>
-                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'analytics' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>
-                                        {isRealDeveloper && !impersonatedRole ? 'Пульт' : 'Анализ'}
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={() => handleTabChange('coaching')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'coaching' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
-                                >
-                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'coaching' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <Users size={18} className={activeTab === 'coaching' ? 'text-sparta-gold' : 'text-white/50'} />
-                                    </div>
-                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'coaching' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Команда</span>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'subscriptions' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Абонемент</span>
                                 </button>
                                 <button
                                     onClick={() => handleTabChange('messages_unified')}
@@ -5679,63 +5814,266 @@ const Dashboard = () => {
                                     </div>
                                     <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'messages_unified' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Чат</span>
                                 </button>
-                                <button
-                                    onClick={() => handleTabChange('profile')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'profile' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
-                                >
-                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'profile' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <User size={18} className={activeTab === 'profile' ? 'text-sparta-gold' : 'text-white/50'} />
-                                    </div>
-                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'profile' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Профиль</span>
-                                </button>
                             </>
-                        ) : (
+                        ) : (effectiveRole === 'coach' || effectiveRole === 'trainer') ? (
+                            /* COACH BOTTOM DOCK */
                             <>
                                 <button
-                                    onClick={() => handleTabChange('requests')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'requests' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                    onClick={() => {
+                                        setCoachSubTab('dashboard');
+                                        handleTabChange('coaching');
+                                    }}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'coaching' && coachSubTab === 'dashboard' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
                                 >
-                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'requests' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <Flame size={19} className={activeTab === 'requests' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'coaching' && coachSubTab === 'dashboard' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <LayoutDashboard size={18} className={activeTab === 'coaching' && coachSubTab === 'dashboard' ? 'text-sparta-gold' : 'text-white/50'} />
                                     </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'requests' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Дневник</span>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'coaching' && coachSubTab === 'dashboard' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Занятие</span>
                                 </button>
                                 <button
-                                    onClick={() => handleTabChange('achievements')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'achievements' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                    onClick={() => {
+                                        setCoachSubTab('journal');
+                                        handleTabChange('coaching');
+                                    }}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'coaching' && coachSubTab === 'journal' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
                                 >
-                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'achievements' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <Trophy size={19} className={activeTab === 'achievements' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'coaching' && coachSubTab === 'journal' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <Users size={18} className={activeTab === 'coaching' && coachSubTab === 'journal' ? 'text-sparta-gold' : 'text-white/50'} />
                                     </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'achievements' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Награды</span>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'coaching' && coachSubTab === 'journal' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Группы</span>
                                 </button>
                                 <button
-                                    onClick={() => handleTabChange('orders')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'orders' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                    onClick={() => navigate('/admin/scanner')}
+                                    className="flex-1 flex flex-col items-center justify-center -mt-4 py-0.5 px-0.5 group cursor-pointer"
+                                    title="Сканировать QR-пропуск ученика"
                                 >
-                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <ShoppingBag size={19} className={activeTab === 'orders' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-sparta-gold text-black flex items-center justify-center shadow-[0_0_18px_rgba(245,158,11,0.5)] border-2 border-black group-active:scale-95 transition-all">
+                                        <QrCode size={22} className="text-black stroke-[2.5]" />
                                     </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'orders' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Призы</span>
+                                    <span className="text-[8px] tracking-tight uppercase font-russo mt-0.5 text-sparta-gold font-bold">Сканер</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setCoachSubTab('review');
+                                        handleTabChange('coaching');
+                                    }}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'coaching' && coachSubTab === 'review' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'coaching' && coachSubTab === 'review' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <CheckSquare size={18} className={activeTab === 'coaching' && coachSubTab === 'review' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'coaching' && coachSubTab === 'review' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Задания</span>
                                 </button>
                                 <button
                                     onClick={() => handleTabChange('messages_unified')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'messages_unified' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'messages_unified' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
                                 >
                                     <div className={`relative p-1.5 rounded-xl transition-all ${activeTab === 'messages_unified' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <MessageSquare size={19} className={activeTab === 'messages_unified' ? 'text-sparta-gold' : 'text-white/50'} />
+                                        <MessageSquare size={18} className={activeTab === 'messages_unified' ? 'text-sparta-gold' : 'text-white/50'} />
                                         {unreadNotifications > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />}
                                     </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'messages_unified' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Чат</span>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'messages_unified' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Чат</span>
+                                </button>
+                            </>
+                        ) : ((isRealDeveloper && !impersonatedRole) || effectiveRole === 'developer' || effectiveRole === 'dev') ? (
+                            /* DEVELOPER BOTTOM DOCK */
+                            <>
+                                <button
+                                    onClick={() => handleTabChange('requests')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'requests' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'requests' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <LayoutDashboard size={18} className={activeTab === 'requests' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'requests' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Сводка</span>
                                 </button>
                                 <button
-                                    onClick={() => handleTabChange('profile')}
-                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${activeTab === 'profile' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                    onClick={() => handleTabChange('analytics')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'analytics' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
                                 >
-                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'profile' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
-                                        <User size={19} className={activeTab === 'profile' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'analytics' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <Terminal size={18} className={activeTab === 'analytics' ? 'text-sparta-gold' : 'text-white/50'} />
                                     </div>
-                                    <span className={`text-[9px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'profile' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Профиль</span>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'analytics' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Пульт</span>
+                                </button>
+                                <button
+                                    onClick={() => setIsRoleSwitcherOpen(true)}
+                                    className="flex-1 flex flex-col items-center justify-center -mt-4 py-0.5 px-0.5 group cursor-pointer"
+                                    title="Быстрое переключение ролей"
+                                >
+                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 via-amber-400 to-sparta-gold text-black flex items-center justify-center shadow-[0_0_18px_rgba(6,182,212,0.5)] border-2 border-black group-active:scale-95 transition-all">
+                                        <Sparkles size={22} className="text-black stroke-[2.5]" />
+                                    </div>
+                                    <span className="text-[8px] tracking-tight uppercase font-russo mt-0.5 text-sparta-gold font-bold">Роли</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('messages_unified')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'messages_unified' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`relative p-1.5 rounded-xl transition-all ${activeTab === 'messages_unified' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <MessageSquare size={18} className={activeTab === 'messages_unified' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'messages_unified' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Чат</span>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/admin')}
+                                    className="flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 text-white/40 hover:text-white/70"
+                                >
+                                    <div className="p-1.5 rounded-xl transition-all">
+                                        <ShieldCheck size={18} className="text-white/50" />
+                                    </div>
+                                    <span className="text-[8.5px] tracking-tight uppercase font-russo mt-0.5 text-white/40">Админка</span>
+                                </button>
+                            </>
+                        ) : effectiveRole === 'director' ? (
+                            /* DIRECTOR BOTTOM DOCK */
+                            <>
+                                <button
+                                    onClick={() => handleTabChange('requests')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'requests' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'requests' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <LayoutDashboard size={18} className={activeTab === 'requests' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'requests' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Сводка</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('analytics')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'analytics' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'analytics' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <TrendingUp size={18} className={activeTab === 'analytics' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'analytics' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Анализ</span>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/admin/finance')}
+                                    className="flex-1 flex flex-col items-center justify-center -mt-4 py-0.5 px-0.5 group cursor-pointer"
+                                    title="Финансовый отчет и выручка"
+                                >
+                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-sparta-gold text-black flex items-center justify-center shadow-[0_0_18px_rgba(245,158,11,0.5)] border-2 border-black group-active:scale-95 transition-all">
+                                        <Wallet size={22} className="text-black stroke-[2.5]" />
+                                    </div>
+                                    <span className="text-[8px] tracking-tight uppercase font-russo mt-0.5 text-sparta-gold font-bold">Финансы</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('messages_unified')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'messages_unified' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`relative p-1.5 rounded-xl transition-all ${activeTab === 'messages_unified' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <MessageSquare size={18} className={activeTab === 'messages_unified' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'messages_unified' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Чат</span>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/admin')}
+                                    className="flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 text-white/40 hover:text-white/70"
+                                >
+                                    <div className="p-1.5 rounded-xl transition-all">
+                                        <ShieldCheck size={18} className="text-white/50" />
+                                    </div>
+                                    <span className="text-[8.5px] tracking-tight uppercase font-russo mt-0.5 text-white/40">Админка</span>
+                                </button>
+                            </>
+                        ) : (effectiveRole === 'admin' || effectiveRole === 'super') ? (
+                            /* ADMIN IN DASHBOARD DOCK */
+                            <>
+                                <button
+                                    onClick={() => handleTabChange('requests')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'requests' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'requests' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <LayoutDashboard size={18} className={activeTab === 'requests' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'requests' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Сводка</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('analytics')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'analytics' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'analytics' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <TrendingUp size={18} className={activeTab === 'analytics' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'analytics' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Анализ</span>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/admin/scanner')}
+                                    className="flex-1 flex flex-col items-center justify-center -mt-4 py-0.5 px-0.5 group cursor-pointer"
+                                    title="Сканировать QR-пропуск"
+                                >
+                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-sparta-gold text-black flex items-center justify-center shadow-[0_0_18px_rgba(245,158,11,0.5)] border-2 border-black group-active:scale-95 transition-all">
+                                        <QrCode size={22} className="text-black stroke-[2.5]" />
+                                    </div>
+                                    <span className="text-[8px] tracking-tight uppercase font-russo mt-0.5 text-sparta-gold font-bold">Сканер</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('coaching')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'coaching' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'coaching' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <Users size={18} className={activeTab === 'coaching' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'coaching' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Команда</span>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/admin')}
+                                    className="flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 text-white/40 hover:text-white/70"
+                                >
+                                    <div className="p-1.5 rounded-xl transition-all">
+                                        <ShieldCheck size={18} className="text-white/50" />
+                                    </div>
+                                    <span className="text-[8.5px] tracking-tight uppercase font-russo mt-0.5 text-white/40">Админка</span>
+                                </button>
+                            </>
+                        ) : (
+                            /* KID / STUDENT BOTTOM DOCK */
+                            <>
+                                <button
+                                    onClick={() => handleTabChange('requests')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'requests' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'requests' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <Flame size={18} className={activeTab === 'requests' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'requests' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Дневник</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('achievements')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'achievements' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'achievements' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <Trophy size={18} className={activeTab === 'achievements' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'achievements' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Награды</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowQR(true)}
+                                    className="flex-1 flex flex-col items-center justify-center -mt-4 py-0.5 px-0.5 group cursor-pointer"
+                                    title="Показать QR-пропуск для входа в манеж"
+                                >
+                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-sparta-gold text-black flex items-center justify-center shadow-[0_0_18px_rgba(245,158,11,0.5)] border-2 border-black group-active:scale-95 transition-all">
+                                        <QrCode size={22} className="text-black stroke-[2.5]" />
+                                    </div>
+                                    <span className="text-[8px] tracking-tight uppercase font-russo mt-0.5 text-sparta-gold font-bold">QR Вход</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('orders')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'orders' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <ShoppingBag size={18} className={activeTab === 'orders' ? 'text-sparta-gold' : 'text-white/50'} />
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'orders' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Призы</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('messages_unified')}
+                                    className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 ${activeTab === 'messages_unified' ? 'text-sparta-gold scale-105' : 'text-white/40 hover:text-white/70'}`}
+                                >
+                                    <div className={`relative p-1.5 rounded-xl transition-all ${activeTab === 'messages_unified' ? 'bg-sparta-gold/20 border border-sparta-gold/40 shadow-[0_0_12px_rgba(212,175,55,0.3)]' : ''}`}>
+                                        <MessageSquare size={18} className={activeTab === 'messages_unified' ? 'text-sparta-gold' : 'text-white/50'} />
+                                        {unreadNotifications > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />}
+                                    </div>
+                                    <span className={`text-[8.5px] tracking-tight uppercase font-russo mt-0.5 ${activeTab === 'messages_unified' ? 'text-sparta-gold font-bold' : 'text-white/40'}`}>Чат</span>
                                 </button>
                             </>
                         )}
@@ -5743,35 +6081,118 @@ const Dashboard = () => {
                 </nav>
             )}
 
-            {/* Absence Reporting Modal ("Отпроситься с тренировки") */}
+            {/* Developer / Tester Role Switcher Bottom Drawer */}
             <AnimatePresence>
-                {isAbsenceModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                {isRoleSwitcherOpen && (
+                    <motion.div
+                        key="role-switcher-backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsRoleSwitcherOpen(false)}
+                        className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md pt-safe pb-safe p-0 sm:p-4"
+                    >
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-md bg-zinc-900 border border-amber-500/30 rounded-3xl p-6 relative overflow-hidden shadow-2xl"
+                            key="role-switcher-sheet"
+                            initial={{ opacity: 0, y: 100 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 100 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-md bg-[#111115] border border-sparta-gold/30 rounded-t-[32px] sm:rounded-3xl p-5 sm:p-6 shadow-2xl relative flex flex-col max-h-[calc(100dvh-2rem)] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
                         >
-                            <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                                        <Calendar size={20} />
+                            <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-9 h-9 rounded-xl bg-sparta-gold/20 border border-sparta-gold/40 flex items-center justify-center text-sparta-gold">
+                                        <Sparkles size={18} />
                                     </div>
                                     <div>
-                                        <h3 className="font-russo text-lg text-white">Уведомить об отсутствии</h3>
-                                        <p className="text-xs text-white/50">Предупредите тренера заранее</p>
+                                        <h3 className="font-russo text-white text-base">Быстрая смена роли</h3>
+                                        <p className="text-[11px] text-white/50">Мгновенный тест мобильного интерфейса</p>
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => setIsAbsenceModalOpen(false)}
-                                    className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10"
+                                    onClick={() => setIsRoleSwitcherOpen(false)}
+                                    className="p-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/10 cursor-pointer"
                                 >
                                     <X size={18} />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleReportAbsence} className="space-y-4">
+                            <div className="space-y-2 overflow-y-auto custom-scrollbar flex-1 pr-1">
+                                {[
+                                    { id: 'user', name: 'Юный спортсмен / Ребёнок', role: 'Спортсмен (Kid)', icon: '👦', tab: 'requests', desc: 'Дневник Чемпиона, монеты, FUT-карта, QR-пропуск' },
+                                    { id: 'parent', name: 'Родитель Чемпиона', role: 'Родитель (Parent)', icon: '👨‍👩‍👧', tab: 'family', desc: 'Карточки детей, абонементы, расписание, вход' },
+                                    { id: 'coach', name: 'Тренер SPARTA', role: 'Тренер (Coach)', icon: '⚽', tab: 'coaching', desc: 'Управление группами, журнал тренировок, ДЗ' },
+                                    { id: 'admin', name: 'Администратор', role: 'Админ (Admin)', icon: '🛡️', path: '/admin', desc: 'CRM, заявки, QR-турникет, пользователи' },
+                                    { id: 'director', name: 'Директор клуба', role: 'Руководитель', icon: '👔', tab: 'analytics', desc: 'Финансовые метрики, выручка, аналитика' },
+                                    { id: null, name: 'Сброс (Разработчик)', role: 'Developer Mode', icon: '💻', tab: 'analytics', desc: 'Возврат к полной консоли разработчика' }
+                                ].map((item: any) => {
+                                    const isCurrent = (item.id === null && !impersonatedRole) || (item.id === impersonatedRole);
+                                    return (
+                                        <button
+                                            key={item.name}
+                                            onClick={() => {
+                                                setImpersonatedRole(item.id);
+                                                if (item.path) {
+                                                    navigate(item.path);
+                                                } else if (item.tab) {
+                                                    handleTabChange(item.tab);
+                                                }
+                                                setIsRoleSwitcherOpen(false);
+                                                setToast({ type: 'success', message: `Режим изменён: ${item.name}` });
+                                            }}
+                                            className={`w-full p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer ${isCurrent ? 'bg-sparta-gold/15 border-sparta-gold/50 text-white shadow-lg shadow-sparta-gold/10' : 'bg-white/5 border-white/5 text-white/80 hover:bg-white/10 hover:border-white/20'}`}
+                                        >
+                                            <div className="text-2xl shrink-0 w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/10">
+                                                {item.icon}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="font-bold text-xs truncate">{item.name}</div>
+                                                    {isCurrent && (
+                                                        <span className="text-[9px] font-black uppercase text-sparta-gold bg-sparta-gold/20 px-2 py-0.5 rounded-full border border-sparta-gold/30">Активно</span>
+                                                    )}
+                                                </div>
+                                                <div className="text-[10px] text-white/40 truncate">{item.desc}</div>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Absence Reporting Modal ("Отпроситься с тренировки") */}
+            <AnimatePresence>
+                {isAbsenceModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md pt-safe pb-safe">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-md bg-zinc-900 border border-amber-500/30 rounded-3xl p-4 sm:p-6 relative overflow-hidden shadow-2xl max-h-[calc(100dvh-2rem)] flex flex-col"
+                        >
+                            <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10 shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                                        <Calendar size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-russo text-base sm:text-lg text-white">Уведомить об отсутствии</h3>
+                                        <p className="text-xs text-white/50">Предупредите тренера заранее</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsAbsenceModalOpen(false)}
+                                    className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 cursor-pointer"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleReportAbsence} className="space-y-4 overflow-y-auto custom-scrollbar flex-1 pr-1">
                                 <div>
                                     <label className="block text-xs font-bold text-white/70 uppercase mb-1.5">
                                         Дата пропущенной тренировки
@@ -5804,17 +6225,17 @@ const Dashboard = () => {
                                     💡 При отмене по причине болезни за ребёнком автоматически сохраняется <strong>1 ваучер на отработку</strong> в другой группе.
                                 </div>
 
-                                <div className="flex gap-3 pt-2">
+                                <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-2">
                                     <button
                                         type="button"
                                         onClick={() => setIsAbsenceModalOpen(false)}
-                                        className="flex-1 py-3 bg-white/5 text-white font-bold rounded-xl hover:bg-white/10 text-xs uppercase tracking-wider"
+                                        className="w-full sm:flex-1 py-3 bg-white/5 text-white font-bold rounded-xl hover:bg-white/10 text-xs uppercase tracking-wider"
                                     >
                                         Отмена
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 py-3 bg-amber-400 text-black font-black rounded-xl hover:bg-amber-300 text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                                        className="w-full sm:flex-1 py-3 bg-amber-400 text-black font-black rounded-xl hover:bg-amber-300 text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                                     >
                                         Отправить
                                     </button>
@@ -5828,61 +6249,61 @@ const Dashboard = () => {
             {/* Makeup Class Booking Modal ("Запись на отработку") */}
             <AnimatePresence>
                 {isMakeupModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md pt-safe pb-safe">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-lg bg-zinc-900 border border-emerald-500/30 rounded-3xl p-6 relative overflow-hidden shadow-2xl"
+                            className="w-full max-w-lg bg-zinc-900 border border-emerald-500/30 rounded-3xl p-4 sm:p-6 relative overflow-hidden shadow-2xl max-h-[calc(100dvh-2rem)] flex flex-col"
                         >
-                            <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
+                            <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10 shrink-0">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                                         <Sparkles size={20} />
                                     </div>
                                     <div>
-                                        <h3 className="font-russo text-lg text-white">Запись на отработку</h3>
+                                        <h3 className="font-russo text-base sm:text-lg text-white">Запись на отработку</h3>
                                         <p className="text-xs text-white/50">Выберите удобный параллельный слот</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setIsMakeupModalOpen(false)}
-                                    className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10"
+                                    className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 cursor-pointer"
                                 >
                                     <X size={18} />
                                 </button>
                             </div>
 
-                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                            <div className="space-y-3 overflow-y-auto custom-scrollbar flex-1 pr-1">
                                 <div
                                     onClick={() => handleBookMakeup('Суббота 13:00–14:00 • Манеж Юг (Тренер Пономарев С.А.)')}
-                                    className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-all flex items-center justify-between group"
+                                    className="p-3.5 sm:p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
                                 >
                                     <div>
                                         <span className="text-xs font-bold text-emerald-400 block mb-0.5">Свободно 3 места</span>
                                         <h4 className="font-bold text-white text-sm group-hover:text-emerald-300">Суббота • 13:00 - 14:00</h4>
                                         <p className="text-xs text-white/60">Манеж Юг • Тренер: Пономарев Сергей Александрович</p>
                                     </div>
-                                    <button className="px-3 py-1.5 rounded-lg bg-emerald-500 text-black text-xs font-bold">Выбрать</button>
+                                    <button className="w-full sm:w-auto px-4 py-2 sm:py-1.5 rounded-lg bg-emerald-500 text-black text-xs font-bold">Выбрать</button>
                                 </div>
 
                                 <div
                                     onClick={() => handleBookMakeup('Воскресенье 12:00–13:00 • Манеж Юг (Тренер Пономарев С.А.)')}
-                                    className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-all flex items-center justify-between group"
+                                    className="p-3.5 sm:p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-emerald-400 hover:bg-emerald-500/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
                                 >
                                     <div>
                                         <span className="text-xs font-bold text-emerald-400 block mb-0.5">Свободно 2 места</span>
                                         <h4 className="font-bold text-white text-sm group-hover:text-emerald-300">Воскресенье • 12:00 - 13:00</h4>
                                         <p className="text-xs text-white/60">Манеж Юг • Тренер: Пономарев Сергей Александрович</p>
                                     </div>
-                                    <button className="px-3 py-1.5 rounded-lg bg-emerald-500 text-black text-xs font-bold">Выбрать</button>
+                                    <button className="w-full sm:w-auto px-4 py-2 sm:py-1.5 rounded-lg bg-emerald-500 text-black text-xs font-bold">Выбрать</button>
                                 </div>
                             </div>
 
-                            <div className="pt-4 flex justify-end">
+                            <div className="pt-4 flex justify-end shrink-0">
                                 <button
                                     onClick={() => setIsMakeupModalOpen(false)}
-                                    className="px-6 py-2.5 bg-white/10 text-white rounded-xl text-xs font-bold hover:bg-white/20"
+                                    className="w-full sm:w-auto px-6 py-2.5 bg-white/10 text-white rounded-xl text-xs font-bold hover:bg-white/20"
                                 >
                                     Закрыть
                                 </button>

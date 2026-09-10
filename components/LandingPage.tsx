@@ -28,14 +28,16 @@ import {
     Heart,
     RefreshCw,
     ExternalLink,
-    ArrowUpRight
+    ArrowUpRight,
+    User,
+    LogIn
 } from 'lucide-react';
 
 import { Button, GlassCard, SectionHeader, Container } from './UIComponents';
 import { NavItem, Feature, Program, Coach, FAQItem } from '../types';
 import { Group } from '../types/shop';
 import TermsModal from './TermsModal';
-import TrialModal from './TrialModal';
+import TrialModal, { SelectedGroupInfo } from './TrialModal';
 import AuthModal from './AuthModal';
 import NewsSection from './NewsSection';
 import { useAuth } from '../context/AuthContext';
@@ -171,9 +173,9 @@ const Navbar = ({ onOpenTrial, onOpenAuth }: { onOpenTrial: () => void, onOpenAu
     }, []);
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 flex justify-center py-6 px-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none">
+        <nav className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-safe py-2 sm:py-5 px-2 sm:px-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none">
             <motion.div
-                className={`pointer-events-auto flex items-center justify-between px-6 lg:px-8 py-3 rounded-full transition-all duration-500 ${isScrolled
+                className={`pointer-events-auto flex items-center justify-between px-3 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-full transition-all duration-500 ${isScrolled
                     ? 'bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl w-full'
                     : 'bg-transparent w-full'
                     }`}
@@ -181,7 +183,7 @@ const Navbar = ({ onOpenTrial, onOpenAuth }: { onOpenTrial: () => void, onOpenAu
                 animate={{ y: 0, opacity: 1 }}
             >
                 <motion.div
-                    className="flex items-center gap-2 cursor-pointer group"
+                    className="flex items-center gap-1.5 sm:gap-2 cursor-pointer group"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
@@ -190,7 +192,7 @@ const Navbar = ({ onOpenTrial, onOpenAuth }: { onOpenTrial: () => void, onOpenAu
                     <motion.img
                         src="/sparta-logo.png"
                         alt="SPARTA Logo"
-                        className="h-12 w-auto object-contain gold-glow-soft"
+                        className="h-8 sm:h-11 md:h-12 w-auto object-contain gold-glow-soft"
                         animate={{ 
                             scale: [1, 1.05, 1],
                             filter: ["drop-shadow(0 0 5px rgba(212,175,55,0.2))", "drop-shadow(0 0 15px rgba(212,175,55,0.5))", "drop-shadow(0 0 5px rgba(212,175,55,0.2))"]
@@ -208,7 +210,7 @@ const Navbar = ({ onOpenTrial, onOpenAuth }: { onOpenTrial: () => void, onOpenAu
                         }}
                     />
                     <motion.div
-                        className="font-russo text-2xl tracking-widest text-gold-gradient drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+                        className="font-russo text-lg sm:text-2xl tracking-widest text-gold-gradient drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.2, duration: 0.5 }}
@@ -279,17 +281,17 @@ const Navbar = ({ onOpenTrial, onOpenAuth }: { onOpenTrial: () => void, onOpenAu
                 </div>
 
                 {/* Mobile Toggle */}
-                <div className="flex xl:hidden items-center gap-3">
+                <div className="flex xl:hidden items-center gap-2 sm:gap-3">
                     {user && (
                          <button
                             onClick={() => navigate('/dashboard')}
-                            className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-sparta-gold border border-sparta-gold/30 shrink-0 overflow-hidden"
+                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 flex items-center justify-center text-sparta-gold border border-sparta-gold/30 shrink-0 overflow-hidden"
                         >
-                            {user.photoURL ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" /> : <span className="font-bold text-base">{user.displayName?.[0] || 'U'}</span>}
+                            {user.photoURL ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" /> : <span className="font-bold text-sm sm:text-base">{user.displayName?.[0] || 'U'}</span>}
                         </button>
                     )}
-                    <button className="text-white p-2 hover:bg-white/5 rounded-xl transition-colors" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                    <button className="text-white p-1.5 sm:p-2 hover:bg-white/5 rounded-xl transition-colors" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Меню">
+                        {mobileMenuOpen ? <X size={22} className="sm:w-6 sm:h-6" /> : <Menu size={22} className="sm:w-6 sm:h-6" />}
                     </button>
                 </div>
             </motion.div>
@@ -310,7 +312,7 @@ const Navbar = ({ onOpenTrial, onOpenAuth }: { onOpenTrial: () => void, onOpenAu
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -20, scale: 0.95 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed top-20 left-4 right-4 bg-[#111]/95 border border-white/10 rounded-[28px] p-6 flex flex-col gap-5 items-center shadow-2xl z-50 max-h-[85vh] overflow-y-auto custom-scrollbar xl:hidden backdrop-blur-2xl pointer-events-auto"
+                            className="fixed top-[calc(4.5rem+env(safe-area-inset-top,0px))] sm:top-20 left-3 right-3 sm:left-4 sm:right-4 bg-[#111]/95 border border-white/10 rounded-2xl sm:rounded-[28px] p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-6 flex flex-col gap-3 sm:gap-5 items-center shadow-2xl z-50 max-h-[calc(100dvh-5.5rem-env(safe-area-inset-top,0px))] overflow-y-auto custom-scrollbar xl:hidden backdrop-blur-2xl pointer-events-auto"
                         >
                             {NAV_ITEMS.map((item) => (
                                 <a
@@ -415,7 +417,7 @@ const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRou
     const isEnrolled = !!user;
 
     return (
-        <section className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden pt-32 pb-20">
+        <section className="relative min-h-screen min-h-screen-dvh flex flex-col justify-center items-center overflow-hidden pt-24 sm:pt-32 pb-12 sm:pb-20">
             {/* Dynamic Background Elements - Wrapped to prevent overflow */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[800px] h-[300px] md:h-[800px] bg-sparta-gold/10 rounded-full blur-[80px] md:blur-[150px]" />
@@ -427,19 +429,19 @@ const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRou
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
-                    className="mb-8"
+                    className="mb-4 sm:mb-8"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-sparta-gold text-xs sm:text-sm font-bold tracking-widest uppercase mb-6 shadow-[0_0_15px_rgba(212,175,55,0.15)]">
+                    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-sparta-gold text-[11px] sm:text-sm font-bold tracking-widest uppercase mb-4 sm:mb-6 shadow-[0_0_15px_rgba(212,175,55,0.15)]">
                         <Flame size={14} className="fill-sparta-gold text-sparta-gold shrink-0" />
                         <span>Детская футбольная школа в Челябинске</span>
                     </div>
 
-                    <h1 className="font-russo text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl leading-[1.1] mb-6 px-4 uppercase tracking-wide">
+                    <h1 className="font-russo text-2xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl leading-[1.15] mb-4 sm:mb-6 px-2 sm:px-4 uppercase tracking-wide">
                         Путь к победам <br className="hidden sm:inline" />
                         начинается в <span className="text-gold-gradient">SPARTA</span>
                     </h1>
 
-                    <p className="font-manrope text-base sm:text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-10 leading-relaxed font-normal">
+                    <p className="font-manrope text-sm sm:text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed font-normal px-2">
                         Профессиональная подготовка детей от 4 до 14 лет — от первых тренировок до соревнований. Не просто секция, а школа развития игрока.
                     </p>
 
@@ -1029,7 +1031,7 @@ const FAQ = () => {
 
 const Footer = ({ onOpenTerms, onOpenContact }: { onOpenTerms: () => void, onOpenContact: () => void }) => {
     return (
-        <footer className="bg-[#020202] pt-24 pb-12 border-t border-white/5 relative overflow-hidden">
+        <footer className="bg-[#020202] pt-16 sm:pt-24 pb-[calc(3rem+env(safe-area-inset-bottom,0px))] sm:pb-12 border-t border-white/5 relative overflow-hidden">
             {/* Subtle glow at footer bottom */}
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-32 bg-sparta-gold/5 blur-[80px]" />
 
@@ -1132,6 +1134,8 @@ const LandingPage: React.FC = () => {
     const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [isTrialOpen, setIsTrialOpen] = useState(false);
     const [isAuthOpen, setIsAuthOpen] = useState(false);
+    const [authInitialPhone, setAuthInitialPhone] = useState<string>('');
+    const [authRedirectTab, setAuthRedirectTab] = useState<string>('');
 
     const [isProductSetupOpen, setIsProductSetupOpen] = useState(false);
     const [isContactOpen, setIsContactOpen] = useState(false);
@@ -1150,7 +1154,7 @@ const LandingPage: React.FC = () => {
 
     const [duration, setDuration] = useState<1 | 3 | 6 | 12>(1);
     const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
-    const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string } | null>(null);
+    const [selectedGroup, setSelectedGroup] = useState<SelectedGroupInfo | null>(null);
 
     const { user, userProfile, requestedGroupIds } = useAuth();
     const { allLocations } = useCity();
@@ -1179,18 +1183,30 @@ const LandingPage: React.FC = () => {
 
     const handleAuthSuccess = async () => {
         setIsAuthOpen(false);
-        navigate('/dashboard');
+        const target = authRedirectTab ? `/dashboard?tab=${authRedirectTab}` : '/dashboard';
+        setAuthRedirectTab('');
+        window.location.href = target;
     };
 
 
-    const handleJoinClick = (group?: Group) => {
-        if (group) {
-            setSelectedGroup({ id: group.id, name: group.name });
+    const handleJoinClick = (group?: any) => {
+        if (group && (group.id || group.name || group.title)) {
+            const groupName = group.name || (group.ageGroupLabel ? `Группа ${group.ageGroupLabel}` : group.title || 'Выбранная группа');
+            setSelectedGroup({
+                id: group.id || 'custom',
+                name: groupName,
+                days: group.days || '',
+                time: group.time || '',
+                ageGroupLabel: group.ageGroupLabel || '',
+                coachName: group.coachName || '',
+                streamTitle: group.streamTitle || '',
+                location: group.location || 'ОЦ «Ньютон»'
+            });
         } else {
             setSelectedGroup(null);
         }
 
-        setIsWizardOpen(true);
+        setIsTrialOpen(true);
     };
 
     return (
@@ -1271,7 +1287,7 @@ const LandingPage: React.FC = () => {
                 onOpenTrial={handleJoinClick}
                 onOpenAuth={() => setIsAuthOpen(true)}
             />
-            <main>
+            <main className="pb-24 md:pb-0">
                 {/* Hero Section - Stadium Entrance */}
                 <div className="bg-hero-bg bg-fixed bg-cover bg-center relative">
                     <div className="absolute inset-0 bg-black/60 pointer-events-none z-0"></div>
@@ -1347,11 +1363,52 @@ const LandingPage: React.FC = () => {
                 </div>
             </main>
             <Footer onOpenTerms={() => setIsTermsOpen(true)} onOpenContact={() => setIsContactOpen(true)} />
+
+            {/* Mobile Sticky Action Bar */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0c0c10]/95 backdrop-blur-xl border-t border-white/10 p-3 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
+                <div className="flex items-center gap-2 max-w-md mx-auto">
+                    <button
+                        onClick={handleJoinClick}
+                        className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-sparta-gold text-black font-russo text-xs uppercase tracking-wider font-bold shadow-[0_0_20px_rgba(245,158,11,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        <span>Записаться на пробное (0 ₽)</span>
+                        <ArrowRight size={15} />
+                    </button>
+                    <button
+                        onClick={() => setIsAuthOpen(true)}
+                        className="p-3 rounded-2xl bg-white/10 hover:bg-white/15 text-sparta-gold border border-white/10 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                        title="Войти в личный кабинет"
+                    >
+                        <User size={18} />
+                    </button>
+                </div>
+            </div>
+
             <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
 
             <LeaveReviewModal isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} />
-            <TrialModal isOpen={isTrialOpen} onClose={() => setIsTrialOpen(false)} selectedGroup={selectedGroup} />
-            <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={handleAuthSuccess} />
+            <TrialModal
+                isOpen={isTrialOpen}
+                onClose={() => setIsTrialOpen(false)}
+                selectedGroup={selectedGroup}
+                onOpenAuth={(phone) => {
+                    setIsTrialOpen(false);
+                    if (phone) setAuthInitialPhone(phone);
+                    setAuthRedirectTab('requests');
+                    setIsAuthOpen(true);
+                }}
+            />
+            <AuthModal
+                isOpen={isAuthOpen}
+                onClose={() => {
+                    setIsAuthOpen(false);
+                    setAuthInitialPhone('');
+                    setAuthRedirectTab('');
+                }}
+                onSuccess={handleAuthSuccess}
+                initialPhone={authInitialPhone}
+                redirectTab={authRedirectTab}
+            />
 
             <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
             <MembershipModal

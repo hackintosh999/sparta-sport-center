@@ -93,7 +93,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className={`fixed inset-0 ${zIndex} flex items-center justify-center overflow-y-auto p-4 sm:p-6 md:p-8`}
+          className={`fixed inset-0 ${zIndex} flex items-center justify-center overflow-y-auto p-2 sm:p-4 md:p-6 pt-safe pb-safe`}
         >
           {/* Фоновый оверлей с глубоким размытием */}
           <motion.div
@@ -118,23 +118,23 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
             {/* Тело модалки */}
             {customCard ? (
-              <div className={`relative ${contentClassName}`}>
+              <div className={`relative max-h-[calc(100dvh-1.5rem)] sm:max-h-[88dvh] overflow-y-auto custom-scrollbar ${contentClassName}`}>
                 {showCloseButton && (
                   <button
                     type="button"
                     onClick={onClose}
                     aria-label="Закрыть"
-                    className={`absolute top-4 right-4 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer z-30 ${closeButtonClassName}`}
+                    className={`absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer z-30 ${closeButtonClassName}`}
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 )}
                 {children}
               </div>
             ) : (
               <div
-                className={`relative rounded-2xl bg-[#0e0e11]/95 border border-amber-500/20 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] backdrop-blur-md max-h-[88vh] overflow-y-auto custom-scrollbar ${
-                  noPadding ? 'p-0' : 'p-5 sm:p-6'
+                className={`relative rounded-2xl bg-[#0e0e11]/95 border border-amber-500/20 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] backdrop-blur-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[88dvh] ${
+                  noPadding ? 'p-0 overflow-hidden flex flex-col' : 'p-4 sm:p-6 overflow-y-auto custom-scrollbar'
                 } ${contentClassName}`}
               >
                 {showCloseButton && (

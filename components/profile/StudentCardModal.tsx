@@ -193,7 +193,7 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="absolute -top-12 right-0 p-2.5 text-white/60 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all cursor-pointer z-20 backdrop-blur-md"
+                        className="absolute top-3 right-3 p-2 text-white/70 hover:text-white bg-black/60 hover:bg-black/80 border border-white/20 rounded-full transition-all cursor-pointer z-30 backdrop-blur-md"
                         aria-label="Закрыть карточку"
                     >
                         <X size={18} />
@@ -202,9 +202,9 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
                     {/* ========================================================================= */}
                     {/* 🏅 АУТЕНТИЧНАЯ КАРТОЧКА ИГРОКА (FUT FIFA ULTIMATE TEAM STYLE) */}
                     {/* ========================================================================= */}
-                    <div className="w-full rounded-[36px] p-6 text-center relative overflow-hidden bg-gradient-to-b from-[#2a2416] via-[#161413] to-[#0a090b] border-2 border-[#e5c069]/70 shadow-[0_0_60px_rgba(229,192,105,0.35)] flex flex-col items-center space-y-4">
+                    <div className="w-full rounded-3xl sm:rounded-[36px] p-3.5 sm:p-6 text-center relative overflow-hidden bg-gradient-to-b from-[#2a2416] via-[#161413] to-[#0a090b] border-2 border-[#e5c069]/70 shadow-[0_0_60px_rgba(229,192,105,0.35)] flex flex-col items-center space-y-3 sm:space-y-4">
                         {/* Золотая огранка карточки */}
-                        <div className="absolute inset-1.5 border border-[#e5c069]/30 rounded-[30px] pointer-events-none" />
+                        <div className="absolute inset-1 sm:inset-1.5 border border-[#e5c069]/30 rounded-[24px] sm:rounded-[30px] pointer-events-none" />
                         <div className="absolute top-0 right-1/4 w-52 h-36 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
                         <div className="absolute -bottom-10 left-1/4 w-44 h-32 bg-amber-600/15 rounded-full blur-3xl pointer-events-none" />
 

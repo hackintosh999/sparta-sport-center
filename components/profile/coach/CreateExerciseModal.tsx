@@ -340,7 +340,7 @@ export const CreateExerciseModal: React.FC<CreateExerciseModalProps> = ({
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[250] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-2xl overflow-y-auto custom-scrollbar">
+            <div className="fixed inset-0 z-[250] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-2xl overflow-y-auto custom-scrollbar pt-safe pb-safe">
                 {/* Backdrop */}
                 <div className="fixed inset-0" onClick={onClose} />
 
@@ -348,16 +348,16 @@ export const CreateExerciseModal: React.FC<CreateExerciseModalProps> = ({
                     initial={{ opacity: 0, scale: 0.96, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: 15 }}
-                    className="relative w-full max-w-2xl bg-[#141416] border border-amber-500/30 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.9),0_0_30px_rgba(245,158,11,0.1)] overflow-hidden flex flex-col my-auto z-10"
+                    className="relative w-full max-w-2xl bg-[#141416] border border-amber-500/30 rounded-3xl sm:rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.9),0_0_30px_rgba(245,158,11,0.1)] overflow-hidden flex flex-col my-auto z-10 max-h-[calc(100dvh-1.5rem)]"
                 >
                     {/* Header */}
-                    <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between gap-3 bg-gradient-to-b from-white/5 to-transparent">
+                    <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 flex items-center justify-between gap-3 bg-gradient-to-b from-white/5 to-transparent shrink-0">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center text-base">
                                 ⚽
                             </div>
                             <div>
-                                <h3 className="text-lg sm:text-xl font-russo text-white uppercase tracking-tight">
+                                <h3 className="text-base sm:text-xl font-russo text-white uppercase tracking-tight">
                                     {editingExercise ? 'Редактирование упражнения' : 'Новое упражнение'}
                                 </h3>
                             </div>
@@ -373,7 +373,7 @@ export const CreateExerciseModal: React.FC<CreateExerciseModalProps> = ({
                     </div>
 
                     {/* Form Body - Compact 5 Rows Layout */}
-                    <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-3.5 overflow-y-auto max-h-[80vh] custom-scrollbar">
+                    <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 overflow-y-auto max-h-[75vh] sm:max-h-[80vh] custom-scrollbar flex-1">
                         {/* Row 1: Title */}
                         <div className="space-y-1.5">
                             <label className="text-[11px] font-black text-zinc-300 uppercase tracking-wider block">
@@ -772,12 +772,12 @@ export const CreateExerciseModal: React.FC<CreateExerciseModalProps> = ({
                         </div>
 
                         {/* Footer (Fixed inside modal) */}
-                        <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-2.5">
+                        <div className="pt-3 border-t border-white/10 flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-2.5 shrink-0">
                             <button
                                 type="button"
                                 onClick={onClose}
                                 disabled={isSubmitting}
-                                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
+                                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 text-center"
                             >
                                 Отмена
                             </button>
@@ -785,7 +785,7 @@ export const CreateExerciseModal: React.FC<CreateExerciseModalProps> = ({
                             <button
                                 type="submit"
                                 disabled={isSubmitting || !title.trim()}
-                                className="px-6 py-2.5 rounded-xl bg-sparta-gold hover:bg-amber-300 text-black font-russo text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
+                                className="w-full sm:w-auto px-6 py-3 sm:py-2.5 rounded-xl bg-sparta-gold hover:bg-amber-300 text-black font-russo text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95 text-center"
                             >
                                 {isSubmitting ? (
                                     <>

@@ -14,7 +14,7 @@ const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard'
 const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
 const AdminRequests = lazyWithRetry(() => import('./pages/admin/AdminRequests'));
 const AdminNews = lazyWithRetry(() => import('./pages/admin/AdminNews'));
-const AdminMessages = lazyWithRetry(() => import('./pages/admin/AdminMessages'));
+import AdminMessages from './pages/admin/AdminMessages';
 const AdminSettings = lazyWithRetry(() => import('./pages/admin/AdminSettings'));
 const AdminComments = lazyWithRetry(() => import('./pages/admin/AdminComments'));
 const AdminSchedule = lazyWithRetry(() => import('./pages/admin/AdminSchedule'));

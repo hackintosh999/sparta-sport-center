@@ -36,6 +36,7 @@
         "tmp",
         "sparta-video",
         "sparta-demo-video",
-        "e2e"
+        "e2e",
+        "**/*.figma.tsx"
     ]
 }

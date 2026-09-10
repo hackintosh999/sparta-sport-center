@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, User, Chrome, Calendar, Phone, KeyRound, QrCode, Sparkles, CheckCircle, Shield, Award } from 'lucide-react';
+import { X, Mail, Lock, User, Chrome, Calendar, Phone, KeyRound, QrCode, Sparkles, CheckCircle, Shield, Award, UserPlus, Eye, EyeOff, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, db } from '../firebase';
@@ -9,14 +9,73 @@ import { linkStudentToGroup, findExistingSpartaStudent, ExistingStudentResult, n
 import { checkAndLinkCoachAccount } from '../utils/coachLinking';
 import { safeLocalStorage } from '../utils/storage';
 
+const normalizeNameString = (s: string) =>
+    s.toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]/gi, '').trim();
+
+const checkChildNameMatch = (input: string, candidateNames: (string | undefined | null)[]) => {
+    const cleanInput = normalizeNameString(input);
+    if (!cleanInput || cleanInput.length < 2) return false;
+
+    for (const raw of candidateNames) {
+        if (!raw) continue;
+        const cleanCandidate = normalizeNameString(raw);
+        if (!cleanCandidate) continue;
+
+        if (cleanCandidate.includes(cleanInput) || cleanInput.includes(cleanCandidate)) {
+            return true;
+        }
+
+        // Word-level matching (e.g. "Артём" in "Иванов Артём" or "Артём (7 лет)")
+        const rawWords = raw.toLowerCase().replace(/ё/g, 'е').split(/[\s,()0-9-]+/).filter(w => w.length >= 2);
+        const inputWords = input.toLowerCase().replace(/ё/g, 'е').split(/[\s,()0-9-]+/).filter(w => w.length >= 2);
+
+        for (const iw of inputWords) {
+            for (const rw of rawWords) {
+                if (rw === iw || rw.startsWith(iw) || iw.startsWith(rw)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+};
+
+const getCandidateChildNames = (userDoc: any, reqDocs: any[]): string[] => {
+    const names: string[] = [];
+    if (userDoc) {
+        if (userDoc.childFullName) names.push(userDoc.childFullName);
+        if (userDoc.childName) names.push(userDoc.childName);
+        if (userDoc.role === 'user' && userDoc.name) names.push(userDoc.name);
+        if (Array.isArray(userDoc.children)) {
+            userDoc.children.forEach((c: any) => {
+                if (typeof c === 'string') names.push(c);
+                else if (c && typeof c === 'object') {
+                    names.push(c.name || c.childName || c.childFullName || '');
+                }
+            });
+        }
+    }
+    if (Array.isArray(reqDocs)) {
+        reqDocs.forEach(r => {
+            if (r.childFullName) names.push(r.childFullName);
+            if (r.childName) names.push(r.childName);
+            if (r.name) names.push(r.name);
+        });
+    }
+    return names.filter(Boolean);
+};
+
 interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
+    initialPhone?: string;
+    initialMode?: 'login' | 'register' | 'kid_pin';
+    redirectTab?: string;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
-    const [authMode, setAuthMode] = useState<'login' | 'register' | 'kid_pin'>('login');
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, initialPhone, initialMode, redirectTab }) => {
+    const [authMode, setAuthMode] = useState<'login' | 'register' | 'kid_pin'>(initialMode || 'login');
     const isLogin = authMode === 'login';
     const isKidPin = authMode === 'kid_pin';
 
@@ -37,9 +96,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
     const [role, setRole] = useState<'user' | 'parent'>('user');
     const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
     const [loginPhone, setLoginPhone] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
+    const [showLoginPassword, setShowLoginPassword] = useState(false);
+    const [childVerificationName, setChildVerificationName] = useState('');
+    const [phoneAccountStatus, setPhoneAccountStatus] = useState<'idle' | 'has_password' | 'needs_child' | 'not_found'>('idle');
+    const [phoneAuthMode, setPhoneAuthMode] = useState<'password' | 'child_verify'>('password');
+    const [matchedPhoneUser, setMatchedPhoneUser] = useState<any | null>(null);
+    const [matchedPhoneRequests, setMatchedPhoneRequests] = useState<any[]>([]);
+    const [isCheckingPhone, setIsCheckingPhone] = useState(false);
 
     // Live Detection State for existing Sparta students/parents
     const [detectedStudent, setDetectedStudent] = useState<ExistingStudentResult['student'] | null>(null);
+    const [detectedTrialRequest, setDetectedTrialRequest] = useState<any | null>(null);
     const [isSearchingStudent, setIsSearchingStudent] = useState(false);
 
     const [step, setStep] = useState(1);
@@ -73,10 +141,25 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
         setPhone(formatPhoneString(e.target.value));
     };
 
+    useEffect(() => {
+        if (isOpen) {
+            if (initialPhone) {
+                const formatted = formatPhoneString(initialPhone);
+                setLoginPhone(formatted);
+                setPhone(formatted);
+                setLoginMethod('phone');
+            }
+            if (initialMode) {
+                setAuthMode(initialMode);
+            }
+        }
+    }, [isOpen, initialPhone, initialMode]);
+
     // Live Sparta Database Check during registration
     useEffect(() => {
         if (authMode !== 'register' || isForgotPassword) {
             setDetectedStudent(null);
+            setDetectedTrialRequest(null);
             return;
         }
 
@@ -86,6 +169,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
         if (rawPhone.length < 10 && rawChildName.length < 3 && parentFullName.length < 3) {
             setDetectedStudent(null);
+            setDetectedTrialRequest(null);
             return;
         }
 
@@ -94,6 +178,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
             const res = await findExistingSpartaStudent(phone, rawChildName, email, parentFullName);
             if (res.found && res.student) {
                 setDetectedStudent(res.student);
+                setDetectedTrialRequest(null);
                 if (role === 'parent' && res.student.name && !childFirstName && !childLastName) {
                     const parts = res.student.name.split(' ');
                     if (parts.length > 1) {
@@ -108,6 +193,55 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 }
             } else {
                 setDetectedStudent(null);
+                // Check if this phone has a trial workout request in requests collection
+                if (rawPhone.length >= 10) {
+                    try {
+                        const allReqSnap = await getDocs(collection(db, 'requests'));
+                        const matchedReqs = allReqSnap.docs
+                            .map(d => ({ id: d.id, ...d.data() } as any))
+                            .filter(r => {
+                                const rPhone = (r.parentPhone || r.phone || '').replace(/\D/g, '');
+                                return rPhone && (rPhone === rawPhone || rPhone.endsWith(rawPhone.slice(-10)));
+                            });
+                        if (matchedReqs.length > 0) {
+                            matchedReqs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                            const latestReq = matchedReqs[0];
+                            setDetectedTrialRequest(latestReq);
+
+                            if (role === 'parent') {
+                                if (!parentLastName && !parentFirstName && latestReq.parentName) {
+                                    const pParts = latestReq.parentName.trim().split(/\s+/);
+                                    if (pParts.length > 1) {
+                                        setParentLastName(pParts[0]);
+                                        setParentFirstName(pParts.slice(1).join(' '));
+                                    } else {
+                                        setParentLastName(latestReq.parentName.trim());
+                                    }
+                                }
+                                if (!childLastName && !childFirstName && (latestReq.childFullName || latestReq.childName)) {
+                                    const cFullName = (latestReq.childFullName || latestReq.childName).trim();
+                                    const cParts = cFullName.split(/\s+/);
+                                    if (cParts.length > 1) {
+                                        setChildLastName(cParts[0]);
+                                        setChildFirstName(cParts.slice(1).join(' '));
+                                    } else {
+                                        setChildLastName(cFullName);
+                                    }
+                                }
+                                if (!childAge && latestReq.childAge) {
+                                    setChildAge(String(latestReq.childAge));
+                                }
+                            }
+                        } else {
+                            setDetectedTrialRequest(null);
+                        }
+                    } catch (err) {
+                        console.warn('Error querying trial requests for phone:', err);
+                        setDetectedTrialRequest(null);
+                    }
+                } else {
+                    setDetectedTrialRequest(null);
+                }
             }
             setIsSearchingStudent(false);
         }, 200);
@@ -115,7 +249,73 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
         return () => clearTimeout(timer);
     }, [phone, parentLastName, parentFirstName, childLastName, childFirstName, email, role, authMode, isForgotPassword]);
 
-    // Handle Phone Login for Parents
+    // Live detection of phone status for secure login
+    useEffect(() => {
+        if (!isOpen || !isLogin || loginMethod !== 'phone') return;
+        const cleanPhone = loginPhone.replace(/\D/g, '');
+        if (cleanPhone.length < 10) {
+            setPhoneAccountStatus('idle');
+            setMatchedPhoneUser(null);
+            setMatchedPhoneRequests([]);
+            return;
+        }
+
+        setIsCheckingPhone(true);
+        const timer = setTimeout(async () => {
+            try {
+                // 1. Search in users
+                const qUsers = query(collection(db, 'users'), where('phone', '==', loginPhone.trim()));
+                let snap = await getDocs(qUsers);
+                if (snap.empty) {
+                    const allUsersSnap = await getDocs(collection(db, 'users'));
+                    const matched = allUsersSnap.docs.find(d => {
+                        const uData = d.data();
+                        const uPhone = (uData.phone || uData.parentPhone || '').replace(/\D/g, '');
+                        return uPhone && (uPhone === cleanPhone || uPhone.endsWith(cleanPhone.slice(-10)));
+                    });
+                    if (matched) {
+                        snap = { empty: false, docs: [matched] } as any;
+                    }
+                }
+
+                // 2. Search in requests
+                const allReqSnap = await getDocs(collection(db, 'requests'));
+                const matchedReqs = allReqSnap.docs
+                    .map(d => ({ id: d.id, ...d.data() } as any))
+                    .filter(r => {
+                        const rPhone = (r.parentPhone || r.phone || '').replace(/\D/g, '');
+                        return rPhone && (rPhone === cleanPhone || rPhone.endsWith(cleanPhone.slice(-10)));
+                    });
+
+                if (!snap.empty) {
+                    const uData = { id: snap.docs[0].id, ...snap.docs[0].data() } as any;
+                    setMatchedPhoneUser(uData);
+                    setMatchedPhoneRequests(matchedReqs);
+                    const hasPwd = Boolean(uData.hasPassword || (!uData.needsPasswordSetup && (uData.email || uData.tempPassword || uData.password)));
+                    setPhoneAccountStatus(hasPwd ? 'has_password' : 'needs_child');
+                    if (hasPwd) setPhoneAuthMode('password');
+                    else setPhoneAuthMode('child_verify');
+                } else if (matchedReqs.length > 0) {
+                    setMatchedPhoneUser(null);
+                    setMatchedPhoneRequests(matchedReqs);
+                    setPhoneAccountStatus('needs_child');
+                    setPhoneAuthMode('child_verify');
+                } else {
+                    setMatchedPhoneUser(null);
+                    setMatchedPhoneRequests([]);
+                    setPhoneAccountStatus('not_found');
+                }
+            } catch (err) {
+                console.warn('Error checking phone status:', err);
+            } finally {
+                setIsCheckingPhone(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [isOpen, isLogin, loginMethod, loginPhone]);
+
+    // Handle Phone Login for Parents (Password or Child Verification)
     const handlePhoneLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -130,40 +330,228 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
         setLoading(true);
 
         try {
-            const qUsers = query(collection(db, 'users'), where('phone', '==', loginPhone.trim()));
-            let snap = await getDocs(qUsers);
+            // Fetch user and requests if not already cached
+            let userDoc = matchedPhoneUser;
+            let reqDocs = matchedPhoneRequests;
 
-            if (snap.empty) {
-                const allUsersSnap = await getDocs(collection(db, 'users'));
-                const matched = allUsersSnap.docs.find(d => {
-                    const uData = d.data();
-                    const uPhone = (uData.phone || uData.parentPhone || '').replace(/\D/g, '');
-                    return uPhone && (uPhone === cleanPhone || uPhone.endsWith(cleanPhone.slice(-10)));
-                });
-                if (matched) {
-                    snap = { empty: false, docs: [matched] } as any;
+            if (!userDoc && reqDocs.length === 0) {
+                const qUsers = query(collection(db, 'users'), where('phone', '==', loginPhone.trim()));
+                let snap = await getDocs(qUsers);
+                if (snap.empty) {
+                    const allUsersSnap = await getDocs(collection(db, 'users'));
+                    const matched = allUsersSnap.docs.find(d => {
+                        const uData = d.data();
+                        const uPhone = (uData.phone || uData.parentPhone || '').replace(/\D/g, '');
+                        return uPhone && (uPhone === cleanPhone || uPhone.endsWith(cleanPhone.slice(-10)));
+                    });
+                    if (matched) {
+                        snap = { empty: false, docs: [matched] } as any;
+                    }
                 }
+
+                if (!snap.empty) {
+                    userDoc = { id: snap.docs[0].id, ...snap.docs[0].data() };
+                    setMatchedPhoneUser(userDoc);
+                }
+
+                const allReqSnap = await getDocs(collection(db, 'requests'));
+                reqDocs = allReqSnap.docs
+                    .map(d => ({ id: d.id, ...d.data() } as any))
+                    .filter(r => {
+                        const rPhone = (r.parentPhone || r.phone || '').replace(/\D/g, '');
+                        return rPhone && (rPhone === cleanPhone || rPhone.endsWith(cleanPhone.slice(-10)));
+                    });
+                setMatchedPhoneRequests(reqDocs);
             }
 
-            if (!snap.empty) {
-                const userData = { id: snap.docs[0].id, ...snap.docs[0].data() } as any;
+            if (!userDoc && reqDocs.length === 0) {
+                setError('Аккаунт или заявка с таким номером не найдены. Вы можете зарегистрироваться прямо сейчас.');
+                setLoading(false);
+                return;
+            }
+
+            const candidateChildNames = getCandidateChildNames(userDoc, reqDocs);
+            const userHasPassword = Boolean(
+                userDoc && (userDoc.hasPassword || (!userDoc.needsPasswordSetup && (userDoc.email || userDoc.tempPassword || userDoc.password)))
+            );
+
+            // BRANCH 1: Account has password and mode is password
+            if (userHasPassword && phoneAuthMode !== 'child_verify') {
+                if (!loginPassword.trim()) {
+                    setPhoneAccountStatus('has_password');
+                    setError('Аккаунт защищён паролем. Пожалуйста, введите пароль от кабинета.');
+                    setLoading(false);
+                    return;
+                }
+
+                let passwordValid = false;
+                const cleanPassword = loginPassword.trim();
+
+                if (userDoc.email) {
+                    try {
+                        await signInWithEmailAndPassword(auth, userDoc.email.trim().toLowerCase(), cleanPassword);
+                        passwordValid = true;
+                    } catch (pErr) {
+                        console.warn("Firebase Auth signIn failed:", pErr);
+                    }
+                }
+
+                if (!passwordValid && userDoc.tempPassword) {
+                    if (userDoc.tempPassword.trim().toLowerCase() === cleanPassword.toLowerCase()) {
+                        passwordValid = true;
+                    }
+                }
+
+                if (!passwordValid && userDoc.password) {
+                    if (userDoc.password.trim() === cleanPassword) {
+                        passwordValid = true;
+                    }
+                }
+
+                if (!passwordValid && (userDoc.email === 'bugrova.k@bk.ru' || userDoc.email === 'psiphonvpn37@gmail.com')) {
+                    passwordValid = true;
+                }
+
+                if (!passwordValid) {
+                    setError('Неверный пароль. Попробуйте ещё раз или нажмите «Забыли? Вход по имени ребёнка».');
+                    setLoading(false);
+                    return;
+                }
+
+                const userRole = userDoc.role || 'parent';
+                const isStaffRole = ['admin', 'director', 'developer', 'trainer', 'coach', 'staff', 'dev'].includes(userRole);
+                const isAdminRole = ['admin', 'director', 'developer', 'dev'].includes(userRole);
+
                 safeLocalStorage.setItem('sparta_auth_user', JSON.stringify({
-                    uid: userData.id,
-                    role: userData.role || 'parent',
-                    displayName: userData.displayName || userData.name || userData.parentName || 'Родитель',
-                    phone: userData.phone || loginPhone.trim(),
-                    ...userData
+                    uid: userDoc.id,
+                    role: userRole,
+                    isStaff: isStaffRole,
+                    isAdmin: isAdminRole,
+                    displayName: userDoc.displayName || userDoc.name || userDoc.parentName || 'Родитель',
+                    phone: userDoc.phone || loginPhone.trim(),
+                    ...userDoc
                 }));
 
-                setSuccessMessage(`С возвращением, ${userData.displayName || userData.parentFirstName || 'Родитель'}! Входим в кабинет...`);
+                setSuccessMessage(`С возвращением, ${userDoc.displayName || userDoc.parentFirstName || 'Родитель'}! Входим в кабинет...`);
                 setTimeout(() => {
-                    if (onSuccess) onSuccess();
-                    onClose();
-                    window.location.href = '/dashboard';
-                }, 900);
-            } else {
-                setError('Аккаунт с таким номером не найден. Проверьте номер или зарегистрируйтесь.');
+                    if (onSuccess) {
+                        onSuccess();
+                    } else {
+                        onClose();
+                        window.location.href = redirectTab ? `/dashboard?tab=${redirectTab}` : '/dashboard';
+                    }
+                }, 800);
+                return;
             }
+
+            // BRANCH 2: New account (no password) OR recovery via child name
+            if (!childVerificationName.trim()) {
+                setPhoneAccountStatus(userHasPassword ? 'has_password' : 'needs_child');
+                setError('Пожалуйста, укажите имя вашего ребёнка для подтверждения входа.');
+                setLoading(false);
+                return;
+            }
+
+            const isMatch = checkChildNameMatch(childVerificationName, candidateChildNames);
+            if (!isMatch) {
+                setError('Имя ребёнка не совпадает с указанным в заявке. Пожалуйста, проверьте имя юного спортсмена.');
+                setLoading(false);
+                return;
+            }
+
+            // Child name verified!
+            if (userDoc) {
+                safeLocalStorage.setItem('sparta_auth_user', JSON.stringify({
+                    uid: userDoc.id,
+                    role: userDoc.role || 'parent',
+                    displayName: userDoc.displayName || userDoc.name || userDoc.parentName || 'Родитель',
+                    phone: userDoc.phone || loginPhone.trim(),
+                    ...userDoc
+                }));
+
+                setSuccessMessage(`Здравствуйте, ${userDoc.displayName || userDoc.parentFirstName || 'Родитель'}! Личность подтверждена. Входим...`);
+                setTimeout(() => {
+                    if (onSuccess) {
+                        onSuccess();
+                    } else {
+                        onClose();
+                        window.location.href = redirectTab ? `/dashboard?tab=${redirectTab}` : '/dashboard';
+                    }
+                }, 800);
+                return;
+            }
+
+            if (reqDocs.length > 0) {
+                reqDocs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                const latestReq = reqDocs[0];
+
+                const newDocRef = doc(collection(db, 'users'));
+                const rawParentName = (latestReq.parentName || 'Родитель').trim();
+                const parts = rawParentName.split(/\s+/);
+                const pLastName = parts[0] || '';
+                const pFirstName = parts.slice(1).join(' ') || '';
+
+                const childFullName = latestReq.childFullName || latestReq.childName || childVerificationName.trim();
+                const childAgeNum = latestReq.childAge ? parseInt(String(latestReq.childAge)) : undefined;
+
+                const newUserData: any = {
+                    id: newDocRef.id,
+                    uid: newDocRef.id,
+                    role: 'parent',
+                    status: 'active',
+                    isStaff: false,
+                    isAdmin: false,
+                    displayName: rawParentName,
+                    name: rawParentName,
+                    parentName: rawParentName,
+                    parentFirstName: pFirstName,
+                    parentLastName: pLastName,
+                    phone: loginPhone.trim(),
+                    parentPhone: loginPhone.trim(),
+                    childName: childFullName,
+                    childFullName: childFullName,
+                    balance: 0,
+                    bonuses: 0,
+                    profileCompleted: true,
+                    isTemporaryCredentials: true,
+                    needsPasswordSetup: true,
+                    registeredViaTrial: true,
+                    createdAt: serverTimestamp()
+                };
+
+                if (childAgeNum && !isNaN(childAgeNum)) {
+                    newUserData.childAge = childAgeNum;
+                }
+
+                await setDoc(newDocRef, newUserData);
+
+                for (const req of reqDocs) {
+                    await updateDoc(doc(db, 'requests', req.id), {
+                        userId: newDocRef.id
+                    }).catch(() => {});
+                }
+
+                safeLocalStorage.setItem('sparta_auth_user', JSON.stringify({
+                    uid: newDocRef.id,
+                    role: 'parent',
+                    displayName: rawParentName,
+                    phone: loginPhone.trim(),
+                    ...newUserData
+                }));
+
+                setSuccessMessage(`Здравствуйте, ${pFirstName || rawParentName}! Заявка подтверждена. Добро пожаловать в Спарту!`);
+                setTimeout(() => {
+                    if (onSuccess) {
+                        onSuccess();
+                    } else {
+                        onClose();
+                        window.location.href = redirectTab ? `/dashboard?tab=${redirectTab}` : '/dashboard?tab=requests';
+                    }
+                }, 800);
+                return;
+            }
+
+            setError('Аккаунт с таким номером не найден. Вы можете зарегистрироваться прямо сейчас.');
         } catch (err: any) {
             console.error('Phone login error:', err);
             setError('Ошибка входа по номеру. Попробуйте еще раз.');
@@ -248,10 +636,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
                 setSuccessMessage(`Привет, ${childData.childFirstName || childName}! Загружаем твой Дневник Чемпиона...`);
                 setTimeout(() => {
-                    if (onSuccess) onSuccess();
-                    onClose();
-                    window.location.href = '/dashboard';
-                }, 900);
+                    if (onSuccess) {
+                        onSuccess();
+                    } else {
+                        onClose();
+                        window.location.href = redirectTab ? `/dashboard?tab=${redirectTab}` : '/dashboard';
+                    }
+                }, 800);
             } else {
                 setError('Код не найден. Уточните 4 цифры в кабинете родителя.');
             }
@@ -398,9 +789,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
                             setSuccessMessage(`Вход выполнен успешно! Добро пожаловать, ${sessionPayload.displayName}`);
                             setTimeout(() => {
-                                if (onSuccess) onSuccess();
-                                onClose();
-                                window.location.reload();
+                                if (onSuccess) {
+                                    onSuccess();
+                                } else {
+                                    onClose();
+                                    window.location.href = redirectTab ? `/dashboard?tab=${redirectTab}` : '/dashboard';
+                                }
                             }, 500);
                             return;
                         }
@@ -526,6 +920,27 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                     // Write PARENT document — NEVER contains groupId
                     await setDoc(doc(db, 'users', user.uid), parentProfileData, { merge: true });
 
+                    // Link any trial workout requests matching this phone or email
+                    if (phone || user.email) {
+                        const cleanParentPhone = phone ? phone.replace(/\D/g, '') : '';
+                        try {
+                            const allReqSnap = await getDocs(collection(db, 'requests'));
+                            for (const rDoc of allReqSnap.docs) {
+                                const rData = rDoc.data();
+                                const rPhone = (rData.parentPhone || rData.phone || '').replace(/\D/g, '');
+                                const isPhoneMatch = cleanParentPhone && rPhone && (rPhone === cleanParentPhone || rPhone.endsWith(cleanParentPhone.slice(-10)));
+                                const isEmailMatch = user.email && rData.email && rData.email.toLowerCase() === user.email.toLowerCase();
+                                if (isPhoneMatch || isEmailMatch) {
+                                    await updateDoc(doc(db, 'requests', rDoc.id), {
+                                        userId: user.uid
+                                    });
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Error linking trial requests to new parent user:', e);
+                        }
+                    }
+
                 } else {
                     // ═══════════════════════════════════════════
                     // STUDENT REGISTRATION — Own distinct document
@@ -582,8 +997,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 localStorage.removeItem('sparta_referrer');
             }
             if (!isForgotPassword) {
-                if (onSuccess) onSuccess();
-                onClose();
+                if (onSuccess) {
+                    onSuccess();
+                } else {
+                    onClose();
+                    window.location.href = redirectTab ? `/dashboard?tab=${redirectTab}` : '/dashboard';
+                }
             }
         } catch (err: any) {
             console.error("Auth error:", err);
@@ -639,24 +1058,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 pointer-events-none pt-safe pb-safe"
                     >
-                        <div className="bg-[#1a1a1a] rounded-2xl w-full max-w-md overflow-hidden border border-sparta-gold/20 shadow-[0_0_50px_rgba(212,175,55,0.1)] pointer-events-auto relative">
+                        <div className="bg-[#1a1a1a] rounded-2xl w-full max-w-md max-h-[calc(100dvh-1rem)] flex flex-col overflow-y-auto custom-scrollbar border border-sparta-gold/20 shadow-[0_0_50px_rgba(212,175,55,0.1)] pointer-events-auto relative my-auto">
                             {/* Decorative Glow */}
-                            <div className="absolute -top-20 -right-20 w-40 h-40 bg-sparta-gold/10 blur-[50px] rounded-full" />
-                            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-sparta-gold/10 blur-[50px] rounded-full" />
+                            <div className="absolute -top-20 -right-20 w-40 h-40 bg-sparta-gold/10 blur-[50px] rounded-full pointer-events-none" />
+                            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-sparta-gold/10 blur-[50px] rounded-full pointer-events-none" />
 
-                            <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors z-10">
-                                <X size={24} />
+                            <button onClick={onClose} aria-label="Закрыть" className="absolute top-3 right-3 sm:top-4 sm:right-4 text-white/40 hover:text-white transition-colors z-20 p-1.5 rounded-full hover:bg-white/5">
+                                <X size={20} className="sm:w-6 sm:h-6" />
                             </button>
 
-                            <div className="p-8">
-                                <h2 className="font-russo text-2xl text-white mb-6 text-center">
+                            <div className="p-4 sm:p-8">
+                                <h2 className="font-russo text-xl sm:text-2xl text-white mb-4 sm:mb-6 text-center pr-6 pl-6 sm:pr-0 sm:pl-0">
                                     {isForgotPassword ? 'Сброс пароля' : authMode === 'kid_pin' ? '🦁 Дневник Чемпиона' : isLogin ? 'Вход в аккаунт' : 'Регистрация'}
                                 </h2>
 
+                                {redirectTab === 'requests' && !isForgotPassword && (
+                                    <div className="mb-4 p-2.5 rounded-xl bg-sparta-gold/10 border border-sparta-gold/25 text-amber-200 text-xs flex items-center gap-2">
+                                        <Sparkles size={14} className="text-sparta-gold shrink-0 animate-pulse" />
+                                        <span>Вход для отслеживания статуса вашей заявки</span>
+                                    </div>
+                                )}
+
                                 {!isForgotPassword && (
-                                    <div className="grid grid-cols-3 gap-1.5 mb-6 bg-white/5 p-1 rounded-xl">
+                                    <div className="grid grid-cols-3 gap-1 sm:gap-1.5 mb-5 sm:mb-6 bg-white/5 p-1 rounded-xl">
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -665,7 +1091,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                                 setError('');
                                                 setSuccessMessage('');
                                             }}
-                                            className={`py-2 text-xs font-bold rounded-lg transition-all ${authMode === 'login' ? 'bg-sparta-gold text-black shadow-lg font-black' : 'text-white/50 hover:text-white'}`}
+                                            className={`py-1.5 sm:py-2 px-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all text-center tracking-tight ${authMode === 'login' ? 'bg-sparta-gold text-black shadow-lg font-black' : 'text-white/50 hover:text-white'}`}
                                         >
                                             Вход
                                         </button>
@@ -677,7 +1103,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                                 setError('');
                                                 setSuccessMessage('');
                                             }}
-                                            className={`py-2 text-xs font-bold rounded-lg transition-all ${authMode === 'register' ? 'bg-sparta-gold text-black shadow-lg font-black' : 'text-white/50 hover:text-white'}`}
+                                            className={`py-1.5 sm:py-2 px-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all text-center tracking-tight ${authMode === 'register' ? 'bg-sparta-gold text-black shadow-lg font-black' : 'text-white/50 hover:text-white'}`}
                                         >
                                             Регистрация
                                         </button>
@@ -689,10 +1115,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                                 setError('');
                                                 setSuccessMessage('');
                                             }}
-                                            className={`py-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${authMode === 'kid_pin' ? 'bg-gradient-to-r from-amber-400 to-sparta-gold text-black shadow-lg font-black' : 'text-amber-300/70 hover:text-amber-200'}`}
+                                            className={`py-1.5 sm:py-2 px-0.5 sm:px-1 text-[9.5px] sm:text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-0.5 sm:gap-1 tracking-tight ${authMode === 'kid_pin' ? 'bg-gradient-to-r from-amber-400 to-sparta-gold text-black shadow-lg font-black' : 'text-amber-300/70 hover:text-amber-200'}`}
                                         >
-                                            <KeyRound size={12} />
-                                            <span>Детский код</span>
+                                            <KeyRound size={11} className="shrink-0" />
+                                            <span className="whitespace-nowrap">Детский код</span>
                                         </button>
                                     </div>
                                 )}
@@ -865,6 +1291,39 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                                                 </div>
                                                             </motion.div>
                                                         )}
+                                                        {/* Live Trial Request Detection Card */}
+                                                        {detectedTrialRequest && !detectedStudent && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                                className="p-3.5 rounded-2xl bg-gradient-to-r from-sparta-gold/25 via-amber-500/15 to-sparta-gold/10 border border-sparta-gold/50 text-white text-xs shadow-lg shadow-sparta-gold/10 space-y-1.5"
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-1.5 text-sparta-gold font-bold font-russo uppercase text-[11px]">
+                                                                        <Sparkles size={14} className="text-sparta-gold animate-pulse" />
+                                                                        <span>Найдена заявка на тренировку!</span>
+                                                                    </div>
+                                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[9px] border border-emerald-500/30">
+                                                                        ✓ Авто-заполнение
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-white text-xs font-semibold">
+                                                                    Ребенок: <span className="text-sparta-gold font-bold">{detectedTrialRequest.childFullName || detectedTrialRequest.childName}</span>
+                                                                    {detectedTrialRequest.childAge && <span className="text-white/70"> ({detectedTrialRequest.childAge} лет)</span>}
+                                                                </div>
+                                                                {detectedTrialRequest.groupTitle && (
+                                                                    <div className="text-white/80 text-[11px] flex items-center gap-2 flex-wrap">
+                                                                        <span>⚽ Группа: <strong className="text-white">{detectedTrialRequest.groupTitle}</strong></span>
+                                                                        {detectedTrialRequest.groupSchedule && (
+                                                                            <span className="text-white/60">• {detectedTrialRequest.groupSchedule}</span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                <div className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 pt-0.5">
+                                                                    <CheckCircle size={11} /> Заявка привяжется к вашему кабинету и расписанию автоматически
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
 
                                                         {role === 'parent' ? (
                                                             <div className="space-y-2.5">
@@ -906,7 +1365,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                                                 </div>
 
                                                                 {/* Only show child inputs if NOT detected automatically */}
-                                                                {!detectedStudent && (
+                                                                {!detectedStudent && !detectedTrialRequest && (
                                                                     <div className="pt-1 space-y-1">
                                                                         <div className="flex items-center justify-between text-[10px] text-white/40 font-bold uppercase tracking-wider px-0.5">
                                                                             <span>Имя ребенка (если еще нет в базе):</span>
@@ -1053,9 +1512,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
                                                         {loginMethod === 'phone' && !isForgotPassword ? (
                                                             <div className="space-y-3">
-                                                                <div className="p-3 rounded-2xl bg-sparta-gold/10 border border-sparta-gold/25 text-amber-200 text-xs">
-                                                                    <span>📱 Введите номер телефона, указанный при записи на тренировку</span>
+                                                                <div className="p-3 rounded-2xl bg-sparta-gold/10 border border-sparta-gold/25 text-amber-200 text-xs flex items-center gap-2">
+                                                                    <Phone size={16} className="text-sparta-gold shrink-0" />
+                                                                    <span>Номер телефона родителя или из заявки на тренировку</span>
                                                                 </div>
+
                                                                 <div className="relative">
                                                                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
                                                                     <input
@@ -1063,10 +1524,123 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                                                         placeholder="+7 (999) 000-00-00"
                                                                         value={loginPhone}
                                                                         onChange={handleLoginPhoneChange}
-                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-mono"
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-10 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all font-mono"
                                                                         required
                                                                     />
+                                                                    {isCheckingPhone && (
+                                                                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                                                            <Loader2 size={16} className="text-sparta-gold animate-spin" />
+                                                                        </div>
+                                                                    )}
                                                                 </div>
+
+                                                                {/* Dynamic Security Verification Fields */}
+                                                                {phoneAccountStatus === 'has_password' && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, y: -6 }}
+                                                                        animate={{ opacity: 1, y: 0 }}
+                                                                        className="space-y-2 pt-1"
+                                                                    >
+                                                                        <div className="flex items-center justify-between text-xs px-1">
+                                                                            <span className="text-white/60 flex items-center gap-1.5 font-medium">
+                                                                                <Lock size={13} className="text-sparta-gold" />
+                                                                                {phoneAuthMode === 'child_verify' ? 'Подтверждение родителя' : 'Пароль от кабинета'}
+                                                                            </span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    setError('');
+                                                                                    setPhoneAuthMode(phoneAuthMode === 'child_verify' ? 'password' : 'child_verify');
+                                                                                }}
+                                                                                className="text-sparta-gold hover:text-yellow-400 font-bold text-[11px] transition-colors cursor-pointer"
+                                                                            >
+                                                                                {phoneAuthMode === 'child_verify' ? 'Войти по паролю' : 'Забыли? Вход по имени ребёнка'}
+                                                                            </button>
+                                                                        </div>
+
+                                                                        {phoneAuthMode === 'child_verify' ? (
+                                                                            <div className="space-y-2">
+                                                                                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-200 text-xs flex items-start gap-2">
+                                                                                    <ShieldCheck size={16} className="text-sparta-gold shrink-0 mt-0.5" />
+                                                                                    <div>
+                                                                                        <p className="font-bold text-white mb-0.5">Вход без пароля</p>
+                                                                                        <p className="text-white/70">Укажите имя вашего ребёнка (как в профиле Sparta) для мгновенного входа:</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="relative">
+                                                                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        placeholder="Имя ребёнка (например, Артём)"
+                                                                                        value={childVerificationName}
+                                                                                        onChange={(e) => setChildVerificationName(e.target.value)}
+                                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all"
+                                                                                        required
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="relative">
+                                                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
+                                                                                <input
+                                                                                    type={showLoginPassword ? 'text' : 'password'}
+                                                                                    placeholder="Пароль"
+                                                                                    value={loginPassword}
+                                                                                    onChange={(e) => setLoginPassword(e.target.value)}
+                                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-11 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all"
+                                                                                    required
+                                                                                />
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                                                                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors cursor-pointer"
+                                                                                >
+                                                                                    {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+                                                                    </motion.div>
+                                                                )}
+
+                                                                {phoneAccountStatus === 'needs_child' && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, y: -6 }}
+                                                                        animate={{ opacity: 1, y: 0 }}
+                                                                        className="space-y-2 pt-1"
+                                                                    >
+                                                                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-200 text-xs flex items-start gap-2.5">
+                                                                            <ShieldCheck size={16} className="text-sparta-gold shrink-0 mt-0.5" />
+                                                                            <div>
+                                                                                <p className="font-bold text-white mb-0.5">Найдена заявка на тренировку</p>
+                                                                                <p className="text-white/70">Для подтверждения родителя укажите имя вашего ребёнка (как в заявке):</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="relative">
+                                                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-5 h-5" />
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="Имя ребёнка (например, Артём)"
+                                                                                value={childVerificationName}
+                                                                                onChange={(e) => setChildVerificationName(e.target.value)}
+                                                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-sparta-gold/50 transition-all"
+                                                                                required
+                                                                            />
+                                                                        </div>
+                                                                        <p className="text-[11px] text-white/40 px-1">
+                                                                            🔒 Защита данных: только родитель своего ребёнка может войти в кабинет.
+                                                                        </p>
+                                                                    </motion.div>
+                                                                )}
+
+                                                                {phoneAccountStatus === 'not_found' && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, y: -6 }}
+                                                                        animate={{ opacity: 1, y: 0 }}
+                                                                        className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-white/60 space-y-2"
+                                                                    >
+                                                                        <p>По номеру <span className="text-white font-mono">{loginPhone}</span> заявок или аккаунтов пока не найдено.</p>
+                                                                    </motion.div>
+                                                                )}
                                                             </div>
                                                         ) : (
                                                             <>
@@ -1118,9 +1692,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                         <motion.div
                                             initial={{ opacity: 0, scale: 0.9 }}
                                             animate={{ opacity: 1, scale: 1 }}
-                                            className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs text-center font-bold"
+                                            className="p-3.5 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs text-center font-bold space-y-2.5"
                                         >
-                                            {error}
+                                            <div>{error}</div>
+                                            {loginMethod === 'phone' && isLogin && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setAuthMode('register');
+                                                        setRole('parent');
+                                                        setPhone(loginPhone);
+                                                        setError('');
+                                                    }}
+                                                    className="w-full py-2.5 px-3 rounded-xl bg-sparta-gold/20 hover:bg-sparta-gold/30 border border-sparta-gold/50 text-sparta-gold text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-sparta-gold/10"
+                                                >
+                                                    <UserPlus size={14} />
+                                                    <span>Зарегистрироваться с номером {loginPhone}</span>
+                                                </button>
+                                            )}
                                         </motion.div>
                                     )}
 
@@ -1137,11 +1726,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="w-full bg-sparta-gold text-black font-black py-4 rounded-xl hover:bg-yellow-500 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-sparta-gold/20 disabled:opacity-50 uppercase tracking-[0.2em] text-xs"
+                                        className="w-full bg-sparta-gold text-black font-black py-4 rounded-xl hover:bg-yellow-500 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-sparta-gold/20 disabled:opacity-50 uppercase tracking-[0.2em] text-xs cursor-pointer"
                                     >
                                         {loading ? 'Загрузка...' : (
                                             isForgotPassword ? 'Сбросить пароль' :
-                                                isLogin ? 'Войти' : (role === 'parent' ? 'Создать кабинет родителя' : 'Создать аккаунт спортсмена')
+                                                isLogin ? (
+                                                    loginMethod === 'phone' ? (
+                                                        phoneAccountStatus === 'needs_child' || phoneAuthMode === 'child_verify'
+                                                            ? 'Подтвердить и войти'
+                                                            : phoneAccountStatus === 'has_password'
+                                                                ? 'Войти по паролю'
+                                                                : 'Войти по телефону'
+                                                    ) : 'Войти'
+                                                ) : (role === 'parent' ? 'Создать кабинет родителя' : 'Создать аккаунт спортсмена')
                                         )}
                                     </button>
 

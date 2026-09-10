@@ -110,7 +110,7 @@ export const AwardDetailModal: React.FC<AwardDetailModalProps> = ({
             glowColor="amber"
             zIndex="z-[350]"
         >
-            <div className="relative w-full rounded-3xl bg-gradient-to-b from-[#1c1b18] via-[#141416] to-[#0c0c0e] border-2 border-sparta-gold/50 p-6 sm:p-8 text-center space-y-5 shadow-[0_0_50px_rgba(212,175,55,0.25)] overflow-hidden">
+            <div className="relative w-full rounded-3xl bg-gradient-to-b from-[#1c1b18] via-[#141416] to-[#0c0c0e] border-2 border-sparta-gold/50 p-4 sm:p-8 text-center space-y-4 sm:space-y-5 shadow-[0_0_50px_rgba(212,175,55,0.25)] overflow-hidden">
                 {/* Background Golden Glow */}
                 <div className="absolute top-0 right-1/4 w-48 h-32 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
 

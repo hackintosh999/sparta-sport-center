@@ -1,275 +1,1052 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove, Timestamp, writeBatch, getDoc, setDoc, serverTimestamp, where, getDocs } from 'firebase/firestore';
-import { db, auth, storage } from '../../firebase';
+import { 
+    collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc,
+    arrayUnion, Timestamp, serverTimestamp, where, getDocs, addDoc 
+} from 'firebase/firestore';
+import { db, auth } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Mail, Trash2, CheckCircle, Reply, Search, Filter, MessageSquare, AlertCircle, ChevronDown, ChevronUp, User, Send, Clock, CheckCircle2, CheckCheck, Circle, FileText, Download, Tag, Plus, X, ListChecks, Star, Paperclip, ExternalLink, Play, Shield, BadgeCheck, Dumbbell, Code } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import ReplyTemplatesModal from '../../components/admin/ReplyTemplatesModal';
-import SpartaVideoPlayer from '../../components/SpartaVideoPlayer';
-import { QUICK_CATEGORIES } from '../../constants/SupportFAQ';
+import { 
+    Search, X, Send, Paperclip, Phone, Mail, CheckCircle2, RotateCcw, 
+    Zap, ArrowLeft, FileText, Download, MessageSquare, Loader2, File,
+    ChevronDown, ChevronUp, Pin, Reply, Copy, Trash2, User, Mic
+} from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import SpartaViewer, { SpartaViewerFile } from '../../components/common/SpartaViewer';
+import { SpartaAudioPlayer } from '../../components/common/SpartaAudioPlayer';
+import { useAudioRecorder, formatAudioDuration } from '../../hooks/useAudioRecorder';
+import { playSendSound } from '../../utils/soundEffects';
 
-interface MessageHistory {
+export type DialogCategory = 'all' | 'requests' | 'certificates' | 'chat' | 'bot';
+
+export interface MessageHistory {
     text: string;
     sender: 'user' | 'admin';
     senderName: string;
     createdAt: Timestamp;
     isRead?: boolean;
-    image?: string; // For legacy image support
+    image?: string;
     attachment?: {
         url: string;
         type: string;
         name: string;
         size?: number;
+        duration?: number;
+        transcription?: string;
     };
     senderRole?: string;
     senderVerification?: any;
+    isInternal?: boolean;
+    replyTo?: {
+        text: string;
+        senderName: string;
+    };
 }
 
-interface Note {
-    text: string;
-    createdAt: Timestamp;
-    adminName: string;
-}
-
-interface MessageTag {
-    id: string;
-    label: string;
-    color: string;
-}
-
-interface Message {
+export interface Message {
     id: string;
     userId?: string;
     name: string;
     email: string;
+    phone?: string;
+    childId?: string;
+    childName?: string;
+    groupName?: string;
+    coachName?: string;
     subject: string;
     message: string;
-    status: 'new' | 'in_progress' | 'resolved';
+    status: 'new' | 'in_progress' | 'waiting' | 'resolved';
     createdAt: Timestamp;
-    notes?: Note[];
-    tags?: string[];
+    rating?: number;
     thread?: MessageHistory[];
+    category?: string;
     isStarred?: boolean;
+    isPinned?: boolean;
+    moderatedAt?: any;
+    moderatedBy?: string;
     isTyping?: {
         admin?: boolean;
         user?: boolean;
     };
-    senderRole?: string;
-    senderVerification?: any;
-    category?: string;
+    typing?: {
+        admin?: boolean;
+        user?: boolean;
+    };
 }
 
-const COLORS = ['#D4AF37', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+export interface CannedResponse {
+    command: string;
+    label: string;
+    text: string;
+}
 
-// Helper to check if user is online (active in last 5 mins)
-const isOnline = (lastActive: any) => {
-    if (!lastActive) return false;
-    const lastActiveMillis = lastActive.seconds ? lastActive.seconds * 1000 : lastActive;
-    const fiveMinutes = 5 * 60 * 1000;
-    return (Date.now() - lastActiveMillis) < fiveMinutes;
+export const BASE_CANNED_RESPONSES: CannedResponse[] = [
+    {
+        command: '/пробное',
+        label: 'Пробное занятие',
+        text: 'Добрый день! С собой на пробную тренировку понадобятся: удобная спортивная форма, обувь (кеды или футзалки) и бутылочка воды. Ждем вас за 10 минут до начала занятия!'
+    },
+    {
+        command: '/справка',
+        label: 'Приём справки о болезни',
+        text: 'Здравствуйте! Справку приняли, период болезни зафиксирован. Пропущенные занятия сохранены/перенесены в абонементе. Скорейшего восстановления!'
+    },
+    {
+        command: '/оплата',
+        label: 'Оплата абонемента',
+        text: 'Добрый день! Оплатить абонемент можно онлайн в вашем личном кабинете в разделе "Мои абонементы". После оплаты доступ и бронь обновятся автоматически.'
+    },
+    {
+        command: '/расписание',
+        label: 'Расписание занятий',
+        text: 'Здравствуйте! Актуальное расписание занятий вечерних групп: с 19:00 до 20:00. Подробную сетку по дням можно посмотреть в вашем профиле.'
+    }
+];
+
+// Helper to detect category of a message
+export const getDialogCategory = (msg: Message): { key: 'requests' | 'certificates' | 'chat' | 'bot'; label: string; color: string } => {
+    const subj = (msg.subject || '').toLowerCase();
+    const text = (msg.message || '').toLowerCase();
+
+    // 1. Bot (AI assistant conversations)
+    const isBot = Boolean(
+        msg.category === 'bot' ||
+        msg.category === 'ai' ||
+        (msg as any).isAi === true ||
+        subj.includes('бот') ||
+        subj.includes('ассистент') ||
+        text.includes('бот') ||
+        msg.thread?.some(t => t.senderRole === 'bot' || t.senderRole === 'assistant' || t.senderName?.toLowerCase().includes('бот') || t.senderName?.toLowerCase().includes('ассистент'))
+    );
+    if (isBot) {
+        return { key: 'bot', label: '🤖 Чат-бот', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' };
+    }
+
+    // 2. Certificates (sick leaves and attached files, excluding voice notes)
+    const hasFiles = Boolean(
+        msg.category === 'sick_leave' ||
+        (msg as any).isSickLeave === true ||
+        subj.includes('справк') ||
+        text.includes('справк') ||
+        ((msg as any).attachment?.url && (msg as any).attachment?.type !== 'audio' && !(msg as any).attachment?.type?.startsWith('audio/')) ||
+        (msg as any).image ||
+        msg.thread?.some(t => Boolean((t.attachment?.url && t.attachment?.type !== 'audio' && !t.attachment?.type?.startsWith('audio/')) || t.image))
+    );
+    if (hasFiles) {
+        return { key: 'certificates', label: '📄 Справка', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' };
+    }
+
+    // 3. Requests / Trials (Заявки: пробная тренировка, smart match, заявка)
+    const isLeadOrTrial = Boolean(
+        msg.category === 'trial' ||
+        msg.category === 'lead' ||
+        subj.includes('заявк') ||
+        subj.includes('пробн') ||
+        text.includes('заявк') ||
+        text.includes('пробн')
+    );
+    if (isLeadOrTrial) {
+        return { key: 'requests', label: '⚽ Заявка', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' };
+    }
+
+    // 4. Default: Chat (regular questions from parents)
+    return { key: 'chat', label: '💬 Чат', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
 };
 
-const AdminMessages = () => {
+// Helper to format clean {Parent} · {Child} without redundant nested brackets
+export const formatCardNames = (rawName?: string, rawChildName?: string): string => {
+    let parent = (rawName || '').trim();
+    let child = (rawChildName || '').trim();
+
+    // If parent string contains brackets like "Кирдин Сергей ( Кирдин Филипп )"
+    const match = parent.match(/^(.*?)\s*[\(\[]+(.*?)[\)\]]+\s*$/);
+    if (match) {
+        parent = match[1].trim();
+        if (!child) {
+            child = match[2].trim();
+        }
+    }
+
+    // Clean any residual brackets in child name
+    child = child.replace(/[\(\)\[\]]/g, '').trim();
+
+    // Filter service placeholder keywords
+    const lowerChild = child.toLowerCase();
+    if (!child || lowerChild === 'undefined' || lowerChild === 'спортсмен' || lowerChild === 'спортсмен спарта' || lowerChild === 'null') {
+        child = '';
+    }
+
+    // If child and parent are identical
+    if (child && parent.toLowerCase() === child.toLowerCase()) {
+        return parent;
+    }
+
+    // If parent already contains child name
+    if (child && parent.toLowerCase().includes(child.toLowerCase())) {
+        return parent;
+    }
+
+    if (parent && child) {
+        return `${parent} · ${child}`;
+    }
+
+    return parent || child || 'Пользователь';
+};
+
+// Build unified chronological message list
+export const buildChatThread = (msg: Message): { item: MessageHistory; threadIndex: number }[] => {
+    const list: { item: MessageHistory; threadIndex: number }[] = [];
+
+    // Initial parent message if present
+    if (msg.message || (msg as any).attachment || (msg as any).image) {
+        const firstInThread = msg.thread?.[0];
+        const isDuplicate = firstInThread && firstInThread.text === msg.message && firstInThread.sender === 'user';
+        if (!isDuplicate) {
+            list.push({
+                item: {
+                    text: msg.message || '',
+                    sender: 'user',
+                    senderName: msg.name || 'Родитель',
+                    createdAt: msg.createdAt,
+                    attachment: (msg as any).attachment || (msg as any).image ? {
+                        url: (msg as any).attachment?.url || (msg as any).image,
+                        type: (msg as any).attachment?.type || 'image/jpeg',
+                        name: (msg as any).attachment?.name || 'Справка / Документ',
+                        size: (msg as any).attachment?.size
+                    } : undefined,
+                    image: (msg as any).image
+                },
+                threadIndex: -1 // Initial message
+            });
+        }
+    }
+
+    // Thread messages
+    if (msg.thread && msg.thread.length > 0) {
+        msg.thread.forEach((t, idx) => {
+            list.push({ item: t, threadIndex: idx });
+        });
+    }
+
+    return list;
+};
+
+// Helper to highlight matching text in search
+export const highlightSearchText = (text: string, queryStr: string, isUserMsg: boolean) => {
+    if (!queryStr || !text) return text;
+    const clean = queryStr.trim();
+    if (!clean) return text;
+
+    const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const parts = text.split(regex);
+
+    if (parts.length <= 1) return text;
+
+    return (
+        <>
+            {parts.map((part, i) => {
+                if (part.toLowerCase() === clean.toLowerCase()) {
+                    return (
+                        <mark
+                            key={i}
+                            className={`bg-amber-400/30 text-amber-200 rounded px-0.5 ${
+                                !isUserMsg ? 'drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] font-medium' : ''
+                            }`}
+                        >
+                            {part}
+                        </mark>
+                    );
+                }
+                return part;
+            })}
+        </>
+    );
+};
+
+export default function AdminMessages() {
     const { userProfile } = useAuth();
-    const navigate = useNavigate();
     const location = useLocation();
+    const navigate = useNavigate();
+
+    // Messages State
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
-    const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [replyMode, setReplyMode] = useState<'internal' | 'email'>('internal');
-    const [internalReplyText, setInternalReplyText] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filter, setFilter] = useState<'all' | 'new' | 'in_progress' | 'resolved' | 'starred'>('all');
-    const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
-    const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
-    const [availableTags, setAvailableTags] = useState<MessageTag[]>([]);
-    const [newTagLabel, setNewTagLabel] = useState('');
-    const [newNote, setNewNote] = useState('');
-    const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
-    const [replyingTo, setReplyingTo] = useState<{ email: string, subject: string, name: string } | null>(null);
-    const [selectedUserContext, setSelectedUserContext] = useState<any>(null);
-    const [loadingContext, setLoadingContext] = useState(false);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    // Attachment State
-    const [attachment, setAttachment] = useState<{ file: File, preview: string, type: string } | null>(null);
+    // Filter States: Search + Category Select + Single-Row Status Tabs
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<DialogCategory>('all');
+    const [activeTab, setActiveTab] = useState<'inbox' | 'in_progress' | 'resolved'>('inbox');
+
+    // Context Menus State
+    const [dialogMenu, setDialogMenu] = useState<{ x: number; y: number; msg: Message } | null>(null);
+    const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; item: MessageHistory; threadIndex: number } | null>(null);
+    const touchTimerRef = useRef<any>(null);
+    const msgTouchTimerRef = useRef<any>(null);
+
+    // Quoting / Replying State
+    const [replyingTo, setReplyingTo] = useState<{ text: string; senderName: string } | null>(null);
+
+    // Chat Input State
+    const [inputText, setInputText] = useState('');
+    const [attachment, setAttachment] = useState<{ file: globalThis.File; preview: string; type: string; name: string; size: number } | null>(null);
     const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
     const chatEndRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll logic
-    useEffect(() => {
-        if (expandedId && chatEndRef.current) {
-            chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    // Canned Responses & Typing State
+    const [isCannedOpen, setIsCannedOpen] = useState(false);
+    const [selectedCannedIndex, setSelectedCannedIndex] = useState(0);
+    const [dbTemplates, setDbTemplates] = useState<CannedResponse[]>([]);
+    const cannedMenuRef = useRef<HTMLDivElement>(null);
+    const zapButtonRef = useRef<HTMLButtonElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const typingAdminTimeoutRef = useRef<any>(null);
+
+    // Audio Voice Recording
+    const {
+        isRecording,
+        recordingDuration,
+        formattedDuration,
+        startRecording,
+        stopRecording,
+        cancelRecording
+    } = useAudioRecorder();
+    const [isSendingVoice, setIsSendingVoice] = useState(false);
+
+    // Context & Sick Leave
+    const [selectedChildContext, setSelectedChildContext] = useState<any>(null);
+    const [isExtendingSub, setIsExtendingSub] = useState(false);
+
+    // SpartaViewer Modal
+    const [viewerFile, setViewerFile] = useState<SpartaViewerFile | null>(null);
+
+    // Active Dialog
+    const activeMessage = messages.find(m => m.id === selectedId) || null;
+
+    // Search within Active Dialog
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+    const [highlightedMsgIdx, setHighlightedMsgIdx] = useState<number | null>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const pulseTimeoutRef = useRef<any>(null);
+    const isSearchOpenRef = useRef(isSearchOpen);
+    isSearchOpenRef.current = isSearchOpen;
+
+    // Chat thread for active dialog
+    const chatThread = activeMessage ? buildChatThread(activeMessage) : [];
+    const cleanSearchQuery = searchQuery.trim().toLowerCase();
+
+    // Matching message indices in chatThread
+    const matchingIndices = React.useMemo(() => {
+        if (!cleanSearchQuery || !isSearchOpen || !activeMessage) return [];
+        const indices: number[] = [];
+        chatThread.forEach(({ item }, idx) => {
+            const textMatch = item.text && item.text.toLowerCase().includes(cleanSearchQuery);
+            const replyMatch = item.replyTo?.text && item.replyTo.text.toLowerCase().includes(cleanSearchQuery);
+            if (textMatch || replyMatch) {
+                indices.push(idx);
+            }
+        });
+        return indices;
+    }, [activeMessage, chatThread, cleanSearchQuery, isSearchOpen]);
+
+    // Scroll to specific message and briefly pulse outline
+    const scrollToMatch = (targetThreadIdx: number) => {
+        setHighlightedMsgIdx(targetThreadIdx);
+        const element = document.getElementById(`chat-msg-${targetThreadIdx}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    }, [expandedId, messages]);
 
-    // Specific document listener for active chat to ensure instant updates
+        if (pulseTimeoutRef.current) {
+            clearTimeout(pulseTimeoutRef.current);
+        }
+        pulseTimeoutRef.current = setTimeout(() => {
+            setHighlightedMsgIdx(null);
+        }, 2000);
+    };
+
+    const goToNextMatch = () => {
+        if (matchingIndices.length === 0) return;
+        const next = (currentMatchIndex + 1) % matchingIndices.length;
+        setCurrentMatchIndex(next);
+        scrollToMatch(matchingIndices[next]);
+    };
+
+    const goToPrevMatch = () => {
+        if (matchingIndices.length === 0) return;
+        const prev = (currentMatchIndex - 1 + matchingIndices.length) % matchingIndices.length;
+        setCurrentMatchIndex(prev);
+        scrollToMatch(matchingIndices[prev]);
+    };
+
+    const handleCloseSearch = () => {
+        setIsSearchOpen(false);
+        setSearchQuery('');
+        setCurrentMatchIndex(0);
+        setHighlightedMsgIdx(null);
+    };
+
+    // Auto-scroll to first match when search query changes
     useEffect(() => {
-        if (!expandedId) return;
-        const unsubscribe = onSnapshot(doc(db, "messages", expandedId), async (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                const updatedMsg = { id: docSnapshot.id, ...docSnapshot.data() } as Message;
-                setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
-
-                // Mark messages as read if they are from user and not read
-                if (updatedMsg.thread) {
-                    const hasUnread = updatedMsg.thread.some(m => m.sender === 'user' && !m.isRead);
-                    if (hasUnread) {
-                        const newThread = updatedMsg.thread.map(m =>
-                            m.sender === 'user' ? { ...m, isRead: true } : m
-                        );
-                        await updateDoc(doc(db, "messages", expandedId), {
-                            thread: newThread
-                        });
-                    }
-                }
-            }
-        });
-        return () => unsubscribe();
-    }, [expandedId]);
-
-    // Fetch Messages
-    useEffect(() => {
-        const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-            setMessages(msgs);
-            setLoading(false);
-
-            // Handle deep linking from AdminRequests or other parts
-            const params = new URLSearchParams(location.search);
-            const threadId = params.get('id');
-            const email = params.get('email');
-
-            if (threadId) {
-                setExpandedId(threadId);
-                // Clear params after handling to avoid re-opening on manual refresh if needed, 
-                // but usually fine to leave for the session
-            } else if (email && msgs.length > 0) {
-                const latestFromEmail = msgs.find(m => m.email === email);
-                if (latestFromEmail) {
-                    setExpandedId(latestFromEmail.id);
-                }
-            }
-        });
-        return () => unsubscribe();
-    }, [location.search]);
-
-    // Fetch User Context in real-time when expanded
-    useEffect(() => {
-        if (!expandedId) {
-            setSelectedUserContext(null);
+        if (!cleanSearchQuery || matchingIndices.length === 0) {
+            setCurrentMatchIndex(0);
+            setHighlightedMsgIdx(null);
             return;
         }
+        setCurrentMatchIndex(0);
+        scrollToMatch(matchingIndices[0]);
+    }, [cleanSearchQuery, matchingIndices.length]);
 
-        const msg = messages.find(m => m.id === expandedId);
-        if (!msg || !msg.email) return;
-
-        setLoadingContext(true);
-        const q = query(collection(db, "users"), where("email", "==", msg.email));
-        const unsubscribe = onSnapshot(q, (snap) => {
-            if (!snap.empty) {
-                setSelectedUserContext({ id: snap.docs[0].id, ...snap.docs[0].data() });
-            } else {
-                setSelectedUserContext(null);
-            }
-            setLoadingContext(false);
-        }, (err) => {
-            console.error("Error fetching user context:", err);
-            setLoadingContext(false);
-        });
-
-        return () => unsubscribe();
-    }, [expandedId, messages]);
-
-    // Fetch Tags
+    // Reset search, canned menu & typing on switching dialogs
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, "message_tags"), (snapshot) => {
-            setAvailableTags(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageTag)));
+        handleCloseSearch();
+        setIsCannedOpen(false);
+        setSelectedCannedIndex(0);
+        if (typingAdminTimeoutRef.current) {
+            clearTimeout(typingAdminTimeoutRef.current);
+            typingAdminTimeoutRef.current = null;
+        }
+    }, [selectedId]);
+
+    // Clear typing timeout on component unmount
+    useEffect(() => {
+        return () => {
+            if (typingAdminTimeoutRef.current) {
+                clearTimeout(typingAdminTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    // Load optional CRM reply templates from Firestore
+    useEffect(() => {
+        const qTpl = query(collection(db, 'message_templates'), orderBy('title'));
+        const unsubscribe = onSnapshot(qTpl, (snap) => {
+            const list: CannedResponse[] = snap.docs.map(docSnap => {
+                const data = docSnap.data();
+                const title = data.title || '';
+                const cmd = title.startsWith('/') ? title : `/${title.toLowerCase().replace(/\s+/g, '_')}`;
+                return {
+                    command: cmd,
+                    label: data.title || 'Шаблон',
+                    text: data.content || ''
+                };
+            });
+            setDbTemplates(list);
+        }, (err) => {
+            console.warn('Could not subscribe to message_templates:', err);
         });
         return () => unsubscribe();
     }, []);
 
-    // --- Actions ---
+    // Combined list of canned responses (base presets + CRM templates)
+    const allCannedResponses = React.useMemo(() => {
+        const combined = [...BASE_CANNED_RESPONSES];
+        dbTemplates.forEach(t => {
+            if (!combined.some(c => c.command.toLowerCase() === t.command.toLowerCase())) {
+                combined.push(t);
+            }
+        });
+        return combined;
+    }, [dbTemplates]);
 
-    const handleToggleStar = async (id: string, current: boolean, e: React.MouseEvent) => {
-        e.stopPropagation();
-        await updateDoc(doc(db, "messages", id), { isStarred: !current });
+    // Query text typed after '/'
+    const cannedFilterQuery = React.useMemo(() => {
+        if (inputText.startsWith('/')) {
+            const match = inputText.match(/^\/([^\s]*)/);
+            return match ? match[1].toLowerCase() : '';
+        }
+        return '';
+    }, [inputText]);
+
+    // Filtered templates based on input query
+    const filteredCannedResponses = React.useMemo(() => {
+        if (!cannedFilterQuery) {
+            return allCannedResponses;
+        }
+        return allCannedResponses.filter(item => {
+            const cleanCmd = item.command.replace(/^\//, '').toLowerCase();
+            const cleanLabel = item.label.toLowerCase();
+            const cleanText = item.text.toLowerCase();
+            return cleanCmd.includes(cannedFilterQuery) ||
+                   cleanLabel.includes(cannedFilterQuery) ||
+                   cleanText.includes(cannedFilterQuery);
+        });
+    }, [allCannedResponses, cannedFilterQuery]);
+
+    // Keep selected index within valid range
+    useEffect(() => {
+        if (selectedCannedIndex >= filteredCannedResponses.length) {
+            setSelectedCannedIndex(Math.max(0, filteredCannedResponses.length - 1));
+        }
+    }, [filteredCannedResponses.length, selectedCannedIndex]);
+
+    // Admin typing indicator logic with 2.2s debounce
+    const handleAdminTyping = (text: string) => {
+        if (!selectedId) return;
+
+        updateDoc(doc(db, "messages", selectedId), {
+            "isTyping.admin": true,
+            "typing.admin": true
+        }).catch(() => {});
+
+        if (typingAdminTimeoutRef.current) {
+            clearTimeout(typingAdminTimeoutRef.current);
+        }
+
+        typingAdminTimeoutRef.current = setTimeout(() => {
+            if (selectedId) {
+                updateDoc(doc(db, "messages", selectedId), {
+                    "isTyping.admin": false,
+                    "typing.admin": false
+                }).catch(() => {});
+            }
+        }, 2200);
     };
 
-    const handleDelete = async (id: string, e?: React.MouseEvent) => {
-        e?.stopPropagation();
-        if (window.confirm('Вы уверены, что хотите удалить это сообщение?')) {
-            await deleteDoc(doc(db, "messages", id));
-            setSelectedMessages(prev => {
-                const next = new Set(prev);
-                next.delete(id);
-                return next;
-            });
-            if (expandedId === id) setExpandedId(null);
+    // Handle typing in input with slash detection
+    const handleAdminInputChange = (val: string) => {
+        setInputText(val);
+
+        if (val.startsWith('/')) {
+            setIsCannedOpen(true);
+            setSelectedCannedIndex(0);
+        } else if (isCannedOpen && !val.includes('/')) {
+            setIsCannedOpen(false);
+        }
+
+        handleAdminTyping(val);
+    };
+
+    // Select canned response
+    const handleSelectCanned = (canned: CannedResponse) => {
+        let newText = canned.text;
+        if (inputText.startsWith('/')) {
+            const remainder = inputText.replace(/^\/[^\s]*\s*/, '');
+            newText = remainder ? `${canned.text} ${remainder}` : canned.text;
+        }
+        setInputText(newText);
+        setIsCannedOpen(false);
+        setSelectedCannedIndex(0);
+
+        handleAdminTyping(newText);
+
+        setTimeout(() => {
+            if (textareaRef.current) {
+                textareaRef.current.focus();
+                const len = newText.length;
+                textareaRef.current.setSelectionRange(len, len);
+            }
+        }, 30);
+    };
+
+    // Toggle canned menu via Zap button
+    const handleToggleCanned = () => {
+        setIsCannedOpen(prev => {
+            const next = !prev;
+            if (next) {
+                setSelectedCannedIndex(0);
+                setTimeout(() => textareaRef.current?.focus(), 30);
+            }
+            return next;
+        });
+    };
+
+    // Keyboard Shortcuts: Ctrl+F / Cmd+F to open search
+    useEffect(() => {
+        const handleSearchShortcut = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А')) {
+                if (selectedId) {
+                    e.preventDefault();
+                    setIsSearchOpen(true);
+                    setTimeout(() => {
+                        searchInputRef.current?.focus();
+                        searchInputRef.current?.select();
+                    }, 50);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleSearchShortcut);
+        return () => window.removeEventListener('keydown', handleSearchShortcut);
+    }, [selectedId]);
+
+    // Smart screen boundaries for popovers (never overflows screen)
+    const getSmartCoordinates = (clientX: number, clientY: number, width = 220, height = 210) => {
+        let x = clientX;
+        let y = clientY;
+        const screenW = window.innerWidth;
+        const screenH = window.innerHeight;
+
+        if (x + width > screenW - 12) {
+            x = screenW - width - 12;
+        }
+        if (y + height > screenH - 12) {
+            y = screenH - height - 12;
+        }
+        return { x: Math.max(12, x), y: Math.max(12, y) };
+    };
+
+    // Close context menus & canned responses on outside click, scroll or Escape key
+    useEffect(() => {
+        const handleCloseMenus = (e?: MouseEvent) => {
+            setDialogMenu(null);
+            setMessageMenu(null);
+            if (e) {
+                const target = e.target as Node;
+                const insideCanned = cannedMenuRef.current?.contains(target);
+                const insideZap = zapButtonRef.current?.contains(target);
+                if (!insideCanned && !insideZap) {
+                    setIsCannedOpen(false);
+                }
+            } else {
+                setIsCannedOpen(false);
+            }
+        };
+
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (isSearchOpenRef.current) {
+                    handleCloseSearch();
+                }
+                setIsCannedOpen(false);
+                setDialogMenu(null);
+                setMessageMenu(null);
+            }
+        };
+
+        window.addEventListener('mousedown', handleCloseMenus);
+        window.addEventListener('scroll', () => handleCloseMenus(), true);
+        window.addEventListener('keydown', handleGlobalKeyDown);
+
+        return () => {
+            window.removeEventListener('mousedown', handleCloseMenus);
+            window.removeEventListener('scroll', () => handleCloseMenus(), true);
+            window.removeEventListener('keydown', handleGlobalKeyDown);
+        };
+    }, []);
+
+    // 1. Listen to Messages Collection
+    useEffect(() => {
+        const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const msgs: Message[] = snapshot.docs.map(d => ({
+                id: d.id,
+                ...d.data()
+            } as Message));
+            setMessages(msgs);
+            setLoading(false);
+
+            // Deep-link from URL param
+            const params = new URLSearchParams(location.search);
+            const threadId = params.get('id');
+            if (threadId) {
+                setSelectedId(threadId);
+            } else if (!selectedId && msgs.length > 0 && window.innerWidth >= 768) {
+                // Select first conversation by default on desktop
+                setSelectedId(msgs[0].id);
+            }
+        }, (err) => {
+            console.error("Error fetching messages:", err);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [location.search]);
+
+    // 2. Fetch Athlete Profile Context
+    useEffect(() => {
+        if (!activeMessage) {
+            setSelectedChildContext(null);
+            return;
+        }
+
+        // Try by childId
+        if (activeMessage.childId) {
+            const unsub = onSnapshot(doc(db, "users", activeMessage.childId), (snap) => {
+                if (snap.exists()) {
+                    setSelectedChildContext({ id: snap.id, ...snap.data() });
+                } else {
+                    setSelectedChildContext(null);
+                }
+            }, () => setSelectedChildContext(null));
+            return () => unsub();
+        }
+
+        // Try by childName
+        if (activeMessage.childName) {
+            const qChild = query(collection(db, "users"), where("childName", "==", activeMessage.childName));
+            getDocs(qChild).then((snap) => {
+                if (!snap.empty) {
+                    setSelectedChildContext({ id: snap.docs[0].id, ...snap.docs[0].data() });
+                } else {
+                    getDocs(query(collection(db, "users"), where("displayName", "==", activeMessage.childName)))
+                        .then((dSnap) => {
+                            if (!dSnap.empty) {
+                                setSelectedChildContext({ id: dSnap.docs[0].id, ...dSnap.docs[0].data() });
+                            } else {
+                                setSelectedChildContext(null);
+                            }
+                        })
+                        .catch(() => setSelectedChildContext(null));
+                }
+            }).catch(() => setSelectedChildContext(null));
+            return;
+        }
+
+        // Fallback to userId
+        if (activeMessage.userId) {
+            const unsub = onSnapshot(doc(db, "users", activeMessage.userId), (snap) => {
+                if (snap.exists()) {
+                    setSelectedChildContext({ id: snap.id, ...snap.data() });
+                } else {
+                    setSelectedChildContext(null);
+                }
+            }, () => setSelectedChildContext(null));
+            return () => unsub();
+        }
+
+        setSelectedChildContext(null);
+    }, [activeMessage?.id, activeMessage?.childId, activeMessage?.childName, activeMessage?.userId]);
+
+    // Auto-scroll chat to bottom
+    useEffect(() => {
+        if (selectedId && chatEndRef.current) {
+            chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [selectedId, activeMessage?.thread?.length]);
+
+    // Format card time
+    const formatCardTime = (ts?: Timestamp) => {
+        if (!ts) return '';
+        const d = ts.toDate();
+        if (isToday(d)) return format(d, 'HH:mm');
+        if (isYesterday(d)) return 'Вчера';
+        return format(d, 'd MMM', { locale: ru });
+    };
+
+    // Helper to get preview of last message
+    const getLastMessageText = (msg: Message) => {
+        if (msg.thread && msg.thread.length > 0) {
+            const last = msg.thread[msg.thread.length - 1];
+            if (
+                last.attachment?.type === 'audio' ||
+                last.attachment?.type?.startsWith('audio/') ||
+                last.attachment?.name?.toLowerCase().includes('голосовое')
+            ) {
+                return '🎤 Голосовое сообщение';
+            }
+            return last.text || (last.attachment ? '📎 Вложение' : (last.image ? '📷 Фотография' : 'Сообщение'));
+        }
+        return msg.message || '—';
+    };
+
+    // Helper: is sick leave
+    const isSickLeave = (msg: Message | null) => {
+        if (!msg) return false;
+        return (
+            msg.category === 'sick_leave' ||
+            (msg as any).isSickLeave === true ||
+            msg.subject?.toLowerCase().includes('справк') ||
+            msg.message?.toLowerCase().includes('справк')
+        );
+    };
+
+    // Get Status Dot color
+    const getStatusDot = (status: string) => {
+        switch (status) {
+            case 'new':
+                return 'bg-amber-400 ring-2 ring-amber-400/20';
+            case 'waiting':
+                return 'bg-blue-400 ring-2 ring-blue-400/20';
+            case 'in_progress':
+                return 'bg-sparta-gold ring-2 ring-sparta-gold/20';
+            case 'resolved':
+                return 'bg-emerald-400 ring-2 ring-emerald-400/20';
+            default:
+                return 'bg-gray-400';
         }
     };
 
-    const handleBulkDelete = async () => {
-        if (!selectedMessages.size) return;
-        if (!window.confirm(`Удалить выбранные сообщения (${selectedMessages.size})?`)) return;
+    // Update status in Firestore & local state
+    const handleUpdateStatus = async (id: string, newStatus: 'in_progress' | 'waiting' | 'resolved' | 'new') => {
+        setMessages(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m));
+        try {
+            await updateDoc(doc(db, "messages", id), { 
+                status: newStatus,
+                updatedAt: serverTimestamp()
+            });
+        } catch (err) {
+            console.error("Status update error:", err);
+        }
+    };
 
-        const batch = writeBatch(db);
-        selectedMessages.forEach(id => {
-            batch.delete(doc(db, "messages", id));
+    // Toggle Pin Dialog
+    const handleTogglePin = async (id: string, currentPinned: boolean) => {
+        const nextPinned = !currentPinned;
+        setMessages(prev => prev.map(m => m.id === id ? { ...m, isPinned: nextPinned } : m));
+        try {
+            await updateDoc(doc(db, "messages", id), { isPinned: nextPinned });
+        } catch (err) {
+            console.error("Pin toggle error:", err);
+        }
+    };
+
+    // Delete Dialog
+    const handleDeleteDialog = async (id: string) => {
+        if (!window.confirm('Вы уверены, что хотите удалить этот диалог?')) return;
+        setMessages(prev => prev.filter(m => m.id !== id));
+        if (selectedId === id) setSelectedId(null);
+        try {
+            await deleteDoc(doc(db, "messages", id));
+        } catch (err) {
+            console.error("Delete dialog error:", err);
+        }
+    };
+
+    // Delete Single Message from Thread (if admin)
+    const handleDeleteMessage = async (threadIdx: number) => {
+        if (!activeMessage || !activeMessage.thread) return;
+        if (!window.confirm('Удалить это сообщение?')) return;
+
+        const updatedThread = activeMessage.thread.filter((_, idx) => idx !== threadIdx);
+        setMessages(prev => prev.map(m => m.id === activeMessage.id ? { ...m, thread: updatedThread } : m));
+
+        try {
+            await updateDoc(doc(db, "messages", activeMessage.id), {
+                thread: updatedThread
+            });
+        } catch (err) {
+            console.error("Error deleting message:", err);
+        }
+    };
+
+    // Context Menu Handlers for Dialog Cards
+    const openDialogContextMenu = (clientX: number, clientY: number, msg: Message) => {
+        const coords = getSmartCoordinates(clientX, clientY, 220, 230);
+        setMessageMenu(null);
+        setDialogMenu({
+            x: coords.x,
+            y: coords.y,
+            msg
         });
-        await batch.commit();
-        setSelectedMessages(new Set());
     };
 
-    const handleBulkStatus = async (status: 'new' | 'in_progress' | 'resolved') => {
-        if (!selectedMessages.size) return;
-        const batch = writeBatch(db);
-        selectedMessages.forEach(id => {
-            batch.update(doc(db, "messages", id), { status });
+    const handleDialogContextMenu = (e: React.MouseEvent, msg: Message) => {
+        e.preventDefault();
+        openDialogContextMenu(e.clientX, e.clientY, msg);
+    };
+
+    const handleDialogTouchStart = (e: React.TouchEvent, msg: Message) => {
+        const touch = e.touches[0];
+        const clientX = touch.clientX;
+        const clientY = touch.clientY;
+        touchTimerRef.current = setTimeout(() => {
+            openDialogContextMenu(clientX, clientY, msg);
+        }, 500);
+    };
+
+    const handleDialogTouchEndOrMove = () => {
+        if (touchTimerRef.current) {
+            clearTimeout(touchTimerRef.current);
+            touchTimerRef.current = null;
+        }
+    };
+
+    // Context Menu Handlers for Messages
+    const openMessageContextMenu = (clientX: number, clientY: number, item: MessageHistory, threadIndex: number) => {
+        const coords = getSmartCoordinates(clientX, clientY, 200, 160);
+        setDialogMenu(null);
+        setMessageMenu({
+            x: coords.x,
+            y: coords.y,
+            item,
+            threadIndex
         });
-        await batch.commit();
-        setSelectedMessages(new Set());
     };
 
-    const handleStatusChange = async (id: string, newStatus: string) => {
-        await updateDoc(doc(db, "messages", id), { status: newStatus });
+    const handleMessageContextMenu = (e: React.MouseEvent, item: MessageHistory, threadIndex: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openMessageContextMenu(e.clientX, e.clientY, item, threadIndex);
     };
 
-    const handleTyping = (() => {
-        let timeout: any;
-        return async (id: string) => {
-            if (timeout) clearTimeout(timeout);
-            await updateDoc(doc(db, "messages", id), { "isTyping.admin": true });
-            timeout = setTimeout(async () => {
-                try {
-                    await updateDoc(doc(db, "messages", id), { "isTyping.admin": false });
-                } catch (e) { }
-            }, 3000);
-        };
-    })();
+    const handleMsgTouchStart = (e: React.TouchEvent, item: MessageHistory, threadIndex: number) => {
+        const touch = e.touches[0];
+        const clientX = touch.clientX;
+        const clientY = touch.clientY;
+        msgTouchTimerRef.current = setTimeout(() => {
+            openMessageContextMenu(clientX, clientY, item, threadIndex);
+        }, 500);
+    };
 
+    const handleMsgTouchEndOrMove = () => {
+        if (msgTouchTimerRef.current) {
+            clearTimeout(msgTouchTimerRef.current);
+            msgTouchTimerRef.current = null;
+        }
+    };
+
+    // Counts for the 3 Status Tabs
+    const countInbox = messages.filter(m => m.status === 'new' || (m.status as string) === 'open' || !m.status).length;
+    const countInProgress = messages.filter(m => m.status === 'in_progress' || m.status === 'waiting').length;
+    const countResolved = messages.filter(m => m.status === 'resolved').length;
+
+    // Filter messages for left list
+    const filteredMessages = messages.filter(msg => {
+        // 1. Search filter
+        const term = searchTerm.trim().toLowerCase();
+        if (term) {
+            const matchesParent = msg.name?.toLowerCase().includes(term);
+            const matchesChild = msg.childName?.toLowerCase().includes(term);
+            const matchesSubject = msg.subject?.toLowerCase().includes(term);
+            const matchesMessage = msg.message?.toLowerCase().includes(term);
+            const matchesPhone = msg.phone?.includes(term);
+            const matchesEmail = msg.email?.toLowerCase().includes(term);
+            if (!matchesParent && !matchesChild && !matchesSubject && !matchesMessage && !matchesPhone && !matchesEmail) {
+                return false;
+            }
+        }
+
+        // 2. Category filter
+        if (selectedCategory !== 'all') {
+            const cat = getDialogCategory(msg);
+            if (cat.key !== selectedCategory) {
+                return false;
+            }
+        }
+
+        // 3. Single-row Status Tab filter
+        if (activeTab === 'inbox') {
+            return msg.status === 'new' || (msg.status as string) === 'open' || !msg.status;
+        }
+        if (activeTab === 'in_progress') {
+            return msg.status === 'in_progress' || msg.status === 'waiting';
+        }
+        if (activeTab === 'resolved') {
+            return msg.status === 'resolved';
+        }
+        return true;
+    });
+
+    // Pinned dialogs sorted to the top, then newest first
+    const sortedMessages = [...filteredMessages].sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        const aTime = a.createdAt?.seconds || 0;
+        const bTime = b.createdAt?.seconds || 0;
+        return bTime - aTime;
+    });
+
+    // Extend subscription by 7 days for sick leave
+    const handleExtendSubscription7Days = async (msg: Message) => {
+        if (!msg) return;
+        const targetAthlete = selectedChildContext;
+        const athleteId = msg.childId || targetAthlete?.id;
+
+        if (!athleteId) {
+            alert('Не удалось определить ID спортсмена. Проверьте карточку в базе пользователей.');
+            return;
+        }
+
+        setIsExtendingSub(true);
+        try {
+            const currentSub = targetAthlete?.subscription || {};
+            const currentExp = currentSub.expiresAt || currentSub.endDate;
+            let baseMs = Date.now();
+            if (currentExp) {
+                const sec = currentExp.seconds ? currentExp.seconds : (new Date(currentExp).getTime() / 1000);
+                if (sec > 0 && sec * 1000 > Date.now()) {
+                    baseMs = sec * 1000;
+                }
+            }
+            const newExpDate = new Date(baseMs + 7 * 24 * 60 * 60 * 1000);
+            const formattedDate = format(newExpDate, 'dd.MM.yyyy');
+            const athleteName = msg.childName || targetAthlete?.childName || targetAthlete?.displayName || 'спортсмена';
+
+            const updatedSubscription = {
+                ...currentSub,
+                title: currentSub.title || 'Стандартный',
+                status: 'active',
+                expiresAt: Timestamp.fromDate(newExpDate),
+                endDate: format(newExpDate, 'yyyy-MM-dd'),
+                isFrozen: false,
+                frozenUntil: null
+            };
+
+            // 1. Update user record in Firestore
+            await updateDoc(doc(db, "users", athleteId), {
+                subscription: updatedSubscription
+            });
+
+            setSelectedChildContext((prev: any) => prev ? { ...prev, subscription: updatedSubscription } : prev);
+
+            // 2. Add system note into thread
+            const systemMsg: MessageHistory = {
+                text: `✅ Справка о болезни проверена администратором. Абонемент спортсмена ${athleteName} успешно продлён на 7 дней (новый срок действия до ${formattedDate}). Ждём на тренировках!`,
+                sender: 'admin',
+                senderName: userProfile?.displayName || 'Администрация клуба Sparta',
+                senderRole: 'admin',
+                createdAt: Timestamp.now(),
+                isRead: false
+            };
+
+            // 3. Mark ticket resolved
+            await updateDoc(doc(db, "messages", msg.id), {
+                status: 'resolved',
+                thread: arrayUnion(systemMsg),
+                moderatedAt: serverTimestamp(),
+                moderatedBy: userProfile?.displayName || 'Администратор'
+            });
+
+            // 4. Send notification to parent
+            if (msg.userId) {
+                await addDoc(collection(db, 'notifications'), {
+                    userId: msg.userId,
+                    email: msg.email || '',
+                    title: '✅ Справка о болезни принята',
+                    message: `Медицинская справка для ${athleteName} проверена. Абонемент успешно продлён на 7 дней (до ${formattedDate}).`,
+                    type: 'subscription_extended',
+                    createdAt: serverTimestamp(),
+                    read: false,
+                    link: '/profile?tab=messages'
+                });
+            }
+
+            alert(`✅ Справка принята! Абонемент ${athleteName} успешно продлён на 7 дней (до ${formattedDate}).`);
+        } catch (err: any) {
+            console.error('Error extending subscription:', err);
+            alert('Ошибка при продлении: ' + (err?.message || 'Попробуйте снова'));
+        } finally {
+            setIsExtendingSub(false);
+        }
+    };
+
+    // File Selection
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
+        if (!e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
         const reader = new FileReader();
         reader.onloadend = () => {
             setAttachment({
                 file,
                 preview: reader.result as string,
-                type: file.type
+                type: file.type,
+                name: file.name,
+                size: file.size
             });
         };
         reader.readAsDataURL(file);
     };
 
-    const uploadFile = async (messageId: string, file: File): Promise<{ url: string, type: string, name: string, size: number }> => {
+    // Upload File
+    const uploadFile = async (messageId: string, file: globalThis.File): Promise<{ url: string; type: string; name: string; size: number }> => {
         setUploadProgress(10);
-
         const formData = new FormData();
         formData.append('file', file);
         formData.append('bucket', 'review-media');
@@ -283,7 +1060,7 @@ const AdminMessages = () => {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || 'Failed to upload through proxy');
+                throw new Error(error.error || 'Failed to upload file');
             }
 
             setUploadProgress(90);
@@ -296,783 +1073,1261 @@ const AdminMessages = () => {
                 name: file.name,
                 size: file.size
             };
-        } catch (error) {
-            console.error("Supabase upload error:", error);
-            throw error;
+        } catch (err) {
+            console.warn("Media proxy upload failed, falling back to data URL:", err);
+            return new Promise((resolve) => {
+                const r = new FileReader();
+                r.onloadend = () => {
+                    resolve({
+                        url: r.result as string,
+                        type: file.type,
+                        name: file.name,
+                        size: file.size
+                    });
+                };
+                r.readAsDataURL(file);
+            });
         }
     };
 
-    const handleInternalReply = async (id: string) => {
-        if (!internalReplyText.trim() && !attachment) return;
+    // Send Message
+    const handleSendMessage = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if ((!inputText.trim() && !attachment) || !selectedId || !activeMessage) return;
 
-        const message = messages.find(m => m.id === id);
-        if (!message || !message.email) return;
+        const currentText = inputText.trim();
+        const currentAttachment = attachment;
+        const currentReply = replyingTo;
+
+        playSendSound();
+
+        if (typingAdminTimeoutRef.current) {
+            clearTimeout(typingAdminTimeoutRef.current);
+            typingAdminTimeoutRef.current = null;
+        }
+        setIsCannedOpen(false);
+
+        setInputText('');
+        setAttachment(null);
+        setReplyingTo(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
 
         try {
             let attachmentData = null;
-            if (attachment) {
-                setUploadProgress(0); // Start showing progress immediately
-                attachmentData = await uploadFile(id, attachment.file);
+            if (currentAttachment) {
+                setUploadProgress(20);
+                attachmentData = await uploadFile(selectedId, currentAttachment.file);
             }
 
-            const reply: MessageHistory = {
-                text: internalReplyText,
+            const newMsg: MessageHistory = {
+                text: currentText,
                 sender: 'admin',
-                senderName: auth.currentUser?.displayName || 'Администратор',
+                senderName: auth.currentUser?.displayName || userProfile?.displayName || 'Администратор',
                 senderRole: userProfile?.role || 'admin',
-                senderVerification: userProfile?.verification || null,
                 createdAt: Timestamp.now(),
-                ...(attachmentData && { attachment: attachmentData })
+                isRead: false,
+                ...(currentReply && { replyTo: currentReply }),
+                ...(attachmentData && { attachment: attachmentData }),
+                ...(attachmentData?.type?.startsWith('image/') && { image: attachmentData.url })
             };
 
-            const batch = writeBatch(db);
-            const msgRef = doc(db, "messages", id);
+            // Automatic status transition to 'in_progress'
+            const shouldAutoProgress = activeMessage.status === 'new' || (activeMessage.status as string) === 'open' || activeMessage.status === 'waiting';
+            const nextStatus = shouldAutoProgress ? 'in_progress' : activeMessage.status;
 
-            batch.update(msgRef, {
-                thread: arrayUnion(reply),
-                status: 'in_progress',
+            // Optimistic update
+            setMessages(prev => prev.map(m => m.id === selectedId ? {
+                ...m,
+                status: nextStatus,
+                thread: [...(m.thread || []), newMsg]
+            } : m));
+
+            // Update ticket in Firestore
+            await updateDoc(doc(db, "messages", selectedId), {
+                thread: arrayUnion(newMsg),
+                status: nextStatus,
                 isReadByUser: false,
-                "isTyping.admin": false
+                "isTyping.admin": false,
+                "typing.admin": false
             });
 
-            const notificationRef = doc(collection(db, "notifications"));
-            batch.set(notificationRef, {
-                email: message.email,
-                type: 'request',
-                title: 'Новый ответ от поддержки',
-                message: `Вы получили ответ на обращение: ${message.subject}`,
-                isRead: false,
-                createdAt: serverTimestamp(),
-                relatedId: id
-            });
-
-            await batch.commit();
-            setInternalReplyText('');
-            setAttachment(null);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-        } catch (error: any) {
-            console.error("Full reply error:", error);
-            const errorMessage = error?.message || "";
-            if (errorMessage.includes("CORS") || errorMessage.includes("Network Error") || errorMessage.includes("Превышено время")) {
-                alert("⚠️ Ошибка настройки сервера (CORS)\n\nФайлы не отправляются, так как не настроен Firebase Storage.\n\nПожалуйста, выполните команду настройки в Google Cloud Shell (см. чат).");
-            } else {
-                alert(`Ошибка при отправке: ${errorMessage}`);
+            // Send notification to user
+            if (activeMessage.email || activeMessage.userId) {
+                addDoc(collection(db, "notifications"), {
+                    userId: activeMessage.userId || '',
+                    email: activeMessage.email || '',
+                    type: 'request',
+                    title: 'Новый ответ от поддержки',
+                    message: `Вы получили ответ на обращение: ${activeMessage.subject}`,
+                    isRead: false,
+                    createdAt: serverTimestamp(),
+                    relatedId: selectedId
+                }).catch(() => {});
             }
+        } catch (err: any) {
+            console.error("Error sending message:", err);
+            alert('Ошибка отправки: ' + (err?.message || 'Попробуйте снова'));
         } finally {
             setUploadProgress(null);
         }
     };
 
-    const handleEmailReply = (email: string, subject: string, name: string, e?: React.MouseEvent) => {
-        e?.stopPropagation();
-        setReplyingTo({ email, subject, name });
-        setIsTemplatesOpen(true);
-    };
-
-    const onTemplateSelect = async (content: string) => {
-        if (!replyingTo) return;
-
-        if (replyMode === 'internal' && expandedId) {
-            setInternalReplyText(content);
-            setIsTemplatesOpen(false);
-            setReplyingTo(null);
-            return;
-        }
-
-        const { email, subject, name } = replyingTo;
-        const body = `Здравствуйте, ${name}!\n\n${content}\n\nС уважением,\nКоманда Sparta Sports Center`;
-
+    // Send Voice Message (Admin)
+    const handleSendVoiceAdmin = async () => {
+        if (!selectedId || !activeMessage || isSendingVoice) return;
+        setIsSendingVoice(true);
         try {
-            await navigator.clipboard.writeText(body);
-            alert('Текст ответа скопирован в буфер обмена! Открываем почтовый клиент...');
-        } catch (err) { }
+            const recorded = await stopRecording();
+            if (!recorded) return;
 
-        window.location.href = `mailto:${email}?subject=Re: ${subject}&body=${encodeURIComponent(body)}`;
-        setIsTemplatesOpen(false);
-        setReplyingTo(null);
-    };
+            playSendSound();
 
-    const handleAddNote = async (id: string) => {
-        if (!newNote.trim()) return;
-        const note: Note = {
-            text: newNote,
-            createdAt: Timestamp.now(),
-            adminName: auth.currentUser?.displayName || 'Admin'
-        };
-        await updateDoc(doc(db, "messages", id), { notes: arrayUnion(note) });
-        setNewNote('');
-    };
+            let uploadedAttachment = null;
+            try {
+                uploadedAttachment = await uploadFile(selectedId, recorded.file);
+            } catch {
+                uploadedAttachment = {
+                    url: recorded.url,
+                    type: recorded.file.type || 'audio/webm',
+                    name: recorded.file.name,
+                    size: recorded.blob.size
+                };
+            }
 
-    const createTag = async () => {
-        if (!newTagLabel.trim()) return;
-        const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-        await setDoc(doc(collection(db, "message_tags")), { label: newTagLabel, color });
-        setNewTagLabel('');
-    };
+            const newMsg: MessageHistory = {
+                text: '',
+                sender: 'admin',
+                senderName: auth.currentUser?.displayName || userProfile?.displayName || 'Администратор',
+                senderRole: userProfile?.role || 'admin',
+                createdAt: Timestamp.now(),
+                isRead: false,
+                ...(replyingTo && { replyTo: replyingTo }),
+                attachment: {
+                    url: uploadedAttachment.url,
+                    type: 'audio',
+                    name: `Голосовое сообщение (${formatAudioDuration(recorded.duration)})`,
+                    duration: recorded.duration,
+                    size: recorded.blob.size,
+                    transcription: recorded.transcription || ''
+                }
+            };
 
-    const deleteTag = async (id: string) => {
-        if (window.confirm('Удалить этот тег?')) {
-            await deleteDoc(doc(db, "message_tags", id));
+            setReplyingTo(null);
+
+            // Automatic status transition to 'in_progress'
+            const shouldAutoProgress = activeMessage.status === 'new' || (activeMessage.status as string) === 'open' || activeMessage.status === 'waiting';
+            const nextStatus = shouldAutoProgress ? 'in_progress' : activeMessage.status;
+
+            // Optimistic update
+            setMessages(prev => prev.map(m => m.id === selectedId ? {
+                ...m,
+                status: nextStatus,
+                thread: [...(m.thread || []), newMsg]
+            } : m));
+
+            // Update ticket in Firestore
+            if (typingAdminTimeoutRef.current) {
+                clearTimeout(typingAdminTimeoutRef.current);
+                typingAdminTimeoutRef.current = null;
+            }
+            await updateDoc(doc(db, "messages", selectedId), {
+                thread: arrayUnion(newMsg),
+                status: nextStatus,
+                isReadByUser: false,
+                "isTyping.admin": false,
+                "typing.admin": false
+            });
+
+            // Send notification to user
+            if (activeMessage.email || activeMessage.userId) {
+                addDoc(collection(db, "notifications"), {
+                    userId: activeMessage.userId || '',
+                    email: activeMessage.email || '',
+                    type: 'request',
+                    title: 'Новый ответ от поддержки',
+                    message: `Вы получили голосовое сообщение в обращении: ${activeMessage.subject}`,
+                    isRead: false,
+                    createdAt: serverTimestamp(),
+                    relatedId: selectedId
+                }).catch(() => {});
+            }
+        } catch (err: any) {
+            console.error("Voice reply admin error:", err);
+            alert('Ошибка при отправке голосового сообщения');
+        } finally {
+            setIsSendingVoice(false);
         }
     };
 
-    const toggleMessageTag = async (messageId: string, tagId: string, hasTag: boolean) => {
-        await updateDoc(doc(db, "messages", messageId), {
-            tags: hasTag ? arrayRemove(tagId) : arrayUnion(tagId)
+    // Enter to send or navigate canned responses
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (isCannedOpen && filteredCannedResponses.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedCannedIndex(prev => (prev + 1) % filteredCannedResponses.length);
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedCannedIndex(prev => (prev - 1 + filteredCannedResponses.length) % filteredCannedResponses.length);
+                return;
+            }
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                handleSelectCanned(filteredCannedResponses[selectedCannedIndex]);
+                return;
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setIsCannedOpen(false);
+                return;
+            }
+        }
+
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    };
+
+    // Format Child & Group Header Info
+    const getChildHeaderInfo = () => {
+        if (!activeMessage) return '';
+        const childName = activeMessage.childName || selectedChildContext?.childName || selectedChildContext?.displayName;
+        if (!childName) return '';
+
+        // Try extracting birth year
+        const birthDateStr = selectedChildContext?.childBirthDate || selectedChildContext?.birthDate || '';
+        let birthYear = selectedChildContext?.birthYear || '';
+        if (!birthYear && birthDateStr) {
+            const match = birthDateStr.match(/\d{4}/);
+            if (match) birthYear = match[0];
+        }
+
+        // Try extracting group
+        const group = activeMessage.groupName || selectedChildContext?.groupName || selectedChildContext?.group;
+
+        if (birthYear && group) {
+            return `${childName} (${birthYear} г.р. · ${group})`;
+        }
+        if (birthYear) {
+            return `${childName} (${birthYear} г.р.)`;
+        }
+        if (group) {
+            return `${childName} (${group})`;
+        }
+        return childName;
+    };
+
+    // Open attachment in SpartaViewer
+    const openInViewer = (url: string, name?: string, type?: string) => {
+        const cleanName = name || (url.split('/').pop()?.split('?')[0]) || 'Документ';
+        let detectedType = type;
+        if (!detectedType) {
+            const ext = cleanName.split('.').pop()?.toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'].includes(ext || '')) detectedType = 'image/jpeg';
+            else if (ext === 'pdf') detectedType = 'application/pdf';
+            else detectedType = 'application/octet-stream';
+        }
+        setViewerFile({
+            url,
+            name: cleanName,
+            type: detectedType
         });
     };
 
-    const handleExportCSV = () => {
-        const headers = ['ID', 'Date', 'Name', 'Email', 'Subject', 'Message', 'Status', 'Tags'];
-        const csvContent = [
-            headers.join(','),
-            ...messages.map(msg => [
-                msg.id,
-                format(msg.createdAt.toDate(), 'yyyy-MM-dd HH:mm'),
-                `"${msg.name}"`,
-                msg.email,
-                `"${msg.subject}"`,
-                `"${msg.message.replace(/"/g, '""').replace(/\n/g, ' ')}"`,
-                msg.status,
-                `"${msg.tags?.map(tId => availableTags.find(t => t.id === tId)?.label).join('; ') || ''}"`
-            ].join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `messages_export_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-        link.click();
-    };
-
-    const toggleSelection = (id: string) => {
-        const newSet = new Set(selectedMessages);
-        if (newSet.has(id)) newSet.delete(id);
-        else newSet.add(id);
-        setSelectedMessages(newSet);
-    };
-
-    const filteredMessages = messages.filter(msg => {
-        const name = msg.name || '';
-        const email = msg.email || '';
-        const subject = msg.subject || '';
-
-        const matchesSearch =
-            name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            subject.toLowerCase().includes(searchTerm.toLowerCase());
-
-        if (filter === 'all') return matchesSearch;
-        if (filter === 'starred') return matchesSearch && msg.isStarred;
-        return matchesSearch && msg.status === filter;
-    });
-
-    const unreadCount = messages.filter(m => m.status === 'new').length;
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'new': return 'bg-sparta-gold text-black border-sparta-gold';
-            case 'in_progress': return 'bg-blue-500/20 text-blue-400 border-blue-500/50';
-            case 'resolved': return 'bg-green-500/20 text-green-400 border-green-500/50';
-            default: return 'bg-white/10 text-white/50 border-white/10';
-        }
-    };
-
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case 'new': return 'Новое';
-            case 'in_progress': return 'В работе';
-            case 'resolved': return 'Решено';
-            default: return status;
-        }
-    };
-
     return (
-        <div className="p-8 font-manrope">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-russo text-white mb-2">Сообщения</h1>
-                    <p className="text-white/50">Обработка запросов и обратная связь</p>
-                </div>
-                <div className="flex gap-3">
-                    <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white transition-colors">
-                        <Download size={18} /> <span className="hidden md:inline">Экспорт CSV</span>
-                    </button>
-                    <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
-                        <Mail className="text-sparta-gold" />
-                        <span className="text-white font-bold">{unreadCount}</span>
-                        <span className="text-white/50 text-sm hidden md:inline">новых</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Bulk Actions Bar */}
-            {selectedMessages.size > 0 && (
-                <div className="mb-6 bg-sparta-gold/10 border border-sparta-gold/30 p-4 rounded-xl flex flex-wrap items-center gap-4 animate-in fade-in slide-in-from-top-2">
-                    <span className="text-sparta-gold font-bold">{selectedMessages.size} выбрано</span>
-                    <div className="h-4 w-px bg-sparta-gold/30 mx-2" />
-                    <button onClick={handleBulkDelete} className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm">
-                        <Trash2 size={16} /> Удалить
-                    </button>
-                    <button onClick={() => handleBulkStatus('resolved')} className="flex items-center gap-2 text-green-400 hover:text-green-300 text-sm">
-                        <CheckCircle2 size={16} /> Пометить "Решено"
-                    </button>
-                    <button onClick={() => handleBulkStatus('in_progress')} className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
-                        <Clock size={16} /> Пометить "В работе"
-                    </button>
-                    <button onClick={() => setSelectedMessages(new Set())} className="ml-auto text-white/50 hover:text-white text-sm">
-                        Снять выделение
-                    </button>
-                </div>
-            )}
-
-            {/* Filters */}
-            <div className="flex flex-col xl:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Поиск по имени, email или теме..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-[#121212] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:border-sparta-gold outline-none"
-                    />
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-2 xl:pb-0 scrollbar-hide">
-                    {(['all', 'new', 'in_progress', 'resolved', 'starred'] as const).map((f) => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={`px-4 py-2 rounded-xl border transition-colors whitespace-nowrap flex items-center gap-2 ${filter === f ? 'bg-white/10 text-white border-white/30' : 'bg-transparent text-white/50 border-white/5 hover:border-white/20'}`}
-                        >
-                            {f === 'starred' && <Star size={14} className={filter === 'starred' ? "fill-white" : ""} />}
-                            {f === 'all' ? 'Все' : f === 'starred' ? 'Важные' : getStatusLabel(f)}
-                        </button>
-                    ))}
-                    <button
-                        onClick={() => setIsTagManagerOpen(!isTagManagerOpen)}
-                        className={`px-4 py-2 rounded-xl border border-white/10 hover:border-white/30 transition-colors whitespace-nowrap flex items-center gap-2 ${isTagManagerOpen ? 'bg-white/10 text-white' : 'text-white/50'}`}
-                    >
-                        <Tag size={16} /> Теги
-                    </button>
-                </div>
-            </div>
-
-            {/* Tag Manager */}
-            {isTagManagerOpen && (
-                <div className="mb-6 p-4 bg-white/5 rounded-xl border border-white/10 animate-in fade-in">
-                    <h4 className="text-white font-bold mb-3 flex items-center gap-2"><Tag size={16} /> Управление тегами</h4>
-                    <div className="flex gap-2 mb-4">
-                        <input
-                            type="text"
-                            value={newTagLabel}
-                            onChange={(e) => setNewTagLabel(e.target.value)}
-                            placeholder="Новый тег..."
-                            className="bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-sparta-gold outline-none"
-                        />
-                        <button onClick={createTag} className="p-2 bg-sparta-gold text-black rounded-lg hover:bg-white transition-colors">
-                            <Plus size={16} />
-                        </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {availableTags.map(tag => (
-                            <div key={tag.id} className="flex items-center gap-2 px-3 py-1 bg-black/40 rounded-full border border-white/10">
-                                <span className={`w-2 h-2 rounded-full`} style={{ backgroundColor: tag.color }} />
-                                <span className="text-white text-sm">{tag.label}</span>
-                                <button onClick={() => deleteTag(tag.id)} className="text-white/30 hover:text-red-400 ml-1"><X size={14} /></button>
+        <div className="font-manrope h-[calc(100vh-theme(spacing.16))] flex flex-col min-h-0 text-white select-none relative">
+            {/* Main 2-Column Container */}
+            <div className="flex-1 flex overflow-hidden rounded-2xl border border-white/10 bg-[#121212] shadow-2xl min-h-0">
+                
+                {/* ======================================================== */}
+                {/* 1. LEFT COLUMN (35% width, fixed list from top to bottom) */}
+                {/* ======================================================== */}
+                <div className={`w-full md:w-[35%] lg:w-[32%] xl:w-[30%] flex flex-col border-r border-white/10 bg-[#151515] min-w-[300px] shrink-0 min-h-0 ${selectedId ? 'hidden md:flex' : 'flex'}`}>
+                    
+                    {/* Top Search + Category Select Bar */}
+                    <div className="p-3 pb-2.5 border-b border-white/10 shrink-0 space-y-2">
+                        <div className="flex items-center gap-2">
+                            {/* Search Input */}
+                            <div className="relative flex-1">
+                                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Поиск по диалогам..."
+                                    className="w-full bg-[#202020] border border-white/10 rounded-xl pl-9 pr-7 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-sparta-gold transition-colors"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm('')}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
                             </div>
-                        ))}
-                        {availableTags.length === 0 && <span className="text-white/30 text-sm">Нет тегов</span>}
-                    </div>
-                </div>
-            )}
 
-            {/* List */}
-            <div className="bg-[#121212] rounded-3xl border border-white/10 overflow-hidden">
-                {loading ? (
-                    <div className="p-8 text-center text-white/50">Загрузка...</div>
-                ) : filteredMessages.length === 0 ? (
-                    <div className="p-12 text-center flex flex-col items-center">
-                        <MessageSquare size={48} className="text-white/10 mb-4" />
-                        <p className="text-white/50">Сообщений не найдено</p>
-                    </div>
-                ) : (
-                    <div className="divide-y divide-white/5">
-                        {filteredMessages.map((msg) => (
-                            <div key={msg.id} className={`group hover:bg-white/5 transition-colors ${expandedId === msg.id ? 'bg-white/5' : ''}`}>
-                                {/* Header Row */}
-                                <div
-                                    onClick={() => setExpandedId(expandedId === msg.id ? null : msg.id)}
-                                    className="p-6 cursor-pointer flex flex-col md:flex-row gap-4 md:items-center relative"
+                            {/* Category Select Dropdown */}
+                            <div className="relative shrink-0">
+                                <select
+                                    value={selectedCategory}
+                                    onChange={(e) => setSelectedCategory(e.target.value as DialogCategory)}
+                                    className="bg-[#202020] border border-white/10 rounded-xl pl-3 pr-8 py-2 text-xs text-gray-200 focus:outline-none focus:border-sparta-gold transition-colors appearance-none cursor-pointer font-medium hover:bg-white/5"
                                 >
-                                    {/* Selection Checkbox */}
-                                    <div className={`absolute left-2 top-1/2 -translate-y-1/2 transition-opacity ${selectedMessages.has(msg.id) ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'}`} onClick={(e) => e.stopPropagation()}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedMessages.has(msg.id)}
-                                            onChange={() => toggleSelection(msg.id)}
-                                            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-sparta-gold focus:ring-offset-0 focus:ring-1 focus:ring-sparta-gold cursor-pointer"
-                                        />
-                                    </div>
+                                    <option value="all" className="bg-[#1b1b1b] text-white">Все категории</option>
+                                    <option value="requests" className="bg-[#1b1b1b] text-white">⚽ Пробные заявки</option>
+                                    <option value="certificates" className="bg-[#1b1b1b] text-white">📄 Справки</option>
+                                    <option value="chat" className="bg-[#1b1b1b] text-white">💬 Вопросы родителей</option>
+                                    <option value="bot" className="bg-[#1b1b1b] text-white">🤖 Чат-бот</option>
+                                </select>
+                                <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            </div>
+                        </div>
+                    </div>
 
-                                    {/* Star Button */}
-                                    <div className="md:ml-4" onClick={(e) => handleToggleStar(msg.id, !!msg.isStarred, e)}>
-                                        <Star
-                                            size={18}
-                                            className={`transition-colors ${msg.isStarred ? 'text-sparta-gold fill-sparta-gold' : 'text-white/10 group-hover:text-white/30'}`}
-                                        />
-                                    </div>
+                    {/* Single Row Status Tabs: [ 🔥 Входящие (N) ] [ В работе (N) ] [ Решённые (N) ] */}
+                    <div className="p-2 border-b border-white/5 bg-[#121212] shrink-0">
+                        <div className="grid grid-cols-3 gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/5 text-xs font-medium">
+                            <button
+                                onClick={() => setActiveTab('inbox')}
+                                className={`py-1.5 px-1 rounded-lg text-center transition-all truncate flex items-center justify-center gap-1 ${
+                                    activeTab === 'inbox' 
+                                        ? 'bg-sparta-gold text-black font-semibold shadow' 
+                                        : 'text-gray-400 hover:text-white'
+                                }`}
+                            >
+                                <span>🔥 Входящие</span>
+                                {countInbox > 0 && (
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                                        activeTab === 'inbox' ? 'bg-black/20 text-black' : 'bg-amber-400/20 text-amber-300'
+                                    }`}>
+                                        {countInbox}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('in_progress')}
+                                className={`py-1.5 px-1 rounded-lg text-center transition-all truncate flex items-center justify-center gap-1 ${
+                                    activeTab === 'in_progress' 
+                                        ? 'bg-sparta-gold text-black font-semibold shadow' 
+                                        : 'text-gray-400 hover:text-white'
+                                }`}
+                            >
+                                <span>В работе</span>
+                                <span className={`text-[10px] ${activeTab === 'in_progress' ? 'text-black/80' : 'text-gray-500'}`}>
+                                    ({countInProgress})
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('resolved')}
+                                className={`py-1.5 px-1 rounded-lg text-center transition-all truncate flex items-center justify-center gap-1 ${
+                                    activeTab === 'resolved' 
+                                        ? 'bg-sparta-gold text-black font-semibold shadow' 
+                                        : 'text-gray-400 hover:text-white'
+                                }`}
+                            >
+                                <span>Решённые</span>
+                                <span className={`text-[10px] ${activeTab === 'resolved' ? 'text-black/80' : 'text-gray-500'}`}>
+                                    ({countResolved})
+                                </span>
+                            </button>
+                        </div>
+                    </div>
 
-                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${msg.status === 'new' ? 'bg-sparta-gold text-black' : 'bg-white/10 text-white/50'}`}>
-                                            <Mail size={20} />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                <span className={`font-bold text-sm ${msg.status === 'new' ? 'text-white' : 'text-white/70'}`}>
-                                                    {msg.name}
-                                                </span>
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${getStatusColor(msg.status)}`}>
-                                                    {getStatusLabel(msg.status)}
-                                                </span>
-                                                {msg.category && msg.category !== 'general' && (
-                                                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-sparta-gold/10 text-sparta-gold border border-sparta-gold/20 font-bold uppercase tracking-wider">
-                                                        {QUICK_CATEGORIES.find(c => c.id === msg.category)?.label || msg.category}
+                    {/* Cards List (Fixed vertical scrolling, NO ACCORDIONS) */}
+                    <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-white/5">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center h-48 text-gray-500 gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-sparta-gold" />
+                                <span className="text-xs">Загрузка обращений...</span>
+                            </div>
+                        ) : sortedMessages.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500 text-xs">
+                                Обращений не найдено
+                            </div>
+                        ) : (
+                            sortedMessages.map(msg => {
+                                const isSelected = selectedId === msg.id;
+                                const formattedTitle = formatCardNames(msg.name, msg.childName);
+                                const catInfo = getDialogCategory(msg);
+
+                                return (
+                                    <div
+                                        key={msg.id}
+                                        onClick={() => setSelectedId(msg.id)}
+                                        onContextMenu={(e) => handleDialogContextMenu(e, msg)}
+                                        onTouchStart={(e) => handleDialogTouchStart(e, msg)}
+                                        onTouchEnd={handleDialogTouchEndOrMove}
+                                        onTouchMove={handleDialogTouchEndOrMove}
+                                        className={`p-3.5 cursor-pointer transition-colors border-l-4 relative select-none ${
+                                            isSelected 
+                                                ? 'bg-sparta-gold/15 border-l-sparta-gold text-white' 
+                                                : 'border-l-transparent hover:bg-white/5 text-gray-300'
+                                        }`}
+                                    >
+                                        {/* Line 1: Clean Formatted Name (Parent · Child) + Time & Status Dot */}
+                                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                {msg.isPinned && (
+                                                    <span title="Закреплённый диалог" className="shrink-0 flex items-center">
+                                                        <Pin className="w-3 h-3 text-sparta-gold fill-current" />
                                                     </span>
                                                 )}
-                                                {msg.tags?.map(tId => {
-                                                    const tag = availableTags.find(t => t.id === tId);
-                                                    if (!tag) return null;
-                                                    return (
-                                                        <span key={tId} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-white/5 text-white/70 border border-white/10">
-                                                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
-                                                            {tag.label}
-                                                        </span>
-                                                    );
-                                                })}
-                                                <span className="text-white/30 text-xs ml-auto md:ml-0">
-                                                    {msg.createdAt?.seconds
-                                                        ? format(new Date(msg.createdAt.seconds * 1000), 'd MMM HH:mm', { locale: ru })
-                                                        : '...'}
+                                                <span className="font-semibold text-xs sm:text-sm text-white truncate" title={formattedTitle}>
+                                                    {formattedTitle}
                                                 </span>
                                             </div>
-                                            <h4 className="text-white font-medium text-sm truncate">{msg.subject}</h4>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <span className="text-[11px] text-gray-400 font-mono">
+                                                    {formatCardTime(msg.createdAt)}
+                                                </span>
+                                                <span className={`w-2 h-2 rounded-full ${getStatusDot(msg.status)}`} />
+                                            </div>
                                         </div>
+
+                                        {/* Line 2: Category Badge & Subject */}
+                                        <div className="flex items-center gap-1.5 mb-1 min-w-0">
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${catInfo.color}`}>
+                                                {catInfo.label}
+                                            </span>
+                                            <span className="text-xs font-medium text-white/90 truncate">
+                                                {msg.subject || 'Обращение'}
+                                            </span>
+                                        </div>
+
+                                        {/* Line 3: Last Message snippet strictly in 1 clean line */}
+                                        {msg.isTyping?.user || (msg as any).typing?.user ? (
+                                            <p className="text-xs text-emerald-400 font-medium flex items-center gap-1.5 animate-pulse truncate">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 inline-block animate-ping" />
+                                                печатает...
+                                            </p>
+                                        ) : (
+                                            <p className="line-clamp-1 text-xs text-neutral-400 truncate">
+                                                {getLastMessageText(msg)}
+                                            </p>
+                                        )}
                                     </div>
-                                    <div className="flex items-center gap-2 opacity-100 transition-opacity ml-auto md:ml-0">
-                                        <button
-                                            onClick={(e) => handleEmailReply(msg.email, msg.subject, msg.name, e)}
-                                            className="p-2 text-white/50 hover:text-sparta-gold hover:bg-white/5 rounded-lg transition-colors"
-                                            title="Ответить"
-                                        >
-                                            <Reply size={18} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDelete(msg.id, e)}
-                                            className="p-2 text-white/50 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                            title="Удалить"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                        {expandedId === msg.id ? <ChevronUp className="text-white/50" /> : <ChevronDown className="text-white/50" />}
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+
+                {/* ======================================================== */}
+                {/* 2. RIGHT COLUMN (65% width, чистый чат)                  */}
+                {/* ======================================================== */}
+                <div className={`flex-1 flex flex-col min-w-0 bg-[#0e0e0e] min-h-0 ${!selectedId ? 'hidden md:flex' : 'flex'}`}>
+                    
+                    {!activeMessage ? (
+                        // Empty State
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-500">
+                            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-sparta-gold/50 mb-3 shadow-inner">
+                                <MessageSquare className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-base font-semibold text-gray-300 mb-1">Выберите диалог</h3>
+                            <p className="text-xs text-gray-500 max-w-sm">
+                                Выберите обращение из списка слева, чтобы начать переписку с родителем.
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* --- HEADER --- */}
+                            <div className="p-3.5 px-4 border-b border-white/10 bg-[#161616] flex items-center justify-between gap-3 shrink-0">
+                                
+                                {/* Mobile Back Button + Title Info */}
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <button
+                                        onClick={() => setSelectedId(null)}
+                                        className="md:hidden p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white shrink-0"
+                                    >
+                                        <ArrowLeft className="w-5 h-5" />
+                                    </button>
+
+                                    <div className="min-w-0">
+                                        {/* Parent Name · Child (Group) */}
+                                        <h2 className="text-sm sm:text-base font-semibold text-white truncate flex items-center gap-1.5">
+                                            <span>{activeMessage.name}</span>
+                                            {getChildHeaderInfo() && (
+                                                <span className="text-sparta-gold font-normal truncate">
+                                                    · {getChildHeaderInfo()}
+                                                </span>
+                                            )}
+                                        </h2>
+
+                                        {/* Phone for calling or typing indicator */}
+                                        {activeMessage.isTyping?.user || (activeMessage as any).typing?.user ? (
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className="text-xs text-emerald-400 font-medium flex items-center gap-1.5 animate-pulse">
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 inline-block animate-ping" />
+                                                    печатает...
+                                                </span>
+                                                {activeMessage.phone && <span className="text-white/20">•</span>}
+                                                {activeMessage.phone && (
+                                                    <a
+                                                        href={`tel:${activeMessage.phone}`}
+                                                        className="inline-flex items-center gap-1.5 text-sparta-gold/80 hover:text-sparta-gold hover:underline font-mono text-xs"
+                                                        title="Позвонить родителю"
+                                                    >
+                                                        <Phone className="w-3 h-3" />
+                                                        <span>{activeMessage.phone}</span>
+                                                    </a>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
+                                                {activeMessage.phone ? (
+                                                    <a
+                                                        href={`tel:${activeMessage.phone}`}
+                                                        className="inline-flex items-center gap-1.5 text-sparta-gold hover:underline font-mono"
+                                                        title="Позвонить родителю"
+                                                    >
+                                                        <Phone className="w-3 h-3" />
+                                                        <span>{activeMessage.phone}</span>
+                                                    </a>
+                                                ) : activeMessage.email ? (
+                                                    <span className="inline-flex items-center gap-1 text-gray-400">
+                                                        <Mail className="w-3 h-3" />
+                                                        <span>{activeMessage.email}</span>
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Expanded Content */}
-                                {expandedId === msg.id && (
-                                    <div className="px-6 pb-6 pt-0 border-t border-white/5 md:border-t-0 animate-in slide-in-from-top-2 duration-200 pl-16">
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-                                            {/* Left: Chat & Details */}
-                                            <div className="lg:col-span-2 space-y-6">
+                                {/* Right Actions in Header */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                    
+                                    {/* Prominent Sick Leave Extension Button */}
+                                    {isSickLeave(activeMessage) && (
+                                        <button
+                                            onClick={() => handleExtendSubscription7Days(activeMessage)}
+                                            disabled={isExtendingSub}
+                                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-sparta-gold hover:from-amber-400 hover:to-yellow-300 text-black font-semibold text-xs flex items-center gap-1.5 shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                                            title="Автоматически продлить абонемент на 7 дней и закрыть обращение"
+                                        >
+                                            {isExtendingSub ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                                <Zap className="w-3.5 h-3.5 fill-current" />
+                                            )}
+                                            <span className="hidden sm:inline">⚡ Продлить на 7 дней</span>
+                                            <span className="sm:hidden">+7 дн.</span>
+                                        </button>
+                                    )}
 
-                                                {/* Chat History */}
-                                                <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden flex flex-col max-h-[500px]">
-                                                    {/* Initial Message Header */}
-                                                    <div className="p-4 bg-white/5 border-b border-white/5">
-                                                        <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <div className="flex items-center gap-2 mb-1">
-                                                                    <h4 className="text-white font-bold text-sm">{msg.subject}</h4>
-                                                                    {msg.category && (
-                                                                        <span className="text-[9px] px-2 py-0.5 bg-sparta-gold/10 text-sparta-gold rounded-full border border-sparta-gold/20 uppercase font-black tracking-widest">
-                                                                            {QUICK_CATEGORIES.find(c => c.id === msg.category)?.label || msg.category}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <p className="text-white/50 text-xs">От: {msg.name} ({msg.email})</p>
-                                                            </div>
-                                                            <div className="text-white/30 text-xs">
-                                                                {format(msg.createdAt.toDate(), 'dd.MM HH:mm')}
-                                                            </div>
-                                                        </div>
-                                                        <div className="mt-3 text-white/90 text-sm whitespace-pre-wrap bg-black/20 p-3 rounded-lg border border-white/5">
-                                                            {msg.message}
-                                                        </div>
-                                                    </div>
+                                    {/* In-Dialog Search Toggle Button */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!isSearchOpen) {
+                                                setIsSearchOpen(true);
+                                                setTimeout(() => {
+                                                    searchInputRef.current?.focus();
+                                                    searchInputRef.current?.select();
+                                                }, 50);
+                                            } else {
+                                                handleCloseSearch();
+                                            }
+                                        }}
+                                        className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border font-medium text-xs flex items-center gap-1.5 transition-all active:scale-95 ${
+                                            isSearchOpen
+                                                ? 'bg-sparta-gold/20 text-sparta-gold border-sparta-gold/40'
+                                                : 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border-white/10'
+                                        }`}
+                                        title="Поиск по сообщениям (Ctrl+F)"
+                                    >
+                                        <Search className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Поиск</span>
+                                    </button>
 
-                                                    {/* Thread */}
-                                                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0a0a0a]">
-                                                        {msg.thread?.map((reply, idx) => {
-                                                            const isAdmin = reply.sender === 'admin';
-                                                            return (
-                                                                <div key={idx} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
-                                                                    <div className={`max-w-[80%] p-4 rounded-2xl shadow-sm overflow-hidden ${isAdmin
-                                                                        ? 'bg-sparta-gold text-black rounded-tr-none shadow-[0_4px_15px_rgba(212,175,55,0.1)]'
-                                                                        : 'bg-white/10 text-white rounded-tl-none border border-white/5'
-                                                                        }`}>
-                                                                        {/* Legacy Image support (matches UserRequests) */}
-                                                                        {reply.image && (
-                                                                            <div className="mb-2 rounded-lg overflow-hidden border border-white/10 max-w-sm">
-                                                                                <img src={reply.image} alt="Attachment" className="w-full h-auto cursor-pointer" onClick={() => window.open(reply.image, '_blank')} />
-                                                                            </div>
-                                                                        )}
+                                    {/* Unified Single Action Button: [ ✅ Завершить диалог ] vs [ ↩️ Вернуть в работу ] */}
+                                    {activeMessage.status !== 'resolved' ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleUpdateStatus(activeMessage.id, 'resolved')}
+                                            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+                                            title="Завершить диалог и переместить в решённые"
+                                        >
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            <span>✅ Завершить диалог</span>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleUpdateStatus(activeMessage.id, 'in_progress')}
+                                            className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white border border-white/10 font-medium text-xs flex items-center gap-1.5 transition-colors active:scale-95"
+                                            title="Вернуть диалог в работу"
+                                        >
+                                            <RotateCcw className="w-4 h-4" />
+                                            <span>↩️ Вернуть в работу</span>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
 
-                                                                        {/* New Attachment Support */}
-                                                                        {reply.attachment && (
-                                                                            <div className="mb-2 rounded-lg overflow-hidden border border-white/10 max-w-sm bg-black/20">
-                                                                                {reply.attachment.type.startsWith('image/') ? (
-                                                                                    <img src={reply.attachment.url} alt={reply.attachment.name} className="w-full h-auto cursor-pointer" onClick={() => window.open(reply.attachment.url, '_blank')} />
-                                                                                ) : reply.attachment.type.startsWith('video/') ? (
-                                                                                    <div className="w-[280px] sm:w-[350px] max-w-full aspect-video bg-black/20 rounded-lg overflow-hidden relative">
-                                                                                        <div className="absolute inset-0">
-                                                                                            <SpartaVideoPlayer src={reply.attachment.url} className="w-full h-full" />
-                                                                                        </div>
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <div className="p-3 flex items-center justify-between gap-4">
-                                                                                        <div className="flex items-center gap-2 overflow-hidden">
-                                                                                            <FileText size={20} className="text-sparta-gold shrink-0" />
-                                                                                            <div className="min-w-0">
-                                                                                                <div className="text-xs font-bold text-white truncate">{reply.attachment.name}</div>
-                                                                                                <div className="text-[10px] text-white/40">{reply.attachment.size ? (reply.attachment.size / 1024 / 1024).toFixed(2) + ' MB' : 'File'}</div>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                        <a href={reply.attachment.url} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/50 hover:text-white shrink-0">
-                                                                                            <Download size={18} />
-                                                                                        </a>
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
+                            {/* --- COMPACT IN-DIALOG SEARCH STRIP --- */}
+                            {isSearchOpen && (
+                                <div className="p-2 px-4 border-b border-white/10 bg-[#161616] flex items-center justify-between gap-3 shrink-0">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <Search className="w-4 h-4 text-sparta-gold shrink-0" />
+                                        <input
+                                            ref={searchInputRef}
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    if (e.shiftKey) {
+                                                        goToPrevMatch();
+                                                    } else {
+                                                        goToNextMatch();
+                                                    }
+                                                } else if (e.key === 'Escape') {
+                                                    e.preventDefault();
+                                                    handleCloseSearch();
+                                                }
+                                            }}
+                                            placeholder="Поиск по сообщениям..."
+                                            className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none"
+                                        />
+                                    </div>
 
-                                                                        <div className="text-sm whitespace-pre-wrap">{reply.text}</div>
-                                                                        <div className={`text-[10px] mt-1 flex gap-2 items-center ${isAdmin ? 'justify-end text-black/40' : 'text-white/30'}`}>
-                                                                            <span className="font-bold flex items-center gap-1">
-                                                                                {reply.senderName}
-                                                                                {reply.senderRole === 'admin' && <span title="Администратор"><BadgeCheck size={10} className="text-blue-500" /></span>}
-                                                                                {reply.senderRole === 'trainer' && <span title="Тренер"><Dumbbell size={10} className="text-green-500" /></span>}
-                                                                                {reply.senderRole === 'director' && <span title="Директор"><Star size={10} className="text-purple-500" /></span>}
-                                                                                {reply.senderRole === 'developer' && <span title="Разработчик"><Code size={10} className="text-cyan-500" /></span>}
-                                                                                {reply.senderVerification?.isVerified && <span title={reply.senderVerification.title}><BadgeCheck size={10} className="text-blue-500" /></span>}
-                                                                            </span>
-                                                                            <span>{format(reply.createdAt.toDate(), 'HH:mm')}</span>
-                                                                            {isAdmin && (
-                                                                                <CheckCheck
-                                                                                    size={14}
-                                                                                    className={reply.isRead ? "text-black" : "text-black/20"}
-                                                                                />
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                        {msg.isTyping?.user && (
-                                                            <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2">
-                                                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center mr-2 mt-auto">
-                                                                    <User size={16} className="text-white/50" />
-                                                                </div>
-                                                                <div className="bg-white/10 text-white p-4 rounded-2xl rounded-tl-none border border-white/5 flex items-center gap-1 w-fit">
-                                                                    <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-                                                                    <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                                                                    <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                        <div ref={chatEndRef} />
-                                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {/* Match Counter */}
+                                        {searchQuery.trim() ? (
+                                            <div className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10">
+                                                {matchingIndices.length > 0 ? (
+                                                    <span className="text-gray-300">
+                                                        <span className="text-sparta-gold font-semibold">{currentMatchIndex + 1}</span> из {matchingIndices.length}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-rose-400 font-medium">Ничего не найдено</span>
+                                                )}
+                                            </div>
+                                        ) : null}
 
-                                                    {/* Reply Input */}
-                                                    <div className="p-4 bg-white/5 border-t border-white/5">
-                                                        <div className="flex gap-2 mb-2">
-                                                            <button
-                                                                onClick={() => setReplyMode('internal')}
-                                                                className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${replyMode === 'internal' ? 'bg-sparta-gold text-black font-bold' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
-                                                            >
-                                                                В чат (На сайте)
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setReplyMode('email')}
-                                                                className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${replyMode === 'email' ? 'bg-sparta-gold text-black font-bold' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
-                                                            >
-                                                                Email (Внешний)
-                                                            </button>
-                                                        </div>
+                                        {/* Navigation Arrows */}
+                                        <div className="flex items-center gap-0.5 border-l border-white/10 pl-2">
+                                            <button
+                                                type="button"
+                                                onClick={goToPrevMatch}
+                                                disabled={matchingIndices.length === 0}
+                                                className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                                title="Предыдущее совпадение (Shift+Enter)"
+                                            >
+                                                <ChevronUp className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={goToNextMatch}
+                                                disabled={matchingIndices.length === 0}
+                                                className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                                title="Следующее совпадение (Enter)"
+                                            >
+                                                <ChevronDown className="w-4 h-4" />
+                                            </button>
+                                        </div>
 
-                                                        {replyMode === 'internal' ? (
-                                                            <div>
-                                                                <div className="flex gap-2">
-                                                                    <div className="relative flex-1">
-                                                                        <textarea
-                                                                            value={internalReplyText}
-                                                                            onChange={(e) => {
-                                                                                setInternalReplyText(e.target.value);
-                                                                                handleTyping(msg.id);
-                                                                            }}
-                                                                            placeholder="Напишите ответ пользователю..."
-                                                                            rows={1}
-                                                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 pr-20 text-white focus:border-sparta-gold outline-none resize-none overflow-hidden min-h-[46px]"
-                                                                            style={{ height: 'auto', minHeight: '46px' }}
-                                                                            onInput={(e) => {
-                                                                                e.currentTarget.style.height = 'auto';
-                                                                                e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                                                            }}
-                                                                            onKeyDown={(e) => {
-                                                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                                                    e.preventDefault();
-                                                                                    handleInternalReply(msg.id);
-                                                                                }
-                                                                            }}
-                                                                        />
-                                                                        <div className="absolute right-2 top-2 flex items-center gap-1">
-                                                                            <button
-                                                                                onClick={() => fileInputRef.current?.click()}
-                                                                                className={`p-1.5 hover:bg-white/10 rounded-lg transition-colors ${attachment ? 'text-sparta-gold' : 'text-white/30 hover:text-white'}`}
-                                                                                title="Прикрепить файл"
-                                                                            >
-                                                                                <Paperclip size={16} />
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setReplyingTo({ email: msg.email, subject: msg.subject, name: msg.name });
-                                                                                    setIsTemplatesOpen(true);
-                                                                                }}
-                                                                                className="p-1.5 hover:bg-white/10 rounded-lg text-white/30 hover:text-sparta-gold transition-colors"
-                                                                                title="Шаблоны"
-                                                                            >
-                                                                                <FileText size={16} />
-                                                                            </button>
-                                                                        </div>
-                                                                        <input
-                                                                            type="file"
-                                                                            ref={fileInputRef}
-                                                                            className="hidden"
-                                                                            onChange={handleFileSelect}
-                                                                        />
-                                                                    </div>
-                                                                    <button
-                                                                        onClick={() => handleInternalReply(msg.id)}
-                                                                        disabled={(!internalReplyText.trim() && !attachment) || uploadProgress !== null}
-                                                                        className="p-3 bg-sparta-gold text-black rounded-xl hover:bg-white transition-colors disabled:opacity-50 relative overflow-hidden"
-                                                                    >
-                                                                        {uploadProgress !== null ? (
-                                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                                                                <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                                                                            </div>
-                                                                        ) : <Send size={20} />}
-                                                                        {uploadProgress !== null && (
-                                                                            <div
-                                                                                className="absolute bottom-0 left-0 h-1 bg-black/40 transition-all duration-300"
-                                                                                style={{ width: `${uploadProgress}%` }}
-                                                                            />
-                                                                        )}
-                                                                    </button>
-                                                                </div>
+                                        {/* Close Search Button */}
+                                        <button
+                                            type="button"
+                                            onClick={handleCloseSearch}
+                                            className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                            title="Закрыть поиск (Escape)"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-                                                                {/* Attachment Preview UI */}
-                                                                {attachment && (
-                                                                    <div className="mt-2 flex items-start gap-3 p-2 bg-white/5 rounded-xl border border-white/10 animate-in fade-in slide-in-from-top-1">
-                                                                        {attachment.type.startsWith('image/') ? (
-                                                                            <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0">
-                                                                                <img src={attachment.preview} alt="Preview" className="w-full h-full object-cover" />
-                                                                            </div>
-                                                                        ) : attachment.type.startsWith('video/') ? (
-                                                                            <div className="w-16 h-16 rounded-lg bg-black flex items-center justify-center shrink-0">
-                                                                                <Play size={24} className="text-sparta-gold" />
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="w-16 h-16 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-                                                                                <FileText size={24} className="text-white/50" />
-                                                                            </div>
-                                                                        )}
-                                                                        <div className="flex-1 min-w-0 py-1">
-                                                                            <div className="text-xs font-bold text-white truncate">{attachment.file.name}</div>
-                                                                            <div className="text-[10px] text-white/40">{(attachment.file.size / 1024 / 1024).toFixed(2)} MB</div>
-                                                                        </div>
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setAttachment(null);
-                                                                                if (fileInputRef.current) fileInputRef.current.value = '';
-                                                                            }}
-                                                                            className="p-2 hover:bg-white/10 rounded-full text-white/30 hover:text-red-400 transition-colors"
-                                                                        >
-                                                                            <X size={16} />
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                onClick={(e) => handleEmailReply(msg.email, msg.subject, msg.name, e)}
-                                                                className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-                                                            >
-                                                                <Mail size={18} /> Открыть почтовый клиент
-                                                            </button>
-                                                        )}
-                                                    </div>
+                            {/* --- MESSAGE HISTORY STREAM --- */}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 bg-[#0e0e0e]">
+                                {chatThread.map(({ item, threadIndex }, idx) => {
+                                    const isUser = item.sender === 'user';
+                                    const isSystem = item.senderRole === 'system' || item.senderName?.toLowerCase().includes('система') || item.text?.startsWith('✅');
+                                    const timeStr = item.createdAt ? format(item.createdAt.toDate(), 'HH:mm') : '';
+
+                                    const isCurrentMatch = isSearchOpen && matchingIndices.length > 0 && matchingIndices[currentMatchIndex] === idx;
+                                    const isPulseActive = highlightedMsgIdx === idx;
+
+                                    // System notification
+                                    if (isSystem) {
+                                        return (
+                                            <div key={idx} id={`chat-msg-${idx}`} className="flex justify-center my-2 transition-all">
+                                                <div className={`max-w-md bg-white/5 border border-white/10 rounded-xl px-3.5 py-1.5 text-center text-xs text-gray-300 shadow-sm leading-relaxed transition-all ${
+                                                    isCurrentMatch || isPulseActive ? 'ring-2 ring-sparta-gold shadow-lg shadow-sparta-gold/30 animate-pulse' : ''
+                                                }`}>
+                                                    {isSearchOpen && cleanSearchQuery ? highlightSearchText(item.text, cleanSearchQuery, true) : item.text}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    // User message (Left, Dark) or Admin message (Right, Gold)
+                                    return (
+                                        <div
+                                            key={idx}
+                                            id={`chat-msg-${idx}`}
+                                            className={`flex ${isUser ? 'justify-start' : 'justify-end'} transition-all`}
+                                        >
+                                            <div
+                                                onContextMenu={(e) => handleMessageContextMenu(e, item, threadIndex)}
+                                                onTouchStart={(e) => handleMsgTouchStart(e, item, threadIndex)}
+                                                onTouchEnd={handleMsgTouchEndOrMove}
+                                                onTouchMove={handleMsgTouchEndOrMove}
+                                                className={`max-w-[80%] sm:max-w-[70%] rounded-2xl p-3.5 text-sm shadow-md transition-all select-text ${
+                                                    isUser
+                                                        ? 'bg-[#222222] border border-white/10 text-white rounded-tl-sm hover:border-white/20'
+                                                        : 'bg-[#D4AF37] text-black font-normal rounded-tr-sm hover:brightness-105'
+                                                } ${
+                                                    isCurrentMatch || isPulseActive
+                                                        ? isUser
+                                                            ? 'ring-2 ring-sparta-gold shadow-lg shadow-sparta-gold/40 animate-pulse'
+                                                            : 'ring-2 ring-black shadow-lg shadow-black/40 animate-pulse'
+                                                        : ''
+                                                }`}
+                                            >
+                                                {/* Author Name + Time */}
+                                                <div className={`flex items-center justify-between gap-4 mb-1 text-[11px] select-none ${
+                                                    isUser ? 'text-sparta-gold font-medium' : 'text-black/70 font-semibold'
+                                                }`}>
+                                                    <span>{isUser ? activeMessage.name : (item.senderName || 'Администратор')}</span>
+                                                    <span className="font-mono text-[10px] opacity-75">{timeStr}</span>
                                                 </div>
 
-                                                {/* Internal Notes */}
-                                                <div>
-                                                    <h4 className="text-white/30 text-[10px] uppercase tracking-wider mb-2 font-bold flex items-center gap-2">
-                                                        <MessageSquare size={12} /> Заметки для команды
-                                                    </h4>
-                                                    <div className="space-y-3 mb-3">
-                                                        {msg.notes?.map((note, idx) => (
-                                                            <div key={idx} className="bg-white/5 rounded-xl p-3 text-sm">
-                                                                <p className="text-white/80 mb-1">{note.text}</p>
-                                                                <div className="flex justify-between text-[10px] text-white/30">
-                                                                    <span>{note.adminName}</span>
-                                                                    <span>{format(note.createdAt.toDate(), 'd MMM HH:mm', { locale: ru })}</span>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                        {(!msg.notes || msg.notes.length === 0) && (
-                                                            <p className="text-white/20 text-sm italic">Заметок пока нет</p>
-                                                        )}
+                                                {/* Quoted / Replied Message Banner */}
+                                                {item.replyTo && (
+                                                    <div className={`mb-2 p-2 rounded-lg border-l-2 text-xs select-none ${
+                                                        isUser
+                                                            ? 'bg-black/30 border-sparta-gold text-gray-300'
+                                                            : 'bg-black/15 border-black text-black/90'
+                                                    }`}>
+                                                        <div className="font-semibold text-[11px] opacity-90">{item.replyTo.senderName}</div>
+                                                        <div className="truncate opacity-75">
+                                                            {isSearchOpen && cleanSearchQuery ? highlightSearchText(item.replyTo.text, cleanSearchQuery, isUser) : item.replyTo.text}
+                                                        </div>
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <input
-                                                            type="text"
-                                                            value={newNote}
-                                                            onChange={(e) => setNewNote(e.target.value)}
-                                                            placeholder="Добавить заметку..."
-                                                            className="flex-1 bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:border-sparta-gold outline-none"
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    e.preventDefault();
-                                                                    handleAddNote(msg.id);
+                                                )}
+
+                                                {/* Text Content */}
+                                                {item.text && (
+                                                    <p className="whitespace-pre-wrap break-words leading-relaxed">
+                                                        {isSearchOpen && cleanSearchQuery
+                                                            ? highlightSearchText(item.text, cleanSearchQuery, isUser)
+                                                            : item.text}
+                                                    </p>
+                                                )}
+
+                                                {/* Image Attachment */}
+                                                {(item.image || (item.attachment && item.attachment.type?.startsWith('image/'))) && (
+                                                    <div className="mt-2">
+                                                        <img
+                                                            src={item.image || item.attachment?.url}
+                                                            alt="Вложение"
+                                                            onClick={() => openInViewer(item.image || item.attachment?.url || '', item.attachment?.name || 'Фотография')}
+                                                            className="max-h-60 rounded-xl object-cover border border-black/10 cursor-pointer hover:opacity-95 transition"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Voice Audio Message Player */}
+                                                {item.attachment && (
+                                                    item.attachment.type === 'audio' ||
+                                                    item.attachment.type?.startsWith('audio/') ||
+                                                    item.attachment.name?.toLowerCase().includes('голосовое') ||
+                                                    item.attachment.url?.includes('voice_')
+                                                ) && (
+                                                    <div className="mt-2">
+                                                        <SpartaAudioPlayer
+                                                            url={item.attachment.url}
+                                                            duration={item.attachment.duration}
+                                                            name={item.attachment.name}
+                                                            transcription={item.attachment.transcription}
+                                                            variant={isUser ? 'dark' : 'gold'}
+                                                            onSaveTranscription={async (transcriptionText) => {
+                                                                if (!activeMessage || !selectedId) return;
+                                                                const updatedThread = (activeMessage.thread || []).map((m: any, mIdx: number) => {
+                                                                    if (mIdx === threadIndex) {
+                                                                        return {
+                                                                            ...m,
+                                                                            attachment: {
+                                                                                ...(typeof m.attachment === 'object' ? m.attachment : {}),
+                                                                                transcription: transcriptionText
+                                                                            }
+                                                                        };
+                                                                    }
+                                                                    return m;
+                                                                });
+
+                                                                setMessages(prev => prev.map(m => m.id === selectedId ? { ...m, thread: updatedThread } : m));
+                                                                try {
+                                                                    await updateDoc(doc(db, "messages", selectedId), { thread: updatedThread });
+                                                                } catch (err) {
+                                                                    console.error('Error saving transcription in AdminMessages:', err);
                                                                 }
                                                             }}
                                                         />
-                                                        <button
-                                                            onClick={() => handleAddNote(msg.id)}
-                                                            className="p-2 bg-sparta-gold text-black rounded-xl hover:bg-white transition-colors"
-                                                        >
-                                                            <Send size={16} />
-                                                        </button>
                                                     </div>
-                                                </div>
-                                            </div>
+                                                )}
 
-                                            {/* Right Column */}
-                                            <div className="space-y-6">
-                                                <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-4">
-                                                    <div>
-                                                        <label className="text-white/30 text-xs block mb-1">Статус</label>
-                                                        <div className="space-y-2">
-                                                            {(['new', 'in_progress', 'resolved'] as const).map(status => (
-                                                                <button
-                                                                    key={status}
-                                                                    onClick={(e) => { e.stopPropagation(); handleStatusChange(msg.id, status); }}
-                                                                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${msg.status === status ? 'bg-white/10 border border-white/20' : 'hover:bg-white/5 border border-transparent opacity-50 hover:opacity-100'}`}
-                                                                >
-                                                                    {status === 'new' && <Circle size={14} className="text-sparta-gold fill-sparta-gold" />}
-                                                                    {status === 'in_progress' && <Clock size={14} className="text-blue-400" />}
-                                                                    {status === 'resolved' && <CheckCircle2 size={14} className="text-green-500" />}
-                                                                    <span className={msg.status === status ? 'text-white' : 'text-white/60'}>
-                                                                        {getStatusLabel(status)}
-                                                                    </span>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="text-white/30 text-xs block mb-2">Теги</label>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {availableTags.map(tag => {
-                                                                const hasTag = msg.tags?.includes(tag.id);
-                                                                return (
-                                                                    <button
-                                                                        key={tag.id}
-                                                                        onClick={() => toggleMessageTag(msg.id, tag.id, !!hasTag)}
-                                                                        className={`px-2 py-1 rounded-full text-xs border transition-all ${hasTag ? 'bg-white/10 border-white/30 text-white' : 'bg-white/5 border-white/10 text-white/50'}`}
-                                                                        style={hasTag ? { borderColor: tag.color } : {}}
-                                                                    >
-                                                                        {tag.label}
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="pt-4 border-t border-white/5">
-                                                        <div className="text-white/30 text-xs">Email</div>
-                                                        <div className="text-white text-sm select-all">{msg.email}</div>
-                                                    </div>
-
-                                                    {/* User Profile Context */}
-                                                    <div className="pt-4 border-t border-white/5 space-y-4">
-                                                        <h5 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Информация о пользователе</h5>
-                                                        {loadingContext ? (
-                                                            <div className="flex items-center gap-2 text-white/20 text-xs animate-pulse">
-                                                                <div className="w-3 h-3 border-2 border-white/10 border-t-white/40 rounded-full animate-spin" />
-                                                                Загрузка профиля...
+                                                {/* Document Attachment (PDF, DOC, XLS, etc.) */}
+                                                {item.attachment &&
+                                                    !item.attachment.type?.startsWith('image/') &&
+                                                    !item.attachment.type?.startsWith('audio/') &&
+                                                    item.attachment.type !== 'audio' &&
+                                                    !item.attachment.name?.toLowerCase().includes('голосовое') &&
+                                                    !item.attachment.url?.includes('voice_') && (
+                                                    <div
+                                                        onClick={() => openInViewer(item.attachment?.url || '', item.attachment?.name, item.attachment?.type)}
+                                                        className={`mt-2 p-2.5 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                                                            isUser
+                                                                ? 'bg-white/10 hover:bg-white/15 border-white/10 text-white'
+                                                                : 'bg-black/10 hover:bg-black/20 border-black/10 text-black'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-2.5 min-w-0">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                                                isUser ? 'bg-white/10 text-sparta-gold' : 'bg-black/10 text-black'
+                                                            }`}>
+                                                                <FileText className="w-4 h-4" />
                                                             </div>
-                                                        ) : selectedUserContext ? (
-                                                            <div className="space-y-3">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className={`w-2 h-2 rounded-full ${isOnline(selectedUserContext.lastActive) ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-white/20'}`} />
-                                                                    <span className="text-xs text-white/70 font-bold uppercase">
-                                                                        {isOnline(selectedUserContext.lastActive) ? 'В СЕТИ' : 'ОФФЛАЙН'}
-                                                                    </span>
+                                                            <div className="min-w-0">
+                                                                <div className="text-xs font-semibold truncate">
+                                                                    {item.attachment.name || 'Документ'}
                                                                 </div>
-                                                                <div>
-                                                                    <div className="text-[10px] text-white/30 uppercase font-medium">План</div>
-                                                                    <div className="text-xs text-white font-bold">
-                                                                        {selectedUserContext.subscription?.title || 'Без абонемента'}
-                                                                    </div>
+                                                                <div className="text-[10px] opacity-70">
+                                                                    {item.attachment.size ? `${(item.attachment.size / 1024).toFixed(0)} КБ` : 'Нажмите для просмотра'}
                                                                 </div>
-                                                                <div>
-                                                                    <div className="text-[10px] text-white/30 uppercase font-medium">В Спарте с</div>
-                                                                    <div className="text-xs text-white">
-                                                                        {selectedUserContext.createdAt?.seconds
-                                                                            ? format(new Date(selectedUserContext.createdAt.seconds * 1000), 'd MMMM yyyy', { locale: ru })
-                                                                            : '—'}
-                                                                    </div>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => navigate(`/admin/users?email=${selectedUserContext.email}`)}
-                                                                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-[10px] font-bold uppercase transition-all"
-                                                                >
-                                                                    <ExternalLink size={12} /> Перейти в профиль
-                                                                </button>
                                                             </div>
-                                                        ) : (
-                                                            <div className="text-xs text-white/20 italic">Пользователь не найден в базе</div>
-                                                        )}
+                                                        </div>
+
+                                                        <Download className="w-4 h-4 shrink-0 opacity-80" />
                                                     </div>
-                                                </div>
+                                                )}
                                             </div>
+                                        </div>
+                                    );
+                                })}
+                                {/* User typing indicator in thread */}
+                                {(activeMessage.isTyping?.user || (activeMessage as any).typing?.user) && (
+                                    <div className="flex items-center gap-2 text-xs text-gray-400 pl-1 py-1 animate-pulse">
+                                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-white/60 shrink-0">
+                                            <User className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="bg-[#202020] border border-white/10 text-white/70 px-3 py-1.5 rounded-2xl rounded-tl-xs flex items-center gap-1.5 text-xs">
+                                            <span className="text-emerald-400 font-medium">{activeMessage.name || 'Родитель'} печатает</span>
+                                            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                                            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                                            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
                                         </div>
                                     </div>
                                 )}
+                                <div ref={chatEndRef} />
                             </div>
-                        ))}
-                    </div>
-                )}
+
+                            {/* --- INPUT ROW (EXACTLY ONE INPUT FIELD) --- */}
+                            <div className="relative shrink-0 bg-[#161616] border-t border-white/10">
+                                
+                                {/* Canned Responses Popover Menu */}
+                                <AnimatePresence>
+                                    {isCannedOpen && (
+                                        <motion.div
+                                            ref={cannedMenuRef}
+                                            initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute bottom-full mb-2 left-2 sm:left-4 w-[calc(100%-16px)] sm:w-80 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl p-2 z-50 flex flex-col max-h-80 overflow-hidden"
+                                        >
+                                            <div className="px-2.5 py-1.5 border-b border-white/10 flex items-center justify-between text-xs text-white/50 shrink-0">
+                                                <span className="flex items-center gap-1.5 font-semibold text-sparta-gold">
+                                                    <Zap className="w-3.5 h-3.5 fill-current" />
+                                                    Быстрые шаблоны
+                                                </span>
+                                                <span className="text-[10px] text-white/40 hidden sm:inline">
+                                                    ↑↓ выбор • Enter • Esc
+                                                </span>
+                                            </div>
+
+                                            <div className="overflow-y-auto overflow-x-hidden p-1 space-y-1 max-h-64 custom-scrollbar">
+                                                {filteredCannedResponses.length === 0 ? (
+                                                    <div className="p-4 text-center text-xs text-white/40">
+                                                        Шаблонов по запросу <span className="text-sparta-gold font-mono">/{cannedFilterQuery}</span> не найдено
+                                                    </div>
+                                                ) : (
+                                                    filteredCannedResponses.map((item, idx) => {
+                                                        const isSelected = idx === selectedCannedIndex;
+                                                        return (
+                                                            <button
+                                                                key={item.command}
+                                                                type="button"
+                                                                onClick={() => handleSelectCanned(item)}
+                                                                onMouseEnter={() => setSelectedCannedIndex(idx)}
+                                                                className={`w-full p-2.5 rounded-xl text-left transition-all cursor-pointer flex flex-col gap-1 border ${
+                                                                    isSelected
+                                                                        ? 'bg-sparta-gold/15 border-sparta-gold/40 text-white shadow-sm'
+                                                                        : 'bg-white/[0.02] hover:bg-white/[0.06] border-transparent text-white/80'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-between gap-2">
+                                                                    <span className="font-mono text-xs font-bold text-sparta-gold bg-sparta-gold/10 px-1.5 py-0.5 rounded border border-sparta-gold/20">
+                                                                        {item.command}
+                                                                    </span>
+                                                                    <span className="text-xs font-semibold text-white truncate flex-1 ml-1.5">
+                                                                        {item.label}
+                                                                    </span>
+                                                                    {isSelected && (
+                                                                        <span className="text-[10px] text-sparta-gold font-medium shrink-0">
+                                                                            Enter ↵
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-[11px] text-white/50 line-clamp-2 leading-relaxed">
+                                                                    {item.text}
+                                                                </p>
+                                                            </button>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Quoting / Replying Banner */}
+                                {replyingTo && (
+                                    <div className="p-2.5 px-4 bg-[#1f1f1f] border-b border-white/5 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <Reply className="w-4 h-4 text-sparta-gold shrink-0" />
+                                            <div className="min-w-0 text-xs">
+                                                <div className="font-semibold text-sparta-gold truncate">
+                                                    Ответ пользователю {replyingTo.senderName}
+                                                </div>
+                                                <div className="text-gray-400 truncate line-clamp-1">
+                                                    {replyingTo.text}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setReplyingTo(null)}
+                                            className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+                                            title="Отменить ответ"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Attachment Preview Strip */}
+                                {attachment && (
+                                    <div className="p-2.5 px-4 bg-[#1e1e1e] border-b border-white/5 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            {attachment.type.startsWith('image/') ? (
+                                                <img src={attachment.preview} alt="Превью" className="w-8 h-8 rounded object-cover border border-white/10" />
+                                            ) : (
+                                                <File className="w-5 h-5 text-sparta-gold" />
+                                            )}
+                                            <span className="text-xs text-gray-300 truncate max-w-xs">{attachment.name}</span>
+                                            <span className="text-[10px] text-gray-500 font-mono">({(attachment.size / 1024).toFixed(0)} КБ)</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAttachment(null);
+                                                if (fileInputRef.current) fileInputRef.current.value = '';
+                                            }}
+                                            className="text-gray-400 hover:text-white"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Form or Recording Bar */}
+                                {isRecording ? (
+                                    <div className="p-3 flex items-center justify-between gap-3 bg-[#1e1e1e] animate-in fade-in duration-200">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative flex items-center justify-center">
+                                                <span className="w-3 h-3 rounded-full bg-red-500 animate-ping absolute opacity-75" />
+                                                <span className="w-3 h-3 rounded-full bg-red-500 relative" />
+                                            </div>
+                                            <span className="text-xs font-mono font-bold text-red-400">
+                                                {formattedDuration}
+                                            </span>
+                                            <div className="hidden sm:flex items-center gap-1">
+                                                <div className="w-1 h-3 bg-red-500/60 rounded-full animate-pulse" />
+                                                <div className="w-1 h-5 bg-red-500 rounded-full animate-pulse delay-75" />
+                                                <div className="w-1 h-2 bg-red-500/40 rounded-full animate-pulse delay-150" />
+                                                <div className="w-1 h-4 bg-red-500/80 rounded-full animate-pulse delay-100" />
+                                            </div>
+                                            <span className="text-xs text-gray-400">Идёт запись голосового...</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={cancelRecording}
+                                                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                                title="Отменить запись"
+                                            >
+                                                <X className="w-4 h-4" />
+                                                <span className="hidden sm:inline">Отмена</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={isSendingVoice}
+                                                onClick={handleSendVoiceAdmin}
+                                                className="px-4 py-1.5 rounded-xl bg-sparta-gold hover:bg-yellow-400 text-black font-bold text-xs transition-all flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-50"
+                                                title="Отправить голосовое"
+                                            >
+                                                {isSendingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                                <span>Отправить</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <form onSubmit={handleSendMessage} className="p-3 flex items-center gap-2">
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileSelect}
+                                            className="hidden"
+                                            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                                        />
+
+                                        {/* Paperclip Button */}
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="p-2.5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors shrink-0"
+                                            title="Прикрепить файл или фото"
+                                        >
+                                            <Paperclip className="w-5 h-5" />
+                                        </button>
+
+                                        {/* Microphone Button */}
+                                        <button
+                                            type="button"
+                                            onClick={startRecording}
+                                            className="p-2.5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-sparta-gold transition-colors shrink-0"
+                                            title="Записать голосовое сообщение"
+                                        >
+                                            <Mic className="w-5 h-5" />
+                                        </button>
+
+                                        {/* Zap Canned Responses Button */}
+                                        <button
+                                            ref={zapButtonRef}
+                                            type="button"
+                                            onClick={handleToggleCanned}
+                                            className={`p-2.5 rounded-xl transition-colors shrink-0 ${
+                                                isCannedOpen
+                                                    ? 'bg-sparta-gold/20 text-sparta-gold'
+                                                    : 'hover:bg-white/10 text-gray-400 hover:text-sparta-gold'
+                                            }`}
+                                            title="Быстрые шаблоны ответов (/)"
+                                        >
+                                            <Zap className="w-5 h-5" />
+                                        </button>
+
+                                        {/* Single Textarea / Input */}
+                                        <textarea
+                                            ref={textareaRef}
+                                            rows={1}
+                                            value={inputText}
+                                            onChange={(e) => handleAdminInputChange(e.target.value)}
+                                            onKeyDown={handleKeyDown}
+                                            placeholder="Напишите ответ родителю (или введите / для шаблона)..."
+                                            className="flex-1 bg-[#202020] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-sparta-gold transition-colors resize-none max-h-32"
+                                        />
+
+                                        {/* Send Button */}
+                                        <button
+                                            type="submit"
+                                            disabled={(!inputText.trim() && !attachment) || uploadProgress !== null}
+                                            className="p-2.5 rounded-xl bg-sparta-gold hover:bg-yellow-400 text-black font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 shrink-0"
+                                            title="Отправить ответ"
+                                        >
+                                            {uploadProgress !== null ? (
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            ) : (
+                                                <Send className="w-5 h-5" />
+                                            )}
+                                        </button>
+                                    </form>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
-            <ReplyTemplatesModal
-                isOpen={isTemplatesOpen}
-                onClose={() => setIsTemplatesOpen(false)}
-                onSelect={onTemplateSelect}
+            {/* ======================================================== */}
+            {/* 3. CONTEXT MENU FOR DIALOG CARDS                         */}
+            {/* ======================================================== */}
+            {dialogMenu && (
+                <div
+                    style={{ left: dialogMenu.x, top: dialogMenu.y }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="fixed z-50 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl p-1.5 w-56 backdrop-blur-md text-xs animate-in fade-in zoom-in-95 duration-100"
+                >
+                    {/* Status change */}
+                    {dialogMenu.msg.status !== 'resolved' ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                handleUpdateStatus(dialogMenu.msg.id, 'resolved');
+                                setDialogMenu(null);
+                            }}
+                            className="w-full px-3 py-2 rounded-lg text-left font-medium flex items-center gap-2.5 text-emerald-300 hover:bg-white/10 transition-colors"
+                        >
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                            <span>Завершить диалог</span>
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                handleUpdateStatus(dialogMenu.msg.id, 'in_progress');
+                                setDialogMenu(null);
+                            }}
+                            className="w-full px-3 py-2 rounded-lg text-left font-medium flex items-center gap-2.5 text-blue-300 hover:bg-white/10 transition-colors"
+                        >
+                            <RotateCcw className="w-4 h-4 text-blue-400" />
+                            <span>Вернуть в работу</span>
+                        </button>
+                    )}
+
+                    {/* Toggle Pin */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            handleTogglePin(dialogMenu.msg.id, !!dialogMenu.msg.isPinned);
+                            setDialogMenu(null);
+                        }}
+                        className="w-full px-3 py-2 rounded-lg text-left font-medium flex items-center gap-2.5 text-gray-200 hover:bg-white/10 transition-colors"
+                    >
+                        <Pin className={`w-4 h-4 ${dialogMenu.msg.isPinned ? 'text-sparta-gold fill-current' : 'text-gray-400'}`} />
+                        <span>{dialogMenu.msg.isPinned ? 'Открепить диалог' : 'Закрепить диалог'}</span>
+                    </button>
+
+                    {/* Mark Unread */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            handleUpdateStatus(dialogMenu.msg.id, 'new');
+                            setDialogMenu(null);
+                        }}
+                        className="w-full px-3 py-2 rounded-lg text-left font-medium flex items-center gap-2.5 text-gray-200 hover:bg-white/10 transition-colors"
+                    >
+                        <Mail className="w-4 h-4 text-amber-400" />
+                        <span>Пометить непрочитанным</span>
+                    </button>
+
+                    {/* Go to Student Profile */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            const searchTarget = dialogMenu.msg.childName || dialogMenu.msg.name || '';
+                            setDialogMenu(null);
+                            navigate(`/admin/users?search=${encodeURIComponent(searchTarget)}`);
+                        }}
+                        className="w-full px-3 py-2 rounded-lg text-left font-medium flex items-center gap-2.5 text-gray-200 hover:bg-white/10 transition-colors"
+                    >
+                        <User className="w-4 h-4 text-blue-400" />
+                        <span>Профиль ученика</span>
+                    </button>
+
+                    <div className="h-px bg-white/10 my-1" />
+
+                    {/* Delete Dialog */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            const id = dialogMenu.msg.id;
+                            setDialogMenu(null);
+                            handleDeleteDialog(id);
+                        }}
+                        className="w-full px-3 py-2 rounded-lg text-left font-medium flex items-center gap-2.5 text-red-400 hover:bg-red-500/15 transition-colors"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Удалить диалог</span>
+                    </button>
+                </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* 4. CONTEXT MENU FOR MESSAGES                             */}
+            {/* ======================================================== */}
+            {messageMenu && (
+                <div
+                    style={{ left: messageMenu.x, top: messageMenu.y }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="fixed z-50 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl p-1.5 w-52 backdrop-blur-md text-xs animate-in fade-in zoom-in-95 duration-100"
+                >
+                    {/* Reply to message */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setReplyingTo({
+                                text: messageMenu.item.text,
+                                senderName: messageMenu.item.senderName || (messageMenu.item.sender === 'user' ? (activeMessage?.name || 'Родитель') : 'Администратор')
+                            });
+                            setMessageMenu(null);
+                        }}
+                        className="w-full px-3 py-2 rounded-lg text-left font-medium flex items-center gap-2.5 text-gray-200 hover:bg-white/10 transition-colors"
+                    >
+                        <Reply className="w-4 h-4 text-sparta-gold" />
+                        <span>Ответить</span>
+                    </button>
+
+                    {/* Copy Text */}
+                    {messageMenu.item.text && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                navigator.clipboard.writeText(messageMenu.item.text);
+                                setMessageMenu(null);
+                            }}
+                            className="w-full px-3 py-2 rounded-lg text-left font-medium flex items-center gap-2.5 text-gray-200 hover:bg-white/10 transition-colors"
+                        >
+                            <Copy className="w-4 h-4 text-blue-400" />
+                            <span>Скопировать текст</span>
+                        </button>
+                    )}
+
+                    {/* Delete Message (if sender is admin and from thread) */}
+                    {messageMenu.item.sender === 'admin' && messageMenu.threadIndex >= 0 && (
+                        <>
+                            <div className="h-px bg-white/10 my-1" />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const idx = messageMenu.threadIndex;
+                                    setMessageMenu(null);
+                                    handleDeleteMessage(idx);
+                                }}
+                                className="w-full px-3 py-2 rounded-lg text-left font-medium flex items-center gap-2.5 text-red-400 hover:bg-red-500/15 transition-colors"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                <span>Удалить сообщение</span>
+                            </button>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* SpartaViewer Modal for full preview, zoom, rotate, print and direct download */}
+            <SpartaViewer
+                isOpen={!!viewerFile}
+                file={viewerFile}
+                onClose={() => setViewerFile(null)}
             />
         </div>
     );
-};
-
-export default AdminMessages;
+}

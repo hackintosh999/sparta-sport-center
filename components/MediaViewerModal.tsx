@@ -76,10 +76,10 @@ const MediaViewerModal: React.FC<MediaViewerModalProps> = ({ isOpen, onClose, it
             zIndex="z-[200]"
         >
             <div className="relative w-full h-[90vh] max-h-[900px] flex items-center justify-center overflow-hidden bg-black/95 rounded-3xl border border-white/10">
-                {/* UI Controls - Top Header */}
-                <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between z-50 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
-                    <div className="pointer-events-auto flex items-center gap-4">
-                        <h3 className="text-white font-russo text-sm uppercase tracking-widest opacity-80 bg-black/40 px-4 py-2 rounded-full border border-white/10 backdrop-blur-md">
+                {/* Controls Overlay */}
+                <div className="absolute top-0 left-0 right-0 p-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] sm:p-6 flex items-center justify-between z-50 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
+                    <div className="pointer-events-auto flex items-center gap-2 sm:gap-4">
+                        <h3 className="text-white font-russo text-xs sm:text-sm uppercase tracking-widest opacity-80 bg-black/40 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full border border-white/10 backdrop-blur-md">
                             {activeIndex + 1} <span className="text-sparta-gold mx-1">/</span> {galleryItems.length}
                         </h3>
                         <span className="text-white/40 text-xs hidden md:block font-medium bg-black/20 px-3 py-2 rounded-full border border-white/5 truncate max-w-xs">
@@ -87,39 +87,39 @@ const MediaViewerModal: React.FC<MediaViewerModalProps> = ({ isOpen, onClose, it
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-3 pointer-events-auto">
+                    <div className="flex items-center gap-1.5 sm:gap-3 pointer-events-auto">
                         {currentItem.type === 'image' && (
                             <button
                                 onClick={toggleZoom}
-                                className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-sparta-gold hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md cursor-pointer"
+                                className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-sparta-gold hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md cursor-pointer"
                                 title="Масштаб"
                             >
-                                {scale > 1 ? <ZoomOut size={20} /> : <ZoomIn size={20} />}
+                                {scale > 1 ? <ZoomOut size={16} className="sm:w-5 sm:h-5" /> : <ZoomIn size={16} className="sm:w-5 sm:h-5" />}
                             </button>
                         )}
                         <button
                             onClick={toggleFullscreen}
-                            className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-sparta-gold hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md cursor-pointer"
+                            className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-sparta-gold hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md cursor-pointer"
                             title="Полный экран"
                         >
-                            {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+                            {isFullscreen ? <Minimize2 size={16} className="sm:w-5 sm:h-5" /> : <Maximize2 size={16} className="sm:w-5 sm:h-5" />}
                         </button>
                         <a
                             href={currentItem.url}
                             download
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md cursor-pointer"
+                            className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md cursor-pointer"
                             title="Скачать"
                         >
-                            <Download size={20} />
+                            <Download size={16} className="sm:w-5 sm:h-5" />
                         </a>
                         <button
                             onClick={onClose}
-                            className="w-12 h-12 rounded-full bg-sparta-gold/10 flex items-center justify-center text-sparta-gold hover:bg-sparta-gold hover:text-black transition-all border border-sparta-gold/30 shadow-[0_0_20px_rgba(255,184,0,0.2)] backdrop-blur-md ml-2 cursor-pointer"
+                            className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-sparta-gold/10 flex items-center justify-center text-sparta-gold hover:bg-sparta-gold hover:text-black transition-all border border-sparta-gold/30 shadow-[0_0_20px_rgba(255,184,0,0.2)] backdrop-blur-md ml-1 sm:ml-2 cursor-pointer"
                             title="Закрыть (Esc)"
                         >
-                            <X size={24} />
+                            <X size={18} className="sm:w-6 sm:h-6" />
                         </button>
                     </div>
                 </div>
@@ -160,18 +160,20 @@ const MediaViewerModal: React.FC<MediaViewerModalProps> = ({ isOpen, onClose, it
 
                 {/* Navigation Buttons */}
                 {galleryItems.length > 1 && (
-                    <div className="hidden md:block">
+                    <div>
                         <button
                             onClick={handlePrev}
-                            className="absolute left-8 top-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-black/40 hover:bg-sparta-gold flex items-center justify-center text-white/40 hover:text-black transition-all z-50 border border-white/5 hover:border-sparta-gold shadow-2xl backdrop-blur-md group cursor-pointer"
+                            aria-label="Предыдущий"
+                            className="absolute left-2 sm:left-4 md:left-8 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-14 sm:h-14 md:w-20 md:h-20 rounded-full bg-black/50 hover:bg-sparta-gold flex items-center justify-center text-white/70 hover:text-black transition-all z-50 border border-white/10 hover:border-sparta-gold shadow-2xl backdrop-blur-md group cursor-pointer"
                         >
-                            <ChevronLeft size={40} className="group-hover:-translate-x-1 transition-transform" />
+                            <ChevronLeft size={18} className="sm:w-8 sm:h-8 md:w-10 md:h-10 group-hover:-translate-x-1 transition-transform" />
                         </button>
                         <button
                             onClick={handleNext}
-                            className="absolute right-8 top-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-black/40 hover:bg-sparta-gold flex items-center justify-center text-white/40 hover:text-black transition-all z-50 border border-white/5 hover:border-sparta-gold shadow-2xl backdrop-blur-md group cursor-pointer"
+                            aria-label="Следующий"
+                            className="absolute right-2 sm:right-4 md:right-8 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-14 sm:h-14 md:w-20 md:h-20 rounded-full bg-black/50 hover:bg-sparta-gold flex items-center justify-center text-white/70 hover:text-black transition-all z-50 border border-white/10 hover:border-sparta-gold shadow-2xl backdrop-blur-md group cursor-pointer"
                         >
-                            <ChevronRight size={40} className="group-hover:translate-x-1 transition-transform" />
+                            <ChevronRight size={18} className="sm:w-8 sm:h-8 md:w-10 md:h-10 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>
                 )}
@@ -181,13 +183,13 @@ const MediaViewerModal: React.FC<MediaViewerModalProps> = ({ isOpen, onClose, it
                     <motion.div
                         initial={{ y: 50, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 p-3 bg-black/60 backdrop-blur-2xl rounded-3xl border border-white/10 max-w-[90vw] overflow-x-auto scrollbar-hide z-50 shadow-2xl"
+                        className="absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-8 left-1/2 -translate-x-1/2 flex gap-2 sm:gap-3 p-2 sm:p-3 bg-black/60 backdrop-blur-2xl rounded-2xl sm:rounded-3xl border border-white/10 max-w-[92vw] overflow-x-auto scrollbar-hide z-50 shadow-2xl"
                     >
                         {galleryItems.map((item, idx) => (
                             <button
                                 key={idx}
                                 onClick={() => { setScale(1); setCurrentIndex(idx); }}
-                                className={`w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all shrink-0 relative group cursor-pointer ${activeIndex === idx ? 'border-sparta-gold scale-110 shadow-[0_0_15px_rgba(255,184,0,0.4)]' : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'
+                                className={`w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl overflow-hidden border-2 transition-all shrink-0 relative group cursor-pointer ${activeIndex === idx ? 'border-sparta-gold scale-110 shadow-[0_0_15px_rgba(255,184,0,0.4)]' : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'
                                     }`}
                             >
                                 {item.type === 'image' ? (

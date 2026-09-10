@@ -273,7 +273,7 @@ const CartSidebar = () => {
                         className="fixed top-0 right-0 h-full w-full sm:w-[500px] bg-[#111218] shadow-2xl z-[140] border-l border-white/10 flex flex-col font-manrope text-white"
                     >
                         {/* Header */}
-                        <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between">
+                        <div className="p-5 sm:p-6 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] sm:pt-6 border-b border-white/10 flex items-center justify-between">
                             <div>
                                 <h2 className="text-xl sm:text-2xl font-black font-russo uppercase text-white tracking-wider">
                                     Корзина
@@ -364,7 +364,7 @@ const CartSidebar = () => {
 
                         {/* Footer / Checkout */}
                         {cartItems.length > 0 && (
-                            <div className="p-5 sm:p-6 border-t border-white/10 bg-[#0d0e12] space-y-3.5">
+                            <div className="p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-white/10 bg-[#0d0e12] space-y-3.5">
                                 {/* 1. Информационная плашка: Получение и срок изготовления */}
                                 <div className="p-3 bg-zinc-900/90 border border-white/10 rounded-xl space-y-1.5 text-xs">
                                     <div className="flex items-center gap-2 text-zinc-200">

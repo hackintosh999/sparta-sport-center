@@ -7,14 +7,14 @@ import {
     KeyRound, QrCode, Sparkles, Copy, Check,
     Heart, Shield, RefreshCw, Trophy, CreditCard,
     Snowflake, Edit3, MapPin, ArrowLeftRight,
-    Undo2, History, RotateCcw, ArrowRight
+    Undo2, History, RotateCcw, ArrowRight, Phone, Clock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import StatsSection from './StatsSection';
 import AttendanceSection from './AttendanceSection';
 import { FamilyScheduleSection } from './FamilyScheduleSection';
 import { db } from '../../firebase';
-import { collection, query, where, onSnapshot, updateDoc, doc, serverTimestamp, Timestamp, addDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, or, onSnapshot, updateDoc, doc, serverTimestamp, Timestamp, addDoc, getDocs } from 'firebase/firestore';
 import { Button } from '../UIComponents';
 import { LinkChildModal } from './LinkChildModal';
 import { UpgradeSubscriptionModal } from './UpgradeSubscriptionModal';
@@ -60,6 +60,30 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
     const [isProudSent, setIsProudSent] = useState(false);
     const [isUnlinking, setIsUnlinking] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
+    useEffect(() => {
+        const pPhone = (userProfile?.phone || userProfile?.parentPhone || '').trim();
+        const pEmail = (user?.email || userProfile?.email || '').trim();
+        const uId = user?.uid;
+
+        const conds: any[] = [];
+        if (pEmail) conds.push(where('email', '==', pEmail));
+        if (uId) conds.push(where('userId', '==', uId));
+        if (pPhone) conds.push(where('parentPhone', '==', pPhone));
+
+        if (conds.length === 0) return;
+
+        const q = conds.length > 1 ? query(collection(db, 'requests'), or(...conds)) : query(collection(db, 'requests'), conds[0]);
+        const unsub = onSnapshot(q, (snapshot) => {
+            const list = snapshot.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter((r: any) => ['new', 'contacted'].includes(r.status));
+            setPendingRequests(list);
+        });
+
+        return () => unsub();
+    }, [userProfile?.phone, userProfile?.parentPhone, userProfile?.email, user?.uid, user?.email]);
 
     useEffect(() => {
         let isMounted = true;
@@ -731,9 +755,44 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
                 </div>
             </div>
 
+            {/* Active Trial / Group Request Banner */}
+            {pendingRequests.length > 0 && (
+                <div className="bg-gradient-to-r from-sparta-gold/15 via-[#1a1710] to-transparent border border-sparta-gold/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-sparta-gold/20 flex items-center justify-center text-sparta-gold shrink-0 border border-sparta-gold/30">
+                            <Clock size={20} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-sparta-gold uppercase tracking-wider">
+                                    Активная заявка на тренировку
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-[10px] font-bold border border-yellow-500/30">
+                                    {pendingRequests[0].status === 'new' ? 'На рассмотрении' : 'В работе'}
+                                </span>
+                            </div>
+                            <p className="text-white text-sm font-semibold mt-0.5">
+                                {pendingRequests[0].groupTitle ? `Группа «${pendingRequests[0].groupTitle}»` : 'Подбор группы и пробное занятие'}
+                                {pendingRequests[0].childFullName ? ` для ${pendingRequests[0].childFullName}` : ''}
+                            </p>
+                            <p className="text-white/50 text-xs mt-0.5">
+                                Администратор свяжется с вами по указанному телефону в течение 15 минут.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => onTabChange?.('requests')}
+                        className="px-4 py-2 bg-sparta-gold text-black rounded-xl font-bold text-xs hover:brightness-110 transition-all shrink-0 cursor-pointer shadow-md shadow-sparta-gold/20 flex items-center gap-1.5 active:scale-95"
+                    >
+                        <span>Отслеживать статус</span>
+                        <ArrowRight size={14} />
+                    </button>
+                </div>
+            )}
+
             {/* Multi-Child Selector Tabs */}
             {children.length > 0 && (
-                <div className="flex flex-wrap gap-2.5 sm:gap-3 items-center">
+                <div className="flex items-center gap-2.5 sm:gap-3 overflow-x-auto pb-2 -mx-1 px-1 sm:mx-0 sm:px-0 sm:flex-wrap no-scrollbar">
                     {children.map(child => {
                         const isSelected = selectedChildId === child.id;
                         const childSub = resolveChildSubscription(child, userProfile);
@@ -743,7 +802,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
                             <button
                                 key={child.id}
                                 onClick={() => setSelectedChildId(child.id)}
-                                className={`group relative flex items-center gap-3 px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl border transition-all duration-300 cursor-pointer ${
+                                className={`group relative flex items-center gap-3 px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl border transition-all duration-300 cursor-pointer shrink-0 ${
                                     isSelected
                                         ? 'bg-gradient-to-r from-sparta-gold via-yellow-400 to-sparta-gold text-black border-sparta-gold shadow-lg shadow-sparta-gold/20 scale-[1.02]'
                                         : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/20'
@@ -783,7 +842,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
                     {/* Quick Add Child Button */}
                     <button
                         onClick={() => setIsLinkModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl border border-dashed border-sparta-gold/40 hover:border-sparta-gold bg-sparta-gold/10 hover:bg-sparta-gold/20 text-sparta-gold transition-all duration-300 cursor-pointer text-xs font-bold uppercase tracking-wider"
+                        className="flex items-center gap-2 px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl border border-dashed border-sparta-gold/40 hover:border-sparta-gold bg-sparta-gold/10 hover:bg-sparta-gold/20 text-sparta-gold transition-all duration-300 cursor-pointer text-xs font-bold uppercase tracking-wider shrink-0"
                     >
                         <Plus size={16} />
                         <span>Добавить ребёнка</span>
@@ -1176,6 +1235,51 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
                                         </div>
                                         <ChevronRight size={18} className="text-white/30 group-hover:text-blue-400 transition-colors" />
                                     </button>
+
+                                    {/* Direct Club Administrator Support Shortcut */}
+                                    <div className="w-full p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sparta-gold/15 via-[#1b1a15] to-amber-500/10 border border-sparta-gold/35 hover:border-sparta-gold/60 transition-all shadow-xl shadow-sparta-gold/5 space-y-3">
+                                        <div
+                                            onClick={() => onTabChange?.('messages')}
+                                            className="flex items-center justify-between cursor-pointer group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-11 h-11 rounded-2xl bg-sparta-gold/20 text-sparta-gold flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-md shadow-sparta-gold/10">
+                                                    <MessageSquare size={20} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] uppercase font-black tracking-wider text-amber-300">Сервис и забота • 09:00 – 21:00</p>
+                                                    <h4 className="text-sm sm:text-base font-russo text-white uppercase group-hover:text-sparta-gold transition-colors">
+                                                        Администрация клуба
+                                                    </h4>
+                                                    <p className="text-[11px] text-white/50 mt-0.5">
+                                                        Справки о болезни, перерасчёт абонементов и любые вопросы
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <ChevronRight size={18} className="text-white/30 group-hover:text-sparta-gold transition-colors shrink-0" />
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-white/10">
+                                            <button
+                                                type="button"
+                                                onClick={() => onTabChange?.('messages')}
+                                                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-sparta-gold to-yellow-400 hover:brightness-110 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sparta-gold/20 cursor-pointer"
+                                            >
+                                                <MessageSquare size={15} />
+                                                <span>Связаться с администратором</span>
+                                            </button>
+
+                                            <a
+                                                href="tel:+73512301269"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-sparta-gold/40 text-white transition-all flex items-center justify-center gap-2 text-xs font-bold whitespace-nowrap cursor-pointer"
+                                                title="Позвонить в администрацию клуба"
+                                            >
+                                                <Phone size={14} className="text-sparta-gold" />
+                                                <span className="font-mono text-xs">+7 (351) 230-12-69</span>
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

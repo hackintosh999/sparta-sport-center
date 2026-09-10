@@ -464,7 +464,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({ isOpen, onClose, us
                 glowColor="amber"
                 zIndex="z-[70]"
             >
-                <div className="bg-[#15171C] rounded-3xl w-full overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] relative max-h-[85vh] flex flex-col font-manrope">
+                <div className="bg-[#15171C] rounded-2xl sm:rounded-3xl w-full overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] relative max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] flex flex-col font-manrope">
                     {/* Top Header Actions */}
                     <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
                         {(!isEditing && userData?.id === user?.uid) && (
@@ -863,7 +863,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({ isOpen, onClose, us
 
                                             {/* ACTION FOOTER */}
                                             {user && userData.id !== user.uid && !isEditing && (
-                                                <div className="flex gap-3 pt-2">
+                                                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-2">
                                                     {friendStatus === 'none' && (
                                                         <button
                                                             onClick={handleAddFriend}

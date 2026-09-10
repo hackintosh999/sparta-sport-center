@@ -269,7 +269,7 @@ export const SpartaCreateStoryModal: React.FC<SpartaCreateStoryModalProps> = ({
             glowColor="amber"
             zIndex="z-[9999]"
         >
-            <div className="relative w-full max-w-[420px] h-[92vh] max-h-[820px] bg-[#101015] border border-white/20 rounded-[36px] overflow-hidden shadow-2xl flex flex-col justify-between select-none">
+            <div className="relative w-full max-w-[420px] h-[calc(100dvh-1.5rem)] sm:h-[92vh] max-h-[820px] bg-[#101015] border border-white/20 rounded-2xl sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col justify-between select-none">
                     {/* TOP HEADER: Status & Close */}
                     <div className="absolute top-4 inset-x-4 z-40 flex items-center justify-between pointer-events-auto">
                         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white">
@@ -892,7 +892,7 @@ export const SpartaCreateStoryModal: React.FC<SpartaCreateStoryModalProps> = ({
                     />
 
                     {/* BOTTOM ACTION BAR */}
-                    <div className="p-4 bg-black/60 backdrop-blur-xl border-t border-white/10 flex items-center gap-3 z-30">
+                    <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-4 bg-black/60 backdrop-blur-xl border-t border-white/10 flex items-center gap-3 z-30">
                         <button
                             type="button"
                             onClick={handlePublish}

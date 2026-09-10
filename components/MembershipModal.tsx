@@ -546,7 +546,7 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
         setIsProcessing(true);
 
         try {
-            let finalPrice = (typeof selectedPrice === 'number' && !isNaN(selectedPrice) && selectedPrice > 0)
+            const finalPrice = (typeof selectedPrice === 'number' && !isNaN(selectedPrice) && selectedPrice > 0)
                 ? selectedPrice
                 : getProgramBasePrice(program, selectedDuration);
             const activeSlot = SPARTA_SCHEDULE.find(s => s.id === selectedSlotId);
@@ -782,9 +782,9 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
             glowColor="amber"
             zIndex="z-50"
         >
-            <div className="relative w-full bg-zinc-950 rounded-[2rem] overflow-hidden font-manrope text-white flex flex-col max-h-[85vh]">
+            <div className="relative w-full bg-zinc-950 rounded-2xl sm:rounded-[2rem] overflow-hidden font-manrope text-white flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[85vh]">
                 {/* Header */}
-                <div className="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 shrink-0">
+                <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 shrink-0">
                     <div className="flex items-center gap-3">
                         {step === 'bank_transfer' && !isSuccess && (
                             <button

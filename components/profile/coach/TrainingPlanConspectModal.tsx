@@ -144,7 +144,7 @@ export const TrainingPlanConspectModal: React.FC<TrainingPlanConspectModalProps>
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[250] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-2xl overflow-y-auto custom-scrollbar">
+            <div className="fixed inset-0 z-[250] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-2xl overflow-y-auto custom-scrollbar pt-safe pb-safe">
                 {/* Backdrop */}
                 <div className="fixed inset-0" onClick={onClose} />
 
@@ -152,10 +152,10 @@ export const TrainingPlanConspectModal: React.FC<TrainingPlanConspectModalProps>
                     initial={{ opacity: 0, scale: 0.96, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: 15 }}
-                    className="relative w-full max-w-4xl bg-[#121214] border border-amber-500/30 rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.9),0_0_30px_rgba(245,158,11,0.1)] overflow-hidden flex flex-col my-auto z-10 max-h-[92vh]"
+                    className="relative w-full max-w-4xl bg-[#121214] border border-amber-500/30 rounded-2xl sm:rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.9),0_0_30px_rgba(245,158,11,0.1)] overflow-hidden flex flex-col my-auto z-10 max-h-[calc(100dvh-1.5rem)] sm:max-h-[92vh]"
                 >
                     {/* Header */}
-                    <div className="p-6 sm:p-8 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent relative">
+                    <div className="p-4 sm:p-8 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent relative shrink-0">
                         <div className="flex items-start justify-between gap-4">
                             <div className="space-y-2">
                                 <div className="flex flex-wrap items-center gap-2">
@@ -390,7 +390,7 @@ export const TrainingPlanConspectModal: React.FC<TrainingPlanConspectModalProps>
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="p-6 border-t border-white/10 bg-[#121214] flex flex-wrap items-center justify-between gap-3">
+                    <div className="p-4 sm:p-6 border-t border-white/10 bg-[#121214] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
                         <div className="flex items-center gap-2">
                             {onEdit && (
                                 <button
@@ -399,18 +399,18 @@ export const TrainingPlanConspectModal: React.FC<TrainingPlanConspectModalProps>
                                         onEdit(plan);
                                         onClose();
                                     }}
-                                    className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-all border border-white/10 flex items-center gap-2 cursor-pointer"
+                                    className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-all border border-white/10 flex items-center gap-2 cursor-pointer"
                                 >
                                     <Edit2 size={14} /> Редактировать план
                                 </button>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                                className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
                             >
                                 Закрыть
                             </button>
@@ -422,7 +422,7 @@ export const TrainingPlanConspectModal: React.FC<TrainingPlanConspectModalProps>
                                         onAssignToSchedule(plan);
                                         onClose();
                                     }}
-                                    className="px-6 py-2.5 rounded-xl bg-sparta-gold hover:bg-amber-300 text-black font-russo text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] flex items-center gap-2 cursor-pointer active:scale-95"
+                                    className="w-full sm:w-auto justify-center px-6 py-2.5 rounded-xl bg-sparta-gold hover:bg-amber-300 text-black font-russo text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] flex items-center gap-2 cursor-pointer active:scale-95"
                                 >
                                     <Calendar size={15} />
                                     <span>📅 Назначить в расписание</span>

@@ -286,7 +286,7 @@ export const SavedListsModal: React.FC<SavedListsModalProps> = ({
                         query(collection(db, 'pending_students'), where('childFullName', '==', childFullName))
                     );
 
-                    let existingPendingDoc = pendingSnap.docs.find(d => {
+                    const existingPendingDoc = pendingSnap.docs.find(d => {
                         const data = d.data();
                         const pPhone = (data.parentPhone || '').replace(/\D/g, '');
                         return (cleanPhone && pPhone.includes(cleanPhone.slice(-10))) || (targetGroupId && data.groupId === targetGroupId);
@@ -373,7 +373,7 @@ export const SavedListsModal: React.FC<SavedListsModalProps> = ({
         ];
 
         const wb = XLSX.utils.book_new();
-        const safeSheetName = (list.name || 'Список').replace(/[*?:/\\\[\]]/g, '').slice(0, 30);
+        const safeSheetName = (list.name || 'Список').replace(/[*?:/\\[\]]/g, '').slice(0, 30);
         XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
         const safeFileName = `${(list.name || 'Список_детей').replace(/[^a-zA-Zа-яА-Я0-9_-]/g, '_')}.xlsx`;
         XLSX.writeFile(wb, safeFileName);
@@ -428,7 +428,7 @@ export const SavedListsModal: React.FC<SavedListsModalProps> = ({
             noPadding
             glowColor="amber"
         >
-            <div className="bg-[#121214] rounded-2xl w-full p-6 overflow-hidden flex flex-col max-h-[88vh]">
+            <div className="bg-[#121214] rounded-2xl w-full p-4 sm:p-6 overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[88vh]">
                 
                 {/* Header */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10 mb-4 shrink-0">

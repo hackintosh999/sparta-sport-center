@@ -343,7 +343,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
             zIndex="z-[350]"
         >
             <div
-                className="relative w-full h-[88vh] max-h-[850px] flex flex-col bg-black/95 rounded-3xl select-none overflow-hidden border border-white/10"
+                className="relative w-full h-[calc(100dvh-1rem)] sm:h-[88vh] max-h-[850px] flex flex-col bg-black/95 rounded-2xl sm:rounded-3xl select-none overflow-hidden border border-white/10"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 onMouseMove={() => setShowControls(true)}
@@ -357,7 +357,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute top-3 sm:top-4 inset-x-0 mx-auto max-w-xl px-3 sm:px-4 z-40 pointer-events-none"
+                            className="absolute top-[calc(0.5rem+env(safe-area-inset-top,0px))] sm:top-4 inset-x-0 mx-auto max-w-xl px-2 sm:px-4 z-40 pointer-events-none"
                         >
                             {/* Single Unified Floating Island Bar */}
                             <div
@@ -488,10 +488,10 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                     e.stopPropagation();
                                     handlePrev();
                                 }}
-                                className="absolute left-2 sm:left-4 lg:left-8 z-30 p-2.5 sm:p-3 rounded-full bg-[#121218]/85 hover:bg-sparta-gold text-white hover:text-black transition-all border border-white/15 backdrop-blur-2xl shadow-2xl active:scale-95 cursor-pointer"
+                                className="absolute left-1.5 sm:left-4 lg:left-8 z-30 p-2 sm:p-2.5 lg:p-3 rounded-full bg-[#121218]/85 hover:bg-sparta-gold text-white hover:text-black transition-all border border-white/15 backdrop-blur-2xl shadow-2xl active:scale-95 cursor-pointer"
                                 title="Предыдущее (←)"
                             >
-                                <ChevronLeft size={20} />
+                                <ChevronLeft size={16} className="sm:w-5 sm:h-5" />
                             </motion.button>
                         )}
 
@@ -531,10 +531,10 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                                     e.stopPropagation();
                                     handleNext();
                                 }}
-                                className="absolute right-2 sm:right-4 lg:right-8 z-30 p-2.5 sm:p-3 rounded-full bg-[#121218]/85 hover:bg-sparta-gold text-white hover:text-black transition-all border border-white/15 backdrop-blur-2xl shadow-2xl active:scale-95 cursor-pointer"
+                                className="absolute right-1.5 sm:right-4 lg:right-8 z-30 p-2 sm:p-2.5 lg:p-3 rounded-full bg-[#121218]/85 hover:bg-sparta-gold text-white hover:text-black transition-all border border-white/15 backdrop-blur-2xl shadow-2xl active:scale-95 cursor-pointer"
                                 title="Следующее (→)"
                             >
-                                <ChevronRight size={20} />
+                                <ChevronRight size={16} className="sm:w-5 sm:h-5" />
                             </motion.button>
                         )}
                     </div>
@@ -548,7 +548,7 @@ export const SpartaMediaGalleryModal: React.FC<SpartaMediaGalleryModalProps> = (
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 20 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute bottom-3 sm:bottom-4 inset-x-0 mx-auto max-w-xl px-3 sm:px-4 z-40 pointer-events-none"
+                            className="absolute bottom-[calc(0.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-4 inset-x-0 mx-auto max-w-xl px-2 sm:px-4 z-40 pointer-events-none"
                         >
                             <div
                                 className="pointer-events-auto bg-[#121218]/90 backdrop-blur-2xl border border-white/15 rounded-2xl p-2 sm:p-2.5 flex items-center justify-between gap-3 shadow-2xl"

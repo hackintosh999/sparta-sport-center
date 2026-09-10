@@ -2275,7 +2275,7 @@ const ProductDetails = () => {
                         initial={{ opacity: 0, y: 30, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 30, scale: 0.95 }}
-                        className="fixed bottom-6 right-6 z-50 bg-[#121212]/95 backdrop-blur-2xl border border-yellow-500/40 p-4 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex items-center gap-3.5 max-w-sm w-full"
+                        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 z-50 bg-[#121212]/95 backdrop-blur-2xl border border-yellow-500/40 p-4 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex items-center gap-3.5 max-w-sm mx-auto lg:mx-0 w-auto lg:w-full"
                     >
                         <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 flex-shrink-0">
                             <VideoIcon size={20} className="animate-pulse" />
@@ -3041,7 +3041,7 @@ const ProductDetails = () => {
             </BaseModal>
 
             {/* --- STICKY MOBILE/TABLET PURCHASE BAR (< 1024px) --- */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d0d0d]/95 backdrop-blur-2xl border-t border-yellow-500/20 p-3 sm:p-4 px-4 sm:px-6 shadow-[0_-12px_40px_rgba(0,0,0,0.9)]">
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d0d0d]/95 backdrop-blur-2xl border-t border-yellow-500/20 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:p-4 sm:pb-4 px-4 sm:px-6 shadow-[0_-12px_40px_rgba(0,0,0,0.9)]">
                 {/* Quick Size Popover above bar */}
                 <AnimatePresence>
                     {isQuickSizeOpen && product?.sizes && product.sizes.length > 0 && (

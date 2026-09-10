@@ -117,11 +117,11 @@ export const SpartaScheduleChatCard: React.FC<SpartaScheduleChatCardProps> = ({
         // Example format: • *Суббота:* 12:00 – 13:00 📍 Главный зал  OR  ▫️ Пн: 19:00–20:00 (Манеж)
         const lines = rawText.split('\n');
         for (const line of lines) {
-            const slotMatch = line.match(/(?:[•▫️\-*]\s*)?\*?([А-Яа-яA-Za-z]+):\*?\s*([0-9]{1,2}:[0-9]{2}(?:\s*[-–—]\s*[0-9]{1,2}:[0-9]{2})?)(?:\s*(?:📍|\()?\s*([^)\n]+)\)?)?/i);
+            const slotMatch = line.match(/(?:(?:[•\-*]|▫️)\s*)?\*?([А-Яа-яA-Za-z]+):\*?\s*([0-9]{1,2}:[0-9]{2}(?:\s*[-–—]\s*[0-9]{1,2}:[0-9]{2})?)(?:\s*(?:📍|\()?\s*([^)\n]+)\)?)?/iu);
             if (slotMatch) {
                 const dayName = slotMatch[1].replace(/\*/g, '').trim();
                 const time = slotMatch[2].replace(/\*/g, '').trim();
-                let location = (slotMatch[3] || 'Главный манеж').replace(/[📍*()]/g, '').trim();
+                let location = (slotMatch[3] || 'Главный манеж').replace(/[📍*()]/gu, '').trim();
                 if (!location) location = 'Главный манеж';
 
                 const shortDay = getShortDay(dayName);

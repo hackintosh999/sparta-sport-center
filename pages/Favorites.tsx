@@ -52,16 +52,17 @@ const Favorites = () => {
 
     return (
         <div className="min-h-screen bg-[#020202] text-white font-manrope pt-24 pb-10">
-            <div className="max-w-7xl mx-auto px-6">
-                <div className="flex items-center gap-4 mb-8">
+            <div className="max-w-7xl mx-auto px-3.5 sm:px-6">
+                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
                     <button
                         onClick={() => navigate('/shop')}
-                        className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                        className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                        aria-label="Назад в магазин"
                     >
-                        <ArrowLeft size={24} />
+                        <ArrowLeft size={20} className="sm:w-6 sm:h-6" />
                     </button>
-                    <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-600 flex items-center gap-3">
-                        <Heart className="text-red-500 fill-red-500" />
+                    <h1 className="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-600 flex items-center gap-2.5 sm:gap-3">
+                        <Heart className="text-red-500 fill-red-500 w-5 h-5 sm:w-7 sm:h-7" />
                         Избранное
                     </h1>
                 </div>
@@ -71,7 +72,7 @@ const Favorites = () => {
                         <Loader2 className="animate-spin text-yellow-500" size={48} />
                     </div>
                 ) : products.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                         <AnimatePresence>
                             {products.map((product) => (
                                 <motion.div
@@ -113,15 +114,15 @@ const Favorites = () => {
                                         </div>
                                     </div>
 
-                                    <div className="p-5 flex flex-col flex-1">
-                                        <h3 className="text-lg font-bold text-white leading-tight mb-2">{product.title}</h3>
+                                    <div className="p-3 sm:p-5 flex flex-col flex-1">
+                                        <h3 className="text-xs sm:text-base font-bold text-white leading-tight mb-1.5 sm:mb-2 line-clamp-2">{product.title}</h3>
                                         <div className="mt-auto flex items-center justify-between">
-                                            <span className="text-xl font-bold text-yellow-500 font-mono">
+                                            <span className="text-sm sm:text-xl font-bold text-yellow-500 font-mono">
                                                 {product.price.toLocaleString()} ₽
                                             </span>
-                                            <button className="text-sm font-bold text-gray-400 hover:text-white transition-colors">
+                                            <span className="text-xs sm:text-sm font-bold text-gray-400 hover:text-white transition-colors hidden sm:inline">
                                                 Подробнее
-                                            </button>
+                                            </span>
                                         </div>
                                     </div>
                                 </motion.div>

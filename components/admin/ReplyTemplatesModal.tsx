@@ -83,9 +83,9 @@ const ReplyTemplatesModal: React.FC<ReplyTemplatesModalProps> = ({ isOpen, onClo
             glowColor="amber"
             zIndex="z-[100]"
         >
-            <div className="bg-[#1a1a1a] w-full rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
-                <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
-                    <h3 className="text-xl font-bold text-white font-russo">Шаблоны ответов</h3>
+            <div className="bg-[#1a1a1a] w-full rounded-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[85vh]">
+                <div className="p-4 sm:p-6 border-b border-white/5 flex justify-between items-center bg-white/5 shrink-0">
+                    <h3 className="text-lg sm:text-xl font-bold text-white font-russo">Шаблоны ответов</h3>
                     <button
                         onClick={onClose}
                         aria-label="Закрыть"
@@ -95,7 +95,7 @@ const ReplyTemplatesModal: React.FC<ReplyTemplatesModalProps> = ({ isOpen, onClo
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6">
                     {isEditing ? (
                         <div className="space-y-4">
                             <input
