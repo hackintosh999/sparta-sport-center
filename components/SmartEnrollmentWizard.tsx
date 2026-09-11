@@ -16,7 +16,10 @@ import {
     MapPin,
     Navigation,
     Heart,
-    Zap
+    Zap,
+    Award,
+    MessageCircle,
+    LayoutDashboard
 } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -25,6 +28,7 @@ import { useCity } from '../context/CityContext';
 import { SPARTA_SCHEDULE, ScheduleSlot } from '../constants/spartaSchedule';
 import { linkStudentToGroup } from '../utils/studentLinking';
 import { safeLocalStorage } from '../utils/storage';
+import { checkTrialEligibility, TrialEligibilityResult, normalizePhone } from '../utils/trialEligibility';
 import confetti from 'canvas-confetti';
 import { BaseModal } from './ui/BaseModal';
 
@@ -52,6 +56,7 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [existingIneligibility, setExistingIneligibility] = useState<TrialEligibilityResult | null>(null);
 
     // --- Step 1: Child & Branch ---
     const [childLastName, setChildLastName] = useState(userProfile?.childLastName || '');
@@ -257,9 +262,24 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
         setLoading(true);
 
         try {
-            let activeParentUid = (user && user.uid) ? user.uid : null;
             const fullChildName = `${childLastName.trim()} ${childFirstName.trim()}`.trim();
             const fullParentName = `${parentLastName.trim()} ${parentFirstName.trim()}`.trim();
+
+            // Anti-Abuse Deduplication Check
+            const eligibility = await checkTrialEligibility({
+                phone: parentPhone,
+                childName: fullChildName,
+                birthDate: birthDate.trim(),
+                userId: user?.uid
+            });
+
+            if (!eligibility.eligible) {
+                setExistingIneligibility(eligibility);
+                setLoading(false);
+                return;
+            }
+
+            let activeParentUid = (user && user.uid) ? user.uid : null;
 
             // 1. Create or query Parent Doc
             if (!activeParentUid) {
@@ -297,11 +317,14 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
 
 
             // 3. Save trial booking
+            const cleanPhone = normalizePhone(parentPhone);
             const generatedKidPin = Math.floor(1000 + Math.random() * 9000).toString();
             const trialData = {
                 parentId: activeParentUid,
                 parentName: fullParentName,
                 parentPhone: parentPhone.trim(),
+                phone: parentPhone.trim(),
+                cleanPhone: cleanPhone,
                 childName: fullChildName,
                 childLastName: childLastName.trim(),
                 childFirstName: childFirstName.trim(),
@@ -334,6 +357,8 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                 birthDate: birthDate.trim(),
                 parentName: fullParentName,
                 parentPhone: parentPhone.trim(),
+                phone: parentPhone.trim(),
+                cleanPhone: cleanPhone,
                 locationId: selectedLocation.id,
                 locationName: selectedLocation.name,
                 comment: parentComment.trim() || null,
@@ -344,6 +369,11 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                 groupTitle: `${selectedSlot.streamTitle} (${selectedSlot.days} ${selectedSlot.time})`,
                 createdAt: serverTimestamp(),
             });
+
+            const currentRequestedIds = JSON.parse(safeLocalStorage.getItem('trial_requested_ids') || '[]');
+            if (selectedSlot?.id && !currentRequestedIds.includes(selectedSlot.id)) {
+                safeLocalStorage.setItem('trial_requested_ids', JSON.stringify([...currentRequestedIds, selectedSlot.id]));
+            }
 
             if (refreshTrialStatus) {
                 try {
@@ -405,14 +435,14 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                         <div>
                             <div className="flex items-center gap-1.5">
                                 <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-sparta-gold bg-sparta-gold/10 px-1.5 py-0.5 rounded border border-sparta-gold/20">
-                                    {step === 1 ? 'Шаг 1 из 2' : step === 2 ? 'Шаг 2 из 2' : '✓ Подтверждено'}
+                                    {existingIneligibility ? 'Информация' : step === 1 ? 'Шаг 1 из 2' : step === 2 ? 'Шаг 2 из 2' : '✓ Подтверждено'}
                                 </span>
                                 <h3 className="font-russo text-sm sm:text-base text-white">
-                                    {step === 3 ? 'Пригласительный билет' : 'День знакомства со Sparta'}
+                                    {existingIneligibility ? 'Статус записи' : step === 3 ? 'Пригласительный билет' : 'День знакомства со Sparta'}
                                 </h3>
                             </div>
                             <p className="text-[11px] text-white/50 font-manrope truncate max-w-[240px] sm:max-w-none">
-                                {step === 1 ? 'Подберем группу, где ребенку будет комфортно' : step === 2 ? 'Контакты для подтверждения визита' : 'Ждем вас на футбольном поле!'}
+                                {existingIneligibility ? 'Проверка пробного посещения' : step === 1 ? 'Подберем группу, где ребенку будет комфортно' : step === 2 ? 'Контакты для подтверждения визита' : 'Ждем вас на футбольном поле!'}
                             </p>
                         </div>
                     </div>
@@ -429,8 +459,56 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                 {/* Scrollable Content Area */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-10 space-y-3">
                     <AnimatePresence mode="wait">
+                        {existingIneligibility && (
+                            <motion.div
+                                key="ineligible-card"
+                                initial={{ opacity: 0, scale: 0.96 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.96 }}
+                                className="flex flex-col items-center text-center py-4 px-2"
+                            >
+                                <div className="w-16 h-16 bg-amber-500/15 rounded-full flex items-center justify-center text-sparta-gold mb-4 border border-sparta-gold/30 shadow-[0_0_25px_rgba(212,175,55,0.25)]">
+                                    {existingIneligibility.reason === 'already_attended' ? (
+                                        <Award size={32} className="text-sparta-gold" />
+                                    ) : existingIneligibility.reason === 'already_scheduled' ? (
+                                        <CheckCircle2 size={32} className="text-emerald-400" />
+                                    ) : (
+                                        <Clock size={32} className="text-amber-400" />
+                                    )}
+                                </div>
+
+                                <h3 className="font-russo text-lg sm:text-xl text-white mb-2">
+                                    {existingIneligibility.reason === 'already_requested_pending' && 'Заявка уже на рассмотрении!'}
+                                    {existingIneligibility.reason === 'already_scheduled' && 'Вы уже записаны на тренировку!'}
+                                    {existingIneligibility.reason === 'already_attended' && 'Пробное занятие уже состоялось'}
+                                    {existingIneligibility.reason === 'already_student' && 'Спортсмен уже в составе SPARTA'}
+                                </h3>
+
+                                <p className="text-white/75 text-xs sm:text-sm max-w-sm mb-4 leading-relaxed font-manrope">
+                                    {existingIneligibility.message}
+                                </p>
+
+                                <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl text-xs text-white/60 max-w-sm mb-2 space-y-1.5 w-full text-left">
+                                    <div className="flex items-center justify-between text-[11px] text-white/40 uppercase font-bold">
+                                        <span>Проверенные данные:</span>
+                                        <span className="text-sparta-gold font-mono">1 заявка / 1 ребёнок</span>
+                                    </div>
+                                    <div className="text-white text-xs font-semibold flex items-center justify-between">
+                                        <span>Номер телефона:</span>
+                                        <span className="font-mono text-sparta-gold">{parentPhone}</span>
+                                    </div>
+                                    {fullChildDisplayName && (
+                                        <div className="text-white text-xs font-semibold flex items-center justify-between">
+                                            <span>Имя ребёнка:</span>
+                                            <span>{fullChildDisplayName}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+
                         {/* ================= STEP 1: COMPACT CHILD & BRANCH & SCHEDULE ================= */}
-                        {step === 1 && (
+                        {!existingIneligibility && step === 1 && (
                             <motion.form
                                 key="step1"
                                 id="wizard-step1-form"
@@ -686,7 +764,7 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                         )}
 
                         {/* ================= STEP 2: PARENT CONTACTS & CARE ================= */}
-                        {step === 2 && (
+                        {!existingIneligibility && step === 2 && (
                             <motion.form
                                 key="step2"
                                 id="wizard-step2-form"
@@ -797,7 +875,7 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                         )}
 
                         {/* ================= STEP 3: CLEAN SUCCESS TICKET ================= */}
-                        {step === 3 && (
+                        {!existingIneligibility && step === 3 && (
                             <motion.div
                                 key="step3-clean"
                                 initial={{ opacity: 0, scale: 0.95 }}
@@ -863,103 +941,141 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
 
                 {/* Bottom Sticky Action Footer (Always Visible & Accessible) */}
                 <div className="p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-4 border-t border-white/10 bg-[#121212]/95 backdrop-blur-md relative z-10 shrink-0 space-y-2">
-                    {step === 1 && (
-                        <button
-                            type="submit"
-                            form="wizard-step1-form"
-                            className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-manrope font-extrabold text-xs sm:text-sm hover:brightness-110 shadow-[0_0_20px_rgba(212,175,55,0.35)] active:scale-98 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                            <span>Далее: Контакты родителя</span>
-                            <ArrowRight size={15} />
-                        </button>
-                    )}
-
-                    {step === 2 && (
-                        <div className="flex gap-2">
+                    {existingIneligibility ? (
+                        <div className="flex flex-col gap-2 w-full">
                             <button
                                 type="button"
-                                onClick={() => updateStep(1)}
-                                className="py-3 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                            >
-                                <ArrowLeft size={13} />
-                                <span>Назад</span>
-                            </button>
-                            <button
-                                type="submit"
-                                form="wizard-step2-form"
-                                disabled={loading}
-                                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-manrope font-extrabold text-xs sm:text-sm hover:brightness-110 shadow-[0_0_20px_rgba(212,175,55,0.35)] active:scale-98 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-                            >
-                                {loading ? (
-                                    <span>Оформляем визит...</span>
-                                ) : (
-                                    <>
-                                        <span>Подтвердить визит и получить билет</span>
-                                        <ArrowRight size={15} />
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-
-                    {step === 3 && (
-                        <div className="flex flex-col sm:flex-row gap-2">
-                            <button
                                 onClick={() => {
                                     onComplete();
-                                    window.location.href = '/dashboard';
+                                    window.location.href = '/dashboard?tab=requests';
                                 }}
-                                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-manrope font-extrabold text-xs sm:text-sm transition-all hover:brightness-110 shadow-[0_0_20px_rgba(212,175,55,0.35)] flex items-center justify-center gap-2 cursor-pointer"
+                                className="w-full py-3.5 px-5 bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-extrabold rounded-xl hover:brightness-110 transition-all text-xs uppercase tracking-wider cursor-pointer shadow-lg shadow-sparta-gold/25 flex items-center justify-center gap-2 active:scale-[0.99]"
                             >
-                                <span>В Личный Кабинет родителя</span>
-                                <ArrowRight size={15} />
+                                <LayoutDashboard size={16} />
+                                <span>Перейти в Личный кабинет</span>
                             </button>
 
-                            {selectedLocation.href && (
+                            <div className="flex gap-2">
                                 <a
-                                    href={selectedLocation.href}
+                                    href="https://t.me/sparta_football"
                                     target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="py-3 px-3.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                                    rel="noreferrer"
+                                    className="flex-1 py-2.5 px-3 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white rounded-xl transition-all text-xs font-semibold cursor-pointer border border-white/10 flex items-center justify-center gap-2"
                                 >
-                                    <Navigation size={13} className="text-amber-400" />
-                                    <span>Маршрут</span>
+                                    <MessageCircle size={15} className="text-sky-400" />
+                                    <span>Связаться с нами</span>
                                 </a>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setExistingIneligibility(null)}
+                                    className="py-2.5 px-4 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-xl transition-all text-xs font-semibold cursor-pointer border border-white/10"
+                                >
+                                    Изменить данные
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {step === 1 && (
+                                <button
+                                    type="submit"
+                                    form="wizard-step1-form"
+                                    className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-manrope font-extrabold text-xs sm:text-sm hover:brightness-110 shadow-[0_0_20px_rgba(212,175,55,0.35)] active:scale-98 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                                >
+                                    <span>Далее: Контакты родителя</span>
+                                    <ArrowRight size={15} />
+                                </button>
                             )}
 
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    onComplete();
-                                    if (onContactLink) {
-                                        onContactLink();
-                                    } else {
-                                        window.location.href = '/dashboard?tab=messages';
-                                    }
-                                }}
-                                className="py-3 px-3.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                            >
-                                <MessageSquare size={13} className="text-sparta-gold" />
-                                <span>Чат</span>
-                            </button>
-                        </div>
-                    )}
+                            {step === 2 && (
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => updateStep(1)}
+                                        className="py-3 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                    >
+                                        <ArrowLeft size={13} />
+                                        <span>Назад</span>
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        form="wizard-step2-form"
+                                        disabled={loading}
+                                        className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-manrope font-extrabold text-xs sm:text-sm hover:brightness-110 shadow-[0_0_20px_rgba(212,175,55,0.35)] active:scale-98 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                                    >
+                                        {loading ? (
+                                            <span>Оформляем визит...</span>
+                                        ) : (
+                                            <>
+                                                <span>Подтвердить визит и получить билет</span>
+                                                <ArrowRight size={15} />
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
 
-                    {/* Footer Reassurance */}
-                    {step < 3 && (
-                        <p className="text-[10px] text-center text-white/40">
-                            🔒 Первое занятие бесплатно • Уже занимаетесь?{' '}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    onComplete();
-                                    if (onContactLink) onContactLink();
-                                }}
-                                className="text-sparta-gold hover:underline font-semibold cursor-pointer ml-0.5"
-                            >
-                                Войти в кабинет
-                            </button>
-                        </p>
+                            {step === 3 && (
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <button
+                                        onClick={() => {
+                                            onComplete();
+                                            window.location.href = '/dashboard';
+                                        }}
+                                        className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-manrope font-extrabold text-xs sm:text-sm transition-all hover:brightness-110 shadow-[0_0_20px_rgba(212,175,55,0.35)] flex items-center justify-center gap-2 cursor-pointer"
+                                    >
+                                        <span>В Личный Кабинет родителя</span>
+                                        <ArrowRight size={15} />
+                                    </button>
+
+                                    {selectedLocation.href && (
+                                        <a
+                                            href={selectedLocation.href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="py-3 px-3.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                                        >
+                                            <Navigation size={13} className="text-amber-400" />
+                                            <span>Маршрут</span>
+                                        </a>
+                                    )}
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onComplete();
+                                            if (onContactLink) {
+                                                onContactLink();
+                                            } else {
+                                                window.location.href = '/dashboard?tab=messages';
+                                            }
+                                        }}
+                                        className="py-3 px-3.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                    >
+                                        <MessageSquare size={13} className="text-sparta-gold" />
+                                        <span>Чат</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Footer Reassurance */}
+                            {step < 3 && (
+                                <p className="text-[10px] text-center text-white/40">
+                                    🔒 Первое занятие бесплатно • Уже занимаетесь?{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onComplete();
+                                            if (onContactLink) onContactLink();
+                                        }}
+                                        className="text-sparta-gold hover:underline font-semibold cursor-pointer ml-0.5"
+                                    >
+                                        Войти в кабинет
+                                    </button>
+                                </p>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

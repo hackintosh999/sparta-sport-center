@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "components/LandingPage.tsx": {
-    "mtime": 1789067389.0708423,
-    "ast_hash": "39e15d70cfdd057ecced832b97c50bde",
+    "mtime": 1789117713.641018,
+    "ast_hash": "e77448f1115e1eff0b6e46098743478a",
     "semantic_hash": ""
   },
   "components/LeaveReviewModal.tsx": {
@@ -400,8 +400,8 @@
     "semantic_hash": "710a85fc0487496669a32d0f1300ce39"
   },
   "components/SmartEnrollmentWizard.tsx": {
-    "mtime": 1789066887.04845,
-    "ast_hash": "95ed851961a22c962d15ce7942260761",
+    "mtime": 1789118016.0174716,
+    "ast_hash": "535692928537a46ddd222c3118d418e2",
     "semantic_hash": ""
   },
   "components/SpartaVideoPlayer.tsx": {
@@ -425,8 +425,8 @@
     "semantic_hash": ""
   },
   "components/TrialModal.tsx": {
-    "mtime": 1788982927.7918606,
-    "ast_hash": "e7f0337441623f95851d7c16c5426cd9",
+    "mtime": 1789117811.5566247,
+    "ast_hash": "bc3e2f729c1f4e690e55af45b87ba34e",
     "semantic_hash": ""
   },
   "components/UIComponents.tsx": {
@@ -620,8 +620,8 @@
     "semantic_hash": "5f56b24eaf33f34831b32e268f604142"
   },
   "context/AuthContext.tsx": {
-    "mtime": 1788489505.5993626,
-    "ast_hash": "a540b67daf1228581493e12d47f27332",
+    "mtime": 1789117726.164881,
+    "ast_hash": "5050634975af897c301a136c9216f5ee",
     "semantic_hash": ""
   },
   "context/CartContext.tsx": {
@@ -6740,8 +6740,8 @@
     "semantic_hash": ""
   },
   "HANDOFF_NEXT_SESSION.md": {
-    "mtime": 1789068000.8027668,
-    "ast_hash": "197a08c608cbe86fbf2fca48749ec3d0",
+    "mtime": 1789071407.264727,
+    "ast_hash": "1e3110ddf5e59acc3508cecd5731be9e",
     "semantic_hash": ""
   },
   "skill-observations/last-review-date.txt": {
@@ -8535,8 +8535,8 @@
     "semantic_hash": ""
   },
   "docs/session-handoff.md": {
-    "mtime": 1789067988.5260627,
-    "ast_hash": "197a08c608cbe86fbf2fca48749ec3d0",
+    "mtime": 1789071407.264727,
+    "ast_hash": "1e3110ddf5e59acc3508cecd5731be9e",
     "semantic_hash": ""
   },
   "public/action-camera-mockup.html": {
@@ -8937,6 +8937,11 @@
   "public/manifest.json": {
     "mtime": 1789066854.223461,
     "ast_hash": "c75741c28183c4f6ea8d25adcf892052",
+    "semantic_hash": ""
+  },
+  "utils/trialEligibility.ts": {
+    "mtime": 1789117592.993758,
+    "ast_hash": "64f114ca69b8ac7617a3b31caebe6c3a",
     "semantic_hash": ""
   }
 }

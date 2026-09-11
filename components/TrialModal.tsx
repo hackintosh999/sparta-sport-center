@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Shield, MapPin, Sparkles, Phone, User, Calendar, Award, ChevronDown, LayoutDashboard } from 'lucide-react';
+import { Check, Shield, MapPin, Sparkles, Phone, User, Calendar, Award, ChevronDown, LayoutDashboard, CheckCircle2, Clock, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { safeLocalStorage } from '../utils/storage';
 import { BaseModal } from './ui/BaseModal';
+import { checkTrialEligibility, TrialEligibilityResult, normalizePhone } from '../utils/trialEligibility';
 
 export interface SelectedGroupInfo {
     id: string;
@@ -109,6 +110,7 @@ const TrialModal: React.FC<TrialModalProps> = ({ isOpen, onClose, selectedGroup,
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showComment, setShowComment] = useState(false);
+    const [existingIneligibility, setExistingIneligibility] = useState<TrialEligibilityResult | null>(null);
 
     const handleTrackRequest = () => {
         onClose();
@@ -138,10 +140,15 @@ const TrialModal: React.FC<TrialModalProps> = ({ isOpen, onClose, selectedGroup,
     }, [selectedGroup]);
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            setExistingIneligibility(null);
+            setIsSubmitted(false);
+            return;
+        }
 
         setIsSubmitted(false);
         setIsSubmitting(false);
+        setExistingIneligibility(null);
 
         const initialDays = getAvailableDayOptions(selectedGroup);
         const defaultDay = initialDays[initialDays.length - 1]?.id || 'В любой день';
@@ -211,8 +218,22 @@ const TrialModal: React.FC<TrialModalProps> = ({ isOpen, onClose, selectedGroup,
         }
 
         setIsSubmitting(true);
+        setExistingIneligibility(null);
 
         try {
+            // Anti-Abuse Deduplication Check
+            const eligibility = await checkTrialEligibility({
+                phone: formData.parentPhone,
+                childName: trimmedChild,
+                userId: user?.uid
+            });
+
+            if (!eligibility.eligible) {
+                setExistingIneligibility(eligibility);
+                setIsSubmitting(false);
+                return;
+            }
+
             const nameParts = trimmedChild.split(/\s+/);
             let parsedSurname = '';
             let parsedFirstName = '';
@@ -227,6 +248,7 @@ const TrialModal: React.FC<TrialModalProps> = ({ isOpen, onClose, selectedGroup,
             const expOption = EXPERIENCE_OPTIONS.find(o => o.id === formData.experienceLevel);
             const expLabel = expOption ? `${expOption.title} (${expOption.subtitle})` : 'Новичок';
 
+            const cleanPhone = normalizePhone(formData.parentPhone);
             const requestPayload = {
                 childName: trimmedChild,
                 childFullName: trimmedChild,
@@ -242,6 +264,7 @@ const TrialModal: React.FC<TrialModalProps> = ({ isOpen, onClose, selectedGroup,
                 parentName: formData.parentName.trim(),
                 parentPhone: formData.parentPhone.trim(),
                 phone: formData.parentPhone.trim(),
+                cleanPhone: cleanPhone,
                 email: formData.email.trim() || null,
                 userId: user?.uid || null,
                 createdAt: serverTimestamp(),
@@ -289,7 +312,80 @@ const TrialModal: React.FC<TrialModalProps> = ({ isOpen, onClose, selectedGroup,
             zIndex="z-50"
         >
             <div className="text-left font-manrope">
-                {!isSubmitted ? (
+                {existingIneligibility ? (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex flex-col items-center text-center py-5 px-1"
+                    >
+                        <div className="w-16 h-16 bg-amber-500/15 rounded-full flex items-center justify-center text-sparta-gold mb-4 border border-sparta-gold/30 shadow-[0_0_25px_rgba(212,175,55,0.25)]">
+                            {existingIneligibility.reason === 'already_attended' ? (
+                                <Award size={32} className="text-sparta-gold" />
+                            ) : existingIneligibility.reason === 'already_scheduled' ? (
+                                <CheckCircle2 size={32} className="text-emerald-400" />
+                            ) : (
+                                <Clock size={32} className="text-amber-400" />
+                            )}
+                        </div>
+
+                        <h3 className="font-russo text-xl sm:text-2xl text-white mb-2">
+                            {existingIneligibility.reason === 'already_requested_pending' && 'Заявка уже на рассмотрении!'}
+                            {existingIneligibility.reason === 'already_scheduled' && 'Вы уже записаны на тренировку!'}
+                            {existingIneligibility.reason === 'already_attended' && 'Пробное занятие уже состоялось'}
+                            {existingIneligibility.reason === 'already_student' && 'Спортсмен уже в составе SPARTA'}
+                        </h3>
+
+                        <p className="text-white/75 text-xs sm:text-sm max-w-sm mb-5 leading-relaxed font-manrope">
+                            {existingIneligibility.message}
+                        </p>
+
+                        <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl text-xs text-white/60 max-w-sm mb-6 space-y-1.5 w-full text-left">
+                            <div className="flex items-center justify-between text-[11px] text-white/40 uppercase font-bold">
+                                <span>Проверенные данные:</span>
+                                <span className="text-sparta-gold font-mono">1 заявка / 1 ребёнок</span>
+                            </div>
+                            <div className="text-white text-xs font-semibold flex items-center justify-between">
+                                <span>Номер телефона:</span>
+                                <span className="font-mono text-sparta-gold">{formData.parentPhone}</span>
+                            </div>
+                            {formData.childFullName && (
+                                <div className="text-white text-xs font-semibold flex items-center justify-between">
+                                    <span>Имя ребёнка:</span>
+                                    <span>{formData.childFullName}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-2.5 w-full max-w-sm">
+                            <button
+                                type="button"
+                                onClick={handleTrackRequest}
+                                className="w-full py-3.5 px-5 bg-gradient-to-r from-sparta-gold via-yellow-500 to-sparta-gold text-black font-extrabold rounded-xl hover:brightness-110 transition-all text-xs uppercase tracking-wider cursor-pointer shadow-lg shadow-sparta-gold/25 flex items-center justify-center gap-2 active:scale-[0.99]"
+                            >
+                                <LayoutDashboard size={16} />
+                                <span>Перейти в Личный кабинет</span>
+                            </button>
+
+                            <a
+                                href="https://t.me/sparta_football"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-full py-2.5 px-4 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white rounded-xl transition-all text-xs font-semibold cursor-pointer border border-white/10 flex items-center justify-center gap-2"
+                            >
+                                <MessageCircle size={15} className="text-sky-400" />
+                                <span>Связаться с администратором</span>
+                            </a>
+
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="w-full py-2 px-4 text-white/40 hover:text-white rounded-xl transition-all text-xs font-medium cursor-pointer text-center"
+                            >
+                                Закрыть
+                            </button>
+                        </div>
+                    </motion.div>
+                ) : !isSubmitted ? (
                     <>
                         {/* HEADER */}
                         <div className="text-center mb-4">

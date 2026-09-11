@@ -831,7 +831,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const ids = new Set<string>();
                 snapshot.docs.forEach(d => {
                     const data = d.data();
-                    if (data.status !== 'rejected' && data.groupId) ids.add(data.groupId);
+                    if (data.status !== 'rejected' && data.status !== 'cancelled') {
+                        ids.add(data.groupId || d.id || 'general');
+                    }
                 });
 
                 const currentIds = Array.from(ids);
@@ -852,7 +854,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const ids = new Set<string>();
                     snapshot.docs.forEach(d => {
                         const data = d.data();
-                        if (data.status !== 'rejected' && data.groupId) ids.add(data.groupId);
+                        if (data.status !== 'rejected' && data.status !== 'cancelled') {
+                            ids.add(data.groupId || d.id || 'general');
+                        }
+                    });
+
+                    const currentIds = Array.from(ids);
+                    setRequestedGroupIds(prev => {
+                        const combined = Array.from(new Set([...prev, ...currentIds]));
+                        if (prev.length === combined.length && prev.every(id => combined.includes(id))) {
+                            return prev;
+                        }
+                        safeLocalStorage.setItem('trial_requested_ids', JSON.stringify(combined));
+                        return combined;
+                    });
+                });
+            }
+
+            let unsubByPhone = () => { };
+            const phoneToQuery = userProfile?.phone || user.phoneNumber;
+            if (phoneToQuery) {
+                const qByPhone = query(collection(db, "requests"), where("parentPhone", "==", phoneToQuery));
+                unsubByPhone = onSnapshot(qByPhone, (snapshot) => {
+                    const ids = new Set<string>();
+                    snapshot.docs.forEach(d => {
+                        const data = d.data();
+                        if (data.status !== 'rejected' && data.status !== 'cancelled') {
+                            ids.add(data.groupId || d.id || 'general');
+                        }
                     });
 
                     const currentIds = Array.from(ids);
@@ -870,9 +899,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return () => {
                 unsubById();
                 unsubByEmail();
+                unsubByPhone();
             };
         }
-    }, [user]);
+    }, [user, userProfile?.phone]);
 
     const contextValue = React.useMemo(() => ({
         user,

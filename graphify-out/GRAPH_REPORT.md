@@ -1,16 +1,16 @@
 # Graph Report - sparta-sports-center  (2026-09-11)
 
 ## Corpus Check
-- 371 files · ~11,848,330 words
+- 372 files · ~11,849,610 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2290 nodes · 3574 edges · 272 communities (172 shown, 100 thin omitted)
+- 2285 nodes · 3583 edges · 273 communities (173 shown, 100 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.55)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3b48de63`
+- Built from commit: `aa59a7f6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -75,6 +75,7 @@
 - server.js
 - AdminScanner.tsx
 - health-monitor.sh
+- ContactModal.tsx
 - TrialsTab.tsx
 - ShopReceipt.tsx
 - Viewer3D.tsx
@@ -87,6 +88,7 @@
 - vercel.json
 - @capacitor/android
 - express
+- NotificationsModal.tsx
 - github-setup.sh
 - guidance-hook.sh
 - guidance-hooks.sh
@@ -99,11 +101,13 @@
 - v3-quick-status.sh
 - concurrently
 - cors
+- usePresence.ts
 - ScheduleSection.tsx
 - electron-is-dev
 - emoji-picker-react
 - DirectorDashboard.tsx
 - @eslint/js
+- @capacitor/core
 - generate-svg-dance-lotus.mjs
 - generate-svg-sparta-duo-concept.mjs
 - generate-svg-sparta-tennis.mjs
@@ -220,7 +224,6 @@
 - 🔹 Сообщение 41
 - 🔹 Сообщение 43
 - 🔹 Сообщение 48
-- WindowTitleBar.tsx
 - 🔹 Сообщение 6
 - @capacitor/android
 - 1. Логика определения собеседника в списке чатов (`ChatListItem`):
@@ -243,9 +246,7 @@
 - 🔹 Сообщение 50
 - ScheduleOverrideModal.tsx
 - html5-qrcode
-- @typescript-eslint/eslint-plugin
 - concurrently
-- electron-serve
 - SpartaPromoBanner.tsx
 - Global Constraints
 - Best Practices
@@ -260,7 +261,7 @@
 - Sparta Sports Center - Video Brief
 
 ## God Nodes (most connected - your core abstractions)
-1. `db` - 121 edges
+1. `db` - 122 edges
 2. `💬 Подробная хронология всех запросов и ответов сессии` - 106 edges
 3. `useAuth()` - 96 edges
 4. `BaseModal()` - 46 edges
@@ -272,29 +273,29 @@
 10. `ТЕХНИЧЕСКОЕ ЗАДАНИЕ: МАСТЕР ПЕРЕДАЧИ ГРУПП И БЕЗОПАСНОЕ УВОЛЬНЕНИЕ ТРЕНЕРА` - 16 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `BroadcastReactions()` --calls--> `useAuth()`  [EXTRACTED]
-  components/BroadcastReactions.tsx → context/AuthContext.tsx
+- `BroadcastChat()` --calls--> `useAuth()`  [EXTRACTED]
+  components/BroadcastChat.tsx → context/AuthContext.tsx
 - `ChildBenefitsSection()` --calls--> `useAuth()`  [EXTRACTED]
   components/ChildBenefitsSection.tsx → context/AuthContext.tsx
 - `GroupsSection()` --calls--> `useAuth()`  [EXTRACTED]
   components/GroupsSection.tsx → context/AuthContext.tsx
 - `Navbar()` --calls--> `useAuth()`  [EXTRACTED]
   components/LandingPage.tsx → context/AuthContext.tsx
-- `LeaveReviewModal()` --calls--> `useAuth()`  [EXTRACTED]
-  components/LeaveReviewModal.tsx → context/AuthContext.tsx
+- `NewsModal()` --calls--> `useAuth()`  [EXTRACTED]
+  components/NewsModal.tsx → context/AuthContext.tsx
 
 ## Import Cycles
 - None detected.
 
-## Communities (272 total, 100 thin omitted)
+## Communities (273 total, 100 thin omitted)
 
 ### Community 0 - "LandingPage.tsx"
 Cohesion: 0.08
-Nodes (24): COACHES, FAQS, FEATURES, getPriceInfo(), getProgramImage(), Hero(), LandingPage(), LocationCard() (+16 more)
+Nodes (23): CitySelector(), COACHES, FAQS, FEATURES, getPriceInfo(), getProgramImage(), Hero(), LandingPage() (+15 more)
 
 ### Community 1 - "LearningService"
-Cohesion: 0.15
-Nodes (7): categories, NewsModal(), NewsModalProps, CATEGORY_LABELS, RelatedNewsListProps, ShareModal(), ShareModalProps
+Cohesion: 0.12
+Nodes (8): MediaViewerModalProps, categories, NewsModal(), NewsModalProps, CATEGORY_LABELS, RelatedNewsListProps, ShareModal(), ShareModalProps
 
 ### Community 2 - "App.tsx"
 Cohesion: 0.05
@@ -305,32 +306,32 @@ Cohesion: 0.06
 Nodes (34): ./*, build, DOM, DOM.Iterable, e2e, ES2022, **/*.figma.tsx, node (+26 more)
 
 ### Community 5 - "useAuth"
-Cohesion: 0.13
-Nodes (15): ParentAccountSetupModalProps, MagicTransfer(), MagicTransferProps, TransferMode, SmartEnrollmentWizard(), SmartEnrollmentWizardProps, DayOption, EXPERIENCE_OPTIONS (+7 more)
+Cohesion: 0.08
+Nodes (23): CoachSection, DeveloperConsole, DirectorDashboard, ParentDashboard, STAFF_ROLES, KidDashboard, EditProfileModal(), ParentAccountSetupModalProps (+15 more)
 
 ### Community 6 - "NewsModal.tsx"
-Cohesion: 0.08
-Nodes (23): BroadcastArchiveModalProps, BroadcastCountdown(), BroadcastCountdownProps, DirectStreamBroadcaster(), DirectStreamBroadcasterProps, RemoteCameraStreamItem(), DirectStreamViewer(), DirectStreamViewerProps (+15 more)
+Cohesion: 0.07
+Nodes (26): BroadcastArchiveModalProps, BroadcastChat(), BroadcastChatProps, Message, BroadcastCountdown(), BroadcastCountdownProps, DirectStreamBroadcaster(), DirectStreamBroadcasterProps (+18 more)
 
 ### Community 7 - "swarm-hooks.sh"
-Cohesion: 0.17
-Nodes (9): ProfileViewModal(), ProfileViewModalProps, app, auth, firebaseConfig, googleProvider, storage, AdminRequests() (+1 more)
+Cohesion: 0.40
+Nodes (4): app, firebaseConfig, googleProvider, storage
 
 ### Community 8 - "CoachSection.tsx"
 Cohesion: 0.13
 Nodes (12): ChatAttachmentMenu(), ChatAttachmentMenuProps, ChatParticipant, MessagesTabProps, CoachChat(), CoachChatProps, ThemeToggle(), Theme (+4 more)
 
 ### Community 9 - "UIComponents.tsx"
-Cohesion: 0.09
-Nodes (20): ageGroups, AgeGroupsSectionProps, AgeGroup, BenefitItem, BENEFITS_BY_AGE, ChildBenefitsSection(), ChildBenefitsSectionProps, LinkingRequest (+12 more)
+Cohesion: 0.12
+Nodes (12): LinkingRequest, LinkingRequestBanner(), MembershipReceiptProps, ProgressSectionProps, ShopReceiptProps, Button(), ButtonProps, CardProps (+4 more)
 
 ### Community 10 - "db"
-Cohesion: 0.08
-Nodes (10): BroadcastReactions(), BroadcastReactionsProps, EMOJIS, Reaction, DeveloperConsoleProps, NotificationCategory, NotificationsModalProps, ActivitySectionProps (+2 more)
+Cohesion: 0.07
+Nodes (12): DeveloperConsoleProps, CoachQuickPlannerProps, QUICK_PRAISES, StudentItem, PollMessageProps, GRADIENT_PRESETS, SpartaCreateStoryModal(), SpartaCreateStoryModalProps (+4 more)
 
 ### Community 11 - "devDependencies"
 Cohesion: 0.11
-Nodes (19): electron, electron-builder, electron-is-dev, devDependencies, electron, electron-builder, electron-is-dev, @eslint/js (+11 more)
+Nodes (19): electron-builder, electron-is-dev, electron-serve, devDependencies, electron-builder, electron-is-dev, electron-serve, @eslint/js (+11 more)
 
 ### Community 12 - "FavoritesContext.tsx"
 Cohesion: 0.03
@@ -341,8 +342,8 @@ Cohesion: 0.06
 Nodes (38): ExcelImportModal(), ExcelImportModalProps, ImportRow, MergeStrategy, parseSpartaExcel(), QueuedFile, toTitleCase(), formatPhone() (+30 more)
 
 ### Community 14 - "GroupChat.tsx"
-Cohesion: 0.08
-Nodes (18): AnnouncementModal(), AnnouncementModalProps, PRESETS, AudioRecorderProps, copyImageToClipboard(), downloadFile(), GroupChat(), GroupChatProps (+10 more)
+Cohesion: 0.06
+Nodes (24): AnnouncementModal(), AnnouncementModalProps, PRESETS, AudioRecorderProps, copyImageToClipboard(), downloadFile(), GroupChat(), GroupChatProps (+16 more)
 
 ### Community 15 - "metrics-db.mjs"
 Cohesion: 0.24
@@ -350,7 +351,7 @@ Nodes (16): RFC-1321, add32(), buildRobokassaUrl(), cmn(), ff(), gg(), hex(), he
 
 ### Community 16 - "statusline.js"
 Cohesion: 0.06
-Nodes (54): BadgeCard(), BadgeCardProps, SpartanBadge, BadgeDetailModal(), BadgeDetailModalProps, CompactTaskList(), CompactTaskListProps, TaskItem (+46 more)
+Nodes (52): BadgeCard(), BadgeCardProps, SpartanBadge, BadgeDetailModal(), BadgeDetailModalProps, CompactTaskList(), CompactTaskListProps, TaskItem (+44 more)
 
 ### Community 17 - "shop.ts"
 Cohesion: 0.06
@@ -361,20 +362,20 @@ Cohesion: 0.19
 Nodes (9): getVideoEmbedUrl(), ReviewCard(), ReviewCardProps, ReviewsSectionProps, getVideoEmbedUrl(), ReviewAdminCard(), ReviewAdminCardProps, Review (+1 more)
 
 ### Community 19 - "UserRequests.tsx"
-Cohesion: 0.24
-Nodes (10): AGE_FILTER_OPTIONS, CoachSection(), CoachSectionProps, DEFAULT_EXERCISE_CATEGORIES, DEFAULT_EXERCISES, DURATION_FILTER_OPTIONS, ExerciseTopic, getExerciseCategoryLabel() (+2 more)
+Cohesion: 0.17
+Nodes (12): CoachReviewDashboardProps, SubmissionItem, AGE_FILTER_OPTIONS, CoachSection(), CoachSectionProps, DEFAULT_EXERCISE_CATEGORIES, DEFAULT_EXERCISES, DURATION_FILTER_OPTIONS (+4 more)
 
 ### Community 20 - "ParentDashboard.tsx"
 Cohesion: 0.11
 Nodes (19): 1. Добавить пункт в меню быстрых действий строки (`•••`):, 1. Защитный диалог передачи групп («Мастер преемника») в [`pages/admin/AdminTeam.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminTeam.tsx), 1. Защитный диалог передачи групп при удалении («Мастер преемника» в `AdminTeam.tsx`):, 1. Пункт в меню быстрых действий строки (`•••`):, 2. Интерактивная ячейка в колонке «ТРЕНЕР»:, 2. Интерактивная ячейка в колонке «ТРЕНЕР»:, 2. Массовое назначение тренера в таблице групп (`AdminGroups.tsx`):, 2. Пакетная смена тренера в таблице [`pages/admin/AdminGroups.tsx`](file:///c:/Users/User/Downloads/sparta-sports-center/pages/admin/AdminGroups.tsx) (+11 more)
 
 ### Community 21 - "AuthContext.tsx"
-Cohesion: 0.33
-Nodes (5): DAY_NAME_TO_INDEX, MONTHS_SHORT, SpartaDatePickerPopover(), SpartaDatePickerPopoverProps, WEEK_DAYS
+Cohesion: 0.17
+Nodes (15): MessageHistory, PARENT_FAQ, parseAttachment(), ParsedAttachment, QuickScenario, Ticket, UserRequests(), UserRequestsProps (+7 more)
 
 ### Community 22 - "learning-hooks.sh"
-Cohesion: 0.07
-Nodes (38): QRScanner(), QRScannerProps, LinkChildModal(), LinkChildModalProps, UpgradeSubscriptionModal(), UpgradeSubscriptionModalProps, RouteModalProps, PERIOD_OPTIONS (+30 more)
+Cohesion: 0.06
+Nodes (43): QRScanner(), QRScannerProps, AGE_QUICK_CHIPS, COMMON_EQUIPMENT_CHIPS, CreateExerciseModal(), CreateExerciseModalProps, DEFAULT_FOOTBALL_CATEGORIES, DURATION_PRESETS (+35 more)
 
 ### Community 23 - "swarm-comms.sh"
 Cohesion: 0.29
@@ -397,8 +398,8 @@ Cohesion: 0.17
 Nodes (12): scripts, android:add, android:open, android:sync, build, dev, electron:build, electron:dev (+4 more)
 
 ### Community 28 - "dependencies"
-Cohesion: 0.13
-Nodes (16): ContextMenuItemProps, MessagesSectionProps, GRADIENT_PRESETS, HIGHLIGHT_ICONS, SpartaHighlightAlbum, SpartaHighlightsModal(), SpartaHighlightsModalProps, SpartaModerationModal() (+8 more)
+Cohesion: 0.12
+Nodes (22): ContextMenuItemProps, MessagesSectionProps, GRADIENT_PRESETS, HIGHLIGHT_ICONS, SpartaHighlightAlbum, SpartaHighlightsModal(), SpartaHighlightsModalProps, SpartaModerationModal() (+14 more)
 
 ### Community 29 - "auto-commit.sh"
 Cohesion: 0.20
@@ -412,21 +413,25 @@ Nodes (8): 2026-08-10, Observation 1: Bento grid 2x column span creates asymmetr
 Cohesion: 0.11
 Nodes (23): BaseModel, LLM Council backend package., Conversation, ConversationMetadata, create_conversation(), CreateConversationRequest, get_conversation(), list_conversations() (+15 more)
 
+### Community 33 - "AchievementsList.tsx"
+Cohesion: 0.20
+Nodes (15): SmartEnrollmentWizard(), SmartEnrollmentWizardProps, DayOption, EXPERIENCE_OPTIONS, getAvailableDayOptions(), SelectedGroupInfo, SPARTA_LOCATIONS, TrialModal() (+7 more)
+
 ### Community 35 - "package.json"
-Cohesion: 0.13
-Nodes (14): 1. [public/manifest.json](file:///c:/Users/User/Downloads/sparta-sports-center/public/manifest.json) & [index.html](file:///c:/Users/User/Downloads/sparta-sports-center/index.html), 🎯 1. Цель и фокус сессии, 2. [src/components/ui/BaseModal.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/src/components/ui/BaseModal.tsx), 📁 2. Внесенные изменения (по файлам), 3. [components/LandingPage.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/LandingPage.tsx), 🛠️ 3. Текущее состояние и проверка качества, 📋 4. Задачи на следующую сессию, 4. Личные кабинеты и панель администратора (+6 more)
+Cohesion: 0.22
+Nodes (8): 1. [components/admin/AdminLayout.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/admin/AdminLayout.tsx), 🎯 1. Цель и фокус сессии, 2. [components/profile/CoachSection.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/profile/CoachSection.tsx), 📁 2. Внесенные изменения (по файлам), 3. [components/Dashboard.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/Dashboard.tsx), 🛠️ 3. Текущее состояние и проверка качества, 📋 4. Задачи на следующую сессию, 💬 5. Готовый стартовый промпт для нового чата
 
 ### Community 36 - "adr-compliance.sh"
-Cohesion: 0.15
-Nodes (17): DailyHub(), DailyHubMemo, DailyHubProps, QUICK_PRAISES, StudentItem, Training, RosterJournalTab(), RosterJournalTabProps (+9 more)
+Cohesion: 0.17
+Nodes (15): DailyHub(), DailyHubMemo, DailyHubProps, QUICK_PRAISES, StudentItem, Training, RosterJournalTab(), RosterJournalTabProps (+7 more)
 
 ### Community 37 - "swarm-monitor.sh"
-Cohesion: 0.14
-Nodes (20): GroupsSection(), DAYS_META, DayScheduleInfo, FamilyScheduleSection(), FamilyScheduleSectionProps, ParentDashboard(), ParentDashboardProps, DaySchedule (+12 more)
+Cohesion: 0.17
+Nodes (11): GroupsSection(), DaySchedule, ScheduleSection(), WEEKLY_DAYS, declineChildName(), ScheduleSlot, AdminFinance(), COLORS (+3 more)
 
 ### Community 38 - "AdminUsers.tsx"
-Cohesion: 0.33
-Nodes (5): GRADIENT_PRESETS, SpartaCreateStoryModal(), SpartaCreateStoryModalProps, SPORTS_STICKERS, TEXT_COLORS
+Cohesion: 0.15
+Nodes (11): ageGroups, AgeGroupsSectionProps, AgeGroup, BenefitItem, BENEFITS_BY_AGE, ChildBenefitsSection(), ChildBenefitsSectionProps, Container() (+3 more)
 
 ### Community 39 - "CartContext.tsx"
 Cohesion: 0.47
@@ -437,8 +442,8 @@ Cohesion: 0.15
 Nodes (11): boyB64, __dirname, __filename, iconFreezeB64, iconGiftB64, iconLicenseB64, iconZeroB64, logoB64 (+3 more)
 
 ### Community 42 - "memory.js"
-Cohesion: 0.23
-Nodes (9): ContextMenuPosition, MessageContextMenuProps, TargetBounds, getReactionDef(), Sparta3DReactionIcon(), SPARTA_3D_REACTIONS, SpartaMessageReactionBadges(), SpartaReactionDef (+1 more)
+Cohesion: 0.33
+Nodes (4): ContextMenuPosition, MessageContextMenuProps, TargetBounds, SpartaReactionsBar()
 
 ### Community 43 - "claude-flow"
 Cohesion: 0.18
@@ -449,8 +454,8 @@ Cohesion: 0.17
 Nodes (10): awardB64, ballerinaBarreB64, ballerinaCutoutB64, contemporaryCutoutB64, __dirname, dynamicsB64, __filename, logoB64 (+2 more)
 
 ### Community 45 - "router.js"
-Cohesion: 0.07
-Nodes (43): SpartaAudioPlayer(), SpartaAudioPlayerProps, WAVEFORM_BARS, FileCategory, SpartaViewerFile, SpartaViewerProps, ContactModal(), ContactModalProps (+35 more)
+Cohesion: 0.13
+Nodes (20): SpartaAudioPlayer(), SpartaAudioPlayerProps, WAVEFORM_BARS, FileCategory, SpartaViewerFile, SpartaViewerProps, formatAudioDuration(), RecordedAudio (+12 more)
 
 ### Community 46 - "worker-manager.sh"
 Cohesion: 0.17
@@ -472,13 +477,17 @@ Nodes (18): bgPhotoB64, chelAddresses, chelHtml, chelHtmlPath, chelSvg, chelTarg
 Cohesion: 0.10
 Nodes (16): bgPhotoB64, bokehB64, chelAddresses, chelHtml, chelHtmlPath, chelSvg, chelTargets, crestB64 (+8 more)
 
+### Community 54 - "validate-v3-config.sh"
+Cohesion: 0.32
+Nodes (8): LinkChildModal(), LinkChildModalProps, createAndLinkChild(), findChildToLink(), get10Digits(), isInvalidStudent(), linkParentToChild(), linkParentToRegistryChild()
+
 ### Community 55 - "AdminAIConsole.tsx"
 Cohesion: 0.27
 Nodes (9): AdminAIConsole(), AdminAIConsoleProps, AIActionResponse, resolveAIAction(), checkHeadroomHealth(), CompressionStats, CompressMessagesResult, compressPromptMessages() (+1 more)
 
 ### Community 56 - "DailyHub.tsx"
 Cohesion: 0.09
-Nodes (26): App(), AdminAwardsManager(), AwardCatalogItem, AdminLayout(), AdminRoute(), DirectorRoute(), BannedScreen(), BannedScreenProps (+18 more)
+Nodes (28): AdminAwardsManager(), AwardCatalogItem, AdminLayout(), AdminRoute(), DirectorRoute(), BannedScreen(), BannedScreenProps, BroadcastReactions() (+20 more)
 
 ### Community 57 - "MessagesSection.tsx"
 Cohesion: 0.17
@@ -489,8 +498,12 @@ Cohesion: 0.18
 Nodes (6): DEFAULT_SUBSCRIPTION_PLANS, app, db, firebaseConfig, supabase, upload
 
 ### Community 59 - "AdminScanner.tsx"
-Cohesion: 0.13
-Nodes (15): CoachSection, Dashboard(), DeveloperConsole, DirectorDashboard, ParentDashboard, resizeImage(), STAFF_ROLES, KidDashboard (+7 more)
+Cohesion: 0.16
+Nodes (15): Dashboard(), resizeImage(), AttendanceSectionProps, DAYS_META, DayScheduleInfo, FamilyScheduleSection(), FamilyScheduleSectionProps, ParentDashboard() (+7 more)
+
+### Community 62 - "ContactModal.tsx"
+Cohesion: 0.29
+Nodes (8): ContactModal(), ContactModalProps, MessageHistory, Ticket, QUICK_CATEGORIES, QUICK_SUBJECTS, QuickCategory, SUPPORT_FAQ
 
 ### Community 63 - "TrialsTab.tsx"
 Cohesion: 0.29
@@ -510,19 +523,19 @@ Nodes (9): bgPhotoB64, crestB64, __dirname, __filename, giftB64, iceB64, paths, 
 
 ### Community 73 - "@capacitor/android"
 Cohesion: 0.15
-Nodes (13): @capacitor/core, dotenv, express, html2canvas, dependencies, @capacitor/core, dotenv, express (+5 more)
+Nodes (13): @capacitor/cli, dotenv, express, html2canvas, dependencies, @capacitor/cli, dotenv, express (+5 more)
 
 ### Community 77 - "guidance-hook.sh"
 Cohesion: 0.05
-Nodes (69): CartSidebar(), CoachReviewDashboardProps, SubmissionItem, ReviewCommentsDrawer(), ReviewCommentsDrawerProps, ThreadNode, ReviewMediaModalProps, SEO() (+61 more)
+Nodes (70): CartSidebar(), ReviewCommentsDrawer(), ReviewCommentsDrawerProps, ThreadNode, getRepliesPlural(), QUICK_REPLIES, ReviewMediaModal(), ReviewMediaModalProps (+62 more)
 
 ### Community 81 - "quick-start.sh"
 Cohesion: 0.33
 Nodes (6): 1. Исправление отображения наставника в таблице (`pages/admin/AdminGroups.tsx`):, 1. Пакетная смена тренера в панели `/admin/groups` (для произвольного набора групп):, 2. Защитный диалог передачи групп при удалении тренера в `AdminTeam.tsx`:, 👤 Пользователь:, 🔹 Сообщение 52, ТЕХНИЧЕСКОЕ ЗАДАНИЕ: ИСПРАВЛЕНИЕ ОТОБРАЖЕНИЯ ТРЕНЕРОВ В ГРУППАХ И АВТОПРИВЯЗКА
 
 ### Community 82 - "setup-mcp.sh"
-Cohesion: 0.09
-Nodes (27): DashboardShell(), DashboardShellProps, ChatProfileDrawer(), ChatProfileDrawerProps, AGE_QUICK_CHIPS, COMMON_EQUIPMENT_CHIPS, CreateExerciseModal(), CreateExerciseModalProps (+19 more)
+Cohesion: 0.18
+Nodes (11): DashboardShell(), DashboardShellProps, ChatProfileDrawer(), ChatProfileDrawerProps, StatsSectionProps, AdminUsers(), CoachNote, User (+3 more)
 
 ### Community 84 - "v3.sh"
 Cohesion: 0.50
@@ -596,10 +609,6 @@ Nodes (10): MEDIA_CATEGORIES, MediaUploadItem, MediaUploadTrayModal(), MediaUplo
 Cohesion: 0.33
 Nodes (4): boyB64, __dirname, __filename, logoB64
 
-### Community 108 - "SpartaForwardModal.tsx"
-Cohesion: 0.60
-Nodes (3): FriendsSection(), FriendsSectionProps, formatLastSeen()
-
 ### Community 109 - "export-pdf-camp.mjs"
 Cohesion: 0.50
 Nodes (4): __dirname, exportPerfectPdf(), __filename, getBase64()
@@ -665,8 +674,8 @@ Cohesion: 0.50
 Nodes (4): __dirname, __filename, getBase64(), slice3dIcons()
 
 ### Community 138 - "AnnouncementModal.tsx"
-Cohesion: 0.08
-Nodes (15): ReplyTemplatesModalProps, Template, BonusModalProps, DocumentViewerModalProps, LeaveReviewModal(), LeaveReviewModalProps, MediaViewerModalProps, CreatePollModalProps (+7 more)
+Cohesion: 0.07
+Nodes (16): ReplyTemplatesModalProps, Template, BonusModalProps, TaskHistoryItem, TaskHistoryModalProps, DocumentViewerModalProps, EditProfileModalProps, LeaveReviewModalProps (+8 more)
 
 ### Community 150 - "figma-generate-banners.js"
 Cohesion: 0.83
@@ -697,8 +706,8 @@ Cohesion: 0.36
 Nodes (9): ExerciseDetailModal(), ExerciseDetailModalProps, formatEquipmentBadge(), ExerciseMediaGrid(), ExerciseMediaGridProps, ExerciseMediaItem, extractYoutubeId(), normalizeType() (+1 more)
 
 ### Community 176 - "MembershipModal.tsx"
-Cohesion: 0.22
-Nodes (9): generateGostQrString(), MembershipModal(), MembershipModalProps, SPARTA_BANK_DETAILS, MembershipReceiptProps, declineChildName(), BANK_DEEP_LINKS, ReceiptVerificationResult (+1 more)
+Cohesion: 0.36
+Nodes (7): generateGostQrString(), MembershipModal(), MembershipModalProps, SPARTA_BANK_DETAILS, BANK_DEEP_LINKS, ReceiptVerificationResult, verifyReceiptImage()
 
 ### Community 177 - "NewsSection.tsx"
 Cohesion: 0.33
@@ -725,8 +734,8 @@ Cohesion: 0.40
 Nodes (5): 2. Динамическая верстка шторки по ролям:, А. Собеседник — РОДИТЕЛЬ (`role === 'parent'`):, Б. Собеседник — ВОСПИТАННИК / СПОРТСМЕН (`role === 'user'`):, В. Собеседник — ТРЕНЕР (`role === 'coach' | 'trainer'`):, Г. Собеседник — АДМИНИСТРАЦИЯ (`role === 'admin' | 'director'`):
 
 ### Community 184 - "🚀 HANDOFF & SESSION MEMORY SUMMARY (Context Compression)"
-Cohesion: 0.13
-Nodes (14): 1. [public/manifest.json](file:///c:/Users/User/Downloads/sparta-sports-center/public/manifest.json) & [index.html](file:///c:/Users/User/Downloads/sparta-sports-center/index.html), 🎯 1. Цель и фокус сессии, 2. [src/components/ui/BaseModal.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/src/components/ui/BaseModal.tsx), 📁 2. Внесенные изменения (по файлам), 3. [components/LandingPage.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/LandingPage.tsx), 🛠️ 3. Текущее состояние и проверка качества, 📋 4. Задачи на следующую сессию, 4. Личные кабинеты и панель администратора (+6 more)
+Cohesion: 0.22
+Nodes (8): 1. [components/admin/AdminLayout.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/admin/AdminLayout.tsx), 🎯 1. Цель и фокус сессии, 2. [components/profile/CoachSection.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/profile/CoachSection.tsx), 📁 2. Внесенные изменения (по файлам), 3. [components/Dashboard.tsx](file:///c:/Users/User/Downloads/sparta-sports-center/components/Dashboard.tsx), 🛠️ 3. Текущее состояние и проверка качества, 📋 4. Задачи на следующую сессию, 💬 5. Готовый стартовый промпт для нового чата
 
 ### Community 188 - "package.json"
 Cohesion: 0.33
@@ -828,16 +837,12 @@ Nodes (3): 🤖 Ассистент:, 👤 Пользователь:, 🔹 Соо
 Cohesion: 0.67
 Nodes (3): 🤖 Ассистент:, 👤 Пользователь:, 🔹 Сообщение 48
 
-### Community 238 - "WindowTitleBar.tsx"
-Cohesion: 0.40
-Nodes (3): CoachQuickPlannerProps, QUICK_PRAISES, StudentItem
-
 ### Community 239 - "🔹 Сообщение 6"
 Cohesion: 0.67
 Nodes (3): 🤖 Ассистент:, 👤 Пользователь:, 🔹 Сообщение 6
 
 ### Community 259 - "ScheduleOverrideModal.tsx"
-Cohesion: 0.25
+Cohesion: 0.31
 Nodes (6): CoachCalendarProps, QUICK_REASONS, ScheduleOverrideModal(), ScheduleOverrideModalProps, SPARTA_COACHES, createScheduleOverride()
 
 ### Community 289 - "Global Constraints"
@@ -861,24 +866,24 @@ Cohesion: 0.33
 Nodes (5): Customizations & Style, Intent, Scenes Breakdown, Sparta Sports Center - Video Brief, Target Audience
 
 ## Knowledge Gaps
-- **1031 isolated node(s):** `npm_config_update_notifier`, `CLAUDE_FLOW_MODE`, `CLAUDE_FLOW_HOOKS_ENABLED`, `CLAUDE_FLOW_TOPOLOGY`, `CLAUDE_FLOW_MAX_AGENTS` (+1026 more)
+- **1023 isolated node(s):** `npm_config_update_notifier`, `CLAUDE_FLOW_MODE`, `CLAUDE_FLOW_HOOKS_ENABLED`, `CLAUDE_FLOW_TOPOLOGY`, `CLAUDE_FLOW_MAX_AGENTS` (+1018 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **100 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `db` connect `db` to `LandingPage.tsx`, `LearningService`, `App.tsx`, `ScheduleOverrideModal.tsx`, `useAuth`, `NewsModal.tsx`, `swarm-hooks.sh`, `CoachSection.tsx`, `UIComponents.tsx`, `AnnouncementModal.tsx`, `Dashboard.tsx`, `GroupChat.tsx`, `statusline.js`, `AdminMessages.tsx`, `UserRequests.tsx`, `learning-hooks.sh`, `swarm-comms.sh`, `SmartEnrollmentWizard.tsx`, `ProductDetails.tsx`, `dependencies`, `AchievementsList.tsx`, `adr-compliance.sh`, `swarm-monitor.sh`, `AdminUsers.tsx`, `CartContext.tsx`, `router.js`, `CreateTrainingPlanModal.tsx`, `MembershipModal.tsx`, `NewsSection.tsx`, `DailyHub.tsx`, `AdminScanner.tsx`, `TrialsTab.tsx`, `html2canvas`, `date-fns`, `guidance-hook.sh`, `setup-mcp.sh`, `SpartaForwardModal.tsx`, `WindowTitleBar.tsx`?**
-  _High betweenness centrality (0.142) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `@capacitor/android` to `concurrently`, `electron`, `firebase`, `CartContext.tsx`, `validate-v3-config.sh`, `MessagesTab.tsx`, `SpartaDatePickerPopover.tsx`, `package.json`, `health-monitor.sh`, `ShopReceipt.tsx`, `files`, `AdminTeam.tsx`, `github-safe.js`, `dotenv`, `express`, `express`, `react-dom`, `github-setup.sh`, `qrcode.react`, `guidance-hooks.sh`, `post-commit`, `pre-commit`, `MaintenanceScreen.tsx`, `@types/http-proxy-middleware`, `update-v3-progress.sh`, `xlsx`, `v3-quick-status.sh`, `concurrently`, `WindowTitleBar.tsx`, `emoji-picker-react`, `AdminSchedule.tsx`, `qrcode`, `@capacitor/android`, `@supabase/supabase-js`, `three`, `@types/express`, `uuid`?**
-  _High betweenness centrality (0.136) - this node is a cross-community bridge._
-- **Why does `MagicTransfer()` connect `useAuth` to `DailyHub.tsx`, `AdminScanner.tsx`, `SpartaDatePickerPopover.tsx`?**
+- **Why does `db` connect `db` to `LandingPage.tsx`, `LearningService`, `App.tsx`, `ScheduleOverrideModal.tsx`, `useAuth`, `NewsModal.tsx`, `swarm-hooks.sh`, `CoachSection.tsx`, `UIComponents.tsx`, `AnnouncementModal.tsx`, `Dashboard.tsx`, `GroupChat.tsx`, `statusline.js`, `AdminMessages.tsx`, `UserRequests.tsx`, `AuthContext.tsx`, `learning-hooks.sh`, `swarm-comms.sh`, `SmartEnrollmentWizard.tsx`, `ProductDetails.tsx`, `dependencies`, `AchievementsList.tsx`, `adr-compliance.sh`, `swarm-monitor.sh`, `CartContext.tsx`, `router.js`, `CreateTrainingPlanModal.tsx`, `MembershipModal.tsx`, `NewsSection.tsx`, `validate-v3-config.sh`, `DailyHub.tsx`, `AdminScanner.tsx`, `ContactModal.tsx`, `TrialsTab.tsx`, `html2canvas`, `date-fns`, `NotificationsModal.tsx`, `guidance-hook.sh`, `setup-mcp.sh`, `usePresence.ts`?**
+  _High betweenness centrality (0.143) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `@capacitor/android` to `concurrently`, `electron`, `firebase`, `CartContext.tsx`, `MessagesTab.tsx`, `SpartaDatePickerPopover.tsx`, `package.json`, `health-monitor.sh`, `ShopReceipt.tsx`, `files`, `AdminTeam.tsx`, `github-safe.js`, `dotenv`, `express`, `express`, `react-dom`, `github-setup.sh`, `qrcode.react`, `guidance-hooks.sh`, `post-commit`, `pre-commit`, `MaintenanceScreen.tsx`, `@types/http-proxy-middleware`, `update-v3-progress.sh`, `xlsx`, `v3-quick-status.sh`, `concurrently`, `WindowTitleBar.tsx`, `emoji-picker-react`, `@capacitor/core`, `AdminSchedule.tsx`, `qrcode`, `@capacitor/android`, `@supabase/supabase-js`, `three`, `@types/express`, `uuid`?**
+  _High betweenness centrality (0.137) - this node is a cross-community bridge._
+- **Why does `MagicTransfer()` connect `useAuth` to `DailyHub.tsx`, `SpartaDatePickerPopover.tsx`?**
   _High betweenness centrality (0.124) - this node is a cross-community bridge._
 - **What connects `npm_config_update_notifier`, `CLAUDE_FLOW_MODE`, `CLAUDE_FLOW_HOOKS_ENABLED` to the rest of the system?**
-  _1065 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1057 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `LandingPage.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.0773109243697479 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08067226890756303 - nodes in this community are weakly interconnected._
+- **Should `LearningService` be split into smaller, more focused modules?**
+  _Cohesion score 0.125 - nodes in this community are weakly interconnected._
 - **Should `App.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.05 - nodes in this community are weakly interconnected._
-- **Should `compilerOptions` be split into smaller, more focused modules?**
-  _Cohesion score 0.05714285714285714 - nodes in this community are weakly interconnected._
