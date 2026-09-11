@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "components/LandingPage.tsx": {
-    "mtime": 1789117713.641018,
-    "ast_hash": "e77448f1115e1eff0b6e46098743478a",
+    "mtime": 1789119333.7140458,
+    "ast_hash": "754f3d0cf216c7c65011bf09c23bb527",
     "semantic_hash": ""
   },
   "components/LeaveReviewModal.tsx": {
@@ -6740,8 +6740,8 @@
     "semantic_hash": ""
   },
   "HANDOFF_NEXT_SESSION.md": {
-    "mtime": 1789071407.264727,
-    "ast_hash": "1e3110ddf5e59acc3508cecd5731be9e",
+    "mtime": 1789118995.7909462,
+    "ast_hash": "fd424ea6d2f458ca2d63c179289c3e5d",
     "semantic_hash": ""
   },
   "skill-observations/last-review-date.txt": {
@@ -8535,8 +8535,8 @@
     "semantic_hash": ""
   },
   "docs/session-handoff.md": {
-    "mtime": 1789071407.264727,
-    "ast_hash": "1e3110ddf5e59acc3508cecd5731be9e",
+    "mtime": 1789118995.7909462,
+    "ast_hash": "fd424ea6d2f458ca2d63c179289c3e5d",
     "semantic_hash": ""
   },
   "public/action-camera-mockup.html": {
