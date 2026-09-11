@@ -30,9 +30,7 @@ import {
     ExternalLink,
     ArrowUpRight,
     User,
-    LogIn,
-    LayoutDashboard,
-    Clock
+    LogIn
 } from 'lucide-react';
 
 import { Button, GlassCard, SectionHeader, Container } from './UIComponents';
@@ -1129,8 +1127,6 @@ const Footer = ({ onOpenTerms, onOpenContact }: { onOpenTerms: () => void, onOpe
     );
 };
 
-const STAFF_ROLES = ['admin', 'director', 'developer', 'dev', 'super', 'coach', 'trainer'];
-
 const LandingPage: React.FC = () => {
     const navigate = useNavigate();
     const [isTermsOpen, setIsTermsOpen] = useState(false);
@@ -1160,10 +1156,6 @@ const LandingPage: React.FC = () => {
 
     const { user, userProfile, requestedGroupIds } = useAuth();
     const { allLocations } = useCity();
-
-    const isStaff = userProfile?.role && STAFF_ROLES.includes(userProfile.role);
-    const hasRequestedTrial = requestedGroupIds && requestedGroupIds.length > 0;
-    const hasEnrolledKids = userProfile?.childrenIds && userProfile.childrenIds.length > 0;
 
     // Handle payment redirects from Robokassa
     useEffect(() => {
@@ -1291,7 +1283,7 @@ const LandingPage: React.FC = () => {
                 onOpenTrial={handleJoinClick}
                 onOpenAuth={() => setIsAuthOpen(true)}
             />
-            <main className="pb-24 md:pb-0">
+            <main className={user ? "pb-6 md:pb-0" : "pb-24 md:pb-0"}>
                 {/* Hero Section - Stadium Entrance */}
                 <div className="bg-hero-bg bg-fixed bg-cover bg-center relative">
                     <div className="absolute inset-0 bg-black/60 pointer-events-none z-0"></div>
@@ -1368,47 +1360,10 @@ const LandingPage: React.FC = () => {
             </main>
             <Footer onOpenTerms={() => setIsTermsOpen(true)} onOpenContact={() => setIsContactOpen(true)} />
 
-            {/* Mobile Sticky Action Bar */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0c0c10]/95 backdrop-blur-xl border-t border-white/10 p-3 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
-                <div className="flex items-center gap-2 max-w-md mx-auto">
-                    {user ? (
-                        isStaff ? (
-                            <button
-                                onClick={() => navigate(userProfile?.role === 'admin' ? '/admin' : '/dashboard')}
-                                className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-sparta-gold text-black font-russo text-xs uppercase tracking-wider font-bold shadow-[0_0_20px_rgba(245,158,11,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                            >
-                                <LayoutDashboard size={15} />
-                                <span>В панель управления</span>
-                                <ArrowRight size={15} />
-                            </button>
-                        ) : hasRequestedTrial ? (
-                            <button
-                                onClick={() => navigate('/dashboard?tab=requests')}
-                                className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 text-black font-russo text-xs uppercase tracking-wider font-bold shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                            >
-                                <Clock size={15} />
-                                <span>Заявка на рассмотрении</span>
-                                <ArrowRight size={15} />
-                            </button>
-                        ) : hasEnrolledKids ? (
-                            <button
-                                onClick={() => navigate('/dashboard?tab=family')}
-                                className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-sparta-gold text-black font-russo text-xs uppercase tracking-wider font-bold shadow-[0_0_20px_rgba(245,158,11,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                            >
-                                <Shield size={15} />
-                                <span>Кабинет родителя</span>
-                                <ArrowRight size={15} />
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleJoinClick}
-                                className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-sparta-gold text-black font-russo text-xs uppercase tracking-wider font-bold shadow-[0_0_20px_rgba(245,158,11,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                            >
-                                <span>Записаться на пробное (0 ₽)</span>
-                                <ArrowRight size={15} />
-                            </button>
-                        )
-                    ) : (
+            {/* Mobile Sticky Action Bar - Shown ONLY for Guests */}
+            {!user && (
+                <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0c0c10]/95 backdrop-blur-xl border-t border-white/10 p-3 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.85)]">
+                    <div className="flex items-center gap-2 max-w-md mx-auto">
                         <button
                             onClick={handleJoinClick}
                             className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-sparta-gold text-black font-russo text-xs uppercase tracking-wider font-bold shadow-[0_0_20px_rgba(245,158,11,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -1416,22 +1371,16 @@ const LandingPage: React.FC = () => {
                             <span>Записаться на пробное (0 ₽)</span>
                             <ArrowRight size={15} />
                         </button>
-                    )}
-                    <button
-                        onClick={() => {
-                            if (user) {
-                                navigate(isStaff && userProfile?.role === 'admin' ? '/admin' : '/dashboard');
-                            } else {
-                                setIsAuthOpen(true);
-                            }
-                        }}
-                        className="p-3 rounded-2xl bg-white/10 hover:bg-white/15 text-sparta-gold border border-white/10 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
-                        title={user ? "В личный кабинет" : "Войти в личный кабинет"}
-                    >
-                        <User size={18} />
-                    </button>
+                        <button
+                            onClick={() => setIsAuthOpen(true)}
+                            className="p-3 rounded-2xl bg-white/10 hover:bg-white/15 text-sparta-gold border border-white/10 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                            title="Войти в личный кабинет"
+                        >
+                            <User size={18} />
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
 
