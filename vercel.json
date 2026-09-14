@@ -41,6 +41,10 @@
             "destination": "/api/yclients-sync.js"
         },
         {
+            "source": "/api/notify-lead",
+            "destination": "/api/notify-lead.js"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }

@@ -44,6 +44,7 @@ import MembershipReceipt from './profile/MembershipReceipt';
 import { SPARTA_SCHEDULE, ScheduleSlot, declineChildName } from '../constants/spartaSchedule';
 import { BANK_DEEP_LINKS, verifyReceiptImage, ReceiptVerificationResult } from '../utils/receiptVerifier';
 import { SPARTA_LOCATIONS, CITIES } from '../constants/cities';
+import { notifyNewLead } from '../services/leadNotificationService';
 
 export const SPARTA_BANK_DETAILS = {
     recipientName: 'ИП ЛЕБЕДЕВА КСЕНИЯ АЛЕКСАНДРОВНА',
@@ -725,6 +726,21 @@ const MembershipModal: React.FC<MembershipModalProps> = ({
                 createdAt: Timestamp.now(),
                 date: Timestamp.now()
             }).catch(e => console.warn('Linked request create failed:', e));
+
+            // Мгновенное оповещение на сайт (CRM) и на почту директора bugrova.k@bk.ru и администратора larisa.p2000@mail.ru
+            notifyNewLead({
+                childName: childName ? childName.trim() : 'Спортсмен',
+                parentName: userProfile?.displayName || user.displayName || 'Родитель',
+                phone: parentPhone || '',
+                email: user.email || '',
+                programType: `Абонемент: ${program?.title || 'Новичок'} (${selectedDuration || 1} мес.)`,
+                location: planBranchName || 'ОЦ «Ньютон»',
+                groupTitle: activeSlot ? `${activeSlot.days} ${activeSlot.time}` : 'Основная группа',
+                schedule: activeSlot ? `${activeSlot.days} ${activeSlot.time}` : '',
+                comment: `Оплата: ${paymentMethod === 'cash' ? 'Наличными' : 'Безналичная/СБП'}, сумма: ${finalPrice} ₽. Тренер: ${activeSlot?.coachName || 'Не указан'}`,
+                requestId: orderRef.id,
+                source: 'Сайт SPARTA (Оформление абонемента)'
+            }).catch(e => console.warn('Notify lead error:', e));
 
             // Notify Coach & Administration
             await addDoc(collection(db, "notifications"), {

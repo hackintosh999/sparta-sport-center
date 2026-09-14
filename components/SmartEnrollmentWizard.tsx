@@ -31,6 +31,7 @@ import { safeLocalStorage } from '../utils/storage';
 import { checkTrialEligibility, TrialEligibilityResult, normalizePhone } from '../utils/trialEligibility';
 import confetti from 'canvas-confetti';
 import { BaseModal } from './ui/BaseModal';
+import { notifyNewLead } from '../services/leadNotificationService';
 
 interface SmartEnrollmentWizardProps {
     user: any;
@@ -351,7 +352,7 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
             await addDoc(collection(db, 'trials'), trialData);
 
             // Save in requests for Admin CRM
-            await addDoc(collection(db, 'requests'), {
+            const reqDocRef = await addDoc(collection(db, 'requests'), {
                 childName: fullChildName,
                 childAge: String(calculatedAge),
                 birthDate: birthDate.trim(),
@@ -369,6 +370,22 @@ const SmartEnrollmentWizard: React.FC<SmartEnrollmentWizardProps> = ({
                 groupTitle: `${selectedSlot.streamTitle} (${selectedSlot.days} ${selectedSlot.time})`,
                 createdAt: serverTimestamp(),
             });
+
+            // Мгновенное оповещение на сайт (CRM) и на почту директора bugrova.k@bk.ru и администратора larisa.p2000@mail.ru
+            notifyNewLead({
+                childName: fullChildName,
+                childAge: String(calculatedAge),
+                birthDate: birthDate.trim(),
+                parentName: fullParentName,
+                phone: parentPhone.trim(),
+                programType: 'Пробная тренировка',
+                location: selectedLocation.name,
+                groupTitle: `${selectedSlot.streamTitle} (${selectedSlot.days} ${selectedSlot.time})`,
+                schedule: `${selectedSlot.days} ${selectedSlot.time}`,
+                comment: parentComment.trim() || undefined,
+                requestId: reqDocRef.id,
+                source: 'Сайт SPARTA (Мастер записи)'
+            }).catch(e => console.warn('Notify lead error:', e));
 
             const currentRequestedIds = JSON.parse(safeLocalStorage.getItem('trial_requested_ids') || '[]');
             if (selectedSlot?.id && !currentRequestedIds.includes(selectedSlot.id)) {

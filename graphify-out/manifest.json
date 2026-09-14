@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "components/ContactModal.tsx": {
-    "mtime": 1789066315.1980555,
-    "ast_hash": "fc88f04984fbd2be8428edb722b43e88",
+    "mtime": 1789401165.3021333,
+    "ast_hash": "e4e5bf1ebff2297e61368ba8dd69f73a",
     "semantic_hash": ""
   },
   "components/Dashboard.tsx": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "components/LandingPage.tsx": {
-    "mtime": 1789119333.7140458,
-    "ast_hash": "754f3d0cf216c7c65011bf09c23bb527",
+    "mtime": 1789399350.4890718,
+    "ast_hash": "90ee917f20eec356e35a47849a201eca",
     "semantic_hash": ""
   },
   "components/LeaveReviewModal.tsx": {
@@ -335,8 +335,8 @@
     "semantic_hash": ""
   },
   "components/MembershipModal.tsx": {
-    "mtime": 1789066340.967921,
-    "ast_hash": "09ffe2a3ad87dc03db6c6dc409367d6f",
+    "mtime": 1789401130.3097844,
+    "ast_hash": "d479a63138f5ace118891682eab38f35",
     "semantic_hash": ""
   },
   "components/NewsModal.tsx": {
@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "components/ReviewsSection.tsx": {
-    "mtime": 1786365585.3355036,
-    "ast_hash": "3109b226d82a1a3de06105176f1ed508",
+    "mtime": 1789399282.6788607,
+    "ast_hash": "c201338c1f6d783cb81eb8ead9a6a5ca",
     "semantic_hash": ""
   },
   "components/SEO.tsx": {
@@ -400,8 +400,8 @@
     "semantic_hash": "710a85fc0487496669a32d0f1300ce39"
   },
   "components/SmartEnrollmentWizard.tsx": {
-    "mtime": 1789118016.0174716,
-    "ast_hash": "535692928537a46ddd222c3118d418e2",
+    "mtime": 1789401086.7715292,
+    "ast_hash": "ebadccaa0960e7ecbe344eab14caf893",
     "semantic_hash": ""
   },
   "components/SpartaVideoPlayer.tsx": {
@@ -425,8 +425,8 @@
     "semantic_hash": ""
   },
   "components/TrialModal.tsx": {
-    "mtime": 1789117811.5566247,
-    "ast_hash": "bc3e2f729c1f4e690e55af45b87ba34e",
+    "mtime": 1789401035.3095326,
+    "ast_hash": "03dde59b961c4b14a0d2c043c0bf112b",
     "semantic_hash": ""
   },
   "components/UIComponents.tsx": {
@@ -450,8 +450,8 @@
     "semantic_hash": "b38f07bae12d793ddceb25b17a7a418a"
   },
   "components/admin/AdminLayout.tsx": {
-    "mtime": 1789070653.9468813,
-    "ast_hash": "c8328bb05332a4ed8ac2c958ba24ea47",
+    "mtime": 1789401229.3593898,
+    "ast_hash": "87673db1ef97acd26947a9208c1a70b2",
     "semantic_hash": ""
   },
   "components/admin/AdminRoute.tsx": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "components/profile/CoachSection.tsx": {
-    "mtime": 1789071272.8402698,
-    "ast_hash": "89e68aa35f72a304f33963221b29545a",
+    "mtime": 1789403063.9126525,
+    "ast_hash": "0398657da583ca6d59dbda2f935a433c",
     "semantic_hash": ""
   },
   "components/profile/CreatePollModal.tsx": {
@@ -555,8 +555,8 @@
     "semantic_hash": ""
   },
   "components/profile/ParentDashboard.tsx": {
-    "mtime": 1789065155.4911308,
-    "ast_hash": "50cacbc2945d7b7771d6b1a729de1f57",
+    "mtime": 1789399124.6597857,
+    "ast_hash": "73297305628a8ebf1e5f92d51161b8fd",
     "semantic_hash": ""
   },
   "components/profile/PollMessage.tsx": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "components/profile/coach/DailyHub.tsx": {
-    "mtime": 1788210525.2696495,
-    "ast_hash": "99ee0af446510d7cb1c897964c762d68",
+    "mtime": 1789403541.5247865,
+    "ast_hash": "e9cb865064dd328e36a4e1e820d5f01b",
     "semantic_hash": ""
   },
   "components/profile/coach/MessagesTab.tsx": {
@@ -680,8 +680,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1788371206.8255324,
-    "ast_hash": "bc09e7f4819697ff4b2ef28cf9b8b405",
+    "mtime": 1789400888.0777051,
+    "ast_hash": "715193f5e1dac7cfaa3ed58d0f826cdd",
     "semantic_hash": ""
   },
   "pages/Broadcasts.tsx": {
@@ -835,8 +835,8 @@
     "semantic_hash": "92922baf0b9cb92c38ed3b10b76799da"
   },
   "server.js": {
-    "mtime": 1788726723.9621763,
-    "ast_hash": "5366e7159799a062b54cb09d834eeac6",
+    "mtime": 1789403154.292116,
+    "ast_hash": "ac04c4531cfcd3ac6282f61cb63be9e9",
     "semantic_hash": ""
   },
   "services/aiActionResolver.ts": {
@@ -930,8 +930,8 @@
     "semantic_hash": ""
   },
   "vercel.json": {
-    "mtime": 1786699691.7623215,
-    "ast_hash": "9e8000a093758e8a9d470a862796099a",
+    "mtime": 1789400936.2160902,
+    "ast_hash": "b22257dec94f3919921bccde96c6a7b5",
     "semantic_hash": ""
   },
   "vite.config.ts": {
@@ -6740,8 +6740,8 @@
     "semantic_hash": ""
   },
   "HANDOFF_NEXT_SESSION.md": {
-    "mtime": 1789118995.7909462,
-    "ast_hash": "fd424ea6d2f458ca2d63c179289c3e5d",
+    "mtime": 1789406542.7968435,
+    "ast_hash": "15e5fb0366ffe7fbc275fbf5c7a69405",
     "semantic_hash": ""
   },
   "skill-observations/last-review-date.txt": {
@@ -8225,8 +8225,8 @@
     "semantic_hash": ""
   },
   "components/SubscriptionsShowcase.tsx": {
-    "mtime": 1788121928.1193373,
-    "ast_hash": "271f35884857cfa8547b1f0589d5d1e0",
+    "mtime": 1789399171.277289,
+    "ast_hash": "7835cb8461ac4a9ab98212cdc3a3a763",
     "semantic_hash": ""
   },
   "components/UIComponents.figma.tsx": {
@@ -8535,8 +8535,8 @@
     "semantic_hash": ""
   },
   "docs/session-handoff.md": {
-    "mtime": 1789118995.7909462,
-    "ast_hash": "fd424ea6d2f458ca2d63c179289c3e5d",
+    "mtime": 1789406461.8673098,
+    "ast_hash": "15e5fb0366ffe7fbc275fbf5c7a69405",
     "semantic_hash": ""
   },
   "public/action-camera-mockup.html": {
@@ -8942,6 +8942,556 @@
   "utils/trialEligibility.ts": {
     "mtime": 1789117592.993758,
     "ast_hash": "64f114ca69b8ac7617a3b31caebe6c3a",
+    "semantic_hash": ""
+  },
+  "analyze_image.py": {
+    "mtime": 1789260969.4262495,
+    "ast_hash": "c1c39cd9579e83003750b9dac60cec0a",
+    "semantic_hash": ""
+  },
+  "ascii_logo.py": {
+    "mtime": 1789261321.0178528,
+    "ast_hash": "a3840c7c8d93fd16bfe0d10a1f8cd513",
+    "semantic_hash": ""
+  },
+  "check_all_uploads.py": {
+    "mtime": 1789264808.5589137,
+    "ast_hash": "534f85c1ed06c5881802bab93ab4fcdb",
+    "semantic_hash": ""
+  },
+  "check_ascii.py": {
+    "mtime": 1789264767.6078603,
+    "ast_hash": "f920f5ef87c476a36808b656cdd5ed98",
+    "semantic_hash": ""
+  },
+  "check_colors.py": {
+    "mtime": 1789261048.0906787,
+    "ast_hash": "a6090f8e7b2206fd42e4a1f01bde9e52",
+    "semantic_hash": ""
+  },
+  "check_lion_front.py": {
+    "mtime": 1789264798.1219835,
+    "ast_hash": "0a23a7d5a05491922d70fda6a058c9ee",
+    "semantic_hash": ""
+  },
+  "check_prep.py": {
+    "mtime": 1789264908.2771988,
+    "ast_hash": "a3277c5b30902958de3228923845d034",
+    "semantic_hash": ""
+  },
+  "check_shop_uniform.py": {
+    "mtime": 1789264845.3439066,
+    "ast_hash": "831efbb3cb772fe445e2bf2f6d3f7234",
+    "semantic_hash": ""
+  },
+  "check_uniforms.py": {
+    "mtime": 1789264748.9469075,
+    "ast_hash": "f288399e75d619088e5d5faee5569ae7",
+    "semantic_hash": ""
+  },
+  "combine_masks.py": {
+    "mtime": 1789261345.93184,
+    "ast_hash": "04641be079b96b8f2ee51bf9669ba582",
+    "semantic_hash": ""
+  },
+  "components/FestivalBanner.tsx": {
+    "mtime": 1789399036.0470064,
+    "ast_hash": "4c5bf8a338bb12c700a62ebdb5d56576",
+    "semantic_hash": ""
+  },
+  "components/ParentMemoModal.tsx": {
+    "mtime": 1789399027.6616776,
+    "ast_hash": "9b0675e7b8e0adef5420404f3c729a94",
+    "semantic_hash": ""
+  },
+  "crop_ribbon.py": {
+    "mtime": 1789265582.6561334,
+    "ast_hash": "94c8ff6150406e2651e1f3a6eb2a9ad2",
+    "semantic_hash": ""
+  },
+  "extract_high_res.py": {
+    "mtime": 1789261740.1281116,
+    "ast_hash": "851d1389cecf3141e988000e0e7eec67",
+    "semantic_hash": ""
+  },
+  "fill_all_holes.py": {
+    "mtime": 1789263389.9971063,
+    "ast_hash": "f0fda59e9af4cf6f8838c9e5194301c2",
+    "semantic_hash": ""
+  },
+  "fill_eyes.py": {
+    "mtime": 1789263548.5998716,
+    "ast_hash": "0e9acb61e963353876d9c26144d233b3",
+    "semantic_hash": ""
+  },
+  "find_center.py": {
+    "mtime": 1789263279.7206206,
+    "ast_hash": "ae53bc92eac7e1e3cf1fa1379cd9ab15",
+    "semantic_hash": ""
+  },
+  "golden_eyes.py": {
+    "mtime": 1789263778.564599,
+    "ast_hash": "d1d78a031e407c79b43771a486a6d089",
+    "semantic_hash": ""
+  },
+  "make_predator_eyes.py": {
+    "mtime": 1789263938.366823,
+    "ast_hash": "a1b68ee6f661674fc33fae642fbf5f82",
+    "semantic_hash": ""
+  },
+  "make_thumbs.py": {
+    "mtime": 1789264784.6467404,
+    "ast_hash": "3e0ea5d8f073e5aa0d999158e25d66c5",
+    "semantic_hash": ""
+  },
+  "master_reset.py": {
+    "mtime": 1789263792.215593,
+    "ast_hash": "cae1f6c13c99e17b458ce46202a5ebf9",
+    "semantic_hash": ""
+  },
+  "mirror_eyes.py": {
+    "mtime": 1789263212.57228,
+    "ast_hash": "27e87192437196927db7a85a0d8ddb4e",
+    "semantic_hash": ""
+  },
+  "mirror_logo.py": {
+    "mtime": 1789263192.4196317,
+    "ast_hash": "1781bbcab4ee3c4c28ee64b71a1ee7c9",
+    "semantic_hash": ""
+  },
+  "morph_smooth.py": {
+    "mtime": 1789261549.2427819,
+    "ast_hash": "196e0478167202115f0b94b31975dade",
+    "semantic_hash": ""
+  },
+  "preview_svg.mjs": {
+    "mtime": 1789261036.2748387,
+    "ast_hash": "210f146bdb172d7f55c5be3f46aafc7b",
+    "semantic_hash": ""
+  },
+  "preview_svg.py": {
+    "mtime": 1789261026.892707,
+    "ast_hash": "998332a42d8c470db67df8befd16c588",
+    "semantic_hash": ""
+  },
+  "remove_bg.py": {
+    "mtime": 1789262766.874264,
+    "ast_hash": "f4d97e78dd92c53cb919535e2da61e7f",
+    "semantic_hash": ""
+  },
+  "remove_bg_fixed.py": {
+    "mtime": 1789263058.8279765,
+    "ast_hash": "d0b18d20b4c82a4da8b0b7242ff77eec",
+    "semantic_hash": ""
+  },
+  "remove_bg_grabcut.py": {
+    "mtime": 1789262807.3541763,
+    "ast_hash": "12836db1a52c7d5cfcab75b2706c85ec",
+    "semantic_hash": ""
+  },
+  "remove_bg_simple.py": {
+    "mtime": 1789262840.82441,
+    "ast_hash": "ed886c105d97cf1dab10d5a630d8bef5",
+    "semantic_hash": ""
+  },
+  "render_logo_check.mjs": {
+    "mtime": 1789265559.3360195,
+    "ast_hash": "df1b42ef8b0296f0c366938886003054",
+    "semantic_hash": ""
+  },
+  "render_pro_preview.mjs": {
+    "mtime": 1789265626.8285265,
+    "ast_hash": "22fae7604a9c463e579c9bc0d1408dce",
+    "semantic_hash": ""
+  },
+  "render_scratch_check.mjs": {
+    "mtime": 1789265570.4159296,
+    "ast_hash": "42bf05f6f0eb8ee8c50e8404113d21f2",
+    "semantic_hash": ""
+  },
+  "restore_original_eyes.py": {
+    "mtime": 1789264095.3245668,
+    "ast_hash": "488958b05d066664aff5ea0aabf24bd3",
+    "semantic_hash": ""
+  },
+  "sample_gold.py": {
+    "mtime": 1789263918.2967417,
+    "ast_hash": "5bb2a9cea2c85d44b3316015225609b4",
+    "semantic_hash": ""
+  },
+  "scripts/assemble_pro_vector_uniform.mjs": {
+    "mtime": 1789262911.1204298,
+    "ast_hash": "0809299f8cf5d6d522dbab4e7d2eb2a5",
+    "semantic_hash": ""
+  },
+  "scripts/build_brand_board.py": {
+    "mtime": 1789123522.5566435,
+    "ast_hash": "909fbfb481c1a6328d44b3f0c2a80717",
+    "semantic_hash": ""
+  },
+  "scripts/build_crests_from_scratch.mjs": {
+    "mtime": 1789260621.7439137,
+    "ast_hash": "dc650ee6f3f213a23abe989adaf1c83c",
+    "semantic_hash": ""
+  },
+  "scripts/build_gold_crest_vector_pro.mjs": {
+    "mtime": 1789265619.0381858,
+    "ast_hash": "290b92b418147f8a2e405e9521c955b4",
+    "semantic_hash": ""
+  },
+  "scripts/build_logos.py": {
+    "mtime": 1789123282.448974,
+    "ast_hash": "499c11163578b00eb26074401b186c31",
+    "semantic_hash": ""
+  },
+  "scripts/build_perfect_ref.py": {
+    "mtime": 1789125183.7374165,
+    "ast_hash": "d4338c5600d0e1be47ccbdd38624fcd3",
+    "semantic_hash": ""
+  },
+  "scripts/build_perfect_ref2.py": {
+    "mtime": 1789125256.3410041,
+    "ast_hash": "176586cad6869864aa461cb45aba6e8f",
+    "semantic_hash": ""
+  },
+  "scripts/build_perfect_ref3.py": {
+    "mtime": 1789125321.016491,
+    "ast_hash": "9b525223092c343155e40b8571577aa0",
+    "semantic_hash": ""
+  },
+  "scripts/build_pro_max_logo.py": {
+    "mtime": 1789124486.7558875,
+    "ast_hash": "ced2c68803464ce6dda4c0f6048aa75e",
+    "semantic_hash": ""
+  },
+  "scripts/build_pro_vector_components.mjs": {
+    "mtime": 1789259960.2634637,
+    "ast_hash": "8506f97da1e0e1514936f474ad294b9f",
+    "semantic_hash": ""
+  },
+  "scripts/build_reference_logo.py": {
+    "mtime": 1789125102.7889504,
+    "ast_hash": "16300a1dff21ef2f9555b9ec2016ca95",
+    "semantic_hash": ""
+  },
+  "scripts/build_single_logo.py": {
+    "mtime": 1789123832.8161943,
+    "ast_hash": "4ba1f43929c6ebd3c3025846f7b0630d",
+    "semantic_hash": ""
+  },
+  "scripts/build_sparta_vector_kit.py": {
+    "mtime": 1789258861.101904,
+    "ast_hash": "cc818a3a1c366a772ead8718f33bc3fa",
+    "semantic_hash": ""
+  },
+  "scripts/compile_complete_vector_kit.mjs": {
+    "mtime": 1789265317.916886,
+    "ast_hash": "4c045981a44189dc0f6b234288466458",
+    "semantic_hash": ""
+  },
+  "scripts/fix_showcase.py": {
+    "mtime": 1789124562.0108564,
+    "ast_hash": "6eaedb65e021168225da58bb965df2ae",
+    "semantic_hash": ""
+  },
+  "scripts/generate_1to1_production_pdf.mjs": {
+    "mtime": 1789259481.331329,
+    "ast_hash": "47f22d624d80718077ef5b4b4880a501",
+    "semantic_hash": ""
+  },
+  "scripts/generate_fullsize_print_pdf.mjs": {
+    "mtime": 1789259688.2881205,
+    "ast_hash": "58dd1434bb4286c4294f45421fab3071",
+    "semantic_hash": ""
+  },
+  "scripts/generate_sparta_kit_pdf.mjs": {
+    "mtime": 1789259282.2295134,
+    "ast_hash": "c8e9aec98291da2200237f0c268d4dc5",
+    "semantic_hash": ""
+  },
+  "scripts/rebuild_clean_vector_kit.py": {
+    "mtime": 1789259264.3272352,
+    "ast_hash": "c4c4c5b4009248dc611bde138282e8b5",
+    "semantic_hash": ""
+  },
+  "scripts/rebuild_flawless_vector_kit.mjs": {
+    "mtime": 1789265641.5561016,
+    "ast_hash": "9a162559c6cbdea8e1769c76163b024d",
+    "semantic_hash": ""
+  },
+  "scripts/rebuild_master_svg.mjs": {
+    "mtime": 1789261122.809614,
+    "ast_hash": "3ab74dd7c2ae0fe27dad6cb8f0e3fefc",
+    "semantic_hash": ""
+  },
+  "scripts/reconstruct_exact_authentic_logos.py": {
+    "mtime": 1789260438.252264,
+    "ast_hash": "2d7f862fb5bc5e15fb6d3e4b2000e343",
+    "semantic_hash": ""
+  },
+  "scripts/test_1to1_prep.py": {
+    "mtime": 1789259463.1396153,
+    "ast_hash": "0078feb3cd55ceebf219b121d6ca0645",
+    "semantic_hash": ""
+  },
+  "test_all_thresholds.py": {
+    "mtime": 1789261285.3851802,
+    "ast_hash": "2cb70645a8c35277c8b4a5dbef96962e",
+    "semantic_hash": ""
+  },
+  "test_thresholds.py": {
+    "mtime": 1789261236.4441347,
+    "ast_hash": "f40a83eabbb383193323330be329b305",
+    "semantic_hash": ""
+  },
+  "test_vtracer.py": {
+    "mtime": 1789264436.300941,
+    "ast_hash": "58e7a0a233860b54c70021a029b8937e",
+    "semantic_hash": ""
+  },
+  "test_vtracer_default.py": {
+    "mtime": 1789265286.1368902,
+    "ast_hash": "563b6faa733e5ab93288fa3401bd4a63",
+    "semantic_hash": ""
+  },
+  "trace_high_res.py": {
+    "mtime": 1789261675.7353382,
+    "ast_hash": "b69b65d1871158b817d014f44c2a2d77",
+    "semantic_hash": ""
+  },
+  "trace_high_res_binary.py": {
+    "mtime": 1789261708.3647032,
+    "ast_hash": "ebd96ee5688d66fb73e1d85e933aaf0d",
+    "semantic_hash": ""
+  },
+  "upscale_uniforms.py": {
+    "mtime": 1789264922.7247734,
+    "ast_hash": "011db43d54973f72e7fc276de4ae0ce2",
+    "semantic_hash": ""
+  },
+  "vectorize.py": {
+    "mtime": 1789260983.113172,
+    "ast_hash": "d4bce1a6a0f56462e3365cd9d28288ba",
+    "semantic_hash": ""
+  },
+  "vectorize_binary.py": {
+    "mtime": 1789261065.9882307,
+    "ast_hash": "e874c08ffe64a1427d614c216e220ec2",
+    "semantic_hash": ""
+  },
+  "vectorize_color.py": {
+    "mtime": 1789261254.0561469,
+    "ast_hash": "dc3d71273095df65b45b36c1a20b53b6",
+    "semantic_hash": ""
+  },
+  "vectorize_color_simple.py": {
+    "mtime": 1789261568.2748811,
+    "ast_hash": "e4cd38f954015c9d3c2fddb80faf40f3",
+    "semantic_hash": ""
+  },
+  "vectorize_new_logo.py": {
+    "mtime": 1789261010.1329198,
+    "ast_hash": "a680c909ba24a8d9bf33f06e17ffbec6",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/sparta_1to1_technical_blueprint.html": {
+    "mtime": 1789259484.9036646,
+    "ast_hash": "f5ef719a58b0c0762a714ef4280e4478",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/sparta_uniform_specification.html": {
+    "mtime": 1789260034.698587,
+    "ast_hash": "ac63ca29964e12c01d8c1ae1ea35e64a",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/authentic_1to1/02_NEW_GOLD_CREST.png": {
+    "mtime": 1789264102.7153006,
+    "ast_hash": "04e179fd2300e56e1cf39ce49764189b",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/authentic_1to1/BATYR_BEAR_AUTHENTIC.svg": {
+    "mtime": 1789260444.6843877,
+    "ast_hash": "42b8fcf9dd288aa010f7d0f5e81e8bb0",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/authentic_1to1/SPARTA_WHITE_LION_AUTHENTIC.svg": {
+    "mtime": 1789261747.1186929,
+    "ast_hash": "788cd548bc2214ae6b299e4a82b20f31",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/batyr_bear_crest.svg": {
+    "mtime": 1789260444.687389,
+    "ast_hash": "42b8fcf9dd288aa010f7d0f5e81e8bb0",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/exact_vectors/batyr_bear_exact.svg": {
+    "mtime": 1789260350.127455,
+    "ast_hash": "b99dd6f94763409103a8feda3a7c13cf",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/exact_vectors/batyr_bear_shorts_exact.svg": {
+    "mtime": 1789260357.0149126,
+    "ast_hash": "9220f7f2de07c8a02ef52a6e72f7b20d",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/exact_vectors/sparta_white_lion_exact.svg": {
+    "mtime": 1789260350.0080783,
+    "ast_hash": "0bc52d15c98e54e05d717e5134b23e78",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/from_scratch/01_SPARTA_WHITE_LION_CREST.svg": {
+    "mtime": 1789265530.3437085,
+    "ast_hash": "8a2710a3860cfc69d02f31a7bb682761",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/from_scratch/02_BATYR_BEAR_CREST.svg": {
+    "mtime": 1789265530.346932,
+    "ast_hash": "48608450b5f811801d78333cd9be7fbc",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/jersey_back.svg": {
+    "mtime": 1789259270.184684,
+    "ast_hash": "f5f4f3e3b2f962ac720e8119ef91b8c7",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/jersey_front.svg": {
+    "mtime": 1789258870.1129594,
+    "ast_hash": "0439917cde4fdeaff941bbb5698baae7",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/lion_back_raw.png": {
+    "mtime": 1789258775.3313751,
+    "ast_hash": "46f7266af8d35154a87e889f711f9612",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/lion_front_raw.png": {
+    "mtime": 1789258775.3266788,
+    "ast_hash": "13aa6f8fdb31b056e5d816f5d44bffc4",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/nameplate_lebedev.svg": {
+    "mtime": 1789260029.605385,
+    "ast_hash": "1b889432943db54eab607d5b62a56a3b",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/number_22_varsity.svg": {
+    "mtime": 1789260029.6043522,
+    "ast_hash": "7c55344085d3c0879985ebd03cbbc82d",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/numbers_font_0_9.svg": {
+    "mtime": 1789258871.7051327,
+    "ast_hash": "b524b82c59620434eb07035bd772dc42",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/pro_vectors/batyr_bear_crest_vector.svg": {
+    "mtime": 1789259965.9947536,
+    "ast_hash": "9969b268f475c1c4b4ce1893cb024578",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/pro_vectors/nameplate_lebedev.svg": {
+    "mtime": 1789259965.9952736,
+    "ast_hash": "1b889432943db54eab607d5b62a56a3b",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/pro_vectors/number_22_varsity.svg": {
+    "mtime": 1789259965.9952736,
+    "ast_hash": "7c55344085d3c0879985ebd03cbbc82d",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/pro_vectors/sparta_gold_crest_vector_pro.svg": {
+    "mtime": 1789265623.1435146,
+    "ast_hash": "cd34574929e912fa518b4f8987ecd2e2",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/pro_vectors/sparta_lion_mascot_pro.svg": {
+    "mtime": 1789259978.3721588,
+    "ast_hash": "8e4b3e0e292c3a1d9a5960d325cbed96",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/pro_vectors/sparta_shield_crest_vector.svg": {
+    "mtime": 1789259965.9947536,
+    "ast_hash": "c55b5060c191e8f07d3d131adeb3ce05",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/shorts_back.svg": {
+    "mtime": 1789258871.602838,
+    "ast_hash": "523f1a4a6f9669acafcf76a04d9452a5",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/shorts_front.svg": {
+    "mtime": 1789258871.4718828,
+    "ast_hash": "296d08885bc1eaa9cdbbc0c2fe410325",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/sparta_kit_mockup_clean.svg": {
+    "mtime": 1789259269.161544,
+    "ast_hash": "05a910bb8d78566844807748e951b720",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/sparta_kit_mockup_vector.svg": {
+    "mtime": 1789259269.1645465,
+    "ast_hash": "05a910bb8d78566844807748e951b720",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/sparta_lion.svg": {
+    "mtime": 1789258800.481856,
+    "ast_hash": "1e71da33b12b77fd2edc2f09607f0825",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/sparta_lion_head.svg": {
+    "mtime": 1789258868.760469,
+    "ast_hash": "9f999683dcc253dfdf50d4e1a40d6551",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/sparta_shield_crest.svg": {
+    "mtime": 1789261747.1186929,
+    "ast_hash": "788cd548bc2214ae6b299e4a82b20f31",
+    "semantic_hash": ""
+  },
+  "public/vector_kit/sparta_uniform_clean_preview.png": {
+    "mtime": 1789259270.230697,
+    "ast_hash": "041e6fef12294ebf831cc6ac93e3e0a9",
+    "semantic_hash": ""
+  },
+  "temp_rgb.png": {
+    "mtime": 1789260973.2484677,
+    "ast_hash": "0079d7b6b624ac72784ba39edc55721e",
+    "semantic_hash": ""
+  },
+  "api/notify-lead.js": {
+    "mtime": 1789403088.647066,
+    "ast_hash": "373cf70fe83c3ea94f35736918ab4090",
+    "semantic_hash": ""
+  },
+  "services/leadNotificationService.ts": {
+    "mtime": 1789400980.7548008,
+    "ast_hash": "50b0c92f55e9d4a0265e9684cf328f04",
+    "semantic_hash": ""
+  },
+  "utils/audioAlert.ts": {
+    "mtime": 1789400988.087477,
+    "ast_hash": "5ceef787720d63e7dbb7b03658bbd606",
+    "semantic_hash": ""
+  },
+  "components/profile/coach/CoachGuideModal.tsx": {
+    "mtime": 1789402235.9658628,
+    "ast_hash": "ba8c736a972c941f019b7b13737c49a5",
+    "semantic_hash": ""
+  },
+  "public/coach-guide/coach-review-screen.png": {
+    "mtime": 1789400040.9472568,
+    "ast_hash": "4430b0bae2bf7ef7e0789eef23a59ee7",
+    "semantic_hash": ""
+  },
+  "public/coach-guide/coach-trials-screen.png": {
+    "mtime": 1789400040.9462566,
+    "ast_hash": "ace72bddc6af292d806adcecf8d4809c",
+    "semantic_hash": ""
+  },
+  "public/sparta-coach-manual.html": {
+    "mtime": 1789404074.8069267,
+    "ast_hash": "efd2be917788bafe5f38b01d9f66ac4f",
     "semantic_hash": ""
   }
 }

@@ -54,6 +54,7 @@ import {
     Plus,
     Mail,
     HelpCircle,
+    Download,
     Pencil,
     Edit2,
     Copy,
@@ -121,6 +122,7 @@ import StatsLab from './coach/StatsLab';
 import StudentProfileModal from './coach/StudentProfileModal';
 import { AssignmentModal } from './coach/AssignmentModal';
 import confetti from 'canvas-confetti';
+import CoachGuideModal from './coach/CoachGuideModal';
 import { useCoachAnalytics } from '../../hooks/useCoachAnalytics';
 import { getSmartSubscriptionStatus, checkProfileCompleteness } from '../../utils/subscriptionStatusEngine';
 
@@ -2702,18 +2704,31 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
     return (
         <div className="space-y-8 dashboard-theme">
             {/* Top Bar with Guide */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-russo text-white uppercase tracking-tight">Рабочая Панель</h2>
-                    <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mt-1">Система 2.0 • Система управления Sparta</p>
+                    <h2 className="text-2xl sm:text-3xl font-russo text-white uppercase tracking-tight">Кабинет тренера</h2>
+                    <p className="text-xs text-white/50 font-bold mt-1">Отметка посещаемости на поле, приём новичков и связь с родителями</p>
                 </div>
-                <button
-                    onClick={() => setIsGuideOpen(true)}
-                    className="group flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-sparta-gold hover:text-black transition-all"
-                >
-                    <HelpCircle size={18} className="text-sparta-gold group-hover:text-black" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Инструкция</span>
-                </button>
+                <div className="flex items-center gap-2.5">
+                    <button
+                        onClick={() => setIsGuideOpen(true)}
+                        className="group flex items-center gap-2.5 px-4 sm:px-5 py-2.5 sm:py-3 bg-sparta-gold/15 border border-sparta-gold/30 rounded-2xl hover:bg-sparta-gold hover:text-black transition-all cursor-pointer shadow-lg shadow-sparta-gold/10"
+                    >
+                        <BookOpen size={18} className="text-sparta-gold group-hover:text-black shrink-0" />
+                        <span className="text-xs font-russo uppercase tracking-wider text-sparta-gold group-hover:text-black font-black">
+                            📖 Шпаргалка тренера
+                        </span>
+                    </button>
+                    <a
+                        href="/sparta-coach-manual.pdf"
+                        download="sparta-coach-manual.pdf"
+                        className="hidden sm:flex items-center gap-2 px-4 py-2.5 sm:py-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/15 text-white/80 hover:text-white transition-all cursor-pointer text-xs font-russo uppercase tracking-wider"
+                        title="Скачать памятку для печати в PDF"
+                    >
+                        <Download size={16} className="text-sparta-gold" />
+                        <span>Памятка PDF</span>
+                    </a>
+                </div>
             </div>
 
             {/* Top Stats Overview (Clean numbers) */}
@@ -2777,7 +2792,7 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                             {todayWorkouts.length}
                         </div>
                         <div className="text-xs font-bold text-white/30 uppercase">
-                            {todayWorkouts.length === 1 ? 'сессия' : 'сессий'}
+                            {todayWorkouts.length === 1 ? 'тренировка' : (todayWorkouts.length >= 2 && todayWorkouts.length <= 4 ? 'тренировки' : 'тренировок')}
                         </div>
                     </div>
                 </motion.div>
@@ -2795,16 +2810,16 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                             </div>
                             <div>
                                 <span className="text-[10px] font-black uppercase tracking-widest text-white/40 block">
-                                    Новых заявок
+                                    Новенькие на пробном
                                 </span>
                                 <span className="text-[11px] font-bold text-white/60">
-                                    {pendingTrialsCount > 0 ? 'Требуют внимания' : 'Все обработаны'}
+                                    {pendingTrialsCount > 0 ? 'Ждут звонка и на поле' : 'Все обработаны'}
                                 </span>
                             </div>
                         </div>
                         {pendingTrialsCount > 0 ? (
                             <div className="px-2.5 py-1 bg-emerald-500 text-black rounded-lg text-[9px] font-black uppercase tracking-wider animate-pulse">
-                                Новые
+                                Новенькие
                             </div>
                         ) : (
                             <div className="px-2.5 py-1 bg-white/5 text-white/40 rounded-lg text-[9px] font-black uppercase tracking-wider">
@@ -2816,7 +2831,7 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                         <div className="text-4xl sm:text-5xl font-russo text-white tracking-tight">
                             {pendingTrialsCount}
                         </div>
-                        <div className="text-xs font-bold text-white/30 uppercase">заявок</div>
+                        <div className="text-xs font-bold text-white/30 uppercase">детей</div>
                     </div>
                 </motion.div>
             </div>
@@ -2826,11 +2841,11 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                     ? 'bg-white/80 border-black/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.05)]'
                     : 'bg-[#111]/80 border-white/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
                 {[
-                    { id: 'dashboard', label: '⚽ Главная / Тренировка', shortLabel: 'Главная', icon: LayoutDashboard },
+                    { id: 'dashboard', label: '⚽ Сегодня на поле', shortLabel: 'На поле', icon: LayoutDashboard },
+                    { id: 'trials', label: '📥 Новенькие', shortLabel: 'Новенькие', icon: UserPlus, badge: trialRequests.length },
                     { id: 'journal', label: '👥 Мои группы и дети', shortLabel: 'Группы', icon: Users },
-                    { id: 'review', label: '📝 Проверка заданий', shortLabel: 'Проверка', icon: CheckSquare, badge: pendingSubmissionsCount },
-                    { id: 'trials', label: '📥 Новички и заявки', shortLabel: 'Заявки', icon: UserPlus, badge: trialRequests.length },
-                    { id: 'materials', label: '📋 Упражнения и планы', shortLabel: 'Материалы', icon: BookOpen }
+                    { id: 'review', label: '🏆 Домашка ребят', shortLabel: 'Домашка', icon: CheckSquare, badge: pendingSubmissionsCount },
+                    { id: 'materials', label: '📋 База упражнений', shortLabel: 'Планы', icon: BookOpen }
                 ].map((tab) => {
                     const isActive = mainTab === tab.id || (tab.id === 'materials' && (mainTab === 'exercises' || mainTab === 'programs' || mainTab === 'calendar'));
                     return (
@@ -4633,51 +4648,8 @@ const CoachSection: React.FC<CoachSectionProps> = ({ userProfile, initialSubTab 
                 onContactParent={handleContactParent}
                 onTogglePayment={handleTogglePayment}
             />
-            <AnimatePresence>
-                {isGuideOpen && (
-                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl">
-                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-[#111] border border-white/10 rounded-[3rem] p-12 max-w-2xl w-full shadow-2xl relative overflow-hidden">
-                            <div className="absolute -top-20 -right-20 w-64 h-64 bg-sparta-gold/5 rounded-full blur-3xl" />
-                            <button onClick={() => setIsGuideOpen(false)} className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors"><X size={24} /></button>
-
-                            <h3 className="text-3xl font-russo text-white uppercase mb-8">Как пользоваться панелью</h3>
-
-                            <div className="space-y-8 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
-                                <div className="flex gap-6">
-                                    <div className="w-12 h-12 rounded-2xl bg-sparta-gold/10 text-sparta-gold flex items-center justify-center shrink-0"><Zap size={24} /></div>
-                                    <div>
-                                        <h4 className="text-sm font-bold text-white uppercase mb-2">Ваши приоритеты</h4>
-                                        <p className="text-[11px] text-white/40 leading-relaxed uppercase font-black tracking-widest">В самом верху вы видите «Приоритеты на сегодня». Система сама находит данные, новые заявки и сообщения от родителей. Начните работу с этого блока.</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-6">
-                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0"><Users size={24} /></div>
-                                    <div>
-                                        <h4 className="text-sm font-bold text-white uppercase mb-2">Управление составом</h4>
-                                        <p className="text-[11px] text-white/40 leading-relaxed uppercase font-black tracking-widest">Инструкции над списком учеников. Наведите на иконку (i) рядом с фильтром, чтобы понять, какие именно группы туда попадают.</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-6">
-                                    <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0"><RefreshCw size={24} /></div>
-                                    <div>
-                                        <h4 className="text-sm font-bold text-white uppercase mb-2">Синхронизация</h4>
-                                        <p className="text-[11px] text-white/40 leading-relaxed uppercase font-black tracking-widest">Если у ученика есть статус «В базе», значит он уже занесен в клубную базу. Нажмите кнопку «Синхронизировать», чтобы привязать его данные к личному кабинету.</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-6">
-                                    <div className="w-12 h-12 rounded-2xl bg-green-500/10 text-green-400 flex items-center justify-center shrink-0"><ArrowRightLeft size={24} /></div>
-                                    <div>
-                                        <h4 className="text-sm font-bold text-white uppercase mb-2">Перевод учеников</h4>
-                                        <p className="text-[11px] text-white/40 leading-relaxed uppercase font-black tracking-widest">Чтобы перевести ученика в другую группу, нажмите иконку стрелок в строке ученика. Система сама предложит подходящие группы по возрасту.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Button onClick={() => setIsGuideOpen(false)} className="w-full mt-10 py-5 bg-sparta-gold text-black rounded-2xl font-black uppercase tracking-widest text-xs">ПОНЯТНО, ПОЕХАЛИ!</Button>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {/* Interactive Coach Guide Modal */}
+            <CoachGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
 
             {/* Create / Edit Exercise Modal */}
             <CreateExerciseModal

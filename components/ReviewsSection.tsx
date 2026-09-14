@@ -204,8 +204,22 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onOpenReview }) => {
                     <div className="w-12 h-12 border-4 border-sparta-gold/30 border-t-sparta-gold rounded-full animate-spin" />
                 </div>
             ) : filteredReviews.length === 0 ? (
-                <div className="text-center py-20 text-white/50 font-manrope">
-                    Отзывов по вашему фильтру не найдено.
+                <div className="max-w-md mx-auto my-12 p-8 rounded-3xl bg-white/[0.03] border border-white/10 text-center flex flex-col items-center">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-2xl mb-4">
+                        💬
+                    </div>
+                    <h4 className="font-russo text-lg text-white mb-2">Пока нет отзывов по данному фильтру</h4>
+                    <p className="font-manrope text-white/60 text-xs sm:text-sm mb-6 leading-relaxed">
+                        Поделитесь впечатлениями о тренировках вашего ребенка или первом пробном дне!
+                    </p>
+                    {onOpenReview && (
+                        <button
+                            onClick={onOpenReview}
+                            className="min-h-[48px] px-6 py-3 rounded-2xl bg-sparta-gold text-black font-russo text-xs tracking-wider uppercase font-bold hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)]"
+                        >
+                            Оставить первый отзыв
+                        </button>
+                    )}
                 </div>
             ) : !isMarqueeActive ? (
                 /* Static Grid for few reviews */

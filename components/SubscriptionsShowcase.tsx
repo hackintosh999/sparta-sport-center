@@ -127,6 +127,9 @@ export const SubscriptionsShowcase: React.FC<SubscriptionsShowcaseProps> = ({ on
 
     return (
         <section id="tariffs" className="py-16 sm:py-24 relative overflow-hidden font-manrope">
+            {/* Direct Anchor for #programs navbar link */}
+            <div id="programs" className="absolute -top-24 left-0 pointer-events-none" />
+
             {/* Ambient Background Glows */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[380px] bg-sparta-gold/10 rounded-full blur-[140px] pointer-events-none" />
 
@@ -140,7 +143,7 @@ export const SubscriptionsShowcase: React.FC<SubscriptionsShowcaseProps> = ({ on
                     <h2 className="text-3xl sm:text-5xl font-russo text-white uppercase tracking-wider mb-4">
                         Тарифы обучения
                     </h2>
-                    <p className="text-white/60 text-sm sm:text-base max-w-xl mx-auto">
+                    <p className="text-white/80 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
                         Выберите подходящий период абонемента со скидкой до 20% и гарантией 100% переноса занятий по справке.
                     </p>
                 </div>
@@ -155,7 +158,7 @@ export const SubscriptionsShowcase: React.FC<SubscriptionsShowcaseProps> = ({ on
                                     key={option.months}
                                     type="button"
                                     onClick={() => setSelectedPeriod(option.months)}
-                                    className={`relative py-3 px-3 rounded-xl sm:rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 cursor-pointer ${
+                                    className={`relative min-h-[48px] py-3 px-3 rounded-xl sm:rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 cursor-pointer select-none ${
                                         isSelected
                                             ? 'bg-gradient-to-r from-sparta-gold to-yellow-500 text-black shadow-lg shadow-sparta-gold/25 font-black scale-[1.02]'
                                             : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -270,7 +273,7 @@ export const SubscriptionsShowcase: React.FC<SubscriptionsShowcaseProps> = ({ on
                                     {/* Action Button */}
                                     <button
                                         onClick={() => handleSelect(plan)}
-                                        className={`w-full py-3.5 sm:py-4 rounded-2xl font-russo uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer ${
+                                        className={`w-full min-h-[48px] py-3.5 sm:py-4 rounded-2xl font-russo uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer ${
                                             isPopular
                                                 ? 'bg-gradient-to-r from-amber-400 via-sparta-gold to-yellow-500 text-black font-black hover:brightness-110 shadow-lg shadow-sparta-gold/25'
                                                 : 'bg-white/10 hover:bg-sparta-gold hover:text-black text-white font-bold border border-white/10 hover:border-transparent'

@@ -6,6 +6,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { QUICK_SUBJECTS, SUPPORT_FAQ } from '../constants/SupportFAQ';
 import { BaseModal } from './ui/BaseModal';
+import { notifyNewLead } from '../services/leadNotificationService';
 
 interface MessageHistory {
     text: string;
@@ -115,7 +116,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
         setError('');
 
         try {
-            await addDoc(collection(db, 'messages'), {
+            const msgDocRef = await addDoc(collection(db, 'messages'), {
                 userId: auth.currentUser?.uid || null,
                 name,
                 email,
@@ -131,6 +132,16 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
                     createdAt: Timestamp.now()
                 }]
             });
+
+            // Мгновенное оповещение на сайт (CRM) и на почту директора bugrova.k@bk.ru и администратора larisa.p2000@mail.ru
+            notifyNewLead({
+                parentName: name,
+                email: email,
+                programType: `Вопрос с сайта: ${subject || 'Общий'}`,
+                comment: message,
+                requestId: msgDocRef.id,
+                source: 'Сайт SPARTA (Форма обратной связи)'
+            }).catch(e => console.warn('Notify lead error:', e));
             setSuccess(true);
             setTimeout(() => {
                 setSuccess(false);

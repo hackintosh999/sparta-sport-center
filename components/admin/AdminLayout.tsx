@@ -2,10 +2,11 @@ import { Link, Outlet, useLocation, NavLink, useNavigate } from 'react-router-do
 import { Users, FileText, MessageSquare, LogOut, Home, Settings, Newspaper, MessageCircle, Calendar, Layers, Tag, Disc, ShoppingBag, Trophy, ShieldAlert, Menu, X, Video, ArrowLeft, Star, Wallet, QrCode, TrendingUp, User, MapPin, CreditCard } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { playChimeSound } from '../../utils/audioAlert';
 
 
 const AdminLayout = () => {
@@ -15,6 +16,8 @@ const AdminLayout = () => {
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [newRequestsCount, setNewRequestsCount] = useState(0);
+    const [incomingLeadToast, setIncomingLeadToast] = useState<{ id: string; name: string; phone: string; program: string } | null>(null);
+    const isFirstLoadRef = useRef(true);
     const location = useLocation();
 
     // Live subscription to unhandled requests
@@ -23,6 +26,23 @@ const AdminLayout = () => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const count = snapshot.docs.filter(d => !d.data().isDeleted).length;
             setNewRequestsCount(count);
+
+            if (!isFirstLoadRef.current) {
+                const docChanges = snapshot.docChanges();
+                const newDocChange = docChanges.find(c => c.type === 'added' && !c.doc.data().isDeleted);
+                if (newDocChange) {
+                    const data = newDocChange.doc.data();
+                    playChimeSound();
+                    setIncomingLeadToast({
+                        id: newDocChange.doc.id,
+                        name: data.childName || data.parentName || 'Новая заявка',
+                        phone: data.phone || data.parentPhone || '',
+                        program: data.programType || 'Заявка с сайта'
+                    });
+                    setTimeout(() => setIncomingLeadToast(null), 9000);
+                }
+            }
+            isFirstLoadRef.current = false;
         }, (err) => {
             console.warn('AdminLayout new requests listener warning:', err);
         });
@@ -207,6 +227,45 @@ const AdminLayout = () => {
                             <SidebarContent />
                         </motion.aside>
                     </>
+                )}
+            </AnimatePresence>
+
+            {/* Real-time incoming lead toast alert */}
+            <AnimatePresence>
+                {incomingLeadToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -30, scale: 0.92 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -20, scale: 0.92 }}
+                        className="fixed top-4 right-4 z-[9999] bg-[#161822]/95 border border-sparta-gold/60 p-3.5 sm:p-4 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_25px_rgba(212,175,55,0.25)] flex items-center gap-3 sm:gap-4 max-w-[92vw] sm:max-w-md backdrop-blur-xl"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-sparta-gold/20 border border-sparta-gold/40 flex items-center justify-center text-sparta-gold shrink-0 shadow-[0_0_12px_rgba(212,175,55,0.3)]">
+                            <FileText size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                            <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-sparta-gold flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                                Новая заявка на сайте!
+                            </div>
+                            <div className="text-white font-bold text-sm truncate">{incomingLeadToast.name}</div>
+                            <div className="text-white/60 text-xs truncate">{incomingLeadToast.phone} • {incomingLeadToast.program}</div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setIncomingLeadToast(null);
+                                navigate('/admin/requests');
+                            }}
+                            className="px-3 py-2 rounded-xl bg-sparta-gold text-black font-bold text-xs uppercase tracking-wide hover:brightness-110 shrink-0 cursor-pointer shadow-[0_0_10px_rgba(212,175,55,0.3)] active:scale-95 transition-all"
+                        >
+                            Открыть
+                        </button>
+                        <button
+                            onClick={() => setIncomingLeadToast(null)}
+                            className="text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
+                        >
+                            <X size={16} />
+                        </button>
+                    </motion.div>
                 )}
             </AnimatePresence>
 

@@ -56,6 +56,8 @@ import { ThemeToggle } from './ThemeToggle';
 import ChildBenefitsSection from './ChildBenefitsSection';
 import WhyUsPositioningSection from './WhyUsPositioningSection';
 import RouteModal from './RouteModal';
+import ParentMemoModal from './ParentMemoModal';
+import FestivalBanner from './FestivalBanner';
 import CitySelector from './CitySelector';
 import { useCity } from '../context/CityContext';
 
@@ -63,13 +65,13 @@ import { useCity } from '../context/CityContext';
 // --- Data Constants ---
 
 const NAV_ITEMS: NavItem[] = [
-    { label: 'О нас', href: '#about' },
-    { label: 'Программы', href: '#programs' },
+    { label: 'О центре', href: '#about' },
+    { label: 'Абонементы', href: '#tariffs' },
     { label: 'Расписание', href: '#schedule' },
-    { label: 'Магазин', href: '/shop' },
-    { label: 'Трансляции', href: '/broadcasts' },
     { label: 'Команда', href: '#team' },
     { label: 'Отзывы', href: '#reviews' },
+    { label: 'Магазин', href: '/shop' },
+    { label: 'Трансляции', href: '/broadcasts' },
     { label: 'Вопросы', href: '#faq' },
 ];
 
@@ -79,28 +81,28 @@ const FEATURES = [
     {
         id: 1,
         title: 'Безопасные залы',
-        description: 'Залы с качественным покрытием, которое минимизирует риск травм и позволяет комфортно отрабатывать технику.',
+        description: 'Мягкое сертифицированное покрытие, тепло и идеальная чистота. Ребёнок надёжно защищён от ушибов и с радостью бежит на поле.',
         icon: <ShieldCheck className="w-8 h-8 text-sparta-gold" />,
         iconSrc: '/icon-equipment.png'
     },
     {
         id: 2,
-        title: 'Сильный тренерский состав',
-        description: 'Опытные наставники, которые не только знают футбол изнутри, но и умеют находить общий язык с детьми.',
+        title: 'Чуткие наставники',
+        description: 'Опытные тренеры с лицензиями РФС и добрым педагогическим сердцем. Умеют раскрыть потенциал и поддержать без криков.',
         icon: <Users className="w-8 h-8 text-sparta-gold" />,
         iconSrc: '/icon-trophy.png'
     },
     {
         id: 3,
-        title: 'Современный инвентарь',
-        description: 'Мы используем качественные мячи, барьеры, координационные лестницы и другой инвентарь, чтобы тренировки были эффективными и интересными.',
+        title: 'Инвентарь чемпионов',
+        description: 'Лёгкие мячи под каждый возраст, яркие барьеры и полосы препятствий как в академиях — тренировки динамичные и интересные.',
         icon: <Trophy className="w-8 h-8 text-sparta-gold" />,
         iconSrc: '/icon-flame.png'
     },
     {
         id: 4,
-        title: 'Комфорт для родителей',
-        description: 'Удобный график занятий, чистые комфортные раздевалки для детей и наличие парковочных мест для родителей.',
+        title: 'Уют для родителей',
+        description: 'Удобные раздевалки, зона ожидания с панорамным обзором поля, бесплатный быстрый Wi-Fi и просторная парковка у входа.',
         icon: <Heart className="w-8 h-8 text-sparta-gold" />,
         iconSrc: '/icon-comfort.png'
     },
@@ -406,7 +408,7 @@ const LocationCard: React.FC<{ onOpenRoute?: (locId: string) => void }> = ({ onO
     );
 };
 
-const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRoute?: () => void }) => {
+const Hero = ({ onOpenTrial, onOpenRoute, onOpenMemo }: { onOpenTrial: () => void; onOpenRoute?: () => void; onOpenMemo?: () => void }) => {
     const { user, userProfile, requestedGroupIds } = useAuth();
     const navigate = useNavigate();
     const { locations, city } = useCity();
@@ -449,7 +451,7 @@ const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRou
                     <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center w-full max-w-2xl mx-auto mb-10">
                         {isEnrolled ? (
                             <Button 
-                                className="group w-full sm:w-auto px-6 sm:px-8 py-4 text-sm sm:text-base md:text-lg font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-[0_0_30px_rgba(212,175,55,0.3)]" 
+                                className="group w-full sm:w-auto min-h-[48px] px-6 sm:px-8 py-4 text-sm sm:text-base md:text-lg font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-[0_0_30px_rgba(212,175,55,0.3)]" 
                                 onClick={() => navigate('/dashboard')}
                             >
                                 <span className="whitespace-nowrap">Личный кабинет</span>
@@ -457,7 +459,7 @@ const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRou
                             </Button>
                         ) : (
                             <Button 
-                                className="group w-full sm:w-auto px-6 sm:px-8 py-4 text-sm sm:text-base md:text-lg font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-[0_0_30px_rgba(212,175,55,0.3)]" 
+                                className="group w-full sm:w-auto min-h-[48px] px-6 sm:px-8 py-4 text-sm sm:text-base md:text-lg font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-[0_0_30px_rgba(212,175,55,0.3)]" 
                                 onClick={onOpenTrial}
                             >
                                 <span className="whitespace-nowrap">Прийти на день знакомства</span>
@@ -466,7 +468,7 @@ const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRou
                         )}
                         <Button
                             variant="outline"
-                            className="w-full sm:w-auto px-6 py-4 text-sm sm:text-base whitespace-nowrap"
+                            className="w-full sm:w-auto min-h-[48px] px-6 py-4 text-sm sm:text-base whitespace-nowrap"
                             onClick={() => {
                                 const el = document.getElementById('schedule');
                                 el?.scrollIntoView({ behavior: 'smooth' });
@@ -481,7 +483,7 @@ const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRou
                         <button
                             onClick={onOpenRoute}
                             title="Нажмите, чтобы проложить маршрут до любого из залов"
-                            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/[0.06] border border-sparta-gold/30 hover:border-sparta-gold hover:bg-white/[0.12] backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all cursor-pointer group hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] active:scale-95"
+                            className="min-h-[48px] flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/[0.06] border border-sparta-gold/30 hover:border-sparta-gold hover:bg-white/[0.12] backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all cursor-pointer group hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] active:scale-95"
                         >
                             <MapPin className="w-4 h-4 text-sparta-gold shrink-0 group-hover:scale-110 transition-transform" />
                             <span className="text-xs sm:text-sm font-manrope font-semibold text-white group-hover:text-sparta-gold transition-colors">
@@ -491,11 +493,23 @@ const Hero = ({ onOpenTrial, onOpenRoute }: { onOpenTrial: () => void; onOpenRou
                                 🗺️ Карта <ChevronRight className="w-3 h-3 ml-0.5 inline-block group-hover:translate-x-0.5 transition-transform" />
                             </span>
                         </button>
-                        <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+                        {onOpenMemo && (
+                            <button
+                                onClick={onOpenMemo}
+                                title="Памятка для родителей: что взять с собой на первую тренировку"
+                                className="min-h-[48px] flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-400/40 hover:border-amber-400 hover:bg-amber-500/20 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all cursor-pointer group hover:shadow-[0_0_20px_rgba(245,158,11,0.25)] active:scale-95"
+                            >
+                                <span className="text-base">🎒</span>
+                                <span className="text-xs sm:text-sm font-manrope font-bold text-amber-200 group-hover:text-amber-300 transition-colors">
+                                    Что взять с собой?
+                                </span>
+                            </button>
+                        )}
+                        <div className="min-h-[48px] flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
                             <Users className="w-4 h-4 text-sparta-gold shrink-0" />
                             <span className="text-xs sm:text-sm font-manrope font-semibold text-white">Группы 4–14 лет</span>
                         </div>
-                        <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+                        <div className="min-h-[48px] flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
                             <ShieldCheck className="w-4 h-4 text-sparta-gold shrink-0" />
                             <span className="text-xs sm:text-sm font-manrope font-semibold text-white">Забота & Без стресса</span>
                         </div>
@@ -536,7 +550,7 @@ const Marquee = () => {
 
 const WhyUs = () => {
     return (
-        <section id="about" className="py-24 relative">
+        <section id="about" className="py-20 md:py-24 relative">
             <Container>
                 <SectionHeader
                     title="УСЛОВИЯ И ИНФРАСТРУКТУРА"
@@ -552,14 +566,14 @@ const WhyUs = () => {
                             transition={{ delay: idx * 0.1 }}
                             viewport={{ once: true }}
                         >
-                            <GlassCard className="h-full flex flex-col items-center text-center hover:bg-white/10 transition-colors group p-6 rounded-[28px]">
-                                <div className="w-16 h-16 mb-6 relative flex items-center justify-center rounded-2xl bg-sparta-gold/10 border border-sparta-gold/20 text-sparta-gold transition-transform duration-500 group-hover:scale-110 group-hover:bg-sparta-gold/20 group-hover:border-sparta-gold/40 shadow-[0_0_15px_rgba(212,175,55,0.15)]">
+                            <GlassCard className="h-full flex flex-col items-center text-center hover:bg-white/10 transition-all duration-300 group p-6 sm:p-7 rounded-[28px] border border-white/10 hover:border-sparta-gold/40 shadow-[0_4px_25px_rgba(0,0,0,0.3)]">
+                                <div className="w-16 h-16 mb-6 relative flex items-center justify-center rounded-2xl bg-sparta-gold/10 border border-sparta-gold/25 text-sparta-gold transition-transform duration-500 group-hover:scale-110 group-hover:bg-sparta-gold/20 group-hover:border-sparta-gold/50 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
                                     {feature.icon || (
                                         <img src={feature.iconSrc} alt={feature.title} className="w-10 h-10 object-contain drop-shadow-2xl relative z-10" loading="lazy" decoding="async" />
                                     )}
                                 </div>
                                 <h3 className="font-russo text-xl text-white mb-3 group-hover:text-sparta-gold transition-colors">{feature.title}</h3>
-                                <p className="font-manrope text-white/60 text-sm leading-relaxed">{feature.description}</p>
+                                <p className="font-manrope text-white/80 text-sm leading-relaxed">{feature.description}</p>
                             </GlassCard>
                         </motion.div>
                     ))}
@@ -943,11 +957,14 @@ const Team = () => {
     const displayCoaches = (loading || coaches.length === 0) ? COACHES : coaches;
 
     return (
-        <section id="team" className="py-24 bg-gradient-to-b from-transparent to-black/50">
+        <section id="team" className="py-20 md:py-24 bg-gradient-to-b from-transparent to-black/50">
             <Container>
-                <SectionHeader title="НАША КОМАНДА" />
+                <SectionHeader 
+                    title="ТРЕНЕРСКИЙ ШТАБ" 
+                    subtitle="Наставники с лицензиями РФС, высшим спортивным образованием и добрым сердцем"
+                />
 
-                <div className="flex flex-wrap justify-center gap-12">
+                <div className="flex flex-wrap justify-center gap-8 md:gap-12">
                     {displayCoaches.map((coach, idx) => (
                         <motion.div
                             key={coach.id}
@@ -955,23 +972,26 @@ const Team = () => {
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.1 }}
                             viewport={{ once: true }}
-                            className="group flex flex-col items-center text-center"
+                            className="group flex flex-col items-center text-center max-w-[220px]"
                         >
-                            <div className="relative mb-6">
-                                <div className="w-48 h-48 rounded-full p-1 bg-gradient-to-br from-sparta-gold to-transparent">
-                                    <div className="w-full h-full rounded-full overflow-hidden bg-black">
+                            <div className="relative mb-5">
+                                <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-full p-1 bg-gradient-to-br from-sparta-gold via-yellow-500/50 to-transparent shadow-[0_0_20px_rgba(212,175,55,0.2)] group-hover:shadow-[0_0_30px_rgba(212,175,55,0.4)] transition-all">
+                                    <div className="w-full h-full rounded-full overflow-hidden bg-black/80">
                                         <img
                                             src={coach.image}
                                             alt={coach.name}
-                                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500"
+                                            className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                                             loading="lazy"
                                             decoding="async"
                                         />
                                     </div>
                                 </div>
+                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap px-2.5 py-0.5 rounded-full bg-black/90 border border-sparta-gold/50 text-[10px] sm:text-xs font-bold font-manrope text-sparta-gold shadow-md">
+                                    Лицензия РФС
+                                </div>
                             </div>
-                            <h4 className="font-manrope font-bold text-lg text-white group-hover:text-sparta-gold transition-colors">{coach.name}</h4>
-                            <p className="font-manrope text-white/70 text-sm font-medium mt-0.5">{coach.role}</p>
+                            <h4 className="font-manrope font-bold text-base sm:text-lg text-white group-hover:text-sparta-gold transition-colors">{coach.name}</h4>
+                            <p className="font-manrope text-white/75 text-xs sm:text-sm font-medium mt-1 leading-snug">{coach.role}</p>
                         </motion.div>
                     ))}
                 </div>
@@ -1144,6 +1164,7 @@ const LandingPage: React.FC = () => {
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
     const [selectedRouteLocationId, setSelectedRouteLocationId] = useState<string>('newton');
+    const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
 
     const openRouteModal = (locationId?: string) => {
         if (locationId) setSelectedRouteLocationId(locationId);
@@ -1284,11 +1305,24 @@ const LandingPage: React.FC = () => {
                 onOpenAuth={() => setIsAuthOpen(true)}
             />
             <main className={user ? "pb-6 md:pb-0" : "pb-24 md:pb-0"}>
+                {/* Festival Urgent Announcement Banner */}
+                <div className="pt-20 sm:pt-24 px-3 sm:px-4 max-w-7xl mx-auto">
+                    <FestivalBanner
+                        onOpenRoute={() => openRouteModal()}
+                        onOpenMemo={() => setIsMemoModalOpen(true)}
+                        onJoinFestival={() => handleJoinClick({ title: 'Фестиваль футбола SPARTA' })}
+                    />
+                </div>
+
                 {/* Hero Section - Stadium Entrance */}
                 <div className="bg-hero-bg bg-fixed bg-cover bg-center relative">
                     <div className="absolute inset-0 bg-black/60 pointer-events-none z-0"></div>
                     <div className="relative z-10">
-                        <Hero onOpenTrial={handleJoinClick} onOpenRoute={() => openRouteModal()} />
+                        <Hero
+                            onOpenTrial={handleJoinClick}
+                            onOpenRoute={() => openRouteModal()}
+                            onOpenMemo={() => setIsMemoModalOpen(true)}
+                        />
                         <Marquee />
                     </div>
                 </div>
@@ -1424,6 +1458,15 @@ const LandingPage: React.FC = () => {
                 onClose={() => setIsRouteModalOpen(false)}
                 initialLocationId={selectedRouteLocationId}
                 locations={allLocations}
+            />
+
+            <ParentMemoModal
+                isOpen={isMemoModalOpen}
+                onClose={() => setIsMemoModalOpen(false)}
+                onOpenRoute={() => {
+                    setIsMemoModalOpen(false);
+                    openRouteModal();
+                }}
             />
 
             <AnimatePresence>

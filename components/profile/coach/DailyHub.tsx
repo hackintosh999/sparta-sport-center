@@ -6,7 +6,7 @@ import {
     MapPin, Clock, Trophy, Award, User, CheckCircle2,
     Save, ArrowRight, Zap, Shield, Flame, CheckSquare, Square,
     PlusCircle, X, CheckCheck, Star, Heart, MessageSquare,
-    ShieldAlert, ChevronDown, Edit3, AlertTriangle
+    ShieldAlert, ChevronDown, Edit3, AlertTriangle, Phone
 } from 'lucide-react';
 import { db } from '../../../firebase';
 import {
@@ -134,7 +134,13 @@ const DailyHub: React.FC<DailyHubProps> = ({
                 name: s.name || s.childName || s.displayName || 'Спортсмен',
                 position: s.position || (s.sport === 'tennis' ? 'Теннис' : 'Футбол'),
                 type: s.type || (s.isRegistered ? 'registered' : 'offline'),
-                isRegistered: !!s.isRegistered
+                isRegistered: !!s.isRegistered,
+                phone: s.phone || s.parentPhone || s.parentContact || '',
+                parentPhone: s.parentPhone || s.phone || s.parentContact || '',
+                parentName: s.parentName || '',
+                medCertificate: s.medCertificate,
+                birthDate: s.birthDate,
+                birthYear: s.birthYear
             }));
     }, [groupStudents, myStudents, effectiveGroupId, userProfile, coachDisplayName]);
 
@@ -546,7 +552,7 @@ const DailyHub: React.FC<DailyHubProps> = ({
                     </div>
 
                     {/* Student Cards List */}
-                    <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                    <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
                         {localStudentsList.length > 0 ? (
                             localStudentsList.map((student) => {
                                 const isAttended = attendedStudentIds.includes(student.id);
@@ -556,24 +562,24 @@ const DailyHub: React.FC<DailyHubProps> = ({
                                 return (
                                     <div
                                         key={student.id}
-                                        className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                                        className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                                             isAttended
-                                                ? 'bg-white/[0.04] border-white/10 hover:border-emerald-500/30'
-                                                : 'bg-white/[0.01] border-white/5 opacity-60 hover:opacity-100'
+                                                ? 'bg-emerald-950/20 border-emerald-500/40 shadow-sm'
+                                                : 'bg-zinc-900/40 border-white/5 opacity-75 hover:opacity-100'
                                         }`}
                                     >
                                         {/* Left: Avatar + Name + Incomplete Warning + Smart Badge */}
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-russo text-xs font-bold shrink-0 ${
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-russo text-sm font-bold shrink-0 transition-all ${
                                                 isAttended
-                                                    ? 'bg-gradient-to-br from-emerald-500/20 to-sparta-gold/20 text-sparta-gold border border-sparta-gold/30'
-                                                    : 'bg-zinc-800 text-white/40 border border-white/5'
+                                                    ? 'bg-gradient-to-br from-emerald-500 to-sparta-gold text-black shadow-md shadow-emerald-500/20'
+                                                    : 'bg-zinc-800 text-white/40 border border-white/10'
                                             }`}>
                                                 {student.name.slice(0, 2).toUpperCase()}
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-xs sm:text-sm font-bold text-white truncate">
+                                                    <span className="text-sm sm:text-base font-russo text-white truncate tracking-wide">
                                                         {student.name}
                                                     </span>
 
@@ -586,41 +592,54 @@ const DailyHub: React.FC<DailyHubProps> = ({
                                                                 handleViewStudentProfile?.(student);
                                                             }}
                                                             title={profileCheck.tooltipText}
-                                                            className="p-1 rounded-md bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30 transition-all cursor-pointer shrink-0"
+                                                            className="p-1 rounded-md bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 transition-all cursor-pointer shrink-0"
                                                         >
-                                                            <AlertTriangle size={11} />
+                                                            <AlertTriangle size={12} />
                                                         </button>
                                                     )}
 
                                                     {/* Smart Subscription Badge */}
                                                     <span
-                                                        className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider shrink-0 border ${subInfo.badgeClass}`}
+                                                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 border ${subInfo.badgeClass}`}
                                                         title={subInfo.description}
                                                     >
                                                         {subInfo.label}
                                                     </span>
                                                 </div>
-                                                <span className="text-[10px] text-white/40 font-bold block truncate">
-                                                    {student.position || 'Спортсмен'}
-                                                </span>
+                                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                    <span className="text-xs text-white/50 font-bold block truncate">
+                                                        {student.position || 'Спортсмен'}
+                                                    </span>
+                                                    {(student.parentPhone || student.phone) && (
+                                                        <a
+                                                            href={`tel:${student.parentPhone || student.phone}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider transition-colors active:scale-95"
+                                                            title={`Позвонить родителю: ${student.parentPhone || student.phone}`}
+                                                        >
+                                                            <Phone size={11} className="text-emerald-400" />
+                                                            <span>Звонок маме</span>
+                                                        </a>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Right: 2 Quick Attendance Toggle Buttons */}
-                                        <div className="flex items-center gap-1.5 shrink-0">
+                                        {/* Right: 2 Large Tactile Field Buttons (Min 48px Height) */}
+                                        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
                                             <button
                                                 type="button"
                                                 onClick={() => {
                                                     if (!isAttended) toggleStudentAttendance(student.id);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-xl text-[10px] font-russo uppercase transition-all flex items-center gap-1 cursor-pointer ${
+                                                className={`min-h-[48px] flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs sm:text-sm font-russo uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
                                                     isAttended
-                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-sm'
-                                                        : 'bg-white/[0.02] text-white/30 border border-white/5 hover:text-white hover:bg-white/10'
+                                                        ? 'bg-emerald-500 hover:bg-emerald-400 text-black font-black shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-400/50'
+                                                        : 'bg-white/5 text-white/40 border border-white/10 hover:text-white hover:bg-white/10'
                                                 }`}
                                             >
-                                                <Check size={12} className={isAttended ? 'text-emerald-400' : 'text-white/30'} />
-                                                <span>Был</span>
+                                                <Check size={16} strokeWidth={isAttended ? 3 : 2} className={isAttended ? 'text-black' : 'text-white/40'} />
+                                                <span>Пришёл</span>
                                             </button>
 
                                             <button
@@ -628,22 +647,28 @@ const DailyHub: React.FC<DailyHubProps> = ({
                                                 onClick={() => {
                                                     if (isAttended) toggleStudentAttendance(student.id);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-xl text-[10px] font-russo uppercase transition-all flex items-center gap-1 cursor-pointer ${
+                                                className={`min-h-[48px] flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs sm:text-sm font-russo uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
                                                     !isAttended
-                                                        ? 'bg-zinc-800 text-zinc-400 border border-zinc-700'
-                                                        : 'bg-white/[0.02] text-white/30 border border-white/5 hover:text-white hover:bg-white/10'
+                                                        ? 'bg-red-500/20 text-red-300 border border-red-500/50 shadow-md font-bold'
+                                                        : 'bg-white/5 text-white/30 border border-white/10 hover:text-white hover:bg-white/10'
                                                 }`}
                                             >
-                                                <X size={12} className={!isAttended ? 'text-zinc-400' : 'text-white/30'} />
-                                                <span>Пропуск</span>
+                                                <X size={16} strokeWidth={!isAttended ? 2.5 : 2} className={!isAttended ? 'text-red-400' : 'text-white/30'} />
+                                                <span>Не пришёл</span>
                                             </button>
                                         </div>
                                     </div>
                                 );
                             })
                         ) : (
-                            <div className="py-8 text-center text-xs text-white/40 font-bold uppercase">
-                                В группе пока нет зарегистрированных учеников
+                            <div className="py-12 px-4 rounded-2xl bg-zinc-900/60 border border-dashed border-white/10 text-center space-y-3">
+                                <div className="w-12 h-12 rounded-2xl bg-white/5 text-white/40 mx-auto flex items-center justify-center">
+                                    <Users size={24} />
+                                </div>
+                                <h4 className="font-russo text-sm text-white uppercase">Список ребят формируется</h4>
+                                <p className="text-xs text-white/60 max-w-sm mx-auto">
+                                    Состав на сегодняшнее занятие подгружается из реестра. Выберите другую группу выше или добавьте учеников.
+                                </p>
                             </div>
                         )}
                     </div>

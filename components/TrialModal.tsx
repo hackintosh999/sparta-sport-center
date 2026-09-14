@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { safeLocalStorage } from '../utils/storage';
 import { BaseModal } from './ui/BaseModal';
 import { checkTrialEligibility, TrialEligibilityResult, normalizePhone } from '../utils/trialEligibility';
+import { notifyNewLead } from '../services/leadNotificationService';
 
 export interface SelectedGroupInfo {
     id: string;
@@ -285,6 +286,23 @@ const TrialModal: React.FC<TrialModalProps> = ({ isOpen, onClose, selectedGroup,
 
             const docRef = await addDoc(collection(db, "requests"), requestPayload);
             console.log("Trial request created with ID:", docRef.id);
+
+            // Мгновенное оповещение на сайт (CRM) и на почту директора bugrova.k@bk.ru и администратора larisa.p2000@mail.ru
+            notifyNewLead({
+                childName: trimmedChild,
+                childAge: String(ageNum),
+                birthDate: '',
+                parentName: formData.parentName.trim(),
+                phone: formData.parentPhone.trim(),
+                email: formData.email.trim(),
+                programType: 'Пробная тренировка',
+                location: selectedGroup?.location || formData.preferredLocation || 'ОЦ «Ньютон»',
+                groupTitle: selectedGroup?.name || undefined,
+                schedule: selectedGroup?.days ? `${selectedGroup.days} ${selectedGroup.time || ''}`.trim() : formData.preferredDay,
+                comment: formData.comment.trim(),
+                requestId: docRef.id,
+                source: 'Сайт SPARTA (пробная тренировка)'
+            }).catch(e => console.warn('Notify lead error:', e));
 
             const currentRequestedIds = JSON.parse(safeLocalStorage.getItem('trial_requested_ids') || '[]');
             if (selectedGroup && !currentRequestedIds.includes(selectedGroup.id)) {

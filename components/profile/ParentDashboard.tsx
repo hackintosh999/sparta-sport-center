@@ -7,7 +7,8 @@ import {
     KeyRound, QrCode, Sparkles, Copy, Check,
     Heart, Shield, RefreshCw, Trophy, CreditCard,
     Snowflake, Edit3, MapPin, ArrowLeftRight,
-    Undo2, History, RotateCcw, ArrowRight, Phone, Clock
+    Undo2, History, RotateCcw, ArrowRight, Phone, Clock,
+    Compass, Footprints
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import StatsSection from './StatsSection';
@@ -18,6 +19,8 @@ import { collection, query, where, or, onSnapshot, updateDoc, doc, serverTimesta
 import { Button } from '../UIComponents';
 import { LinkChildModal } from './LinkChildModal';
 import { UpgradeSubscriptionModal } from './UpgradeSubscriptionModal';
+import RouteModal from '../RouteModal';
+import ParentMemoModal from '../ParentMemoModal';
 import { unlinkChildFromParent, resolveSpartaCoachAndGroup } from '../../utils/studentLinking';
 import { resolveChildSubscription, isSubscriptionValid } from '../../utils/subscriptionResolver';
 import { SubscriptionStatus } from '../../types/subscription';
@@ -61,6 +64,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
     const [isUnlinking, setIsUnlinking] = useState(false);
     const [copied, setCopied] = useState(false);
     const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+    const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
+    const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
 
     useEffect(() => {
         const pPhone = (userProfile?.phone || userProfile?.parentPhone || '').trim();
@@ -863,12 +868,30 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
                             Привяжите профиль вашего ребенка, чтобы видеть его тренировки, расписание группы, продлевать абонемент и общаться с тренером напрямую.
                         </p>
                     </div>
-                    <Button
-                        onClick={() => setIsLinkModalOpen(true)}
-                        className="px-8 py-4 text-xs font-black tracking-[0.2em] shadow-xl shadow-sparta-gold/20"
-                    >
-                        ➕ ПРИВЯЗАТЬ РЕБЕНКА ПРЯМО СЕЙЧАС
-                    </Button>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                        <Button
+                            onClick={() => setIsLinkModalOpen(true)}
+                            className="w-full sm:w-auto min-h-[48px] px-8 py-4 text-xs font-black tracking-[0.2em] shadow-xl shadow-sparta-gold/20"
+                        >
+                            ➕ ПРИВЯЗАТЬ РЕБЕНКА ПРЯМО СЕЙЧАС
+                        </Button>
+                        <button
+                            type="button"
+                            onClick={() => setIsRouteModalOpen(true)}
+                            className="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-russo text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                        >
+                            <MapPin size={16} className="text-sparta-gold" />
+                            <span>Схема прохода</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsMemoModalOpen(true)}
+                            className="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-russo text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                        >
+                            <Footprints size={16} className="text-amber-400" />
+                            <span>Что взять с собой</span>
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <AnimatePresence mode="wait">
@@ -961,19 +984,68 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
 
                                         {/* Group & Coach details banner */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/10 text-xs">
-                                            <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3">
+                                            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3">
                                                 <Trophy size={18} className="text-sparta-gold shrink-0" />
                                                 <div>
                                                     <span className="text-[10px] uppercase font-bold text-white/40 block">Группа</span>
-                                                    <span className="font-bold text-white text-xs">{activeGroupName}</span>
+                                                    <span className="font-bold text-white text-xs sm:text-sm">{activeGroupName}</span>
                                                 </div>
                                             </div>
-                                            <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3">
+                                            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3">
                                                 <User size={18} className="text-sparta-gold shrink-0" />
                                                 <div>
                                                     <span className="text-[10px] uppercase font-bold text-white/40 block">Тренер группы</span>
-                                                    <span className="font-bold text-white text-xs">{activeCoachName}</span>
+                                                    <span className="font-bold text-white text-xs sm:text-sm">{activeCoachName}</span>
                                                 </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Venue Address, Walking Route & Parent Memo Card */}
+                                        <div className="p-4 sm:p-5 rounded-2xl bg-zinc-900/90 border border-sparta-gold/30 space-y-3.5 shadow-md">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                                <div className="flex items-start gap-2.5">
+                                                    <div className="p-2.5 rounded-xl bg-sparta-gold/15 text-sparta-gold shrink-0 mt-0.5 shadow-sm">
+                                                        <MapPin size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[10px] font-black uppercase tracking-wider text-sparta-gold block">
+                                                            Площадка и зал занятий:
+                                                        </span>
+                                                        <p className="text-xs sm:text-sm font-russo text-white tracking-wide">
+                                                            {activeSubscription?.branchName || 'ОЦ «Ньютон», ул. Героя России Родионова, 6А'}
+                                                        </p>
+                                                        <p className="text-[11px] text-white/60 font-manrope mt-0.5">
+                                                            Вход через спортивный манеж, 1 этаж • Раздевалки №3 и №4 • Зона ожидания родителей на 2 этаже
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Child Attendance Today Status */}
+                                                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-russo uppercase tracking-wider self-start sm:self-auto shrink-0 shadow-sm">
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                                                    <span>Ждём на поле</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Big Tactile Action Buttons (Min 48px height) */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsRouteModalOpen(true)}
+                                                    className="min-h-[48px] px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-sparta-gold to-yellow-500 hover:brightness-110 text-black font-russo text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md shadow-sparta-gold/20 cursor-pointer active:scale-95 font-black"
+                                                >
+                                                    <Compass size={16} />
+                                                    <span>Схема прохода и маршрут</span>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsMemoModalOpen(true)}
+                                                    className="min-h-[48px] px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-russo text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                                                >
+                                                    <Footprints size={16} className="text-amber-400" />
+                                                    <span>Памятка: что взять с собой</span>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -2176,6 +2248,22 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user, userProf
                 activeSubscription={activeSubscription}
                 user={user}
                 userProfile={userProfile}
+            />
+
+            {/* Route & Entrance Map Modal */}
+            <RouteModal
+                isOpen={isRouteModalOpen}
+                onClose={() => setIsRouteModalOpen(false)}
+            />
+
+            {/* Parent Preparation & Checklist Memo Modal */}
+            <ParentMemoModal
+                isOpen={isMemoModalOpen}
+                onClose={() => setIsMemoModalOpen(false)}
+                onOpenRoute={() => {
+                    setIsMemoModalOpen(false);
+                    setIsRouteModalOpen(true);
+                }}
             />
         </div>
     );
